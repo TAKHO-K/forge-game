@@ -15,6 +15,7 @@ local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local AirMotion = require(script.Parent.AirMotion)
 local CameraShake = require(script.Parent.CameraShake)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local F = MovementConfig.fall
 local SAFE_SPEED, FLAME_SPEED = require(ReplicatedStorage.Shared.MoveRules).fallSpeeds() -- 보고 문턱(안전 높이) · 불꽃 문턱(예상 피해 50%)
@@ -94,7 +95,7 @@ local function setKnocked(character, root, on, isSelf)
 		local label = Instance.new("TextLabel")
 		label.Size = UDim2.fromScale(1, 1)
 		label.BackgroundTransparency = 1
-		label.Text = "쿵!"
+		label.Text = Text.get("scene.fall.thud")
 		label.Font = Enum.Font.GothamBlack
 		label.TextScaled = true
 		label.TextColor3 = UIColors.xp

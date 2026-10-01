@@ -15,6 +15,7 @@ local Theme = require(script.Parent.ui.kit.Theme)
 local Wayfinder = require(script.Parent.Wayfinder)
 local RoadNet = require(ReplicatedStorage.Shared.RoadNet)
 local TutorialData = require(ReplicatedStorage.Shared.data.TutorialData)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local player = Players.LocalPlayer
 local B = WorldMapData.barrier
@@ -45,7 +46,7 @@ end
 
 local function lockText(zone)
 	local prev = WorldMapData.zones[zone.tierIndex - 1]
-	return ("🔒 %s\n%s 보스를 처음 잡으면 열린다"):format(zone.theme, prev and prev.theme or "이전 구역")
+	return Text.get("scene.world.lock", { zone = zone.theme, prev = prev and prev.theme or Text.get("scene.world.prevZone") })
 end
 
 local function buildBarrier(zone)
@@ -177,7 +178,7 @@ guideTip.TextColor3 = UIColors.textSecondary
 guideTip.Visible = false
 guideTip.Parent = objectiveLabel
 guideToggle.MouseEnter:Connect(function()
-	guideTip.Text = Wayfinder.isHidden() and "눌러서 길 안내 켜기" or "눌러서 길 안내 끄기"
+	guideTip.Text = Text.get(Wayfinder.isHidden() and "scene.world.guideTipOn" or "scene.world.guideTipOff")
 	guideTip.Visible = true
 end)
 guideToggle.MouseLeave:Connect(function()
@@ -196,7 +197,7 @@ autoButton.BackgroundTransparency = UIColors.panelTransparency
 autoButton.Font = Theme.font
 autoButton.TextSize = Theme.textSize("caption")
 autoButton.TextColor3 = UIColors.textPrimary
-autoButton.Text = "자동 이동"
+autoButton.Text = Text.get("map.autoWalk")
 autoButton.Visible = false
 autoButton.Parent = hud
 Theme.corner(autoButton, 6)
@@ -216,7 +217,7 @@ autoButton.Activated:Connect(function()
 	end
 end)
 AutoWalk.changed:Connect(function(on, _, text)
-	autoButton.Text = on and "자동 이동 중 · 멈춤" or "자동 이동"
+	autoButton.Text = Text.get(on and "scene.world.autoWalkOn" or "map.autoWalk")
 	autoStroke.Color = on and UIColors.xp or UIColors.success
 	if not on and text then
 		Toast.push("TC", { text = text, colorName = "textPrimary", seconds = 2.5 })
@@ -225,7 +226,7 @@ end)
 -- QUEUE-ALL1 R1: 견습 사냥터 안내 = [바로 가기](순간이동 - 서버 Travel.requestTutorialZone) · 첫 관문 안내(bossGate)에는 없다(걸어서 - 자동 이동 · 길 안내 익히기)
 local teleButton = autoButton:Clone()
 teleButton.Name = "TutorialTeleportButton"
-teleButton.Text = "바로 가기"
+teleButton.Text = Text.get("scene.world.teleport")
 teleButton.Parent = hud
 teleButton.Activated:Connect(function()
 	AutoWalk.stop("input")
@@ -261,9 +262,9 @@ local function button(name, slotName, text)
 	return b
 end
 local request = ReplicatedStorage:WaitForChild("TravelRequest", 30)
-local hubButton = button("TravelHubButton", "travelHub", "귀환")
-local partyButton = button("TravelPartyButton", "travelParty", "파티 곁")
-local backButton = button("TravelBackButton", "travelBack", "돌아가기") -- M1-2: 귀환한 자리로(5분 · 1회 · 남은 시간 = 카드 귀환 줄)
+local hubButton = button("TravelHubButton", "travelHub", Text.get("scene.world.recall"))
+local partyButton = button("TravelPartyButton", "travelParty", Text.get("scene.world.toParty"))
+local backButton = button("TravelBackButton", "travelBack", Text.get("scene.world.back")) -- M1-2: 귀환한 자리로(5분 · 1회 · 남은 시간 = 카드 귀환 줄)
 backButton.Visible = false
 backButton.Size = UDim2.new(0, 104, 0, Theme.isMobile and Theme.touchMin or 36) -- "돌아가기 4:59"가 들어가게
 -- [귀환] 버튼 안 시전 게이지(버튼 바탕을 왼쪽부터 채운다 - 글씨는 위)
@@ -328,19 +329,22 @@ RunService.RenderStepped:Connect(function()
 	local backUntil = player:GetAttribute("RecallBackUntil")
 	backButton.Visible = backUntil ~= nil and backUntil > now
 	if backButton.Visible then
-		backButton.Text = "돌아가기 " .. mmss(backUntil - now)
+		backButton.Text = Text.get("scene.world.backTime", { time = mmss(backUntil - now) })
 	end
-	local fill, text, dim = 0, "귀환", false
+	local fill, text, timeText, dim = 0, Text.get("scene.world.recall"), nil, false -- timeText = 귀환 뒤 시간(타일이면 시간만)
 	if untilAt and untilAt > now then
 		fill = math.clamp(1 - (untilAt - now) / WorldMapData.travel.recall.castSeconds, 0, 1)
-		text = ("귀환 %.1f"):format(untilAt - now)
+		timeText = ("%.1f"):format(untilAt - now)
 	elseif os.clock() < cancelShownUntil then
-		text = "취소됨"
+		text = Text.get("scene.world.recallCanceled")
 	elseif readyAt and readyAt > now then
-		text, dim = "귀환 " .. mmss(readyAt - now), true
+		timeText, dim = mmss(readyAt - now), true
+	end
+	if timeText then
+		text = Text.get("scene.world.recallTime", { time = timeText })
 	end
 	castFill.Size = hubTiled and UDim2.new(fill, 0, 0, 5) or UDim2.fromScale(fill, 1)
-	hubLabel.Text = (hubTiled and text == "귀환") and "" or (hubTiled and text:gsub("^귀환 ", "") or text) -- 타일이면 평소 글씨 없음 · 시간만
+	hubLabel.Text = hubTiled and (timeText or (text == Text.get("scene.world.recall") and "" or text)) or text -- 타일이면 평소 글씨 없음 · 시간만
 	hubLabel.TextTransparency = dim and 0.45 or 0
 end)
 -- QUEUE-ALL2 Q6: 시전 중이면 취소(같은 버튼 · 같은 키) · 아니면 시작
@@ -404,9 +408,9 @@ task.spawn(function()
 end)
 
 -- 지역 · 높이 줄 · 파티 버튼 보이기 · 관문 안내(0.2초마다)
-local function stationText()
+local function treeText(meters)
 	local cp = player:GetAttribute("TreeCheckpoint")
-	return cp and (" · 정거장 %d"):format(cp) or ""
+	return cp and Text.get("scene.world.treeStation", { m = meters, station = ("%d"):format(cp) }) or Text.get("scene.world.tree", { m = meters })
 end
 local function regionName(position)
 	if WorldMapLayout.inHub(position) then
@@ -417,7 +421,7 @@ local function regionName(position)
 		return ("%s · %s"):format(rangeZone.theme, range.name)
 	end
 	local zone = WorldMapLayout.zoneAt(position)
-	return zone and zone.theme or "들판"
+	return zone and zone.theme or Text.get("scene.world.field")
 end
 local lastGate = nil
 local lastTutorialStep = nil
@@ -436,7 +440,7 @@ RunService.Heartbeat:Connect(function(dt)
 		local feet = root.Position - Vector3.new(0, 3, 0)
 		local above = feet.Y - WorldMapData.floorTopY
 		local climbing = Vector3.new(feet.X, 0, feet.Z).Magnitude <= 160 and above > 12
-		regionLabel.Text = climbing and ("큰 나무 · 높이 %dm%s"):format(math.floor(above * TREE.metersPerStud + 0.5), stationText()) or regionName(feet)
+		regionLabel.Text = climbing and treeText(("%d"):format(math.floor(above * TREE.metersPerStud + 0.5))) or regionName(feet)
 	end
 	-- M1-3: 관문 길 안내 + 다음 목표 = 등록 전 보스 스테이지만(서버 BossGateId - 등록하면 꺼진다)
 	local gate = player:GetAttribute("BossGateId")
@@ -444,7 +448,7 @@ RunService.Heartbeat:Connect(function(dt)
 		lastGate = gate
 		if gate then
 			local info = WorldMapLayout.bossGate(gate)
-			Wayfinder.setPoints("bossGate", WorldMapLayout.bossGateRoute(gate), { label = info and (info.name .. " 관문") })
+			Wayfinder.setPoints("bossGate", WorldMapLayout.bossGateRoute(gate), { label = info and Text.get("scene.world.gateLabel", { name = info.name }) })
 		else
 			Wayfinder.clear("bossGate")
 		end
@@ -473,16 +477,17 @@ RunService.Heartbeat:Connect(function(dt)
 	objectiveLabel.Visible = (g ~= nil or dest ~= nil) and regionLabel.Visible and owner ~= nil and not inBoss
 	objectiveLabel.TextTransparency = Wayfinder.isHidden() and 0.45 or 0
 	if Wayfinder.isHidden() then
-		objectiveLabel.Text = "길 안내 꺼짐 · 눌러서 켜기"
+		objectiveLabel.Text = Text.get("scene.world.guideOff")
 		objectiveLabel.TextColor3 = UIColors.textPrimary
 	elseif g and root then
 		local d = Vector3.new(g.position.X - root.Position.X, 0, g.position.Z - root.Position.Z).Magnitude
-		objectiveLabel.Text = ("다음 목표: %s 관문을 찾아라 · %dm"):format(g.name, math.floor(d * TREE.metersPerStud + 0.5))
+		objectiveLabel.Text = Text.get("scene.world.goalGate", { name = g.name, m = ("%d"):format(math.floor(d * TREE.metersPerStud + 0.5)) })
 		objectiveLabel.TextColor3 = Color3.fromRGB(g.color[1], g.color[2], g.color[3])
 	elseif dest and root then
 		local d = Vector3.new(dest.X - root.Position.X, 0, dest.Z - root.Position.Z).Magnitude
 		local label = Wayfinder.label()
-		objectiveLabel.Text = label and ("다음 목표: %s · %dm"):format(label, math.floor(d * TREE.metersPerStud + 0.5)) or ("안내 · %dm"):format(math.floor(d * TREE.metersPerStud + 0.5))
+		local meters = ("%d"):format(math.floor(d * TREE.metersPerStud + 0.5))
+		objectiveLabel.Text = label and Text.get("scene.world.goal", { label = tostring(label), m = meters }) or Text.get("scene.world.guideDistance", { m = meters })
 		objectiveLabel.TextColor3 = UIColors.textPrimary
 	end
 	placeObjective()

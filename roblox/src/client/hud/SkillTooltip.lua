@@ -27,7 +27,7 @@ local INFO_MAX_AGE = 1
 local PAD = 10
 local LABEL_WIDTH = 84
 local ICON = 56
-local KEEP = { ["쿨타임"] = true, ["예상 피해"] = true, ["효과"] = true, ["회복량"] = true, ["쉴드량"] = true } -- 카드 = 핵심 수치 1 ~ 2개(QUEUE-ALL3 Q9)
+local KEEP = { cooldown = true, expected = true, effect = true, heal = true, shield = true } -- 카드 = 핵심 수치 1 ~ 2개(QUEUE-ALL3 Q9) · QUEUE-ALL4 E: 줄 id로 고른다(줄 머리 글은 언어마다 다르다)
 local MARGIN = 8
 
 local player = Players.LocalPlayer
@@ -117,9 +117,9 @@ local function render()
 		local ult = slotId == "t" and UltimateData.skills[classId]
 		built = { keyText = slotId == "dash" and "Shift" or slotId:upper(), title = ult and ult.name or Text.get("skillCard.dash"), lines = {} }
 		if ult then
-			table.insert(built.lines, { label = "쿨타임", text = Text.get("skillCard.ultGauge") })
+			table.insert(built.lines, { id = "cooldown", label = Text.get("desc.skill.label.cooldown"), text = Text.get("skillCard.ultGauge") })
 			if ult.durationSeconds then
-				table.insert(built.lines, { label = "효과", text = Text.get("skillCard.duration", { n = tostring(ult.durationSeconds) }), colorName = "ember" })
+				table.insert(built.lines, { id = "effect", label = Text.get("desc.skill.label.effect"), text = Text.get("skillCard.duration", { n = tostring(ult.durationSeconds) }), colorName = "ember" })
 			end
 		end
 	end
@@ -134,7 +134,7 @@ local function render()
 		table.insert(compact, { label = "", text = short })
 	end
 	for _, entry in ipairs(built.lines) do
-		if KEEP[entry.label] and #compact < 3 then
+		if KEEP[entry.id] and #compact < 3 then
 			table.insert(compact, entry)
 		end
 	end
@@ -150,7 +150,7 @@ local function render()
 	refs.icon.Image = path and ArtImage.get(path) or ""
 	refs.icon.ImageColor3 = locked and Color3.fromRGB(120, 122, 130) or Color3.new(1, 1, 1)
 	local w = width()
-	refs.title.Text = ("[%s] %s"):format(built.keyText, built.title)
+	refs.title.Text = Text.get("hud.skill.title", { key = built.keyText, name = built.title })
 	for _, label in ipairs(refs.lines) do
 		label.left:Destroy()
 		label.right:Destroy()

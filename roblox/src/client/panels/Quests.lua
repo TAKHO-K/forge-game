@@ -260,7 +260,7 @@ local function renderCommunity()
 	local week = Workspace:GetAttribute("CommunityGoalWeek")
 	local left = week and ((week + 1) * 7 - 3) * 86400 - os.time() or nil -- 다음 월요일 0시(UTC)까지
 	local mine = label(card, Text.get("quests.communityMine", { n = tostring(player:GetAttribute("CommunityGoalContributed") or 0),
-		left = left and ("%d일 %d시간"):format(left // 86400, (left % 86400) // 3600) or "-" }), "body", "textSecondary")
+		left = left and Text.get("ui.quest.daysHours", { days = ("%d"):format(left // 86400), hours = ("%d"):format((left % 86400) // 3600) }) or "-" }), "body", "textSecondary")
 	mine.Position, mine.Size = UDim2.fromOffset(0, 96), UDim2.new(1, 0, 0, 22)
 	local claimed = "," .. tostring(player:GetAttribute("CommunityGoalClaimed") or "") .. ","
 	for i, t in ipairs(CommunityGoalData.tiers) do

@@ -28,16 +28,16 @@ local INFO_COLOR = Color3.new(1, 1, 1)
 local OPPORTUNITY_COLOR = Color3.fromRGB(120, 200, 255) -- BossPatternVisuals의 헤롱 말풍선과 같은 값
 
 -- 표시 문자열(수치 아님). kind·rescueType은 BossData SPECIES_MECHANICS의 값이다.
-local KIND_NAMES = {
-	frozen = "빙결",
-	submerged = "침수",
-	crystallized = "결정화",
-	buried = "속박",
-	shocked = "감전",
-	grabbed = "대공 잡기", -- BR1
-	airFrozen = "얼음(대공 잡기 대기)", -- BR1 사슬: 가까운 사람부터 잡힌다
-	bubbled = "공중 가둠", -- BR1-2: 점프 연타로 탈출
-	snowball = "눈덩이", -- BR1-4c c-11: 1.2초 안에 저절로 튀어나온다(구출 없음)
+local KIND_NAMES = { -- 값 = 문장 키(TextData_scene)
+	frozen = "scene.boss.trap.frozen",
+	submerged = "scene.boss.trap.submerged",
+	crystallized = "scene.boss.trap.crystallized",
+	buried = "scene.boss.trap.buried",
+	shocked = "scene.boss.trap.shocked",
+	grabbed = "scene.boss.trap.grabbed", -- BR1
+	airFrozen = "scene.boss.trap.airFrozen", -- BR1 사슬: 가까운 사람부터 잡힌다
+	bubbled = "scene.boss.trap.bubbled", -- BR1-2: 점프 연타로 탈출
+	snowball = "scene.boss.trap.snowball", -- BR1-4c c-11: 1.2초 안에 저절로 튀어나온다(구출 없음)
 }
 -- 29-5: 구출 입력이 F 홀드 하나로 통일됐다 - 픽토그램은 "손"(꾹 누른다) 하나이고, 다른 길이 있는 종류만 그 길을 덧붙인다
 -- (빙결 = 얼음을 때려도 된다 · 결정화 = 진짜를 찾아 때린다).
@@ -340,7 +340,7 @@ function BossTrapView.start()
 					local remaining, rescue = readBars(target)
 					title.Text = (kind == "grabbed" and rescue <= 0) and Text.get("boss.grab.struggle") -- BR1: 점프 연타로 발버둥(남은 시간이 준다)
 						or (kind == "bubbled" and Text.get("boss.bubble.struggle")) -- BR1-2 공중 가둠
-						or (rescue > 0 and "%s - 친구가 구하는 중" or "%s - 움직일 수 없습니다"):format(KIND_NAMES[kind] or "잡힘")
+						or Text.get(rescue > 0 and "scene.boss.trap.rescuing" or "scene.boss.trap.stuck", { kind = Text.get(KIND_NAMES[kind] or "scene.boss.trap.caught") })
 					ownCountdown.Size = UDim2.new(remaining, 0, 1, 0)
 					ownRescue.Size = UDim2.new(rescue, 0, 1, 0)
 				end

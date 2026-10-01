@@ -19,6 +19,12 @@ local BossEncounter = require(script.Parent.BossEncounter)
 local PartyState = require(script.Parent.PartyState)
 local PartyVote = require(script.Parent.PartyVote)
 local ImmediateSave = require(script.Parent.ImmediateSave)
+local Text = require(ReplicatedStorage.Shared.Text)
+
+-- 그 플레이어 언어의 문장(스탠드인 테이블 → 서버 기본 언어 ko)
+local function textFor(player, key, args)
+	return Text.getFor(typeof(player) == "Instance" and player or nil, key, args)
+end
 
 local BossGate = {}
 
@@ -189,7 +195,7 @@ function BossGate.enterRaid(player, bossId, remote)
 		return "in_encounter"
 	end
 	if PartyState.getParty(player) then
-		PartyState.notify(player, "토벌은 지금 혼자만 들어갈 수 있습니다(파티 토벌은 준비 중)")
+		PartyState.notify(player, textFor(player, "srv.raid.soloOnly"))
 		return "party_later"
 	end
 	if BossEncounter.isEntryExcluded(player) then -- 리뷰: 견습 중 제외(파티 보스 입장과 같은 규칙)
@@ -229,7 +235,7 @@ function BossGate.enter(player, bossId)
 	local back = BossGate.returnPointForBoss(bossId)
 	if party then
 		if not PartyState.isLeader(player) then
-			PartyState.notify(player, "보스 관문은 파티 리더가 연다")
+			PartyState.notify(player, textFor(player, "srv.boss.leaderGate"))
 			return "party_not_leader"
 		end
 		local blocked = BossEncounter.checkPartyEntry(party, stage)
@@ -238,7 +244,7 @@ function BossGate.enter(player, bossId)
 			for _, entry in ipairs(blocked) do
 				table.insert(names, ("%s:%s"):format(entry.player.Name, entry.reason))
 			end
-			PartyState.notify(player, "파티 보스 입장 불가 - " .. table.concat(names, ", "))
+			PartyState.notify(player, textFor(player, "srv.boss.partyBlocked", { list = table.concat(names, ", ") }))
 			return "party_blocked"
 		end
 		local started = PartyVote.start(party, player, stage, function(passed)
@@ -250,7 +256,7 @@ function BossGate.enter(player, bossId)
 			end
 		end)
 		if not started then
-			PartyState.notify(player, "이미 진행 중인 투표가 있습니다")
+			PartyState.notify(player, textFor(player, "srv.party.votePending"))
 			return "vote_pending"
 		end
 		return "vote"
@@ -272,8 +278,8 @@ function BossGate.setupPrompts(groundFolder)
 		if bossId then
 			local prompt = Instance.new("ProximityPrompt")
 			prompt.Name = "GateRegisterPrompt"
-			prompt.ActionText = "관문 등록"
-			prompt.ObjectText = (BossData.bosses[bossId] and BossData.bosses[bossId].displayName or bossId) .. " 관문"
+			prompt.ActionText = Text.get("srv.gate.registerAction")
+			prompt.ObjectText = Text.get("srv.gate.objectText", { boss = BossData.bosses[bossId] and BossData.bosses[bossId].displayName or bossId })
 			prompt.KeyboardKeyCode = Enum.KeyCode.F
 			prompt.HoldDuration = 0
 			prompt.MaxActivationDistance = G.promptDistance

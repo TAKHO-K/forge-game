@@ -88,8 +88,8 @@ local function render()
 				table.insert(parts, ("%s ×%g"):format(require(ReplicatedStorage.Shared.data.ArmorData).grades[gradeId].displayName, m))
 			end
 		end
-		local rule = require(ReplicatedStorage.Shared.DropTable).gainOnly and "늘어난 몫은 일반에서만 뺌 - 첫 환생 전이라 희귀 이상은 줄지 않음" or "늘어난 몫은 아래 등급에서 뺌" -- QUEUE-ALL1 R1
-		line("균열 시간: " .. table.concat(parts, " · ") .. "(" .. rule .. " · 태초 · 초월 제외) - 아래 표는 균열 중 확률", "body", "textPrimary")
+		local ruleKey = require(ReplicatedStorage.Shared.DropTable).gainOnly and "ui.prob.riftGainOnly" or "ui.prob.riftBelow" -- QUEUE-ALL1 R1
+		line(Text.get(ruleKey, { list = table.concat(parts, " · ") }), "body", "textPrimary")
 	end
 	line(Text.get("prob.field"), "body", "textPrimary")
 	for tier, rows in ipairs(d.drop.field) do
@@ -99,13 +99,13 @@ local function render()
 	line(Text.get("prob.firstClear") .. gradeRowsText(d.drop.firstClear), "caption", "textSecondary")
 	if d.firstBossMinGrade then -- QUEUE-ALL1 P3: 그 직업의 첫 보스 첫 클리어 = 이 등급 이상 확정(굴림이 아래면 올린다)
 		local g = require(ReplicatedStorage.Shared.data.ArmorData).grades[d.firstBossMinGrade]
-		line(("  · 직업마다 첫 보스 첫 클리어 = %s 이상 확정(위 표 굴림이 아래면 %s으로)"):format(g and g.displayName or d.firstBossMinGrade, g and g.displayName or d.firstBossMinGrade), "caption", "textSecondary")
+		line(Text.get("ui.prob.firstBossMin", { grade = g and g.displayName or d.firstBossMinGrade }), "caption", "textSecondary")
 	end
 	line(Text.get("prob.raid", { sec = tostring(require(ReplicatedStorage.Shared.data.DropTableData).raidTimeFairness.referenceSeconds) }) .. gradeRowsText(d.drop.raid), "caption", "textSecondary")
 	line(Text.get("prob.sparkle") .. gradeRowsText(d.drop.sparkle), "caption", "textSecondary")
 	line(Text.get("prob.enhance"), "body", "textPrimary")
 	for _, r in ipairs(d.enhance) do
-		line(("+%d → +%d %s · 유지 %s · -1 %s · -2 %s · 초기화 %s"):format(r.level, r.level + 1, pct(r.success), pct(r.maintain), pct(r.down1), pct(r.down2), pct(r.reset)), "caption", "textSecondary")
+		line(Text.get("ui.prob.enhanceRow", { from = ("%d"):format(r.level), to = ("%d"):format(r.level + 1), success = pct(r.success), maintain = pct(r.maintain), down1 = pct(r.down1), down2 = pct(r.down2), reset = pct(r.reset) }), "caption", "textSecondary")
 	end
 	line(Text.get("prob.option"), "body", "textPrimary")
 	local pool = d.options[classId] or Disclosure.optionPool(nil) -- 직업 없음 = 공통 풀(실제 rollFor(nil)과 같음)
@@ -133,7 +133,7 @@ local function render()
 			local t = lv.byEgg[eggGrade]
 			table.insert(parts, ("%s %.1f/%.1f/%.1f/%.1f"):format(EggData.gradeNames[eggGrade], t.common, t.uncommon, t.rare, t.epic))
 		end
-		line(("Lv.%d(%d회~) %s"):format(lv.level, lv.hatches, table.concat(parts, " · ")), "caption", "textSecondary")
+		line(Text.get("ui.prob.hatchRow", { level = ("%d"):format(lv.level), hatches = ("%d"):format(lv.hatches), list = table.concat(parts, " · ") }), "caption", "textSecondary")
 	end
 	line(Text.get("prob.version", { version = d.version }), "caption", "textTertiary")
 end

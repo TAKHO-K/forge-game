@@ -35,11 +35,10 @@ local PAD = 8
 local BUTTON_WIDTH = 200
 local FADE_HEIGHT = 18 -- 스크롤 영역 아래쪽 흐림(더 볼 내용이 있다는 표시)
 local BUY_FAIL_REASONS = {
-	insufficient_gold = "골드가 부족합니다",
-	not_near_station = "강화대에서 너무 멀리 떨어졌습니다",
-	invalid_kind = "알 수 없는 방지권입니다",
+	insufficient_gold = "forge.err.noGold",
+	not_near_station = "forge.enhance.err.notNear",
+	invalid_kind = "forge.enhance.err.invalidKind",
 }
-local TAB_LABELS = { { id = "enhance", text = "강화" }, { id = "rebirth", text = "환생" } }
 
 local player = Players.LocalPlayer
 local built -- 지은 패널의 refs 표 하나(아래 build) - 없으면 아직 안 지었다
@@ -60,29 +59,29 @@ end
 local function resultLine(data)
 	local level = data.level or (player:GetAttribute("WeaponLevel") or 0)
 	local result = data.result
-	local suffix = ""
+	local gain -- 불씨 증가분(있으면 문장 끝에 " · 불씨 +n%"가 붙는 템플릿)
 	if data.gaugeGain and data.gaugeGain > 0 then
-		suffix = (" · 불씨 +%s"):format(OddsView.formatPercent(data.gaugeGain / (data.gaugeMax or EnhanceConfig.gauge.max)))
+		gain = OddsView.formatPercent(data.gaugeGain / (data.gaugeMax or EnhanceConfig.gauge.max))
 	end
 	if data.blockedBy then
 		local left = data.ticketsLeft and data.ticketsLeft[data.blockedBy] or 0
-		return ("%s이 막았습니다(남은 %d장)"):format(EnhanceConfig.protection[data.blockedBy].displayName, left), "textPrimary"
+		return Text.get("forge.enhance.result.blocked", { ticket = EnhanceConfig.protection[data.blockedBy].displayName, left = ("%d"):format(left) }), "textPrimary"
 	elseif result == "success" then
-		return ("성공! +%d"):format(level), "success"
+		return Text.get("forge.enhance.result.success", { level = ("%d"):format(level) }), "success"
 	elseif result == "maintain" then
-		return ("실패 - 유지 (+%d)%s"):format(level, suffix), "textPrimary"
+		return Text.get(gain and "forge.enhance.result.maintainGauge" or "forge.enhance.result.maintain", { level = ("%d"):format(level), gain = gain }), "textPrimary"
 	elseif result == "down1" or result == "down2" then
-		return ("실패 - %d강 하락 (+%d)%s"):format(result == "down1" and 1 or 2, level, suffix), "ember"
+		return Text.get(gain and "forge.enhance.result.downGauge" or "forge.enhance.result.down", { drop = result == "down1" and "1" or "2", level = ("%d"):format(level), gain = gain }), "ember"
 	elseif result == "reset" then
-		return ("%d강에서 다시 시작합니다. 불씨는 유지됩니다"):format(EnhanceConfig.resetToLevel), "danger"
+		return Text.get("forge.enhance.result.reset", { level = ("%d"):format(EnhanceConfig.resetToLevel) }), "danger"
 	elseif result == "max" then
-		return "이미 최대 강화 단계입니다", "textPrimary"
+		return Text.get("forge.enhance.result.max"), "textPrimary"
 	elseif result == "insufficient_gold" then
-		return "골드가 부족합니다", "danger"
+		return Text.get("forge.err.noGold"), "danger"
 	elseif result == "insufficient_material" then
 		local state = Controller.getState()
 		local name = state.material and state.material.name or tostring(data.materialId)
-		return ("%s이 부족합니다 (%d개 필요 · 보유 %d개)"):format(name, data.need, data.have), "danger"
+		return Text.get("forge.enhance.result.noMaterial", { name = name, need = ("%d"):format(data.need), have = ("%d"):format(data.have) }), "danger"
 	end
 	return tostring(result), "textPrimary"
 end
@@ -90,15 +89,15 @@ end
 -- 방지권 구매 결과(ProtectionTicketBuyResult payload)의 문구와 색.
 local function buyResultLine(data)
 	if data.ok then
-		return ("%s을 샀습니다 (보유 %d장)"):format(EnhanceConfig.protection[data.kind].displayName, data.tickets[data.kind]), "success"
+		return Text.get("forge.enhance.bought", { ticket = EnhanceConfig.protection[data.kind].displayName, count = ("%d"):format(data.tickets[data.kind]) }), "success"
 	end
-	return BUY_FAIL_REASONS[data.reason] or tostring(data.reason), "danger"
+	return BUY_FAIL_REASONS[data.reason] and Text.get(BUY_FAIL_REASONS[data.reason]) or tostring(data.reason), "danger"
 end
 
 -- P2.5a R4: 최대 단계를 제목에 항상 적는다("최대 +30" - EnhanceConfig.maxLevel).
 local function titleText(gradeName, level, maxed)
-	return maxed and ("%s 등급 · +%d (최대)"):format(gradeName, level)
-		or ("%s 등급 · +%d → +%d · 최대 +%d"):format(gradeName, level, level + 1, EnhanceConfig.maxLevel)
+	return maxed and Text.get("forge.enhance.title.max", { grade = gradeName, level = ("%d"):format(level) })
+		or Text.get("forge.enhance.title.next", { grade = gradeName, level = ("%d"):format(level), next = ("%d"):format(level + 1), max = ("%d"):format(EnhanceConfig.maxLevel) })
 end
 
 local function refresh()
@@ -111,7 +110,7 @@ local function refresh()
 			built.panel.titleLabel.Text = titleText(state.gradeName, state.level, state.maxed)
 		end
 	else
-		built.panel.titleLabel.Text = "환생"
+		built.panel.titleLabel.Text = Text.get("forge.enhance.tab.rebirth")
 	end
 	CostView.update(built.cost, state)
 	OddsView.updateTable(built.odds, state.level, state.outcomes)
@@ -119,10 +118,10 @@ local function refresh()
 	TicketView.update(built.tickets, state)
 	OddsView.updateHint(built.hint, state)
 	if state.maxed then
-		built.button.setText("최대")
-		built.button.setEnabled(false, "최대 강화 단계입니다")
+		built.button.setText(Text.get("forge.enhance.buttonMax"))
+		built.button.setEnabled(false, Text.get("forge.err.maxed"))
 	else
-		built.button.setText("강화")
+		built.button.setText(Text.get("forge.enhance.button"))
 		built.button.setEnabled(state.canAfford, state.shortReason)
 	end
 	built.rebirth.update()
@@ -261,7 +260,7 @@ local function build()
 
 	local tabs = Tabs.build({
 		parent = content,
-		tabs = TAB_LABELS,
+		tabs = { { id = "enhance", text = Text.get("forge.enhance.tab.enhance") }, { id = "rebirth", text = Text.get("forge.enhance.tab.rebirth") } },
 		selected = "enhance",
 		width = width,
 		onSelect = function(id)
@@ -363,7 +362,7 @@ local function build()
 		parent = footer,
 		name = "EnhanceButton",
 		kind = "primary",
-		text = "강화",
+		text = Text.get("forge.enhance.button"),
 		width = BUTTON_WIDTH,
 		anchorPoint = Vector2.new(0.5, 0),
 		position = UDim2.new(0.5, 0, 0, buttonY),

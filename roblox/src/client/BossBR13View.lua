@@ -14,6 +14,7 @@ local Workspace = game:GetService("Workspace")
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local BossSkillMath = require(ReplicatedStorage.Shared.BossSkillMath)
 local BossFx = require(script.Parent.BossFx)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local BossBR13View = {}
 
@@ -446,7 +447,7 @@ function BossBR13View.armadilloStance(data)
 	local boss = bossNear(data.center)
 	local head = boss and boss:FindFirstChild("Head")
 	if head then
-		shell.gui = billboard(head, "✋ 공격 멈춤", Color3.fromRGB(255, 230, 90), nil, UDim2.new(0, 220, 0, 64))
+		shell.gui = billboard(head, Text.get("scene.boss.shell.stopAttack"), Color3.fromRGB(255, 230, 90), nil, UDim2.new(0, 220, 0, 64))
 		shell.gui.StudsOffset = Vector3.new(0, 7, 0)
 	end
 end

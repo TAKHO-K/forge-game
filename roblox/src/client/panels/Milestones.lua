@@ -29,7 +29,7 @@ local function build()
 	local panel = Panel.create({
 		id = MilestonesPanel.id,
 		kind = "window",
-		title = "성장 보상 - 환생 후 레벨 마일스톤",
+		title = Text.get("ui.milestone.title"),
 		size = PANEL_SIZE,
 		help = { -- G1-1: "버킷" · "스테이지 10칸분" 개발 용어 정리 + 2단
 			short = Text.get("milestones.help.short", { rebirths = MilestoneData.requiredRebirths }),
@@ -128,47 +128,47 @@ function MilestonesPanel.render()
 	local claimed = data.claimedLevel or 0
 	local eligible = Milestone.isEligible(rebirthCount)
 
-	line(("환생 %d회 · 지금 레벨 %d"):format(rebirthCount, level), "header", "textPrimary", "Heading")
-	line(("마일스톤 버킷: %s +%s(합연산 · 상한 +%s · 스테이지 환산 +%.1f)"):format(Milestone.statText(), pct(Milestone.bonusFor(claimed)), pct(Milestone.bonusCap()), Milestone.stageEquivalent(claimed)), "body", "success", "StatTotal")
+	line(Text.get("ui.milestone.heading", { rebirths = ("%d"):format(rebirthCount), level = ("%d"):format(level) }), "header", "textPrimary", "Heading")
+	line(Text.get("ui.milestone.bucket", { stat = Milestone.statText(), bonus = pct(Milestone.bonusFor(claimed)), cap = pct(Milestone.bonusCap()), stages = ("%.1f"):format(Milestone.stageEquivalent(claimed)) }), "body", "success", "StatTotal")
 	if not eligible then
-		line(("환생 %d회를 마치면 레벨 %d부터 보상이 열립니다(지금 %d회)"):format(MilestoneData.requiredRebirths, MilestoneData.firstLevel, rebirthCount), "body", "textSecondary", "Locked")
+		line(Text.get("ui.milestone.locked", { rebirths = ("%d"):format(MilestoneData.requiredRebirths), level = ("%d"):format(MilestoneData.firstLevel), current = ("%d"):format(rebirthCount) }), "body", "textSecondary", "Locked")
 	elseif Milestone.bonusFor(claimed) >= Milestone.bonusCap() then
-		line("능력치 보상은 상한에 닿았습니다(해금은 계속 열립니다)", "body", "textSecondary", "NextStat")
+		line(Text.get("ui.milestone.capReached"), "body", "textSecondary", "NextStat")
 	else
 		local nextStat = Milestone.nextStatLevel(math.max(level, claimed))
-		line(("다음 능력치 보상: Lv.%d(버킷 +%s) - 남은 레벨 %d"):format(nextStat, pct(Milestone.bonusFor(nextStat) - Milestone.bonusFor(claimed)), nextStat - level), "body", "textPrimary", "NextStat")
+		line(Text.get("ui.milestone.nextStat", { level = ("%d"):format(nextStat), bonus = pct(Milestone.bonusFor(nextStat) - Milestone.bonusFor(claimed)), left = ("%d"):format(nextStat - level) }), "body", "textPrimary", "NextStat")
 	end
 	local unlockCount = data.unlockCount or 0
 	local nextUnlock = MilestoneData.unlocks[unlockCount + 1]
 	if nextUnlock then
 		local at = Milestone.unlockLevel(unlockCount + 1)
-		line(("다음 해금: %s - 환생 %d회 뒤 Lv.%d%s"):format(nextUnlock.name, MilestoneData.requiredRebirths, at, (eligible and level < at) and (" · 남은 레벨 %d"):format(at - level) or ""), "body", "textPrimary", "NextUnlock")
+		line(Text.get((eligible and level < at) and "ui.milestone.nextUnlockLeft" or "ui.milestone.nextUnlock", { name = nextUnlock.name, rebirths = ("%d"):format(MilestoneData.requiredRebirths), level = ("%d"):format(at), left = ("%d"):format(at - level) }), "body", "textPrimary", "NextUnlock")
 	else
-		line("해금은 전부 받았습니다", "body", "textSecondary", "NextUnlock")
+		line(Text.get("ui.milestone.allUnlocked"), "body", "textSecondary", "NextUnlock")
 	end
 
-	line(("능력치 사다리(환생 %d회 뒤 · 직업별)"):format(MilestoneData.requiredRebirths), "caption", "textSecondary", "LadderHeader")
+	line(Text.get("ui.milestone.ladderHeader", { rebirths = ("%d"):format(MilestoneData.requiredRebirths) }), "caption", "textSecondary", "LadderHeader")
 	local bigGot = claimed >= MilestoneData.firstLevel
-	row("Ladder_Big", ("Lv.%d"):format(MilestoneData.firstLevel), ("큰 보상 %s +%s"):format(Milestone.statText(), pct(MilestoneData.bigBonus)),
-		bigGot and "받음" or (eligible and ("남은 레벨 %d"):format(MilestoneData.firstLevel - level) or "환생 뒤 열림"), bigGot and "success" or nil, not bigGot)
+	row("Ladder_Big", ("Lv.%d"):format(MilestoneData.firstLevel), Text.get("ui.milestone.big", { stat = Milestone.statText(), bonus = pct(MilestoneData.bigBonus) }),
+		bigGot and Text.get("ui.milestone.got") or (eligible and Text.get("ui.milestone.levelsLeft", { left = ("%d"):format(MilestoneData.firstLevel - level) }) or Text.get("ui.milestone.afterRebirth")), bigGot and "success" or nil, not bigGot)
 	local smallCount = math.max(0, Milestone.statCountFor(claimed) - 1)
-	row("Ladder_Small", ("+%d마다"):format(MilestoneData.statInterval), ("작은 보상 %s +%s"):format(Milestone.statText(), pct(MilestoneData.smallBonus)),
-		("%d회 받음"):format(smallCount), smallCount > 0 and "success" or nil, smallCount == 0)
+	row("Ladder_Small", Text.get("ui.milestone.every", { interval = ("%d"):format(MilestoneData.statInterval) }), Text.get("ui.milestone.small", { stat = Milestone.statText(), bonus = pct(MilestoneData.smallBonus) }),
+		Text.get("ui.milestone.gotTimes", { count = ("%d"):format(smallCount) }), smallCount > 0 and "success" or nil, smallCount == 0)
 	local capLevel = Milestone.capLevel()
 	local capGot = claimed >= capLevel
-	row("Ladder_Cap", ("Lv.%d"):format(capLevel), ("상한 +%s(스테이지 10칸분)"):format(pct(Milestone.bonusCap())), capGot and "도달" or "", capGot and "success" or nil, not capGot)
+	row("Ladder_Cap", ("Lv.%d"):format(capLevel), Text.get("ui.milestone.cap", { cap = pct(Milestone.bonusCap()) }), capGot and Text.get("ui.milestone.reached") or "", capGot and "success" or nil, not capGot)
 
-	line(("시스템 해금(환생 %d회 뒤 Lv.%d부터 %d레벨마다 · 계정 공유)"):format(MilestoneData.requiredRebirths, MilestoneData.firstLevel, MilestoneData.unlockInterval), "caption", "textSecondary", "UnlockHeader")
+	line(Text.get("ui.milestone.unlockHeader", { rebirths = ("%d"):format(MilestoneData.requiredRebirths), level = ("%d"):format(MilestoneData.firstLevel), interval = ("%d"):format(MilestoneData.unlockInterval) }), "caption", "textSecondary", "UnlockHeader")
 	for index, entry in ipairs(MilestoneData.unlocks) do
 		local at = Milestone.unlockLevel(index)
 		local got = index <= unlockCount
 		local stateText, stateColor
 		if got then
-			stateText, stateColor = entry.reserved and "받음 · 그 시스템이 생기면 적용" or "받음", "success"
+			stateText, stateColor = Text.get(entry.reserved and "ui.milestone.gotReserved" or "ui.milestone.got"), "success"
 		elseif eligible and level < at then
-			stateText = ("남은 레벨 %d"):format(at - level)
+			stateText = Text.get("ui.milestone.levelsLeft", { left = ("%d"):format(at - level) })
 		else
-			stateText = "환생 뒤 열림"
+			stateText = Text.get("ui.milestone.afterRebirth")
 		end
 		row("Unlock_" .. entry.id, ("Lv.%d"):format(at), entry.name, stateText, stateColor, not got)
 	end

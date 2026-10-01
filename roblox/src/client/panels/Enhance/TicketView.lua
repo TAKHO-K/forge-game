@@ -2,6 +2,7 @@
 -- 보유 0 · 사용 불가 구간 · 불씨 가득이면 토글은 비활성 + 이유 한 줄(Toggle이 토글 아래에 그린다). [구매]는 언제나 켜져 있다 - 골드가 모자란 경우는 확인창(Confirm)이 다룬다.
 -- 토글 영역은 줄 전체 폭이고 [구매]가 그 오른쪽 끝을 덮는다(나중에 만든 형제가 위 - [구매]를 누르면 토글은 안 바뀐다). 이유 줄이 [구매] 밑까지 넓게 쓰게 하려는 배치다.
 
+local Text = require(game:GetService("ReplicatedStorage").Shared.Text)
 local Button = require(script.Parent.Parent.Parent.ui.kit.Button)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 local Toggle = require(script.Parent.Parent.Parent.ui.kit.Toggle)
@@ -43,7 +44,7 @@ function TicketView.build(parent, x, y, width, kinds, handlers)
 			parent = parent,
 			name = "Buy_" .. kind,
 			kind = "secondary",
-			text = "구매",
+			text = Text.get("forge.buy"),
 			width = BUY_WIDTH,
 			anchorPoint = Vector2.new(1, 0),
 			position = UDim2.new(0, x + width, 0, rowY),

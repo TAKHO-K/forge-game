@@ -200,10 +200,10 @@ local function build()
 	optionStatsHeader.TextSize = Theme.textSize("caption") -- 16-6 [4]: 12px 미만 금지.
 	optionStatsHeader.TextXAlignment = Enum.TextXAlignment.Left
 	optionStatsHeader.TextColor3 = UIColors.textTertiary
-	optionStatsHeader.Text = "옵션 보너스"
+	optionStatsHeader.Text = Text.get("gear.stats.header")
 	optionStatsHeader.Parent = optionStatsBox
 	-- 25-3: `(상한N%)` 표기(26-3)가 왜 있는지 설명 - 창 왼쪽 단이라 오른쪽(기본값)으로 연다.
-	HelpTooltip.attach(optionStatsHeader, UDim2.new(1, -8, 0.5, 0), "스탯마다 상한이 있습니다. 상한에 도달하면 초과분은 버려집니다.")
+	HelpTooltip.attach(optionStatsHeader, UDim2.new(1, -8, 0.5, 0), Text.get("gear.stats.capHelp"))
 	local optionRows = {}
 	for i = 1, 4 do
 		local row = Instance.new("TextLabel")
@@ -254,13 +254,13 @@ local function refreshStats()
 	end
 
 	local axes = {
-		{ id = "attackPercent", label = "위력" },
-		{ id = "speedPercent", label = "신속" },
-		{ id = "defensePercent", label = "방어" },
-		{ id = "maxHpPercent", label = "건강" },
-		{ id = "expGain", label = "성장" },
-		{ id = "healingPower", label = "재생" },
-		{ id = "lifesteal", label = "흡혈" },
+		{ id = "attackPercent", labelKey = "inv.axis.attackPercent" },
+		{ id = "speedPercent", labelKey = "inv.axis.speedPercent" },
+		{ id = "defensePercent", labelKey = "inv.axis.defensePercent" },
+		{ id = "maxHpPercent", labelKey = "gear.stats.maxHpPercent" },
+		{ id = "expGain", labelKey = "inv.axis.expGain" },
+		{ id = "healingPower", labelKey = "inv.axis.healingPower" },
+		{ id = "lifesteal", labelKey = "inv.axis.lifesteal" },
 	}
 
 	local function refreshOptionStats(classId)
@@ -274,9 +274,9 @@ local function refreshStats()
 				local row = rows[shown]
 				local def = OptionData.options[axis.id]
 				-- [12] "상한에 걸린 축은 총 스탯 패널에 (상한 N%)를 붙이고 값 텍스트를 ember로".
-				local capText = def.cap and (" (상한%d)"):format(math.floor(def.cap * 100 + 0.5)) or ""
+				local capText = def.cap and Text.get("gear.stats.cap", { cap = ("%d"):format(math.floor(def.cap * 100 + 0.5)) }) or ""
 				local atCap = def.cap and value >= def.cap - 0.0005
-				row.Text = ("%s %+.1f%%%s"):format(axis.label, value * 100, capText)
+				row.Text = Text.get("gear.stats.row", { axis = Text.get(axis.labelKey), value = ("%+.1f"):format(value * 100), cap = capText })
 				row.TextColor3 = atCap and UIColors.ember or UIColors.textSecondary
 				row.Visible = true
 			end

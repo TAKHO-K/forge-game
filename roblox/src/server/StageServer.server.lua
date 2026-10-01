@@ -18,6 +18,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageConfig)
+local Text = require(ReplicatedStorage.Shared.Text)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local ImmediateSave = require(script.Parent.ImmediateSave)
 local BossEncounter = require(script.Parent.BossEncounter)
@@ -106,13 +107,13 @@ local function onStageMove(player, targetStage)
 	local viaGate = gateOf ~= nil and not remote
 	if party and viaGate and not PartyState.isLeader(player) then
 		reject(player, "party_not_leader")
-		PartyState.notify(player, "보스 스테이지는 파티 리더만 열 수 있습니다")
+		PartyState.notify(player, Text.getFor(player, "srv.boss.leaderStage"))
 		return
 	end
 	if party and BossRules.isBossStage(targetStage) and not BossEncounter.getActive(player) and not viaGate then
 		if not PartyState.isLeader(player) then
 			reject(player, "party_not_leader")
-			PartyState.notify(player, "보스 스테이지는 파티 리더만 열 수 있습니다")
+			PartyState.notify(player, Text.getFor(player, "srv.boss.leaderStage"))
 			return
 		end
 		local blocked = BossEncounter.checkPartyEntry(party, targetStage)
@@ -122,7 +123,7 @@ local function onStageMove(player, targetStage)
 				table.insert(names, ("%s:%s"):format(entry.player.Name, entry.reason))
 			end
 			reject(player, "party_blocked", { blocked = names })
-			PartyState.notify(player, "파티 보스 입장 불가 - " .. table.concat(names, ", "))
+			PartyState.notify(player, Text.getFor(player, "srv.boss.partyBlocked", { list = table.concat(names, ", ") }))
 			return
 		end
 		isPartyBoss = true
@@ -190,7 +191,7 @@ local function onStageMove(player, targetStage)
 		end)
 		if not started then
 			reject(player, "vote_pending")
-			PartyState.notify(player, "이미 진행 중인 투표가 있습니다")
+			PartyState.notify(player, Text.getFor(player, "srv.party.votePending"))
 		end
 		return
 	end

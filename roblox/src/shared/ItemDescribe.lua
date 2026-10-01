@@ -68,14 +68,11 @@ local function optionLines(item, classId)
 	local accentClassId = not mismatched and def.classId or nil
 	if option.id == "crit" then
 		return {
-			{ text = ("치확 %+.1f%%p"):format(value.critRate * 100), dim = mismatched },
-			{ text = ("치피 %+.2f"):format(value.critDmg), dim = mismatched },
+			{ text = Text.get("desc.item.critRate", { value = ("%+.1f"):format(value.critRate * 100) }), dim = mismatched },
+			{ text = Text.get("desc.item.critDmg", { value = ("%+.2f"):format(value.critDmg) }), dim = mismatched },
 		}
 	end
-	local text = ("%s %+.1f%%"):format(optionName(option.id), value * 100)
-	if mismatched then
-		text ..= "(직업 불일치 · 효과 없음)"
-	end
+	local text = Text.get(mismatched and "desc.item.optionMismatch" or "desc.item.option", { name = optionName(option.id), value = ("%+.1f"):format(value * 100) })
 	return { { text = text, dim = mismatched, accentClassId = accentClassId } }
 end
 
@@ -95,13 +92,13 @@ end
 
 local PART_META = {
 	armor = function(item)
-		return ("%s · Lv.%d · 방어력 %s"):format(ItemVisualData.partDisplayNames.armor, item.itemLevel, NumberFormat.format(Loot.getArmorDefense(item)))
+		return Text.get("desc.item.meta.armor", { part = ItemVisualData.partDisplayNames.armor, level = ("%d"):format(item.itemLevel), value = NumberFormat.format(Loot.getArmorDefense(item)) })
 	end,
 	gloves = function(item)
-		return ("%s · Lv.%d · 공격력 +%.0f%%"):format(ItemVisualData.partDisplayNames.gloves, item.itemLevel, Loot.getGlovesAttackPercent(item) * 100)
+		return Text.get("desc.item.meta.gloves", { part = ItemVisualData.partDisplayNames.gloves, level = ("%d"):format(item.itemLevel), value = ("%.0f"):format(Loot.getGlovesAttackPercent(item) * 100) })
 	end,
 	shoes = function(item)
-		return ("%s · Lv.%d · 이동+공속 +%.0f%%"):format(ItemVisualData.partDisplayNames.shoes, item.itemLevel, Loot.getShoesSpeedPercent(item) * 100)
+		return Text.get("desc.item.meta.shoes", { part = ItemVisualData.partDisplayNames.shoes, level = ("%d"):format(item.itemLevel), value = ("%.0f"):format(Loot.getShoesSpeedPercent(item) * 100) })
 	end,
 }
 
@@ -111,7 +108,7 @@ function ItemDescribe.item(item, classId)
 	local metaFn = PART_META[part] or PART_META.armor
 	local suffix = StageGeneration.itemSuffix(item) -- C5-6 세대 세트 이름 접미사(주운 스테이지 ≥ 17,000)
 	return {
-		title = ("%s %s%s"):format(gradeName(item.grade), ItemVisualData.partDisplayNames[part] or "장비", suffix and (" · " .. suffix) or ""),
+		title = Text.get(suffix and "desc.item.titleSuffix" or "desc.item.title", { grade = gradeName(item.grade), part = ItemVisualData.partDisplayNames[part] or Text.get("desc.item.partGear"), suffix = suffix }),
 		gradeId = item.grade,
 		meta = metaFn(item),
 		options = optionLines(item, classId),
@@ -143,20 +140,20 @@ end
 function ItemDescribe.gem(gem, classId)
 	local title
 	if not gem.option then
-		title = ("%s 보석(옵션 미배정)"):format(gradeName(gem.grade))
+		title = Text.get("desc.item.gemNoOption", { grade = gradeName(gem.grade) })
 	else
-		title = ("%s %s 보석 · Lv.%d"):format(gradeName(gem.grade), optionName(gem.option.id), gem.itemLevel or 0)
+		title = Text.get("desc.item.gemTitle", { grade = gradeName(gem.grade), option = optionName(gem.option.id), level = ("%d"):format(gem.itemLevel or 0) })
 	end
-	return { title = title, gradeId = gem.grade, meta = "무기 보석", options = optionLines(gem, classId), note = critNote(gem) }
+	return { title = title, gradeId = gem.grade, meta = Text.get("desc.item.gemMeta"), options = optionLines(gem, classId), note = critNote(gem) }
 end
 
 -- 무기(등급 · 강화 단계). 무기는 옵션이 없다(20.67 [1]).
 function ItemDescribe.weapon(gradeId, weaponLevel)
 	local weaponData = WeaponData.weapons[WeaponData.starterId]
 	return {
-		title = ("%s %s"):format(gradeId and gradeName(gradeId) or "", weaponData.displayName),
+		title = Text.get("desc.item.weaponTitle", { grade = gradeId and gradeName(gradeId) or "", weapon = weaponData.displayName }),
 		gradeId = gradeId,
-		meta = ("무기 · +%d"):format(weaponLevel or 0),
+		meta = Text.get("desc.item.weaponMeta", { level = ("%d"):format(weaponLevel or 0) }),
 		options = {},
 	}
 end

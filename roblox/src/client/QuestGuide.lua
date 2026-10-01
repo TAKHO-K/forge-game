@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
 local WorldMapLayout = require(ReplicatedStorage.Shared.WorldMapLayout)
 local MapPins = require(script.Parent.MapPins)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local QuestGuide = {}
 
@@ -48,7 +49,7 @@ function QuestGuide.target(guide)
 	elseif guide == "altar" then
 		return WorldMapLayout.facility("community"), WorldMapData.hub.facilities.community.displayName
 	elseif guide == "hub" or guide == "lookout" then
-		return WorldMapLayout.spawnPoint(), guide == "lookout" and "큰 나무 오르기" or "허브"
+		return WorldMapLayout.spawnPoint(), Text.get(guide == "lookout" and "scene.guide.lookout" or "scene.guide.hub")
 	elseif guide:sub(1, 5) == "zone:" then
 		local zone = WorldMapLayout.zoneByKey(guide:sub(6))
 		if zone then

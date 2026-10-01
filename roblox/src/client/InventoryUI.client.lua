@@ -23,6 +23,7 @@ local TweenService = game:GetService("TweenService")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
+local Text = require(ReplicatedStorage.Shared.Text)
 local FullTextTip = require(script.Parent.ui.kit.FullTextTip)
 local Theme = require(script.Parent.ui.kit.Theme)
 local UIManager = require(script.Parent.UIManager)
@@ -189,7 +190,7 @@ end
 
 player:GetAttributeChangedSignal("Gold"):Connect(function()
 	if S.isOpen then
-		R.goldPillLabel.Text = "보유 골드 " .. NumberFormat.format(player:GetAttribute("Gold") or 0)
+		R.goldPillLabel.Text = Text.get("gear.bag.gold", { gold = NumberFormat.format(player:GetAttribute("Gold") or 0) })
 	end
 end)
 
@@ -217,7 +218,7 @@ fullToast.TextStrokeTransparency = 0.6
 fullToast.Font = Enum.Font.GothamBold
 fullToast.TextSize = Theme.textSize("header")
 fullToast.TextColor3 = UIColors.danger
-fullToast.Text = "인벤토리가 가득 찼습니다 - 땅에 있는 아이템을 주울 수 없습니다"
+fullToast.Text = Text.get("gear.bag.fullToast")
 fullToast.Parent = R.screenGui
 
 inventoryFull.OnClientEvent:Connect(function()

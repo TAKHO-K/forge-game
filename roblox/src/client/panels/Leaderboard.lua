@@ -33,10 +33,10 @@ local player = Players.LocalPlayer
 local request = ReplicatedStorage:WaitForChild("LeaderboardRequest")
 
 local TABS = {
-	{ id = "all", text = "전체" },
-	{ id = "class", text = "직업별" },
-	{ id = "party", text = "파티" },
-	{ id = "season", text = "시즌" },
+	{ id = "all", textKey = "ui.rank.tab.all" },
+	{ id = "class", textKey = "ui.rank.tab.class" },
+	{ id = "party", textKey = "ui.rank.tab.party" },
+	{ id = "season", textKey = "ui.rank.tab.season" },
 }
 
 local refs
@@ -100,22 +100,26 @@ end
 
 local function meText(result, isParty)
 	if not result then
-		return "내 순위: 불러오는 중…"
+		return Text.get("ui.rank.me.loading")
 	end
 	if result.rank then
-		local timeText = result.seconds and (" · " .. Leaderboard.formatSeconds(result.seconds)) or ""
-		return ("내 순위 %d위 · 스테이지 %d%s"):format(result.rank, result.stage or 0, timeText)
+		local args = { rank = ("%d"):format(result.rank), stage = ("%d"):format(result.stage or 0) }
+		if result.seconds then
+			args.time = Leaderboard.formatSeconds(result.seconds)
+			return Text.get("ui.rank.me.rankTime", args)
+		end
+		return Text.get("ui.rank.me.rank", args)
 	end
 	if result.outOfTop and result.stage then
-		return ("내 순위: %d위 밖 · 스테이지 %d"):format(result.topN or 100, result.stage)
+		return Text.get("ui.rank.me.outOfTop", { top = ("%d"):format(result.topN or 100), stage = ("%d"):format(result.stage) })
 	end
 	if result.retry then
-		return "내 순위: 잠시 뒤 다시 불러옵니다"
+		return Text.get("ui.rank.me.retry")
 	end
 	if result.outOfTop and isParty then
-		return ("내 파티: %d위 안 기록 없음"):format(result.topN or 100)
+		return Text.get("ui.rank.me.partyNone", { top = ("%d"):format(result.topN or 100) })
 	end
-	return "내 순위: 기록 없음"
+	return Text.get("ui.rank.me.none")
 end
 
 -- ═══ 짓기 ═══
@@ -141,7 +145,7 @@ local function build()
 	local panel = Panel.create({
 		id = Leaderboard.id,
 		kind = "window",
-		title = "순위",
+		title = Text.get("ui.rank.title"),
 		size = Vector2.new(660, 440),
 		help = { -- G1-1: "자기 최고 다음 보스" 모호 정리 + 2단
 			short = Text.get("leaderboard.help.short"),
@@ -159,7 +163,7 @@ local function build()
 
 	-- 왼쪽 레일(탭)
 	for index, tab in ipairs(TABS) do
-		local button, stroke = makeButton(content, "Tab_" .. tab.id, tab.text)
+		local button, stroke = makeButton(content, "Tab_" .. tab.id, Text.get(tab.textKey))
 		button.Position = UDim2.new(0, PAD, 0, PAD + (index - 1) * (rowHeight() + GAP))
 		button.Size = UDim2.new(0, RAIL_WIDTH, 0, rowHeight())
 		r.tabButtons[tab.id] = { button = button, stroke = stroke }
@@ -318,36 +322,36 @@ end
 
 local function seasonText(season)
 	if not season then
-		return "시즌 정보를 불러오는 중…"
+		return Text.get("ui.rank.season.loading")
 	end
-	local lines = { ("시즌 %d · 기간 %d일"):format(season.id, season.lengthDays) }
+	local lines = { Text.get("ui.rank.season.head", { season = ("%d"):format(season.id), days = ("%d"):format(season.lengthDays) }) }
 	if season.endsAt then
 		local left = math.max(0, season.endsAt - os.time())
-		table.insert(lines, ("남은 기간: %d일 %d시간"):format(math.floor(left / 86400), math.floor((left % 86400) / 3600)))
+		table.insert(lines, Text.get("ui.rank.season.left", { days = ("%d"):format(math.floor(left / 86400)), hours = ("%d"):format(math.floor((left % 86400) / 3600)) }))
 	else
-		table.insert(lines, "시작일: 아직 정해지지 않았습니다")
+		table.insert(lines, Text.get("ui.rank.season.noStart"))
 	end
 	table.insert(lines, "")
-	table.insert(lines, "· 순위는 시즌마다 새로 시작합니다(전체 · 직업별 · 파티 모두).")
-	table.insert(lines, "· 직업별 · 파티 순위: 스테이지가 높을수록, 같으면 클리어 시간이 짧을수록 위.")
-	table.insert(lines, "· 파티 기록: 그 처치로 파티원 전원의 개인 최고가 오를 때만 남습니다.")
-	table.insert(lines, "· 순위표는 약 90초마다 갱신됩니다.")
-	table.insert(lines, "· 시즌이 끝나면 그 시즌 순위는 명예의 전당에 남습니다.")
+	table.insert(lines, Text.get("ui.rank.season.rule1"))
+	table.insert(lines, Text.get("ui.rank.season.rule2"))
+	table.insert(lines, Text.get("ui.rank.season.rule3"))
+	table.insert(lines, Text.get("ui.rank.season.rule4"))
+	table.insert(lines, Text.get("ui.rank.season.rule5"))
 	-- P3c C7: 영구 개인 최고(시즌과 무관 - 프로필의 보스 클리어 최고).
-	table.insert(lines, ("· 내 영구 최고(시즌과 무관): 스테이지 %d"):format(player:GetAttribute("BestBossCleared") or 0))
+	table.insert(lines, Text.get("ui.rank.season.myBest", { stage = ("%d"):format(player:GetAttribute("BestBossCleared") or 0) }))
 	return table.concat(lines, "\n")
 end
 
 -- P3c E2: 시즌 탭 아래의 지난 시즌 순위표 제목(명예의 전당 - C7과 같은 데이터).
 local function hallTitle(hall)
 	if not hall then
-		return "명예의 전당(지난 시즌)을 불러오는 중…"
+		return Text.get("ui.rank.hall.loading")
 	elseif (hall.season or 0) < 1 then
-		return "명예의 전당: 첫 시즌이라 지난 시즌이 없습니다"
+		return Text.get("ui.rank.hall.first")
 	elseif not hall.exists or #(hall.entries or {}) == 0 then
-		return ("명예의 전당 - 시즌 %d: 기록이 없습니다"):format(hall.season)
+		return Text.get("ui.rank.hall.empty", { season = ("%d"):format(hall.season) })
 	end
-	return ("명예의 전당 - 시즌 %d 개인 순위(상위 %d)"):format(hall.season, #hall.entries)
+	return Text.get("ui.rank.hall.title", { season = ("%d"):format(hall.season), count = ("%d"):format(#hall.entries) })
 end
 
 -- 지금 탭의 목록 · 내 순위 줄을 다시 그린다.
@@ -376,7 +380,7 @@ local function render()
 			row.name.TextColor3 = isMine and UIColors.ember or UIColors.textPrimary
 			row.stroke.Color = isMine and UIColors.ember or UIColors.rim
 			row.stroke.Transparency = isMine and 0 or UIColors.rimTransparency
-			row.stage.Text = ("스테이지 %d"):format(entry.stage or 0)
+			row.stage.Text = Text.get("ui.rank.stage", { stage = ("%d"):format(entry.stage or 0) })
 			row.time.Text = ""
 			y += rowH + 4
 		end
@@ -386,7 +390,7 @@ local function render()
 		local isParty = boardId == "party"
 		refs.emptyLabel.Size = UDim2.new(1, -8, 0, Theme.textSize("body") * 3)
 		refs.emptyLabel.Visible = #entries == 0
-		refs.emptyLabel.Text = board and "아직 기록이 없습니다" or "불러오는 중…"
+		refs.emptyLabel.Text = Text.get(board and "ui.rank.empty" or "ui.rank.loading")
 		if #entries == 0 then
 			y = Theme.textSize("body") * 3 + 8
 		end
@@ -412,7 +416,7 @@ local function render()
 			row.name.TextColor3 = isMine and UIColors.ember or UIColors.textPrimary
 			row.stroke.Color = isMine and UIColors.ember or UIColors.rim
 			row.stroke.Transparency = isMine and 0 or UIColors.rimTransparency
-			row.stage.Text = ("스테이지 %d"):format(entry.stage or 0)
+			row.stage.Text = Text.get("ui.rank.stage", { stage = ("%d"):format(entry.stage or 0) })
 			row.time.Text = Leaderboard.formatSeconds(entry.seconds)
 			y += rowH + 4
 			if isParty and state.expandedParty == entry.key then
@@ -420,7 +424,7 @@ local function render()
 					usedMembers += 1
 					local item = memberButtonAt(usedMembers)
 					item.userId = id
-					item.button.Text = ("%s - 장비 보기"):format(nameOf(board.names, id))
+					item.button.Text = Text.get("ui.rank.memberGear", { name = nameOf(board.names, id) })
 					item.button.Position = UDim2.new(0, 40, 0, y)
 					item.button.Visible = true
 					y += rowH + 4
@@ -547,11 +551,11 @@ function Leaderboard.openCard(boardId, key)
 	task.spawn(function()
 		local result, reason = invoke("card", boardId, key)
 		if not result then
-			Toast.push("TC", { text = reason == "rate_limited" and "잠시 뒤 다시 눌러 주세요" or "장비 정보를 불러오지 못했습니다", colorName = "textPrimary" })
+			Toast.push("TC", { text = Text.get(reason == "rate_limited" and "ui.rank.card.rateLimited" or "ui.rank.card.failed"), colorName = "textPrimary" })
 			return
 		end
 		if type(result.card) ~= "table" or type(result.card.weapon) ~= "table" then
-			Toast.push("TC", { text = "이 기록에는 장비 정보가 없습니다", colorName = "textPrimary" })
+			Toast.push("TC", { text = Text.get("ui.rank.card.noGear"), colorName = "textPrimary" })
 			return
 		end
 		if not UIManager.isOpen(Leaderboard.id) then
@@ -616,7 +620,7 @@ local function buildToggleButton()
 	button.Name = "LeaderboardToggleButton"
 	ScreenMap.place(button, "TR", "leaderboardToggle")
 	button.Size = UDim2.new(0, 72, 0, Theme.isMobile and Theme.touchMin or 36)
-	button.Text = "순위"
+	button.Text = Text.get("ui.rank.title")
 	button.Font = Theme.font
 	button.TextSize = Theme.textSize("body")
 	button.TextColor3 = UIColors.textPrimary

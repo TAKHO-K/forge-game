@@ -94,7 +94,7 @@ function OddsView.buildTable(parent, x, y, width)
 	end
 
 	local sumY = 4 + (#ROWS + 1) * height
-	cell(box, "SumLabel", Enum.TextXAlignment.Left, PAD, RESULT_COL_WIDTH, sumY, height, "textSecondary").Text = "합계"
+	cell(box, "SumLabel", Enum.TextXAlignment.Left, PAD, RESULT_COL_WIDTH, sumY, height, "textSecondary").Text = Text.get("forge.enhance.odds.sum")
 	refs.sumProb = cell(box, "SumProb", Enum.TextXAlignment.Right, PROB_COL_RIGHT - PROB_COL_WIDTH, PROB_COL_WIDTH, sumY, height, "textSecondary")
 	return refs
 end
@@ -128,7 +128,7 @@ end
 -- 불씨 줄: 왼쪽 이름 + Gauge(높이 16, 안에 "54% (실패 시 +6%)"). 반환 refs = { gauge }.
 function OddsView.buildGaugeRow(parent, x, y, width)
 	local label = cell(parent, "GaugeLabel", Enum.TextXAlignment.Left, x, GAUGE_LABEL_WIDTH, y, GAUGE_HEIGHT, "textSecondary")
-	label.Text = "불씨"
+	label.Text = Text.get("forge.enhance.gauge")
 	local gauge = Gauge.build({
 		parent = parent,
 		name = "MasteryGauge",
@@ -148,9 +148,9 @@ function OddsView.updateGaugeRow(refs, state)
 	if state.maxed then
 		text = OddsView.formatPercent(ratio)
 	elseif state.gaugeFull then
-		text = "다음 시도 확정 성공"
+		text = Text.get("forge.enhance.gauge.full")
 	else
-		text = ("%s (실패 시 +%s)"):format(OddsView.formatPercent(ratio), OddsView.formatPercent(state.gaugeGain / state.gaugeMax))
+		text = Text.get("forge.enhance.gauge.value", { now = OddsView.formatPercent(ratio), gain = OddsView.formatPercent(state.gaugeGain / state.gaugeMax) })
 	end
 	refs.gauge.setValue(ratio, text)
 end
@@ -165,7 +165,7 @@ end
 
 -- 최악의 단계는 화면에 보이는 표(방지권 토글을 반영한 표)에서 온다(Controller가 worstLevel로 준다). 상한이면 비운다.
 function OddsView.updateHint(label, state)
-	label.Text = state.worstLevel and ("최악의 경우: +%d강 · 방지권은 실제로 막았을 때만 1장 사라집니다"):format(state.worstLevel) or ""
+	label.Text = state.worstLevel and Text.get("forge.enhance.worst", { level = ("%d"):format(state.worstLevel) }) or ""
 end
 
 return OddsView

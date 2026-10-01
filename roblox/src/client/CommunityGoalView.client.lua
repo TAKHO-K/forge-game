@@ -8,6 +8,7 @@ local D = require(ReplicatedStorage.Shared.data.CommunityGoalData)
 local Rules = require(ReplicatedStorage.Shared.CommunityGoalRules)
 local Theme = require(script.Parent.ui.kit.Theme)
 local Toast = require(script.Parent.ui.kit.Toast)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local player = Players.LocalPlayer
 local GOLD = Color3.fromRGB(255, 214, 90)
@@ -117,7 +118,7 @@ for i, t in ipairs(D.tiers) do
 			return ReplicatedStorage:WaitForChild("CommunityGoalClaim"):InvokeServer(i)
 		end)
 		if ok and type(result) == "table" then
-			Toast.push("TC", { richParts = { { text = (result.ok and "받음: " or "") .. tostring(result.message), color = result.ok and GOLD or Color3.fromRGB(230, 230, 240), bold = true } }, seconds = 3, fadeSeconds = 0.3 })
+			Toast.push("TC", { richParts = { { text = result.ok and Text.get("scene.community.claimed", { message = tostring(result.message) }) or tostring(result.message), color = result.ok and GOLD or Color3.fromRGB(230, 230, 240), bold = true } }, seconds = 3, fadeSeconds = 0.3 })
 		end
 	end)
 	rows[i] = btn
@@ -193,7 +194,9 @@ local function refresh()
 	if b then
 		local bg = b:FindFirstChildOfClass("Frame")
 		bg.Bar.Fill.Size = UDim2.fromScale(frac, 1)
-		bg.Text.Text = ("%s · %s"):format(D.text.panelTitle, (type(target) == "number" and target > 0) and ("%d / %d"):format(total, target) or "목표 계산 중")
+		bg.Text.Text = (type(target) == "number" and target > 0)
+				and Text.get("scene.community.boardProgress", { title = D.text.panelTitle, total = ("%d"):format(total), target = ("%d"):format(target) })
+			or Text.get("scene.community.boardPending", { title = D.text.panelTitle })
 	end
 end
 for _, a in ipairs({ "CommunityGoalTotal", "CommunityGoalTarget" }) do

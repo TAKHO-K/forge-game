@@ -11,6 +11,7 @@ local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local BossFx = require(script.Parent.BossFx)
+local Text = require(game:GetService("ReplicatedStorage").Shared.Text)
 
 local BossGimmick13View = {}
 
@@ -153,8 +154,8 @@ function BossGimmick13View.sandStart(data)
 	sand.connection = RunService.RenderStepped:Connect(function()
 		local now = os.clock()
 		local left = math.max(0, math.ceil(sand.endsAt - now))
-		setHud(sand.mode == "stopped" and ("멈췄다! 진짜를 때려라! %d"):format(left) or sand.mode == "dark" and ("불이 꺼졌다 - 눈으로 따라가라! %d"):format(left)
-			or ("빛나는 꼬리를 찾아 때려라! %d"):format(left), Color3.fromRGB(255, 214, 90))
+		setHud(Text.get(sand.mode == "stopped" and "scene.boss.sand.stopped" or sand.mode == "dark" and "scene.boss.sand.dark"
+			or "scene.boss.sand.find", { left = ("%d"):format(left) }), Color3.fromRGB(255, 214, 90))
 		-- A2-N4 §2-7: 진짜 꼬리만 전구처럼 켜짐 onSeconds · 꺼짐 offSeconds(가짜 꼬리 = 서버가 모래색으로 둔다) · QUEUE-ALL1 D-1: 불 꺼짐부터는 계속 꺼짐
 		if tailSpec then
 			local real = taggedWith("SandMound", sand.realIndex)
@@ -291,7 +292,7 @@ function BossGimmick13View.orgelStart(data)
 		table.insert(crown, spike)
 	end
 	orgel.crown = crown
-	setHud("♪ 순서를 기억하라!", Color3.fromRGB(180, 230, 255))
+	setHud(Text.get("scene.boss.orgel.remember"), Color3.fromRGB(180, 230, 255))
 end
 
 function BossGimmick13View.orgelRing(data)
@@ -310,7 +311,7 @@ function BossGimmick13View.orgelInput(data)
 	orgel.endsAt = os.clock() + data.seconds
 	orgel.connection = RunService.RenderStepped:Connect(function()
 		if orgel and orgel.endsAt then
-			setHud(("♪ 같은 순서로 두드려라  %d/%d · %d"):format(orgel.progress, orgel.length, math.max(0, math.ceil(orgel.endsAt - os.clock()))), orgel.wrongUntil and os.clock() < orgel.wrongUntil and RED or WHITE)
+			setHud(Text.get("scene.boss.orgel.input", { progress = ("%d"):format(orgel.progress), length = ("%d"):format(orgel.length), left = ("%d"):format(math.max(0, math.ceil(orgel.endsAt - os.clock()))) }), orgel.wrongUntil and os.clock() < orgel.wrongUntil and RED or WHITE)
 		end
 	end)
 end
@@ -356,7 +357,7 @@ function BossGimmick13View.orgelStatue(data)
 		orgel.connection:Disconnect()
 		orgel.connection = nil
 	end
-	setHud("…여왕의 수정 장식품이 되었다!", Color3.fromRGB(180, 230, 255))
+	setHud(Text.get("scene.boss.orgel.fail"), Color3.fromRGB(180, 230, 255))
 	local statues = {}
 	orgel.statues = statues
 	for i, userId in ipairs(data.userIds) do
@@ -440,7 +441,7 @@ function BossGimmick13View.orgelEnd(data)
 		end
 	end
 	if data.success then
-		setHud("왕관이 깨졌다!", Color3.fromRGB(120, 200, 255))
+		setHud(Text.get("scene.boss.orgel.success"), Color3.fromRGB(120, 200, 255))
 		task.delay(1.5, clearHud)
 	else
 		task.delay(data.interrupted and 0 or 1.2, clearHud)

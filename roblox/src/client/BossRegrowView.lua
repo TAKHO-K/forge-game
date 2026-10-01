@@ -11,6 +11,7 @@ local RunService = game:GetService("RunService")
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local BossFxData = require(ReplicatedStorage.Shared.data.BossFxData)
 local BossFx = require(script.Parent.BossFx)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local BossRegrowView = {}
 
@@ -134,7 +135,7 @@ function BossRegrowView.encase(data)
 		entry = entry or markFor(userId)
 		if entry then
 			marks[data.id][userId] = entry
-			entry.label.Text = ("탈출! %d타"):format(data.hitsLeft)
+			entry.label.Text = Text.get("scene.boss.regrow.escape", { hits = ("%d"):format(data.hitsLeft) })
 			entry.deadline = deadline
 			entry.total = entry.total or math.max(data.seconds or 1, 0.1)
 		end

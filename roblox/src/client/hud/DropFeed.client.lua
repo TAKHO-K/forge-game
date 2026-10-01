@@ -27,14 +27,36 @@ local dropNotice = ReplicatedStorage:WaitForChild("DropNotice")
 local function gradeAndPart(payload)
 	local grade = ArmorData.grades[payload.grade]
 	local gradeName = grade and grade.displayName or tostring(payload.grade)
-	local partName = ItemVisualData.partDisplayNames[payload.part or "armor"] or "장비"
+	local partName = ItemVisualData.partDisplayNames[payload.part or "armor"] or Text.get("hud.feed.partFallback")
 	return gradeName, partName
+end
+
+-- 템플릿의 {이름} 자리마다 slots[이름](글 조각 목록)을 끼우고, 나머지 글은 보통 조각으로 둔다(누르는 조각을 문장 안에 두기 위해).
+local function templateParts(template, slots)
+	local parts, pos = {}, 1
+	while true do
+		local first, last, name = template:find("{([%w_]+)}", pos)
+		if not first then
+			break
+		end
+		if first > pos then
+			table.insert(parts, { text = template:sub(pos, first - 1), colorName = "textPrimary" })
+		end
+		for _, part in ipairs(slots[name] or { { text = template:sub(first, last), colorName = "textPrimary" } }) do
+			table.insert(parts, part)
+		end
+		pos = last + 1
+	end
+	if pos <= #template then
+		table.insert(parts, { text = template:sub(pos), colorName = "textPrimary" })
+	end
+	return parts
 end
 
 local function primalLine(payload)
 	local gradeName, partName = gradeAndPart(payload)
 	-- G1-1: 채팅 줄도 등급 색(옛: 색 지정 없음 - 흰 글씨)
-	return Text.get("chat.primalDrop", { name = PlayerLabelFormat.plain(payload.name, payload.level, payload.rebirth), color = GradeColor.hex(payload.grade), item = ("%s %s"):format(gradeName, partName) })
+	return Text.get("chat.primalDrop", { name = PlayerLabelFormat.plain(payload.name, payload.level, payload.rebirth), color = GradeColor.hex(payload.grade), item = Text.get("hud.feed.item", { grade = gradeName, part = partName }) })
 end
 
 -- S12b: 알림의 이름 조각들("★n Lv.35 표시이름") - 이름을 누르면 이름 클릭 메뉴(userId가 있을 때만 - 합성 검증 이벤트에는 없다).
@@ -55,7 +77,7 @@ local function itemPart(payload, gradeName, partName)
 	local visual = ItemVisualData.gradeVisuals[payload.grade]
 	local desc = ItemDescribe.item({ grade = payload.grade, part = payload.part or "armor", itemLevel = tonumber(payload.itemLevel) or 0, option = payload.option }, payload.classId)
 	return {
-		text = ("%s %s"):format(gradeName, partName),
+		text = Text.get("hud.feed.item", { grade = gradeName, part = partName }),
 		color = visual and visual.color,
 		colorName = "textPrimary",
 		bold = true,
@@ -67,10 +89,8 @@ end
 
 local function showFeed(payload)
 	local gradeName, partName = gradeAndPart(payload)
-	local parts = nameParts(payload)
-	table.insert(parts, { text = ": ", colorName = "textPrimary" })
-	table.insert(parts, itemPart(payload, gradeName, partName))
-	table.insert(parts, { text = (" Lv.%d"):format(tonumber(payload.itemLevel) or 0), colorName = "textPrimary" })
+	local parts = templateParts(Text.get("hud.feed.party", { level = ("%d"):format(tonumber(payload.itemLevel) or 0) }),
+		{ name = nameParts(payload), item = { itemPart(payload, gradeName, partName) } })
 	return Toast.push("TR", {
 		richParts = parts,
 		seconds = DropNoticeData.seconds,
@@ -82,13 +102,7 @@ end
 
 local function showPrimalBanner(payload, silentChat)
 	local gradeName, partName = gradeAndPart(payload)
-	local parts = { { text = "★ ", colorName = "textPrimary" } }
-	for _, part in ipairs(nameParts(payload)) do
-		table.insert(parts, part)
-	end
-	table.insert(parts, { text = "님이 ", colorName = "textPrimary" })
-	table.insert(parts, itemPart(payload, gradeName, partName))
-	table.insert(parts, { text = "을 얻었습니다", colorName = "textPrimary" })
+	local parts = templateParts(Text.get("hud.feed.primal"), { name = nameParts(payload), item = { itemPart(payload, gradeName, partName) } })
 	Toast.push("TC", {
 		richParts = parts,
 		seconds = DropNoticeData.seconds,

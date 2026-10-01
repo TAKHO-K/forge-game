@@ -107,7 +107,7 @@ local function showWarning(zoneKey, zone)
 	local text, color, sub
 	if zone.role == "tier" then
 		local monster = MonsterData[zoneKey]
-		text = ("%s 구역 진입 - tier %d"):format(monster.displayName, zone.tierIndex)
+		text = Text.get("scene.zone.enterTier", { name = monster.displayName, tier = ("%d"):format(zone.tierIndex) })
 		color = monster.bodyColor
 		if CombatFormula.enabled() then
 			sub = Text.get("combat.recommend", {
@@ -116,7 +116,7 @@ local function showWarning(zoneKey, zone)
 			})
 		end
 	else
-		text = ("%s 진입"):format(zone.displayName or zoneKey)
+		text = Text.get("scene.zone.enter", { name = zone.displayName or zoneKey })
 		color = UIColors.textPrimary
 	end
 	show(text, color, DISPLAY_SECONDS, sub)

@@ -79,7 +79,7 @@ local function build()
 	local panel = Panel.create({
 		id = Party.id,
 		kind = "window",
-		title = "파티",
+		title = Text.get("ui.party.title"),
 		size = Vector2.new(720, 480),
 		onOpen = function()
 			windowOpen = true
@@ -146,8 +146,8 @@ local function build()
 		return column, title, listFrame
 	end
 
-	local myColumn, myTitle, myList = makeColumn(14, "내 파티")
-	local serverColumn, serverTitle, serverList = makeColumn(14 + COLUMN_WIDTH + 30, "서버 플레이어")
+	local myColumn, myTitle, myList = makeColumn(14, Text.get("ui.party.myParty"))
+	local serverColumn, serverTitle, serverList = makeColumn(14 + COLUMN_WIDTH + 30, Text.get("ui.party.serverPlayers"))
 	local _ = serverColumn
 
 	-- 25-3 · S09의 파티 도움말("?"). 숫자(기여 10% · 경험치 보너스 · 투표 10초)는 데이터에서 읽어 끼운다. 패널은 280 × 176 고정.
@@ -155,17 +155,17 @@ local function build()
 		local gatePercent = math.floor(CombatConfig.contributionRewardThreshold * 100 + 0.5)
 		local bonusParts = {}
 		for memberCount = 2, PartyConfig.maxMembers do
-			table.insert(bonusParts, ("%d인 +%d%%"):format(memberCount, math.floor(PartyConfig.expBonusByMemberCount[memberCount] * 100 + 0.5)))
+			table.insert(bonusParts, Text.get("ui.party.help.bonusPart", { count = ("%d"):format(memberCount), percent = ("%d"):format(math.floor(PartyConfig.expBonusByMemberCount[memberCount] * 100 + 0.5)) }))
 		end
 		HelpTooltip.attach(myColumn, UDim2.new(0, 62, 0, 19), { short = Text.get("party.help.short", { percent = gatePercent }), detail = table.concat({ -- G1-1: 2단
-			("■ 기여 %d%%"):format(gatePercent),
-			("몬스터에게 준 피해가 %d%%에 못 미치면 파티여도 골드·경험치·아이템·강화석을 받지 못합니다. 보스는 파티원 전원이 %d%%를 넘겨야 스테이지 클리어로 기록됩니다."):format(gatePercent, gatePercent),
-			"■ 파티 경험치",
-			table.concat(bonusParts, " · ") .. ". 장비의 경험치 옵션과 곱해집니다.",
-			"■ 드랍 알림",
-			"유물 등급 이상이 나오면 파티 전원에게 표시됩니다. 태초는 서버 전체에 알려집니다.",
-			"■ 보스 스테이지 이동",
-			("파티장이 신청하고 파티원 1명이 동의하면 전원이 이동합니다. %d초 안에 동의가 없으면 취소됩니다."):format(PartyConfig.stageVoteTimeoutSeconds),
+			Text.get("ui.party.help.gateHead", { percent = ("%d"):format(gatePercent) }),
+			Text.get("ui.party.help.gateBody", { percent = ("%d"):format(gatePercent) }),
+			Text.get("ui.party.help.expHead"),
+			Text.get("ui.party.help.expBody", { bonuses = table.concat(bonusParts, " · ") }),
+			Text.get("ui.party.help.dropHead"),
+			Text.get("ui.party.help.dropBody"),
+			Text.get("ui.party.help.stageHead"),
+			Text.get("ui.party.help.stageBody", { seconds = ("%d"):format(PartyConfig.stageVoteTimeoutSeconds) }),
 		}, "\n") }, nil, { panelSize = Vector2.new(280, 176) })
 	end
 
@@ -248,7 +248,7 @@ local function build()
 	codeLabel.Size = UDim2.new(1, 0, 0, codeHeight)
 	codeLabel.Visible = false
 
-	local codeHint = Theme.label(myColumn, "다른 서버의 친구에게 이 코드를 알려 주면 코드로 합류할 수 있습니다", "caption", "textTertiary")
+	local codeHint = Theme.label(myColumn, Text.get("ui.party.codeHint"), "caption", "textTertiary")
 	codeHint.Position = UDim2.new(0, 0, 0, MY_EXTRA_Y + codeHeight)
 	codeHint.Size = UDim2.new(1, 0, 0, hintHeight)
 	codeHint.Visible = false
@@ -259,7 +259,7 @@ local function build()
 	joinBox.Size = UDim2.new(0, 160, 0, PILL_HEIGHT)
 	joinBox.Font = Theme.font
 	joinBox.TextSize = Theme.textSize("body")
-	joinBox.PlaceholderText = "파티 코드 입력"
+	joinBox.PlaceholderText = Text.get("ui.party.codePlaceholder")
 	joinBox.PlaceholderColor3 = UIColors.textTertiary
 	joinBox.Text = ""
 	joinBox.TextColor3 = UIColors.textPrimary
@@ -270,7 +270,7 @@ local function build()
 	Theme.corner(joinBox, 8)
 	Theme.stroke(joinBox)
 
-	local joinButton = makePillButton(myColumn, "코드로 합류", 168, joinY, 96, true)
+	local joinButton = makePillButton(myColumn, Text.get("ui.party.joinCode"), 168, joinY, 96, true)
 	joinButton.Activated:Connect(function()
 		local code = joinBox.Text:gsub("%s", ""):upper()
 		if #code > 0 then
@@ -279,12 +279,12 @@ local function build()
 		end
 	end)
 
-	local createButton = makePillButton(myColumn, "파티 만들기 (코드 받기)", 0, createY, 160, false)
+	local createButton = makePillButton(myColumn, Text.get("ui.party.create"), 0, createY, 160, false)
 	createButton.Activated:Connect(function()
 		partyRequest:FireServer("create")
 	end)
 
-	local cancelJoinButton = makePillButton(myColumn, "합류 대기 취소", 168, createY, 110, false)
+	local cancelJoinButton = makePillButton(myColumn, Text.get("ui.party.cancelJoin"), 168, createY, 110, false)
 	cancelJoinButton.Activated:Connect(function()
 		partyRequest:FireServer("cancel_join")
 	end)
@@ -335,7 +335,7 @@ local function build()
 	leaveButton.Size = UDim2.new(0, 110, 0, PILL_HEIGHT)
 	leaveButton.Font = Theme.font
 	leaveButton.TextSize = Theme.textSize("caption")
-	leaveButton.Text = "파티 탈퇴"
+	leaveButton.Text = Text.get("ui.party.leave")
 	leaveButton.TextColor3 = UIColors.textPrimary
 	leaveButton.BackgroundColor3 = UIColors.hpDark
 	leaveButton.BackgroundTransparency = 0.1
@@ -348,7 +348,7 @@ local function build()
 		partyRequest:FireServer("leave")
 	end)
 
-	local emptyLabel = Theme.label(myColumn, "파티가 없습니다. 오른쪽 목록에서 초대하면 리더가 됩니다.\n다른 서버 친구는 코드를 받아 아래에 입력하거나, 친구 목록의 초대 버튼으로 부릅니다.", "caption", "textTertiary")
+	local emptyLabel = Theme.label(myColumn, Text.get("ui.party.empty"), "caption", "textTertiary")
 	emptyLabel.Position = UDim2.new(0, 0, 0, 44)
 	emptyLabel.Size = UDim2.new(1, 0, 0, metaSize * 3 + 6)
 	emptyLabel.TextWrapped = true
@@ -383,12 +383,12 @@ local function build()
 		-- ── 내 파티 ──
 		local members = partyState and partyState.members or {}
 		local pending = partyState and partyState.pending or {} -- 24-2: 다른 서버에서 이동 중인 좌석
-		myTitle.Text = ("내 파티 (%d/%d)%s"):format(#members + #pending, PartyConfig.maxMembers, (partyState and partyState.bossActive) and " · 보스전 중" or "")
+		myTitle.Text = Text.get((partyState and partyState.bossActive) and "ui.party.myTitleBoss" or "ui.party.myTitle", { count = ("%d"):format(#members + #pending), max = ("%d"):format(PartyConfig.maxMembers) })
 		emptyLabel.Visible = #members == 0
 		leaveButton.Visible = #members > 0
 		codeLabel.Visible = #members > 0
 		codeHint.Visible = #members > 0
-		codeLabel.Text = partyState and partyState.code and ("파티 코드  " .. partyState.code) or "파티 코드 발급 중…"
+		codeLabel.Text = partyState and partyState.code and Text.get("ui.party.code", { code = partyState.code }) or Text.get("ui.party.codePending")
 		createButton.Visible = #members == 0
 		cancelJoinButton.Visible = #members == 0
 		ensureRows(myRows, myList, #members + #pending)
@@ -403,16 +403,16 @@ local function build()
 			local stage = member.isDummy and member.dummy.stage or (target and target:GetAttribute("InfiniteStage")) or (last and last.stage)
 			local displayName = (target and target.DisplayName) or (last and last.displayName) or member.name
 			-- 파티장 표시는 금색 이름(옛 "★ " 표시는 환생 ★n과 헷갈려 뺐다).
-			row.name.Text = PlayerLabelFormat.richText(displayName .. (member.isDummy and " (더미)" or ""), level, rebirth, nameSize)
+			row.name.Text = PlayerLabelFormat.richText(member.isDummy and Text.get("ui.party.dummyName", { name = displayName }) or displayName, level, rebirth, nameSize)
 			row.name.TextColor3 = awayText and UIColors.textSecondary or (member.isLeader and UIColors.gold or UIColors.textPrimary)
-			local meta = ("%s · 스테이지 %s"):format(classNameOf(classId), tostring(stage or "-"))
+			local meta = Text.get("ui.party.memberMeta", { class = classNameOf(classId), stage = tostring(stage or "-") })
 			row.meta.Text = awayText and ("%s · %s"):format(awayText, meta) or meta
 			if target then
 				row.nameConnection = row.name.Activated:Connect(openMenu(member.userId, displayName, level, rebirth))
 			end
 			local canKick = isMeLeader() and member.userId ~= player.UserId
 			row.button.Visible = canKick
-			row.button.Text = "추방"
+			row.button.Text = Text.get("ui.party.kick")
 			row.button.AutoButtonColor = true
 			row.button.BackgroundColor3 = UIColors.gold
 			row.button.TextColor3 = Color3.new(0, 0, 0)
@@ -426,9 +426,9 @@ local function build()
 			local row = myRows[#members + i]
 			row.name.Text = seat.name
 			row.name.TextColor3 = UIColors.textSecondary
-			row.meta.Text = "다른 서버에서 이동 중…"
+			row.meta.Text = Text.get("ui.party.movingIn")
 			row.button.Visible = isMeLeader()
-			row.button.Text = "취소"
+			row.button.Text = Text.get("ui.party.cancel")
 			if isMeLeader() then
 				row.connection = row.button.Activated:Connect(function()
 					partyRequest:FireServer("kick", seat.userId)
@@ -446,7 +446,7 @@ local function build()
 		table.sort(others, function(a, b)
 			return a.Name < b.Name
 		end)
-		serverTitle.Text = ("서버 플레이어 (%d) · 다른 서버 친구 (%d)"):format(#others, #friendsElsewhere)
+		serverTitle.Text = Text.get("ui.party.serverTitle", { players = ("%d"):format(#others), friends = ("%d"):format(#friendsElsewhere) })
 		ensureRows(serverRows, serverList, #others)
 		local inMyParty = {}
 		for _, member in ipairs(members) do
@@ -461,11 +461,11 @@ local function build()
 			local level, rebirth = other:GetAttribute("CharacterLevel"), other:GetAttribute("RebirthCount")
 			row.name.Text = PlayerLabelFormat.richText(other.DisplayName, level, rebirth, nameSize)
 			row.name.TextColor3 = UIColors.textPrimary
-			row.meta.Text = ("%s · 스테이지 %s"):format(classNameOf(other:GetAttribute("ClassId")), tostring(other:GetAttribute("InfiniteStage") or "-"))
+			row.meta.Text = Text.get("ui.party.memberMeta", { class = classNameOf(other:GetAttribute("ClassId")), stage = tostring(other:GetAttribute("InfiniteStage") or "-") })
 			row.nameConnection = row.name.Activated:Connect(openMenu(other.UserId, other.DisplayName, level, rebirth))
 			local alreadyIn = inMyParty[other.UserId]
 			row.button.Visible = true
-			row.button.Text = alreadyIn and "파티원" or "초대"
+			row.button.Text = Text.get(alreadyIn and "ui.party.member" or "ui.party.invite")
 			setInviteButton(row, canInvite and not alreadyIn, function()
 				partyRequest:FireServer("invite", other.UserId)
 			end)
@@ -474,17 +474,17 @@ local function build()
 		-- ── 24-2: 다른 서버의 온라인 친구(서버 플레이어 아래, 같은 행 틀) ──
 		friendsHeader.Visible = true
 		friendsHeader.LayoutOrder = #others + 1
-		friendsHeader.Text = #friendsElsewhere > 0 and "다른 서버에 있는 친구 (초대 → 상대가 수락하면 이 서버로 이동)" or "다른 서버에 있는 온라인 친구 없음"
+		friendsHeader.Text = Text.get(#friendsElsewhere > 0 and "ui.party.friendsHeader" or "ui.party.friendsNone")
 		ensureRows(friendRows, serverList, #friendsElsewhere)
 		for i, friend in ipairs(friendsElsewhere) do
 			local row = friendRows[i]
 			row.frame.LayoutOrder = #others + 1 + i
 			row.name.Text = friend.displayName and friend.displayName ~= friend.name and ("%s (@%s)"):format(friend.displayName, friend.name) or friend.name
 			row.name.TextColor3 = UIColors.textPrimary
-			row.meta.Text = "다른 서버 · 온라인"
+			row.meta.Text = Text.get("ui.party.friendMeta")
 			local alreadyIn = inMyParty[friend.userId]
 			row.button.Visible = true
-			row.button.Text = alreadyIn and "파티원" or "초대"
+			row.button.Text = Text.get(alreadyIn and "ui.party.member" or "ui.party.invite")
 			setInviteButton(row, canInvite and not alreadyIn, function()
 				partyRequest:FireServer("invite_remote", friend.userId)
 			end)
@@ -553,7 +553,7 @@ local function buildToggleButton()
 	button.Visible = false -- QUEUE-ALL2 P2 중복 삭제: 왼쪽 메뉴 더보기 [파티] · P 키가 연다(자리 계산은 그대로 - 다른 버튼이 기준으로 읽던 자리)
 	ScreenMap.place(button, "TR", "partyToggle")
 	button.Size = UDim2.new(0, 72, 0, Theme.isMobile and Theme.touchMin or 36)
-	button.Text = "파티"
+	button.Text = Text.get("ui.party.title")
 	button.Font = Theme.font
 	button.TextSize = Theme.textSize("body")
 	button.TextColor3 = UIColors.textPrimary

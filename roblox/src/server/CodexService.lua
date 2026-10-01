@@ -8,6 +8,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local CodexData = require(ReplicatedStorage.Shared.data.CodexData)
 local CodexRules = require(ReplicatedStorage.Shared.CodexRules)
+local Text = require(ReplicatedStorage.Shared.Text)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local TitleData = require(ReplicatedStorage.Shared.data.TitleData)
 local NestData = require(ReplicatedStorage.Shared.data.NestData)
@@ -180,11 +181,11 @@ local function pay(player, reward)
 	local parts = {}
 	if reward.gold and reward.gold > 0 then
 		PlayerProfile.addGold(player, reward.gold)
-		table.insert(parts, ("골드 %d"):format(reward.gold))
+		table.insert(parts, Text.getFor(player, "srv.reward.gold", { n = ("%d"):format(reward.gold) }))
 	end
 	if reward.gemDust then
 		PlayerProfile.addGemDust(player, reward.gemDust)
-		table.insert(parts, ("보석 가루 %d"):format(reward.gemDust))
+		table.insert(parts, Text.getFor(player, "srv.reward.gemDust", { n = ("%d"):format(reward.gemDust) }))
 	end
 	local q = {}
 	for _, k in ipairs({ "enhanceStone", "sparkleShard" }) do
@@ -197,7 +198,7 @@ local function pay(player, reward)
 		table.insert(parts, s)
 	end
 	if reward.eggZone then
-		table.insert(parts, "알 1")
+		table.insert(parts, Text.getFor(player, "srv.reward.egg"))
 	end
 	return true, table.concat(parts, " · ")
 end
@@ -265,7 +266,7 @@ requestRemote.OnServerEvent:Connect(function(player, action, arg)
 		end
 		if #got > 0 then
 			print(("[forge-game] 도감 받기: %s %d칸"):format(player.Name, #got))
-			noticeRemote:FireClient(player, CodexData.text.got:format(#got == 1 and got[1] or (#got .. "칸")))
+			noticeRemote:FireClient(player, CodexData.text.got:format(#got == 1 and got[1] or Text.getFor(player, "srv.codex.cells", { count = tostring(#got) })))
 			require(script.Parent.ImmediateSave).request(player)
 		end
 		if eggFull then

@@ -41,6 +41,7 @@ local BossEncounter = require(script.Parent.BossEncounter)
 local ImmediateSave = require(script.Parent.ImmediateSave)
 local SaveCoordinator = require(script.Parent.SaveCoordinator)
 local SaveSystem = require(script.Parent.SaveSystem) -- QUEUE-6h-b 후속: 텔레포트 직전 저장이 세션 잠금을 놓는다
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local PartyCrossServer = {}
 
@@ -62,24 +63,30 @@ local recentlyReleased = {}
 -- 플랫폼 서비스 실패는 한 종류당 한 번만 warn한다(Studio에서 API 접근이 꺼져 있으면 매 하트비트마다 찍힌다).
 local warnedOnce = {}
 
+-- 이유 코드 → 문장 키(TextData_server srv.party.err.*) - 문장은 보낼 때 그 플레이어 언어로(textFor)
 local REASON_TEXT = {
-	party_not_found = "그 코드의 파티가 없습니다(해산됐거나 코드가 틀립니다)",
-	party_full = "파티가 가득 찼습니다(최대 4인)",
-	already_member = "이미 그 파티의 멤버입니다",
-	already_in_party = "이미 파티에 속해 있습니다",
-	already_joining = "이미 다른 파티에 합류 중입니다",
-	tutorial_self = "견습 모드 중에는 파티에 들어갈 수 없습니다",
-	no_profile = "아직 준비되지 않은 플레이어입니다",
-	service_unavailable = "파티 서비스에 연결할 수 없습니다. 잠시 후 다시 시도하세요",
-	cancelled = "합류를 취소했습니다",
-	teleport_failed = "서버 이동에 실패했습니다. 지금 자리에 그대로 있습니다",
-	party_gone = "파티가 해산되었습니다",
-	wrong_server = "파티 서버에 도착하지 못했습니다. 다시 합류하세요",
+	party_not_found = "srv.party.err.notFound",
+	party_full = "srv.party.err.full",
+	already_member = "srv.party.err.alreadyMember",
+	already_in_party = "srv.party.err.alreadyInParty",
+	already_joining = "srv.party.err.alreadyJoining",
+	tutorial_self = "srv.party.err.tutorial",
+	no_profile = "srv.party.err.noProfile",
+	service_unavailable = "srv.party.err.service",
+	cancelled = "srv.party.err.cancelled",
+	teleport_failed = "srv.party.err.teleportFailed",
+	party_gone = "srv.party.err.disbanded",
+	wrong_server = "srv.party.err.wrongServer",
 }
 PartyCrossServer.REASON_TEXT = REASON_TEXT
 
+-- 스탠드인(테이블)은 언어 Attribute가 없다 - 서버 기본 언어(ko)로
+local function textFor(player, key, args)
+	return Text.getFor(typeof(player) == "Instance" and player or nil, key, args)
+end
+
 local function notify(player, reason)
-	PartyState.notify(player, REASON_TEXT[reason] or reason)
+	PartyState.notify(player, REASON_TEXT[reason] and textFor(player, REASON_TEXT[reason]) or reason)
 end
 
 local function isInstance(player)
@@ -461,7 +468,7 @@ local function attachLocal(player, party)
 		BossEncounter.leaveFor(player)
 	end
 	PartyState.attachMember(party, player)
-	PartyState.notify(player, ("%s님의 파티에 합류했습니다"):format(party.leader.name))
+	PartyState.notify(player, textFor(player, "srv.party.joined", { name = party.leader.name }))
 	return true
 end
 
@@ -513,7 +520,7 @@ local function handleArrival(player, simulate)
 		-- 다른 서버면 파티는 targetJobId 서버에 남아 있다 - 복귀 초대를 띄운다. 수락하면 코드 합류와 같은 경로(requestJoin)로 그 서버로 이동한다(강제 이동은 안 한다).
 		local remaining = (record.awayUntil or 0) - os.time() -- 남은 유예(초) - 팝업 · 게이지 · 카운트다운이 이 값 하나로 간다
 		if remaining > 0 and not PartyState.getParty(player) and not joinState[player] and not remoteInvites[player] and readRecord(record.code) then
-			local invite = { code = record.code, fromName = record.leaderName or "파티" }
+			local invite = { code = record.code, fromName = record.leaderName or textFor(player, "srv.party.fallbackName") }
 			remoteInvites[player] = invite
 			invite.thread = task.delay(remaining, function()
 				if remoteInvites[player] == invite then
@@ -555,7 +562,7 @@ local function handleArrival(player, simulate)
 				seat.since = os.time()
 			end
 		end
-		PartyState.notify(player, "파티가 보스전 중입니다 - 끝나면 자동으로 합류합니다")
+		PartyState.notify(player, textFor(player, "srv.party.arrivalBossWait"))
 		print(("[forge-game] 크로스서버 도착 보류: %s - 파티 #%d 보스전 중"):format(player.Name, party.id))
 	elseif not ok then
 		PartyState.removePendingSeat(party, player.UserId)
@@ -644,9 +651,9 @@ function PartyCrossServer.requestJoin(player, code, opts)
 		end
 		local blocked = nil
 		if record.bossActive then
-			blocked = "파티가 보스전 중입니다 - 끝나면 이동합니다"
+			blocked = textFor(player, "srv.party.waitBoss")
 		elseif (record.playerCount or 0) >= (record.capacity or PartyCrossServer.capacity()) and record.jobId ~= game.JobId then
-			blocked = ("파티 서버가 가득 찼습니다(%d/%d) - 자리가 나면 이동합니다"):format(record.playerCount or 0, record.capacity or 0)
+			blocked = textFor(player, "srv.party.waitFull", { count = ("%d"):format(record.playerCount or 0), capacity = ("%d"):format(record.capacity or 0) })
 		end
 		if not blocked then
 			break
@@ -701,7 +708,7 @@ function PartyCrossServer.requestJoin(player, code, opts)
 	local options = Instance.new("TeleportOptions")
 	options.ServerInstanceId = record.jobId
 	options:SetTeleportData({ partyCode = code }) -- 힌트 - 권위는 멤버 레코드
-	PartyState.notify(player, ("%s님의 파티 서버로 이동합니다"):format(record.leaderName or "?"))
+	PartyState.notify(player, textFor(player, "srv.party.moving", { name = record.leaderName or "?" }))
 	print(("[forge-game] 크로스서버 텔레포트 시작: %s -> jobId %s (코드 %s)"):format(player.Name, record.jobId, code))
 	local ok, teleportErr = pcall(function()
 		return TeleportService:TeleportAsync(record.placeId or game.PlaceId, { player }, options)
@@ -724,18 +731,18 @@ TeleportService.TeleportInitFailed:Connect(function(player, teleportResult, erro
 	warn(("[forge-game] 크로스서버 텔레포트 실패: %s - %s (%s)"):format(player.Name, tostring(teleportResult), tostring(errorMessage)))
 	local text = REASON_TEXT.teleport_failed
 	if teleportResult == Enum.TeleportResult.GameFull then
-		text = "파티 서버가 가득 찼습니다(플랫폼 정원). 지금 자리에 그대로 있습니다"
+		text = "srv.party.tpFull"
 	elseif teleportResult == Enum.TeleportResult.GameEnded or teleportResult == Enum.TeleportResult.GameNotFound then
-		text = "파티 서버가 종료되었습니다. 지금 자리에 그대로 있습니다"
+		text = "srv.party.tpEnded"
 	elseif teleportResult == Enum.TeleportResult.Flooded then
-		text = "이동 요청이 너무 잦습니다. 잠시 후 다시 시도하세요"
+		text = "srv.party.tpFlooded"
 	end
 	joinState[player] = nil
 	if state.seatReserved then
 		releaseSeat(state.code, player.UserId)
 	end
 	SaveCoordinator.setTeleportFrozen(player, false)
-	PartyState.notify(player, text)
+	PartyState.notify(player, textFor(player, text))
 end)
 
 -- ═══ 초대(리더 서버 → 다른 서버) ═══

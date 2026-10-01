@@ -14,6 +14,7 @@ local TextService = game:GetService("TextService")
 local UserInputService = game:GetService("UserInputService")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local Text = require(ReplicatedStorage.Shared.Text)
 local HudIcons = require(script.Parent.Parent.HudIcons)
 local PanelRegistry = require(script.Parent.Parent.ui.PanelRegistry)
 local ScreenMap = require(script.Parent.Parent.ui.ScreenMap)
@@ -288,8 +289,8 @@ local function makeButton(entry, parent, order)
 	return item
 end
 
-local MORE_ENTRY = { id = "more", iconKey = "more", menuLabel = "더보기" }
-local SHOP_ENTRY = { id = "shop", iconKey = "shop", menuLabel = "상점", onPress = function()
+local MORE_ENTRY = { id = "more", iconKey = "more", menuLabel = Text.get("hud.menu.more") }
+local SHOP_ENTRY = { id = "shop", iconKey = "shop", menuLabel = Text.get("hud.menu.shop"), onPress = function()
 	require(script.Parent.Parent.panels.Shop).openFromHud("recommend")
 end }
 

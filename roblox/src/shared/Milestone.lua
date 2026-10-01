@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageConfig)
 local MilestoneData = require(ReplicatedStorage.Shared.data.MilestoneData)
 local Sanitize = require(ReplicatedStorage.Shared.Sanitize)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local Milestone = {}
 
@@ -75,7 +76,7 @@ end
 
 -- 버킷이 붙는 곳의 표시 글.
 function Milestone.statText()
-	return MilestoneData.stat == "survival" and "최대 체력" or "공격력"
+	return Text.get(MilestoneData.stat == "survival" and "inv.stat.maxHp" or "inv.stat.attack")
 end
 
 -- 스테이지 환산(보고 · 표시) = ln(1 + 버킷) ÷ ln k.

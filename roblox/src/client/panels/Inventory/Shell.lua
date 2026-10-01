@@ -37,7 +37,7 @@ toggleButton.Name = "InventoryToggleButton"
 toggleButton.AnchorPoint = Vector2.new(1, 0.5)
 toggleButton.Position = UDim2.new(1, -16, 0.5, 0)
 toggleButton.Size = UDim2.new(0, 90, 0, 36)
-toggleButton.Text = "가방"
+toggleButton.Text = Text.get("gear.bag.title")
 toggleButton.Font = Enum.Font.GothamBold
 toggleButton.TextSize = Theme.textSize("body")
 toggleButton.TextColor3 = UIColors.textPrimary
@@ -261,7 +261,7 @@ title.Size = UDim2.new(0, 0, 1, 0)
 title.Font = Enum.Font.GothamBold
 title.TextSize = Theme.textSize("title")
 title.TextColor3 = HEADER_INK
-title.Text = "가방"
+title.Text = Text.get("gear.bag.title")
 title.Parent = headerLeft
 
 local countLabel = Instance.new("TextLabel")
@@ -335,7 +335,7 @@ local sortButton = makeHeaderPill(S.SORT_LABELS[S.sortMode], 1, nil, true)
 -- 라벨은 rebuildGrid에서 bulkSellCutoffGrade가 바뀔 때마다 다시 맞춘다.
 local cutoffButton = makeHeaderPill("", 2, nil, true)
 
-local bulkSellButton = makeHeaderPill("일괄 판매", 3)
+local bulkSellButton = makeHeaderPill(Text.get("gear.bag.bulkSell"), 3)
 
 local closeButton = Instance.new("TextButton")
 closeButton.LayoutOrder = 4

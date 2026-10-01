@@ -14,6 +14,7 @@ local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
 local WorldMapLayout = require(ReplicatedStorage.Shared.WorldMapLayout)
 local Toast = require(script.Parent.ui.kit.Toast)
 local Theme = require(script.Parent.ui.kit.Theme)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local player = Players.LocalPlayer
 local G = WorldMapData.bossGate
@@ -71,7 +72,7 @@ local function makeHint(anchor, bossId)
 	text.TextStrokeColor3 = gateColor[bossId] or Color3.new(0, 0, 0)
 	text.TextStrokeTransparency = 0
 	local touch = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
-	text.Text = touch and "관문 등록 - 버튼을 눌러요" or "관문 등록 [F]"
+	text.Text = Text.get(touch and "scene.gate.registerTouch" or "scene.gate.registerKey")
 	text.Parent = gui
 	hints[gui] = bossId
 	gui.Enabled = not reg[bossId]

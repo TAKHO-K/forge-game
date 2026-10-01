@@ -30,9 +30,9 @@ local function rollText(item)
 		return ""
 	end
 	if option.id == "crit" then
-		return (" · 품질 %.0f%% / %.0f%%"):format(EquipCompare.rollPercent(option.roll), EquipCompare.rollPercent(option.roll2 or option.roll))
+		return Text.get("gear.detail.qualityCrit", { pct = ("%.0f"):format(EquipCompare.rollPercent(option.roll)), pct2 = ("%.0f"):format(EquipCompare.rollPercent(option.roll2 or option.roll)) })
 	end
-	return (" · 품질 %.0f%%"):format(EquipCompare.rollPercent(option.roll))
+	return Text.get("gear.detail.quality", { pct = ("%.0f"):format(EquipCompare.rollPercent(option.roll)) })
 end
 
 -- 상세(S20b · QUEUE-ALL2 P2 ref 17) - PC = 오른쪽 단 상세 카드(항상 보임 - 고른 게 없으면 안내), 폰 = 아래에서 올라오는 시트(선택이 있을 때만 · 왼쪽 카드 스크롤 + 오른쪽 버튼 · 닫기 44).
@@ -203,7 +203,7 @@ local function refreshBag(item)
 	for _, line in ipairs(Compare.optionLines(item, equippedSame, classId, false)) do
 		table.insert(lines, line)
 	end
-	table.insert(lines, { text = sellable and ("판매가 %s%s"):format(NumberFormat.format(Loot.getSellPrice(item)), rollText(item)) or ("판매 불가%s"):format(rollText(item)), color = UIColors.textSecondary })
+	table.insert(lines, { text = sellable and Text.get("gear.detail.sellPrice", { price = NumberFormat.format(Loot.getSellPrice(item)), quality = rollText(item) }) or Text.get("gear.detail.noSell", { quality = rollText(item) }), color = UIColors.textSecondary })
 	card.set({
 		title = Text.get("inv.detail.inBag", { name = described.title }), -- P3b C1: 장착 여부(착용 칸은 "(착용 중)")
 		gradeId = item.grade, part = item.part or "armor", iconKey = iconKey(item),
@@ -273,13 +273,13 @@ local function refreshDetailBody()
 		local described = ItemDescribe.weapon(gradeId, player:GetAttribute("WeaponLevel") or 0)
 		card.set({
 			title = described.title, gradeId = gradeId, part = "weapon", iconKey = ItemIcons.keyFor("weapon", gradeId, nil, player:GetAttribute("ClassId")),
-			lines = { { text = described.meta .. " · 강화대에서 강화", color = UIColors.textPrimary } }, gems = true,
+			lines = { { text = Text.get("gear.detail.weaponMeta", { meta = described.meta }), color = UIColors.textPrimary } }, gems = true,
 		})
 	elseif S.selectedKind == "gemSlot" and type(S.selectedValue) == "number" and gemState and Gem.isFilled(gemState.gems, S.selectedValue) then
 		local gem = gemState.gems[S.selectedValue]
 		card.set({
-			title = ("%d번 홈 - %s"):format(S.selectedValue, ItemDescribe.gem(gem).title), gradeId = gem.grade, part = "weapon",
-			lines = { { text = ("장착 중 · 상한 %s%s"):format(ArmorData.grades[Gem.gradeCapForSlot(S.selectedValue)].displayName, rollText(gem)), color = UIColors.textPrimary } },
+			title = Text.get("gear.detail.slotTitle", { slot = ("%d"):format(S.selectedValue), name = ItemDescribe.gem(gem).title }), gradeId = gem.grade, part = "weapon",
+			lines = { { text = Text.get("gear.detail.slotLine", { grade = ArmorData.grades[Gem.gradeCapForSlot(S.selectedValue)].displayName, quality = rollText(gem) }), color = UIColors.textPrimary } },
 			option = gem, notes = ItemDescribe.gem(gem).note, gems = true,
 		})
 		craftButton.Visible = true -- P2.5b B: 장착 중 보석도 재련된다(해제 불필요) · 리롤 버튼은 보석 탭 행 자체에 있다(중복 방지)
@@ -289,7 +289,7 @@ local function refreshDetailBody()
 		-- P3c E4: 판매가도 같이(판매 = 골드 · 분해 = 가루 - 판매가는 분해 가루 가치의 절반).
 		card.set({
 			title = ItemDescribe.gem(gem).title, gradeId = gem.grade, part = "weapon",
-			lines = { { text = ("보유 보석(미장착) · 판매가 %s · 분해하면 가루 %d%s"):format(NumberFormat.format(GemCraft.sellPrice(gem, player:GetAttribute("AccountBestStage") or 1)), GemCraft.dustYield(gem), rollText(gem)), color = UIColors.textPrimary } },
+			lines = { { text = Text.get("gear.detail.gemBagLine", { price = NumberFormat.format(GemCraft.sellPrice(gem, player:GetAttribute("AccountBestStage") or 1)), dust = ("%d"):format(GemCraft.dustYield(gem)), quality = rollText(gem) }), color = UIColors.textPrimary } },
 			option = gem, notes = ItemDescribe.gem(gem).note, gems = true,
 		})
 		-- S20c: [장착] = 자동 장착(GemActions - PC 더블클릭 · 우클릭 · 폰 탭 선택과 같은 통로). 요청 중이면 회색.

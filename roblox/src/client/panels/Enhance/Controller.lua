@@ -13,6 +13,7 @@ local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMateria
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
+local Text = require(ReplicatedStorage.Shared.Text)
 local Confirm = require(script.Parent.Parent.Parent.ui.kit.Confirm)
 
 local Controller = {}
@@ -63,13 +64,13 @@ local function ticketState(kind, level, gaugeFull, maxed)
 	local have = player:GetAttribute(ticketAttributeName(kind)) or 0
 	local reason
 	if maxed then
-		reason = "최대 강화 단계입니다"
+		reason = Text.get("forge.err.maxed")
 	elseif have < 1 then
-		reason = "보유한 방지권이 없습니다"
+		reason = Text.get("forge.enhance.ticket.none")
 	elseif level < config.usableFromLevel then
-		reason = ("%d강부터 쓸 수 있습니다"):format(config.usableFromLevel)
+		reason = Text.get("forge.enhance.ticket.fromLevel", { level = ("%d"):format(config.usableFromLevel) })
 	elseif gaugeFull then
-		reason = "불씨가 가득 차 필요 없습니다"
+		reason = Text.get("forge.enhance.ticket.gaugeFull")
 	end
 	return { name = config.displayName, have = have, want = toggles[kind], enabled = reason == nil, reason = reason }
 end
@@ -127,10 +128,10 @@ function Controller.getState()
 	-- 버튼 비활성 이유(서버가 다시 검증한다 - 화면 안내일 뿐이다). 검사 순서는 서버와 같다: 골드 → 재료.
 	if cost and gold < cost then
 		state.canAfford = false
-		state.shortReason = "골드가 부족합니다"
+		state.shortReason = Text.get("forge.err.noGold")
 	elseif state.material and state.material.have < state.material.need then
 		state.canAfford = false
-		state.shortReason = ("%s이 부족합니다"):format(state.material.name)
+		state.shortReason = Text.get("forge.enhance.short.material", { name = state.material.name })
 	end
 	return state
 end
@@ -153,10 +154,10 @@ end
 -- 구간 진입 확인창의 문구. 숫자(18 · 12 · 1%)는 확률표 · EnhanceConfig에서 읽는다. formatPercent는 화면과 같은 표기(OddsView)를 받는다.
 local function zoneConfirmBody(zone, level, formatPercent)
 	if zone == "drop" then
-		return ("여기서부터 실패하면 단계가 내려갈 수 있습니다(최악 %d강)"):format(Enhance.getWorstLevel(level))
+		return Text.get("forge.enhance.zone.drop", { level = ("%d"):format(Enhance.getWorstLevel(level)) })
 	end
 	local outcomes = Enhance.getOutcomeTable(level, false, false, false)
-	return ("여기서부터 실패하면 %d강으로 초기화될 수 있습니다(%s)"):format(EnhanceConfig.resetToLevel, formatPercent(outcomes.reset))
+	return Text.get("forge.enhance.zone.reset", { level = ("%d"):format(EnhanceConfig.resetToLevel), chance = formatPercent(outcomes.reset) })
 end
 
 -- 서버로 보내는 요청 - 인자는 방지권 토글 2개뿐이다(서버 EnhanceService가 보유 · 구간 · 불씨를 다시 검증해 안 되는 것만 조용히 뗀다).
@@ -177,10 +178,10 @@ function Controller.requestEnhance(parentId, formatPercent)
 		return
 	end
 	Confirm.ask({
-		title = "위험 구간 진입",
+		title = Text.get("forge.enhance.zone.title"),
 		body = zoneConfirmBody(zone, state.level, formatPercent),
-		primaryText = "강화",
-		secondaryText = "취소",
+		primaryText = Text.get("forge.enhance.button"),
+		secondaryText = Text.get("forge.cancel"),
 		parentId = parentId,
 	}, function(accepted)
 		if accepted then
@@ -210,14 +211,15 @@ function Controller.requestBuy(kind, parentId)
 		local gold = player:GetAttribute("Gold") or 0
 		local canAfford = gold >= price
 		Confirm.ask({
-			title = config.displayName .. " 구매",
-			body = ("%s 1장\n가격 %s 골드 · 보유 %s\n(계정 최고 스테이지 %d 기준 잡몹 %d마리분)"):format(
-				config.displayName, NumberFormat.format(price), NumberFormat.format(gold), prices.accountBestStage, config.priceKillEquivalent),
-			primaryText = "구매",
-			secondaryText = "취소",
+			title = Text.get("forge.enhance.buy.title", { ticket = config.displayName }),
+			body = Text.get("forge.enhance.buy.body", {
+				ticket = config.displayName, price = NumberFormat.format(price), gold = NumberFormat.format(gold),
+				stage = ("%d"):format(prices.accountBestStage), kills = ("%d"):format(config.priceKillEquivalent) }),
+			primaryText = Text.get("forge.buy"),
+			secondaryText = Text.get("forge.cancel"),
 			parentId = parentId,
 			primaryEnabled = canAfford,
-			reason = (not canAfford) and ("골드가 부족합니다 (%s 더 필요)"):format(NumberFormat.format(price - gold)) or nil,
+			reason = (not canAfford) and Text.get("forge.enhance.buy.short", { need = NumberFormat.format(price - gold) }) or nil,
 		}, function(accepted)
 			if accepted then
 				ticketBuyRequest:FireServer(kind)

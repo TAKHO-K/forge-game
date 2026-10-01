@@ -4,6 +4,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
+local Text = require(ReplicatedStorage.Shared.Text)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 
 local CostView = {}
@@ -33,8 +34,8 @@ function CostView.build(parent, x, y, width)
 		value.Size = UDim2.new(0, width - NAME_WIDTH, 0, height)
 		return name, value
 	end
-	refs.goldName, refs.goldValue = row("Gold", y, "골드")
-	refs.materialName, refs.materialValue = row("Material", y + height, "재료")
+	refs.goldName, refs.goldValue = row("Gold", y, Text.get("forge.enhance.cost.gold"))
+	refs.materialName, refs.materialValue = row("Material", y + height, Text.get("forge.enhance.cost.material"))
 	return refs
 end
 
@@ -45,17 +46,17 @@ function CostView.update(refs, state)
 		refs.goldValue.Text = "-"
 		refs.goldValue.TextColor3 = colors.textTertiary
 	else
-		refs.goldValue.Text = ("%s (보유 %s)"):format(NumberFormat.format(state.cost), NumberFormat.format(state.gold))
+		refs.goldValue.Text = Text.get("forge.enhance.cost.have", { value = NumberFormat.format(state.cost), have = NumberFormat.format(state.gold) })
 		refs.goldValue.TextColor3 = state.gold < state.cost and colors.danger or colors.textPrimary
 	end
 
 	local material = state.material
 	if material then
 		refs.materialName.Text = material.name
-		refs.materialValue.Text = ("%s (보유 %s)"):format(NumberFormat.format(material.need), NumberFormat.format(material.have))
+		refs.materialValue.Text = Text.get("forge.enhance.cost.have", { value = NumberFormat.format(material.need), have = NumberFormat.format(material.have) })
 		refs.materialValue.TextColor3 = material.have < material.need and colors.danger or colors.textPrimary
 	else
-		refs.materialName.Text = "재료"
+		refs.materialName.Text = Text.get("forge.enhance.cost.material")
 		refs.materialValue.Text = "-"
 		refs.materialValue.TextColor3 = colors.textTertiary
 	end

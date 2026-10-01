@@ -44,15 +44,15 @@ local StageSelectPanel = {}
 
 -- 서버 거절 사유(StageServer.server.lua reject())를 그대로 옮긴다 - StageUI.client.lua의
 -- 콘솔 warn 매핑과 같은 목록, 이 패널은 화면에도 띄운다("조용히 실패하지 마라").
-local REASON_TEXT = {
-	range = "그 스테이지로는 아직 갈 수 없습니다(최고 도달 스테이지 + 1까지만)",
-	boss_locked = "바로 아래 보스를 먼저 깨야 갈 수 있습니다",
-	party_not_leader = "보스 스테이지는 파티 리더만 열 수 있습니다",
-	party_blocked = "파티원 중 입장 불가한 사람이 있습니다",
-	vote_pending = "이미 진행 중인 투표가 있습니다",
-	boss_alive = "보스전 중에는 이동할 수 없습니다(포기하면 한 스테이지 아래 마을로)", -- G1-5(확인창은 StageUI)
+local REASON_KEY = { -- 문장 = TextData_panels(ui.stage.err.*)
+	range = "ui.stage.err.range",
+	boss_locked = "ui.stage.err.bossLocked",
+	party_not_leader = "ui.stage.err.partyNotLeader",
+	party_blocked = "ui.stage.err.partyBlocked",
+	vote_pending = "ui.stage.err.votePending",
+	boss_alive = "ui.stage.err.bossAlive", -- G1-5(확인창은 StageUI)
 	-- S21-0 A4: 수치가 double 붕괴 구간에 들어가기 전 임시로 막는 안전 상한(InfiniteStageConfig.safeStageCap).
-	safe_cap = "현재 도달 가능한 최고 스테이지입니다",
+	safe_cap = "ui.stage.err.safeCap",
 }
 
 local COLUMNS = 5
@@ -194,7 +194,7 @@ title.Font = Enum.Font.GothamBold
 title.TextSize = 15
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.TextColor3 = UIColors.textPrimary
-title.Text = "구역 선택 (N)" -- QUEUE-ALL2 P2: 옛 "맵 선택" → N 키 · 이름 통일
+title.Text = Text.get("ui.stage.title") -- QUEUE-ALL2 P2: 옛 "맵 선택" → N 키 · 이름 통일
 title.Parent = panel
 
 -- S16 사전 작업 2: 터치 영역 44 × 44(모바일 하한). 보이는 원은 예전 그대로 26 × 26이고 같은 중심에 뒤 형제로 그린다(눌리는 것은 투명한 44 × 44 버튼).
@@ -253,7 +253,7 @@ legendLayout.Parent = legend
 -- ★ = 그 보스 칸에 첫 클리어 보상이 남음(gold), ✓ = 전부 받음(textTertiary - 범례에는 안 적는다).
 local REWARD_SPEC = { symbol = "★", color = UIColors.gold }
 local LEGEND_ORDER = { "cleared", "inProgress", "locked", "reward" }
-local LEGEND_TEXT = { cleared = "클리어함", inProgress = "도전 중", locked = "진입 못 함", reward = "첫 클리어 보상 남음" }
+local LEGEND_KEY = { cleared = "ui.stage.legend.cleared", inProgress = "ui.stage.legend.inProgress", locked = "ui.stage.legend.locked", reward = "ui.stage.legend.reward" }
 for i, key in ipairs(LEGEND_ORDER) do
 	local spec = key == "reward" and REWARD_SPEC or STATUS_SPEC[key]
 	local label = Instance.new("TextLabel")
@@ -264,7 +264,7 @@ for i, key in ipairs(LEGEND_ORDER) do
 	label.Font = Enum.Font.GothamBold
 	label.TextSize = 12
 	label.TextColor3 = spec.color
-	label.Text = spec.symbol .. " " .. LEGEND_TEXT[key]
+	label.Text = Text.get(LEGEND_KEY[key], { symbol = spec.symbol })
 	label.Parent = legend
 end
 
@@ -426,9 +426,9 @@ local function makePageButton(text, order)
 	return button
 end
 
-local prevButton = makePageButton("◀ 이전 " .. STEP, 1)
-local frontierButton = makePageButton("최전선", 2)
-local nextButton = makePageButton("다음 " .. STEP .. " ▶", 3)
+local prevButton = makePageButton(Text.get("ui.stage.prev", { count = tostring(STEP) }), 1)
+local frontierButton = makePageButton(Text.get("ui.stage.frontier"), 2)
+local nextButton = makePageButton(Text.get("ui.stage.next", { count = tostring(STEP) }), 3)
 
 local statusLine = Instance.new("TextLabel")
 statusLine.Position = UDim2.new(0, 16, 1, -34)
@@ -705,7 +705,7 @@ UIManager.register("stageSelect", {
 	canOpen = function()
 		return not isTutorialActive()
 	end,
-	blockedText = "견습 중에는 스테이지를 고를 수 없습니다", -- 메뉴바 버튼의 비활성 토스트(UIManager.switchTo)
+	blockedText = Text.get("ui.stage.blockedTutorial"), -- 메뉴바 버튼의 비활성 토스트(UIManager.switchTo)
 	onOpen = onOpen,
 	onClose = onClose,
 })
@@ -739,7 +739,7 @@ stageMoveResult.OnClientEvent:Connect(function(payload)
 	if payload.result == "ok" then
 		setStatus("")
 	elseif payload.result == "rejected" then
-		setStatus(REASON_TEXT[payload.reason] or ("이동할 수 없습니다(" .. tostring(payload.reason) .. ")"))
+		setStatus(REASON_KEY[payload.reason] and Text.get(REASON_KEY[payload.reason]) or Text.get("ui.stage.err.unknown", { reason = tostring(payload.reason) }))
 	end
 end)
 

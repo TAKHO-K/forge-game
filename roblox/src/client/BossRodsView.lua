@@ -11,6 +11,7 @@ local Workspace = game:GetService("Workspace")
 
 local Theme = require(script.Parent.ui.kit.Theme)
 local BossFx = require(script.Parent.BossFx)
+local Text = require(game:GetService("ReplicatedStorage").Shared.Text)
 
 local BossRodsView = {}
 
@@ -99,7 +100,7 @@ end
 
 function BossRodsView.status(data)
 	local gui = ensureHud()
-	gui.Status.Text = ("⚡ 피뢰침 %d/%d · 남은 방전 %d"):format(data.charged, data.required, data.left)
+	gui.Status.Text = Text.get("scene.boss.rods.status", { charged = ("%d"):format(data.charged), required = ("%d"):format(data.required), left = ("%d"):format(data.left) })
 	for index, entry in pairs(rods) do
 		if data.chargedIndex and data.chargedIndex[index] and not entry.glow then
 			entry.glow = newPart(Vector3.new(1.6, 13, 1.6), YELLOW, 0.1)

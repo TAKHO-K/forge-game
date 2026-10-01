@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local PlayerLabelFormat = require(ReplicatedStorage.Shared.PlayerLabelFormat)
 local SkillTooltipText = require(ReplicatedStorage.Shared.SkillTooltipText)
+local Text = require(ReplicatedStorage.Shared.Text)
 local Gauge = require(script.Parent.Parent.ui.kit.Gauge)
 local ListRow = require(script.Parent.Parent.ui.kit.ListRow)
 local ScreenMap = require(script.Parent.Parent.ui.ScreenMap)
@@ -86,8 +87,8 @@ local function buildPcMember(list, order)
 		title.TextColor3 = data.awayText and UIColors.textSecondary or (data.isLeader and UIColors.gold or UIColors.textPrimary)
 		icon.Text = firstChar(data.className)
 		icon.TextColor3 = UIColors.classAccent[data.classId] or UIColors.textSecondary
-		local subtitle = ("%s · 스테이지 %s"):format(data.className, tostring(data.stage or "-"))
-		row.setSubtitle(data.awayText and ("%s · %s"):format(data.awayText, subtitle) or subtitle)
+		local subtitle = Text.get("hud.party.subtitle", { class = data.className, stage = tostring(data.stage or "-") })
+		row.setSubtitle(data.awayText and Text.get("hud.party.awaySubtitle", { away = data.awayText, subtitle = subtitle }) or subtitle)
 		setGauge(gauge, shield, data.ratio, data.shieldRatio)
 		-- 24-3: 링 색으로 버프 여부를 구분한다(새 파티클 · 새 색 없이 기존 rim/success 재사용).
 		stroke.Color = data.buffActive and UIColors.success or UIColors.rim
@@ -248,14 +249,14 @@ function PartyListView.build(opts)
 	function view.setHealerBuff(fraction)
 		buffChipHolder.Visible = fraction ~= nil and fraction > 0
 		if buffChipHolder.Visible then
-			buffChipText.Text = (compact and "✚ +" or "✚ 피해 +") .. SkillTooltipText.pct(fraction) -- 축약형은 폭 96이라 "피해"를 뺀다
+			buffChipText.Text = Text.get(compact and "hud.party.buffChipShort" or "hud.party.buffChip", { pct = SkillTooltipText.pct(fraction) }) -- 축약형은 폭 96이라 "피해"를 뺀다
 		end
 	end
 
 	function view.setExpBonus(bonus)
 		chipHolder.Visible = bonus > 0
 		if bonus > 0 then
-			chipText.Text = ("경험치 +%d%%%s"):format(math.floor(bonus * 100 + 0.5), game:GetService("Players").LocalPlayer:GetAttribute("PartyFriendBonus") and " · 친구 보너스" or "") -- QUEUE-ALL1 P4 §1
+			chipText.Text = Text.get(game:GetService("Players").LocalPlayer:GetAttribute("PartyFriendBonus") and "hud.party.expChipFriend" or "hud.party.expChip", { percent = ("%d"):format(math.floor(bonus * 100 + 0.5)) }) -- QUEUE-ALL1 P4 §1
 		end
 	end
 

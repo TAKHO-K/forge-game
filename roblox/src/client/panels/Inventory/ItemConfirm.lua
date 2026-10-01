@@ -9,6 +9,7 @@ local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local ItemDescribe = require(ReplicatedStorage.Shared.ItemDescribe)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local GemCraft = require(ReplicatedStorage.Shared.GemCraft)
+local Text = require(ReplicatedStorage.Shared.Text)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 
 local ItemConfirm = {}
@@ -71,8 +72,8 @@ function ItemConfirm.create(content, player)
 		buttonCorner.Parent = button
 		return button
 	end
-	local yes = makeButton("확인", -12, true) -- 위험 버튼 = 빨강 오른쪽
-	local no = makeButton("취소", -64, false)
+	local yes = makeButton(Text.get("gear.confirm.ok"), -12, true) -- 위험 버튼 = 빨강 오른쪽
+	local no = makeButton(Text.get("gear.confirm.cancel"), -64, false)
 
 	local pending -- 확인을 누르면 실행할 함수(취소 · 바깥 클릭이면 버린다)
 	local function close()
@@ -108,13 +109,16 @@ function ItemConfirm.create(content, player)
 	function self.item(verb, item, action, isGem)
 		local visual = ItemVisualData.gradeVisuals[item.grade]
 		local described = isGem and ItemDescribe.gem(item) or ItemDescribe.item(item, player:GetAttribute("ClassId"))
-		local gain = ""
+		local args = { name = described.title, grade = ArmorData.grades[item.grade].displayName }
+		local key = verb == "판매" and "gear.confirm.sell" or "gear.confirm.dismantle"
 		if isGem and verb == "판매" then -- P3c E4
-			gain = (" 골드 %s를 얻습니다."):format(NumberFormat.format(GemCraft.sellPrice(item, player:GetAttribute("AccountBestStage") or 1)))
+			key = "gear.confirm.sellGem"
+			args.gold = NumberFormat.format(GemCraft.sellPrice(item, player:GetAttribute("AccountBestStage") or 1))
 		elseif isGem then
-			gain = (" 가루 %d를 얻습니다."):format(GemCraft.dustYield(item))
+			key = "gear.confirm.dismantleGem"
+			args.dust = ("%d"):format(GemCraft.dustYield(item))
 		end
-		self.ask(("%s(%s)를 %s하시겠습니까?%s 되돌릴 수 없습니다."):format(described.title, ArmorData.grades[item.grade].displayName, verb, gain), visual and visual.color or UIColors.textPrimary, action) -- G1-1: 태초도 제 색
+		self.ask(Text.get(key, args), visual and visual.color or UIColors.textPrimary, action) -- G1-1: 태초도 제 색
 	end
 
 	return self

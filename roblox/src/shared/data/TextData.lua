@@ -1,7 +1,9 @@
 -- 플레이어가 보는 문장 원문(G1-1 - shared/Text.get이 읽는다). 키 = "화면.용도" · 값 = 한 문장 전체 템플릿({이름} = 인자).
 -- 규칙(COMMON §2): 한 문장은 한 템플릿이다(조각 이어붙이기 금지) · 인자는 이름으로 · 숫자는 호출하는 쪽이 형식을 정해 문자열로 넘긴다.
 -- G1-1부터 새로 쓰거나 고친 문장만 여기 있다. 옛 문장은 L(번역) 단계에서 옮긴다.
-return {
+-- QUEUE-ALL4 E 영어 준비: en = 같은 키의 영어(TextData_en.lua) · 화면별 분할 파일(TextData_<화면>.lua = { ko, en } 짝)을 아래에서 합친다(파일 800줄 규칙).
+--   en에 없는 키 = ko로 대체(Text가 경고 1회) · 짝 검사 = roblox/tools/i18n/check_textdata.py.
+local TextData = {
 	ko = {
 		-- A2-N4 §4-4 파티 모집 게시판
 		-- QUEUE-ALL2 P2 가방 · 장비창(ref 17)
@@ -693,3 +695,26 @@ return {
 		["gift.claimFailed"] = "선물을 받지 못했습니다",
 	},
 }
+
+TextData.en = require(script.Parent.TextData_en)
+-- 정적 require(로컬 하네스가 require(script.Parent.X) 꼴만 바꿔 끼운다)
+for _, parts in ipairs({
+	require(script.Parent.TextData_hud),
+	require(script.Parent.TextData_scene),
+	require(script.Parent.TextData_inv),
+	require(script.Parent.TextData_forge),
+	require(script.Parent.TextData_panels),
+	require(script.Parent.TextData_shared),
+	require(script.Parent.TextData_server),
+}) do
+	for lang, part in pairs(parts) do
+		for key, template in pairs(part) do
+			if TextData[lang][key] ~= nil then
+				warn(("[TextData] 겹친 키: %s (%s)"):format(key, lang))
+			end
+			TextData[lang][key] = template
+		end
+	end
+end
+
+return TextData

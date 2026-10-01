@@ -3,6 +3,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TextChatService = game:GetService("TextChatService")
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local announce = ReplicatedStorage:WaitForChild("EnhanceAnnounce")
 
@@ -10,6 +11,6 @@ announce.OnClientEvent:Connect(function(displayName, level)
 	local channels = TextChatService:FindFirstChild("TextChannels")
 	local general = channels and channels:FindFirstChild("RBXGeneral")
 	if general then
-		general:DisplaySystemMessage(("%s님이 +%d 강화에 성공했습니다"):format(tostring(displayName), tonumber(level) or 0))
+		general:DisplaySystemMessage(Text.get("scene.enhance.announce", { name = tostring(displayName), level = ("%d"):format(tonumber(level) or 0) }))
 	end
 end)

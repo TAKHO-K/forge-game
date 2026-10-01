@@ -11,9 +11,11 @@
 -- 자리: ScreenMap MR.requestBanner. 모바일은 아래 끝을 BR 터치 예약 구역 위 끝에 맞춘다(공격 · 스킬 버튼을 안 덮는다). ScreenGui는 window 대역(100 ~ 149)과 메뉴바(150) 위 · overlay(200 ~) 아래(창을 연 채 온 초대도 보이고 눌린다).
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TextService = game:GetService("TextService")
 
+local Text = require(ReplicatedStorage.Shared.Text)
 local Button = require(script.Parent.Parent.ui.kit.Button)
 local Gauge = require(script.Parent.Parent.ui.kit.Gauge)
 local ScreenMap = require(script.Parent.Parent.ui.ScreenMap)
@@ -267,10 +269,10 @@ local function ensureBuilt()
 
 	gauge = Gauge.build({ parent = frame, name = "TimeGauge", height = GAUGE_HEIGHT, width = RequestBanner.width - PAD * 2, trackColorName = "slot", fillColorName = "ember", value = 1 })
 	local buttonWidth = (RequestBanner.width - PAD * 2 - BUTTON_GAP) / 2
-	acceptButton = Button.build({ parent = frame, name = "AcceptButton", kind = "primary", text = "수락", width = buttonWidth, anchorPoint = Vector2.new(1, 0), onActivated = function()
+	acceptButton = Button.build({ parent = frame, name = "AcceptButton", kind = "primary", text = Text.get("hud.req.accept"), width = buttonWidth, anchorPoint = Vector2.new(1, 0), onActivated = function()
 		press("accept")
 	end })
-	declineButton = Button.build({ parent = frame, name = "DeclineButton", kind = "secondary", text = "거절", width = buttonWidth, onActivated = function()
+	declineButton = Button.build({ parent = frame, name = "DeclineButton", kind = "secondary", text = Text.get("hud.req.decline"), width = buttonWidth, onActivated = function()
 		press("decline")
 	end })
 

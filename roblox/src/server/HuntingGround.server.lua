@@ -8,6 +8,7 @@ local Workspace = game:GetService("Workspace")
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
 local WorldMapLayout = require(ReplicatedStorage.Shared.WorldMapLayout)
+local Text = require(ReplicatedStorage.Shared.Text)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local MonsterPrefixData = require(ReplicatedStorage.Shared.data.MonsterPrefixData)
 local WorldMap = require(script.Parent.WorldMap)
@@ -190,7 +191,7 @@ local function createGemMerchant(communityZone)
 	local shopPrompt = Instance.new("ProximityPrompt")
 	shopPrompt.Name = "ShopPrompt"
 	shopPrompt.ObjectText = merchant.objectText
-	shopPrompt.ActionText = "상점"
+	shopPrompt.ActionText = Text.get("shop.title")
 	shopPrompt.KeyboardKeyCode = Enum.KeyCode.F
 	shopPrompt.HoldDuration = 0
 	shopPrompt.RequiresLineOfSight = false

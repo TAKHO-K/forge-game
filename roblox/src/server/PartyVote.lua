@@ -8,6 +8,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
+local Text = require(ReplicatedStorage.Shared.Text)
 local PartyState = require(script.Parent.PartyState)
 local BossEncounter = require(script.Parent.BossEncounter)
 
@@ -47,7 +48,7 @@ local function finish(party, passed)
 	fireTo(vote.others, { result = result, stage = vote.targetStage })
 	fireTo({ vote.leader }, { result = result, stage = vote.targetStage, isLeader = true })
 	if not passed then
-		PartyState.notify(vote.leader, "투표가 성립하지 않았습니다(제한시간 초과 - 아무도 동의하지 않음)")
+		PartyState.notify(vote.leader, Text.getFor(typeof(vote.leader) == "Instance" and vote.leader or nil, "srv.party.voteFailed"))
 	end
 	vote.onResolve(passed)
 end

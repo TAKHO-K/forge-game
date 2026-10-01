@@ -9,6 +9,7 @@ local Button = require(script.Parent.Button)
 local Panel = require(script.Parent.Panel)
 local Theme = require(script.Parent.Theme)
 local UIManager = require(script.Parent.Parent.Parent.UIManager)
+local Text = require(game:GetService("ReplicatedStorage").Shared.Text)
 
 local Confirm = {}
 
@@ -120,9 +121,9 @@ function Confirm.ask(props, callback)
 	built.panel.titleLabel.Text = props.title or ""
 	built.panel.titleLabel.TextColor3 = Theme.color(props.danger == true and "danger" or "textPrimary") -- ref 18: 되돌릴 수 없는 물음은 제목도 경고색
 	built.bodyLabel.Text = props.body or ""
-	built.primary.setText(props.primaryText or "확인")
-	built.danger.setText(props.primaryText or "확인")
-	built.secondary.setText(props.secondaryText or "취소")
+	built.primary.setText(props.primaryText or Text.get("ui.confirm.ok"))
+	built.danger.setText(props.primaryText or Text.get("ui.confirm.ok"))
+	built.secondary.setText(props.secondaryText or Text.get("ui.confirm.cancel"))
 	built.primary.root.Visible = props.danger ~= true
 	built.danger.root.Visible = props.danger == true
 	local primaryEnabled = props.primaryEnabled ~= false

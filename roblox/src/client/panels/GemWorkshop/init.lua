@@ -59,18 +59,18 @@ local debugSkipRangeClose = false -- Studio 자체 점검 전용: 검증 캐릭�
 local statusText, statusColorName = "", "textSecondary"
 
 -- 결과 이유 코드 → 한 줄(서버 GemServer의 workshopResult 주석과 같은 코드).
-local REASON_TEXT = {
-	out_of_range = "보석상인에게서 너무 멀어 요청이 거절되었습니다",
-	no_character = "캐릭터를 찾을 수 없습니다",
-	invalid = "잘못된 요청입니다",
-	no_ticket = "변환권이 없습니다 - 위에서 구매하세요",
-	no_gold = "골드가 부족합니다",
-	no_dust = "보석 가루가 부족합니다 - 보석을 분해하면 얻습니다", -- P2.5b C
-	no_class = "직업을 먼저 고르세요",
-	empty_slot = "빈 홈은 리롤할 수 없습니다",
-	not_rerollable = "고대 · 태초 등급만 리롤할 수 있습니다",
-	not_found = "대상을 찾을 수 없습니다",
-	not_equipped = "착용 중인 장비가 아닙니다",
+local REASON_KEY = {
+	out_of_range = "forge.workshop.err.outOfRange",
+	no_character = "forge.workshop.err.noCharacter",
+	invalid = "forge.err.invalid",
+	no_ticket = "forge.workshop.err.noTicket",
+	no_gold = "forge.err.noGold",
+	no_dust = "forge.err.noDust", -- P2.5b C
+	no_class = "forge.err.noClass",
+	empty_slot = "forge.workshop.err.emptySlot",
+	not_rerollable = "forge.workshop.err.notRerollable",
+	not_found = "forge.workshop.err.notFound",
+	not_equipped = "forge.workshop.err.notEquipped",
 }
 
 local function ticketPrice()
@@ -89,7 +89,7 @@ local function optionText(described)
 	for _, line in ipairs(described.options) do
 		table.insert(texts, line.text)
 	end
-	return #texts > 0 and table.concat(texts, " · ") or "옵션 없음"
+	return #texts > 0 and table.concat(texts, " · ") or Text.get("forge.noOption")
 end
 
 -- 리롤할 수 있는 대상(고대 · 태초만): { kind, key, title, subtitle, gradeId }
@@ -100,20 +100,20 @@ local function collectTargets()
 		local gem = state.gems[slot]
 		if type(gem) == "table" and Gem.isRerollableGrade(gem.grade) then
 			local described = ItemDescribe.gem(gem, classId)
-			table.insert(list, { kind = "gem", key = slot, title = ("%d번 홈 · %s"):format(slot, described.title), subtitle = optionText(described), gradeId = gem.grade })
+			table.insert(list, { kind = "gem", key = slot, title = Text.get("forge.workshop.targetSlot", { slot = ("%d"):format(slot), title = described.title }), subtitle = optionText(described), gradeId = gem.grade })
 		end
 	end
 	for _, part in ipairs(EquipSlots.order) do
 		local item = state.equipment[part]
 		if type(item) == "table" and Gem.isRerollableGrade(item.grade) then
 			local described = ItemDescribe.item(item, classId)
-			table.insert(list, { kind = "equipped", key = part, title = ("착용 · %s"):format(described.title), subtitle = described.meta .. " · " .. optionText(described), gradeId = item.grade })
+			table.insert(list, { kind = "equipped", key = part, title = Text.get("forge.workshop.targetEquipped", { title = described.title }), subtitle = described.meta .. " · " .. optionText(described), gradeId = item.grade })
 		end
 	end
 	for index, item in ipairs(state.inventory) do
 		if Gem.isRerollableGrade(item.grade) then
 			local described = ItemDescribe.item(item, classId)
-			table.insert(list, { kind = "bag", key = index, title = ("가방 · %s"):format(described.title), subtitle = described.meta .. " · " .. optionText(described), gradeId = item.grade })
+			table.insert(list, { kind = "bag", key = index, title = Text.get("forge.workshop.targetBag", { title = described.title }), subtitle = described.meta .. " · " .. optionText(described), gradeId = item.grade })
 		end
 	end
 	return list
@@ -138,7 +138,7 @@ local function sendReroll(target)
 		return
 	end
 	pendingSince = os.clock()
-	setStatus("리롤 요청 중...", "textSecondary")
+	setStatus(Text.get("forge.workshop.rerollPending"), "textSecondary")
 	rerollRequest:FireServer(target.kind, target.key)
 	refresh()
 end
@@ -148,7 +148,7 @@ local function sendBuy(gradeId)
 		return
 	end
 	pendingSince = os.clock()
-	setStatus("변환권 구매 요청 중...", "textSecondary")
+	setStatus(Text.get("forge.workshop.buyPending"), "textSecondary")
 	buyRequest:FireServer(gradeId)
 	refresh()
 end
@@ -219,7 +219,7 @@ refresh = function()
 	end
 
 	local dustOwned = player:GetAttribute("GemDust") or 0
-	buildSectionLabel(built.scroll, ("변환권 - 골드 + 보석 가루로 구매(가루 보유 %s · 골드 가격은 계정 최고 스테이지 기준)"):format(NumberFormat.format(dustOwned)), nextOrder())
+	buildSectionLabel(built.scroll, Text.get("forge.workshop.ticketSection", { dust = NumberFormat.format(dustOwned) }), nextOrder())
 	for _, gradeId in ipairs({ "ancient", "primordial" }) do
 		local owned = state.tickets[gradeId] or 0
 		local ticketName = "Ticket_" .. gradeId
@@ -227,9 +227,9 @@ refresh = function()
 		local _, ticketButton = buildRow(built.scroll, width, {
 			name = ticketName,
 			order = nextOrder(),
-			title = ("%s 변환권 · 보유 %d장"):format(gradeName(gradeId), owned),
-			subtitle = ("가격 %s골드 + 가루 %d"):format(NumberFormat.format(price), dustPrice),
-			buttonText = "구매",
+			title = Text.get("forge.workshop.ticketTitle", { grade = gradeName(gradeId), count = ("%d"):format(owned) }),
+			subtitle = Text.get("forge.workshop.ticketPrice", { gold = NumberFormat.format(price), dust = ("%d"):format(dustPrice) }),
+			buttonText = Text.get("forge.buy"),
 			enabled = gold >= price and dustOwned >= dustPrice and not busy,
 			onActivated = function()
 				sendBuy(gradeId)
@@ -238,10 +238,10 @@ refresh = function()
 		built.rows[ticketName] = ticketButton
 	end
 
-	buildSectionLabel(built.scroll, "리롤 - 고대 · 태초 등급 장비 · 보석의 옵션을 변환권으로 다시 굴립니다", nextOrder())
+	buildSectionLabel(built.scroll, Text.get("forge.workshop.rerollSection"), nextOrder())
 	local targets = collectTargets()
 	if #targets == 0 then
-		local empty = Theme.label(built.scroll, "리롤할 수 있는 고대 · 태초 등급 장비 · 보석이 없습니다", "body", "textSecondary")
+		local empty = Theme.label(built.scroll, Text.get("forge.workshop.empty"), "body", "textSecondary")
 		empty.Name = "Empty"
 		empty.LayoutOrder = nextOrder()
 		empty.Size = UDim2.new(1, -8, 0, 40)
@@ -254,9 +254,9 @@ refresh = function()
 			name = targetName,
 			order = nextOrder(),
 			title = target.title,
-			subtitle = target.subtitle .. ((owned < 1) and " · 변환권 없음" or ""),
+			subtitle = (owned < 1) and Text.get("forge.workshop.subNoTicket", { subtitle = target.subtitle }) or target.subtitle,
 			gradeColor = visual and visual.color or nil,
-			buttonText = ("리롤(%d장)"):format(owned),
+			buttonText = Text.get("forge.workshop.rerollButton", { count = ("%d"):format(owned) }),
 			enabled = owned >= 1 and not busy,
 			onActivated = function()
 				sendReroll(target)
@@ -298,7 +298,7 @@ local function build()
 	local panel = Panel.create({
 		id = GemWorkshop.id,
 		kind = "station",
-		title = "보석 공방",
+		title = Text.get("forge.workshop.title"),
 		size = PANEL_SIZE,
 		anchorPoint = Vector2.new(0.5, 0),
 		position = UDim2.new(0.5, 0, 0, TOP_OFFSET),
@@ -411,9 +411,9 @@ function GemWorkshop.start()
 	workshopResult.OnClientEvent:Connect(function(action, success, reason)
 		pendingSince = nil
 		if success then
-			setStatus(action == "buy" and "변환권을 샀습니다" or "리롤 완료 - 새 옵션을 확인하세요", "success")
+			setStatus(action == "buy" and Text.get("forge.workshop.done.buy") or Text.get("forge.workshop.done.reroll"), "success")
 		else
-			setStatus(REASON_TEXT[reason] or ("거절되었습니다(" .. tostring(reason) .. ")"), "danger")
+			setStatus(REASON_KEY[reason] and Text.get(REASON_KEY[reason]) or Text.get("forge.err.rejected", { reason = tostring(reason) }), "danger")
 		end
 		refresh()
 	end)

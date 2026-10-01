@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Milestone = require(ReplicatedStorage.Shared.Milestone)
 local Toast = require(script.Parent.ui.kit.Toast)
 local MilestonesPanel = require(script.Parent.panels.Milestones)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local reached = ReplicatedStorage:WaitForChild("MilestoneReached")
 
@@ -13,15 +14,15 @@ reached.OnClientEvent:Connect(function(payload)
 	if type(payload) ~= "table" then
 		return
 	end
-	local parts = { { text = ("성장 보상 Lv.%d · "):format(payload.level or 0), colorName = "xp", bold = true } }
+	local parts = { { text = Text.get("scene.milestone.head", { level = ("%d"):format(payload.level or 0) }), colorName = "xp", bold = true } }
 	if (payload.statGained or 0) > 0 then
 		-- P2.5c B2: 합연산 버킷의 지금 합(%)을 보인다.
-		table.insert(parts, { text = ("%s +%.1f%%(합) "):format(Milestone.statText(), (payload.bonus or 0) * 100), colorName = "success" })
+		table.insert(parts, { text = Text.get("scene.milestone.stat", { stat = Milestone.statText(), bonus = ("%.1f"):format((payload.bonus or 0) * 100) }), colorName = "success" })
 	end
 	for _, unlock in ipairs(payload.unlocks or {}) do
 		table.insert(parts, { text = ("%s "):format(unlock.name), colorName = "gold", bold = true })
 	end
-	table.insert(parts, { text = "[보상 목록]", colorName = "success", bold = true, onActivate = function()
+	table.insert(parts, { text = Text.get("scene.milestone.list"), colorName = "success", bold = true, onActivate = function()
 		MilestonesPanel.open()
 	end })
 	Toast.push("TC", { richParts = parts, grade = "important", seconds = 6, groupKey = "milestone" })

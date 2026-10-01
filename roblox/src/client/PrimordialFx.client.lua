@@ -18,6 +18,7 @@ local TranscendentData = require(ReplicatedStorage.Shared.data.TranscendentData)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local PrimordialStamp = require(ReplicatedStorage.Shared.PrimordialStamp)
 local Toast = require(script.Parent.ui.kit.Toast)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local player = Players.LocalPlayer
 local ACCENT_HEX = PrimordialData.accentColor:ToHex()
@@ -30,10 +31,10 @@ end
 
 local function bannerParts(entry)
 	local global = isTranscendent(entry)
-	local gradeWord = global and "초월" or "태초"
+	local gradeWord = Text.get(global and "scene.primordial.gradeTranscendent" or "scene.primordial.gradePrimordial")
 	local parts = {
-		{ text = global and "[전 서버] " or "[이 서버] ", colorName = "textSecondary", bold = true },
-		{ text = entry.no and ("%s 세계 %d번째 %s %s "):format(global and TranscendentData.announce.glyph or "★", entry.no, gradeWord, global and TranscendentData.announce.glyph or "★")
+		{ text = ("%s "):format(Text.get(global and "scene.primordial.serverAll" or "scene.primordial.serverThis")), colorName = "textSecondary", bold = true },
+		{ text = entry.no and Text.get("scene.primordial.bannerNth", { glyph = global and TranscendentData.announce.glyph or "★", no = ("%d"):format(entry.no), grade = gradeWord })
 			or ("★ %s ★ "):format(gradeWord), color = global and TranscendentData.announce.color or PrimordialData.auraColor, bold = true },
 		{ text = tostring(entry.name or PrimordialData.fallbackName), color = PrimordialData.accentColor, bold = true },
 	}
@@ -46,8 +47,8 @@ end
 
 local function chatLine(entry)
 	local sourceText = PrimordialStamp.sourceText(entry.source)
-	local gradeWord = isTranscendent(entry) and "초월" or "태초"
-	return ('%s ★ %s - <font color="#%s">%s</font>%s'):format(isTranscendent(entry) and "[전 서버]" or "[이 서버]", entry.no and ("세계 %d번째 %s"):format(entry.no, gradeWord) or gradeWord, ACCENT_HEX, tostring(entry.name or PrimordialData.fallbackName),
+	local gradeWord = Text.get(isTranscendent(entry) and "scene.primordial.gradeTranscendent" or "scene.primordial.gradePrimordial")
+	return ('%s ★ %s - <font color="#%s">%s</font>%s'):format(Text.get(isTranscendent(entry) and "scene.primordial.serverAll" or "scene.primordial.serverThis"), entry.no and Text.get("scene.primordial.chatNth", { no = ("%d"):format(entry.no), grade = gradeWord }) or gradeWord, ACCENT_HEX, tostring(entry.name or PrimordialData.fallbackName),
 		sourceText and (" · " .. sourceText) or "")
 end
 
@@ -78,7 +79,7 @@ local function showSpectate(entry)
 	btn.TextColor3 = TranscendentData.announce.color
 	btn.Font = Enum.Font.GothamBold
 	btn.TextSize = 14
-	btn.Text = ("%s 구경 가기(세계 %s번째 초월)"):format(TranscendentData.announce.glyph, tostring(entry.no or "?"))
+	btn.Text = Text.get("scene.primordial.spectate", { glyph = TranscendentData.announce.glyph, no = tostring(entry.no or "?") })
 	btn.Parent = spectateGui
 	Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0)
 	local stroke = Instance.new("UIStroke")
@@ -88,7 +89,7 @@ local function showSpectate(entry)
 	local mine = spectateGui
 	btn.Activated:Connect(function()
 		ReplicatedStorage:WaitForChild("SpectateRequest"):FireServer(entry.jobId)
-		btn.Text = "이동 중…"
+		btn.Text = Text.get("scene.primordial.moving")
 	end)
 	task.delay(TranscendentData.announce.pillarSeconds, function()
 		if spectateGui == mine then
@@ -144,8 +145,8 @@ ReplicatedStorage:WaitForChild("PrimordialBanner").OnClientEvent:Connect(functio
 					end
 				end
 				Toast.push("TC", { richParts = {
-					{ text = "[전 서버] ", colorName = "textSecondary", bold = true },
-					{ text = ("%s 최근 1시간 초월 %d개"):format(TranscendentData.announce.glyph, #remoteRecent), color = TranscendentData.announce.color, bold = true },
+					{ text = ("%s "):format(Text.get("scene.primordial.serverAll")), colorName = "textSecondary", bold = true },
+					{ text = Text.get("scene.primordial.recentBatch", { glyph = TranscendentData.announce.glyph, count = ("%d"):format(#remoteRecent) }), color = TranscendentData.announce.color, bold = true },
 					{ text = hi > 0 and (" · #%d~#%d"):format(lo, hi) or "", colorName = "textPrimary" },
 				}, seconds = 4, fadeSeconds = 0.4 })
 				return

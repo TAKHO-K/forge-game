@@ -1,6 +1,7 @@
 -- 스킬 툴팁 글(P3b D) - 순수 함수. 규칙 · 사거리 · 틱 수 같은 고정 값은 SkillData(스킬 단일 출처)에서, 내 능력치에 따른 수치(공격력 · 1타 피해 · 쿨다운 · 치명 · 버프 값)는
 -- 서버 SkillStats.info(스킬 판정이 쓰는 함수 그대로)가 준 info에서만 가져온다 - 이 파일은 곱셈 · 나눗셈으로 피해를 다시 계산하지 않는다(표시 형식만 만든다).
--- 반환 = { title, keyText, lines = { { label, text, colorName? } } }. 줄 순서: 설명 · 계수 · 예상 피해 · 쿨타임 · 발동 · 사거리/범위 · 최대 타격 · 관통 · 치명 · 최종 데미지 버킷 · 치유사(모드 · 버프) · 규칙.
+-- 반환 = { title, keyText, lines = { { id, label, text, colorName? } } }. 줄 순서: 설명 · 계수 · 예상 피해 · 쿨타임 · 발동 · 사거리/범위 · 최대 타격 · 관통 · 치명 · 최종 데미지 버킷 · 치유사(모드 · 버프) · 규칙.
+-- QUEUE-ALL4 E: 글 = Text 키(desc.skill.* - TextData_shared) · id = 줄 머리 키의 끝(cooldown · expected · effect …) - 언어와 무관하게 줄을 고를 때 쓴다.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -8,6 +9,7 @@ local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local ShieldConfig = require(ReplicatedStorage.Shared.data.ShieldConfig)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local SkillTooltipText = {}
 
@@ -28,18 +30,23 @@ local function num(value)
 end
 
 local function seconds(value)
-	return (("%.1f"):format(value):gsub("%.0$", "")) .. "초"
+	return Text.get("desc.skill.seconds", { n = (("%.1f"):format(value):gsub("%.0$", "")) })
 end
 
+local function int(value)
+	return ("%d"):format(value)
+end
+
+-- 발동 글 키(desc.skill.act.<shape>) - 표에 없는 모양은 모양 id를 그대로 보여 준다.
 local ACTIVATION = {
-	line = "즉발 · 돌진",
-	circle = "채널링",
-	selfBuff = "즉발 · 자기 버프",
-	dash = "즉발 · 뒤로 도약 + 다음 평타 강화",
-	summon = "즉발 · 소환",
-	singleChannel = "채널링 · 단일 대상",
-	heal = "즉발 · 치유",
-	toggle = "토글(켜기 / 끄기)",
+	line = true,
+	circle = true,
+	selfBuff = true,
+	dash = true,
+	summon = true,
+	singleChannel = true,
+	heal = true,
+	toggle = true,
 }
 
 -- classId · slot("Q" | "E") · info = SkillStats.info 응답(없으면 수치 줄은 "불러오는 중").
@@ -50,129 +57,137 @@ function SkillTooltipText.build(classId, slot, info)
 	end
 	local stats = info and info.slots and info.slots[slot]
 	local lines = {}
-	local function add(label, text, colorName)
-		table.insert(lines, { label = label, text = text, colorName = colorName })
+	local function add(id, text, colorName)
+		table.insert(lines, { id = id, label = Text.get("desc.skill.label." .. id), text = text, colorName = colorName })
 	end
-	local optionText = stats and stats.optionBonus and math.abs(stats.optionBonus) > 1e-9 and (" (옵션 %+.0f%% 포함)"):format(stats.optionBonus * 100) or ""
-	local critText = info and ("치명 확률 %s · 치명 피해 ×%s"):format(pct(math.min(1, info.critRate)), num(info.critDmg)) or "-"
+	local function t(key, args)
+		return Text.get("desc.skill." .. key, args)
+	end
+	local loading = t("loading")
+	local optionText = stats and stats.optionBonus and math.abs(stats.optionBonus) > 1e-9 and t("option", { pct = ("%+.0f"):format(stats.optionBonus * 100) }) or ""
+	local critText = info and t("critInfo", { rate = pct(math.min(1, info.critRate)), dmg = num(info.critDmg) }) or "-"
 	local shape = def.shape
 	local ticks = def.tickCount or 1
 
 	-- 설명
 	if shape == "line" then
-		add("설명", ("바라보는 방향으로 %s 스터드 돌진하며 경로 위의 적을 모두 벤다."):format(num(def.rangeStuds)))
+		add("desc", t("desc.line", { range = num(def.rangeStuds) }))
 	elseif shape == "circle" then
-		add("설명", ("%s 동안 제자리에서 돌며 반경 안의 적을 %d번 벤다. 이동 속도 ×%s · 받는 피해 ×%s."):format(seconds(def.channelSeconds), ticks, num(def.channelMoveSpeedMultiplier), num(def.incomingDamageMultiplier)))
+		add("desc", t("desc.circle", { time = seconds(def.channelSeconds), ticks = int(ticks), move = num(def.channelMoveSpeedMultiplier), taken = num(def.incomingDamageMultiplier) }))
 	elseif shape == "selfBuff" then
-		add("설명", ("%s 동안 활을 깊게 당겨 느리지만 묵직한 큰 화살을 쏜다(적 %d명 관통 · 짧게 밀침). 명중한 화살은 꽂혀 %s 뒤 터진다."):format(seconds(def.durationSeconds), (def.heavyShot and def.heavyShot.pierce or 0) + 1, seconds(def.stuckArrowDelaySeconds)))
+		add("desc", t("desc.selfBuff", { time = seconds(def.durationSeconds), pierce = int((def.heavyShot and def.heavyShot.pierce or 0) + 1), delay = seconds(def.stuckArrowDelaySeconds) }))
 	elseif shape == "dash" then
-		add("설명", ("뒤로 %s 스터드 물러나고, 다음 평타 %d발이 강해진다."):format(num(def.rangeStuds), def.chargesGranted))
+		add("desc", t("desc.dash", { range = num(def.rangeStuds), charges = int(def.chargesGranted) }))
 	elseif shape == "summon" then
-		add("설명", "제자리에 분신을 남겨 적의 시선을 끈다. 분신이 있는 동안 평타 · 스킬이 확정 치명이다.")
+		add("desc", t("desc.summon"))
 	elseif shape == "singleChannel" then
-		add("설명", ("%s 동안 한 대상을 %d번 연타한다."):format(seconds(def.channelSeconds), ticks))
+		add("desc", t("desc.singleChannel", { time = seconds(def.channelSeconds), ticks = int(ticks) }))
 	elseif shape == "heal" then
-		add("설명", ("자신의 체력을 최대 체력의 %s 회복한다. 파티가 있으면 파티원 전원도 각자 최대 체력의 %s 회복한다."):format(pct(def.healPercentOfMaxHp), pct(def.healPercentOfMaxHp)))
+		add("desc", t("desc.heal", { pct = pct(def.healPercentOfMaxHp) }))
 	elseif shape == "toggle" then
-		add("설명", "딜링모드를 켜고 끈다. 켜진 동안 평타가 강해지고 체력이 조금씩 줄어든다(끄면 치유모드).")
+		add("desc", t("desc.toggle"))
 	end
 
 	-- 계수 · 예상 피해
 	if def.coefficient then
 		local perHit = stats and stats.hitCoefficient
 		if ticks > 1 then
-			add("계수", ("공격력의 %s(1타 %s × %d타)%s"):format(pct(stats and stats.castCoefficient or def.coefficient), pct(perHit or def.coefficient / ticks), ticks, optionText))
+			add("coef", t("coefMulti", { total = pct(stats and stats.castCoefficient or def.coefficient), perHit = pct(perHit or def.coefficient / ticks), ticks = int(ticks), option = optionText }))
 		else
-			add("계수", ("공격력의 %s%s"):format(pct(perHit or def.coefficient), optionText))
+			add("coef", t("coef", { pct = pct(perHit or def.coefficient), option = optionText }))
 		end
 		if stats and stats.hitDamage then
-			local total = ticks > 1 and (" · 대상 1명에 %d타 %s"):format(ticks, num(stats.castDamage)) or ""
-			add("예상 피해", ("1타 %s · 치명 %s%s"):format(num(stats.hitDamage), num(stats.critHitDamage), total), "ember")
+			if ticks > 1 then
+				add("expected", t("dmgMulti", { hit = num(stats.hitDamage), crit = num(stats.critHitDamage), ticks = int(ticks), total = num(stats.castDamage) }), "ember")
+			else
+				add("expected", t("dmg", { hit = num(stats.hitDamage), crit = num(stats.critHitDamage) }), "ember")
+			end
 		else
-			add("예상 피해", "불러오는 중…", "textTertiary")
+			add("expected", loading, "textTertiary")
 		end
 	elseif shape == "selfBuff" then
-		add("효과", stats and ("초당 피해 ×%s(상한 ×%s)%s · 발사 간격 ×%s"):format(num(stats.speedMultiplier), num(def.attackSpeedCap), optionText, num(def.heavyShot and def.heavyShot.intervalMultiplier or 1)) or "불러오는 중…", "ember")
-		add("예상 피해", stats and ("꽂힌 화살 1개 %s(공격력의 %s)"):format(num(stats.arrowDamage), pct(def.stuckArrowDamageCoefficient)) or "불러오는 중…", "ember")
+		add("effect", stats and t("selfBuff.effect", { speed = num(stats.speedMultiplier), cap = num(def.attackSpeedCap), option = optionText, interval = num(def.heavyShot and def.heavyShot.intervalMultiplier or 1) }) or loading, "ember")
+		add("expected", stats and t("selfBuff.dmg", { dmg = num(stats.arrowDamage), pct = pct(def.stuckArrowDamageCoefficient) }) or loading, "ember")
 	elseif shape == "dash" then
-		add("효과", ("다음 평타 %d발: 치명 확률 +%s · 추가 피해 공격력의 %s · 사거리 ×%s"):format(def.chargesGranted, pct(def.critRateBonus), pct(def.damageCoefficient), num(def.rangeMultiplier)))
-		add("예상 피해", stats and stats.bonusDamage and ("평타 1발에 +%s"):format(num(stats.bonusDamage)) or "불러오는 중…", "ember")
+		add("effect", t("dash.effect", { charges = int(def.chargesGranted), crit = pct(def.critRateBonus), dmg = pct(def.damageCoefficient), range = num(def.rangeMultiplier) }))
+		add("expected", stats and stats.bonusDamage and t("dash.dmg", { dmg = num(stats.bonusDamage) }) or loading, "ember")
 	elseif shape == "summon" then
-		add("효과", stats and ("분신 · 확정 치명 %s%s"):format(seconds(stats.duration), optionText) or "불러오는 중…", "ember")
+		add("effect", stats and t("summon.effect", { time = seconds(stats.duration), option = optionText }) or loading, "ember")
 	elseif shape == "heal" then
 		if stats and stats.shieldMode then
 			-- 딜링모드 + 파티: 이번 시전은 회복 대신 쉴드(리뷰 6 - 회복량을 보여 주면 실제와 다르다).
-			add("쉴드량", ("자신 %s · 치명 ×%s(파티원은 각자 최대 체력 기준)"):format(num(stats.shieldAmount), num(stats.critHealMultiplier)), "success")
+			add("shield", t("heal.shield", { amount = num(stats.shieldAmount), crit = num(stats.critHealMultiplier) }), "success")
 		else
-			add("회복량", stats and ("%s · 치명 ×%s"):format(num(stats.heal), num(stats.critHealMultiplier)) or "불러오는 중…", "success")
+			add("heal", stats and t("heal.amount", { amount = num(stats.heal), crit = num(stats.critHealMultiplier) }) or loading, "success")
 		end
 	elseif shape == "toggle" then
-		add("효과", stats and ("평타 ×%s(기본 ×%s × 투자 배율 ×%s)"):format(num(stats.attackMultiplier), num(def.attackMultiplier), num(stats.investmentScale)) or "불러오는 중…", "ember")
-		add("소모", stats and ("초당 최대 체력의 %s%s"):format(pct(stats.drainPerSecond), optionText) or "-")
+		add("effect", stats and t("toggle.effect", { mult = num(stats.attackMultiplier), base = num(def.attackMultiplier), scale = num(stats.investmentScale) }) or loading, "ember")
+		add("cost", stats and t("toggle.cost", { pct = pct(stats.drainPerSecond), option = optionText }) or "-")
 	end
 
-	add("쿨타임", stats and (stats.cooldown > 0 and seconds(stats.cooldown) or "없음(바로 다시 쓸 수 있다)") or seconds(def.cooldownSeconds))
-	add("발동", (ACTIVATION[shape] or shape) .. (def.channelSeconds and (" %s"):format(seconds(def.channelSeconds)) or ""))
+	add("cooldown", stats and (stats.cooldown > 0 and seconds(stats.cooldown) or t("cooldownNone")) or seconds(def.cooldownSeconds))
+	local activation = ACTIVATION[shape] and t("act." .. shape) or shape
+	add("cast", def.channelSeconds and t("actTime", { act = activation, time = seconds(def.channelSeconds) }) or activation)
 
 	-- 사거리 · 범위 / 최대 타격 수 / 관통
 	if shape == "line" then
-		add("사거리 · 범위", ("돌진 %s · 경로 좌우 %s"):format(num(def.rangeStuds), num(def.hitRadiusStuds)))
-		add("최대 타격", "경로 위의 적 전원 · 대상마다 1타(마릿수 제한 없음)")
-		add("관통", "관통한다(경로 위 전원)")
+		add("range", t("line.range", { range = num(def.rangeStuds), width = num(def.hitRadiusStuds) }))
+		add("maxHits", t("line.maxHits"))
+		add("pierce", t("line.pierce"))
 	elseif shape == "circle" then
-		add("사거리 · 범위", ("나를 중심으로 반경 %s"):format(num(def.radiusStuds)))
-		add("최대 타격", ("틱마다 반경 안의 적 전원 · 대상마다 %d타"):format(ticks))
-		add("관통", "범위 공격(해당 없음)")
+		add("range", t("circle.range", { radius = num(def.radiusStuds) }))
+		add("maxHits", t("circle.maxHits", { ticks = int(ticks) }))
+		add("pierce", t("circle.pierce"))
 	elseif shape == "singleChannel" then
-		add("사거리 · 범위", ("사거리 %s(가장 가까운 적 1명을 고정)"):format(num(def.rangeStuds)))
-		add("최대 타격", ("대상 1명 · %d타"):format(ticks))
-		add("관통", "관통하지 않는다(한 대상만)")
+		add("range", t("single.range", { range = num(def.rangeStuds) }))
+		add("maxHits", t("single.maxHits", { ticks = int(ticks) }))
+		add("pierce", t("single.pierce"))
 	elseif shape == "dash" then
-		add("사거리 · 범위", ("뒤로 %s 스터드"):format(num(def.rangeStuds)))
+		add("range", t("dash.range", { range = num(def.rangeStuds) }))
 	end
 
 	-- 치명 · 최종 데미지 버킷
 	if def.coefficient then
-		add("치명", "적용 - " .. critText)
-		add("최종 데미지", "적용(강화 · 옵션의 최종 데미지가 공격력에 들어 있다)")
+		add("crit", t("crit.applies", { crit = critText }))
+		add("finalDmg", t("final.coef"))
 	elseif shape == "heal" then
-		add("치명", ("회복에도 치명 굴림(%s) - 치명이면 회복 ×%s"):format(info and pct(math.min(1, info.critRate)) or "-", stats and num(stats.critHealMultiplier) or "-"))
-		add("최종 데미지", "치유량에 적용")
+		add("crit", t("crit.heal", { rate = info and pct(math.min(1, info.critRate)) or "-", mult = stats and num(stats.critHealMultiplier) or "-" }))
+		add("finalDmg", t("final.heal"))
 	elseif shape == "selfBuff" or shape == "dash" then
-		add("치명", "평타 치명 굴림을 그대로 쓴다 - " .. critText)
-		add("최종 데미지", "적용(평타 · 화살 피해의 공격력에 들어 있다)")
+		add("crit", t("crit.basic", { crit = critText }))
+		add("finalDmg", t("final.arrow"))
 	elseif shape == "toggle" then
-		add("치명", "평타 치명 굴림을 그대로 쓴다 - " .. critText)
-		add("최종 데미지", "적용(평타 공격력에 들어 있다)")
+		add("crit", t("crit.basic", { crit = critText }))
+		add("finalDmg", t("final.basic"))
 	elseif shape == "summon" then
-		add("치명", ("치명 확률이 100%%를 넘으면 확정 치명 대신 치명 피해 +%s"):format(num(CombatConfig.guaranteedCritOverflowBonus)))
+		add("crit", t("crit.summon", { bonus = num(CombatConfig.guaranteedCritOverflowBonus) }))
 	end
 
 	-- 치유사 모드 · 버프
 	if classId == "healer" and shape == "heal" then
-		add("치유모드", ("치유모드면 회복 · 딜링모드이고 파티가 있으면 회복 대신 쉴드(회복량의 %s · %s · 최대 %d겹)"):format(pct(def.shield.healRatio), seconds(def.shield.durationSeconds), ShieldConfig.maxLayers or 4))
-		add("파티 버프", info and ("파티가 있으면 전원 최종 피해 +%s(지속 = 쿨타임 × %s)"):format(pct(info.healerBuff), num(def.partyBuffDurationMultiplier)) or "-")
+		add("healMode", t("healMode.heal", { ratio = pct(def.shield.healRatio), time = seconds(def.shield.durationSeconds), layers = int(ShieldConfig.maxLayers or 4) }))
+		add("partyBuff", info and t("partyBuff", { pct = pct(info.healerBuff), mult = num(def.partyBuffDurationMultiplier) }) or "-")
 	elseif classId == "healer" and shape == "toggle" then
-		add("치유모드", stats and (stats.active and "지금: 딜링모드(켜짐)" or "지금: 치유모드(꺼짐 - 평타 ×1)") or "-")
+		add("healMode", stats and (stats.active and t("healMode.on") or t("healMode.off")) or "-")
 	elseif def.coefficient then
-		add("치유모드", info and ("치유사 파티 버프를 받으면 최종 피해 +%s(모드와 무관)"):format(pct(info.healerBuff)) or "-")
+		add("healMode", info and t("healMode.buff", { pct = pct(info.healerBuff) }) or "-")
 	end
 
 	-- 설명 없이는 알기 어려운 규칙
 	if shape == "line" then
-		add("규칙", "판정은 서버가 캐릭터가 바라보는 방향으로 한다 · 벽에 막히면 그 자리까지")
+		add("rule", t("rule.line"))
 	elseif shape == "circle" then
-		add("규칙", "채널 중에는 평타를 못 쓴다 · 맞아도 끊기지 않는다")
+		add("rule", t("rule.circle"))
 	elseif shape == "singleChannel" then
-		add("규칙", ("대상이 죽거나 사거리를 벗어나면 남은 타격은 사라진다 · 사거리 안에 적이 없으면 쿨타임 없이 취소 · 분신 중이면 첫 %d타만 확정 치명"):format(def.guaranteedCritHits or 1))
+		add("rule", t("rule.single", { n = int(def.guaranteedCritHits or 1) }))
 	elseif shape == "selfBuff" then
-		add("규칙", ("초당 피해 배율 = (1 + 직업 치명 확률 × %s) × (1 + 옵션), 상한 ×%s - 느려진 간격만큼 한 발이 커진다 · 꾹 누르면 자동 발사(빨리 눌러도 더 빨라지지 않는다) · 화살은 몬스터마다 최대 %d개"):format(num(def.attackSpeedCritCoefficient), num(def.attackSpeedCap), def.stuckArrowMaxPerMonster))
+		add("rule", t("rule.selfBuff", { coef = num(def.attackSpeedCritCoefficient), cap = num(def.attackSpeedCap), max = int(def.stuckArrowMaxPerMonster) }))
 	elseif shape == "dash" then
-		add("규칙", "강해진 평타는 맞든 빗나가든 쏠 때 1발씩 줄어든다 · 늘어난 사거리는 몬스터 인식 범위를 넘지 않는다")
+		add("rule", t("rule.dash"))
 	elseif shape == "summon" then
-		add("규칙", "분신은 스스로 공격하지 않는다")
+		add("rule", t("rule.summon"))
 	elseif shape == "toggle" then
-		add("규칙", "체력 소모는 쉴드로 막을 수 없다 · 켜고 끄기에 쿨타임이 없다")
+		add("rule", t("rule.toggle"))
 	end
 
 	return { title = def.name, keyText = slot, lines = lines }

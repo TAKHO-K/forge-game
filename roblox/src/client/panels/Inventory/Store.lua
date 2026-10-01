@@ -7,6 +7,7 @@ local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local EquipSlots = require(ReplicatedStorage.Shared.data.EquipSlots)
 local Loot = require(ReplicatedStorage.Shared.Loot)
+local Text = require(ReplicatedStorage.Shared.Text)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 local GradeFrame = require(script.Parent.Parent.Parent.GradeFrame) -- A2-N2 2-5 등급 프레임(ArtStyleV1 스위치 뒤)
 
@@ -43,7 +44,7 @@ S.GEAR_ORDER, S.PART_ORDER_INDEX = GEAR_ORDER, PART_ORDER_INDEX
 
 S.sortMode = "grade" -- "grade" | "level" | "part" - 클라 전용 표시 순서, 서버 왕복 없음.
 S.SORT_MODES = { "grade", "level", "part" }
-S.SORT_LABELS = { grade = "정렬: 등급", level = "정렬: 레벨", part = "정렬: 부위" } -- QUEUE-ALL1 01 A-2 문구(등급 → 레벨 → 부위)
+S.SORT_LABELS = { grade = Text.get("gear.bag.sortGrade"), level = Text.get("gear.bag.sortLevel"), part = Text.get("gear.bag.sortPart") } -- QUEUE-ALL1 01 A-2 문구(등급 → 레벨 → 부위)
 
 -- 일괄판매 기준 등급 선택지(20-3) - ArmorData.gradeOrder에서 bulkSellMaxGrade까지만 잘라낸다(단일 출처 - 서버도 같은 두 값으로 같은 상한을 강제한다).
 local BULK_SELL_GRADE_CHOICES = {}

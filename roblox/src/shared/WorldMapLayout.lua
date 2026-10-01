@@ -2,6 +2,7 @@
 -- 도형 명세(prim) = { model, name, size(Vector3), cf(CFrame), color({r,g,b}), material, shape("Block"|"Ball"|"Cylinder"|"Wedge"), collide(bool - true면 지면 폴더), attrs }.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local Layout = {}
 
@@ -561,7 +562,7 @@ function Layout.tree()
 			s.prevK = "ring"
 			s.angle += P.dir * 8 / P.radius -- 고리 위에서 조금 걸어 다음 구간 시작
 		end
-		table.insert(out.stations, { index = legIndex, y = leg.untilY, name = C.stations[legIndex] and C.stations[legIndex].name or "정상 전망대",
+		table.insert(out.stations, { index = legIndex, y = leg.untilY, name = C.stations[legIndex] and C.stations[legIndex].name or Text.get("desc.world.deck"),
 			unlockLevel = C.stations[legIndex] and C.stations[legIndex].unlockLevel or nil, deck = C.stations[legIndex] == nil })
 	end
 	treeCache = out
@@ -921,7 +922,7 @@ function Layout.buildTree(list)
 		end
 		local a = math.rad(St.startAngleDeg)
 		local mid = (St.ringInner + St.ringOuter) / 2
-		local label = s.deck and "정상 전망대" or ("%s(Lv %d)"):format(s.name, s.unlockLevel)
+		local label = s.deck and Text.get("desc.world.deck") or Text.get("desc.world.stationSign", { name = s.name, level = ("%d"):format(s.unlockLevel) })
 		local sign = Vector3.new(math.cos(a) * mid, FLOOR + s.y + 0.2, math.sin(a) * mid)
 		prim(list, "TreeCourse", "StationSign", Vector3.new(3, 0.4, 3), CFrame.new(sign), D.colors.marker, { collide = false, neon = true, attrs = { Label = label } })
 		if s.deck then
@@ -1188,7 +1189,7 @@ function Layout.buildZone(zone, list)
 	local raidcf = flatYaw(raid, dirOf(zone.angleDeg))
 	column(list, model, "RaidGatePost", raidcf * CFrame.new(-10, 0, 0), 4, 4, 22, D.colors.block)
 	column(list, model, "RaidGatePost", raidcf * CFrame.new(10, 0, 0), 4, 4, 22, D.colors.block)
-	prim(list, model, "RaidGateTop", Vector3.new(24, 3, 4), raidcf * CFrame.new(0, 23.5, 0), D.colors.block, { attrs = { RaidGate = zone.key, Label = "토벌 관문(BR2)" } })
+	prim(list, model, "RaidGateTop", Vector3.new(24, 3, 4), raidcf * CFrame.new(0, 23.5, 0), D.colors.block, { attrs = { RaidGate = zone.key, Label = Text.get("desc.world.raidGate") } })
 
 	local meta = { features = {}, eggs = {}, nests = {}, explore = {} } -- nests = M1-3 둥지 3트랙(WorldStructures - buildAll이 채운다)
 	for i, f in ipairs(zone.features) do

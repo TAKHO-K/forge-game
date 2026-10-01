@@ -109,7 +109,7 @@ bestLabel.Size = UDim2.new(0, 0, 0, 16)
 bestLabel.Font = Enum.Font.Gotham
 bestLabel.TextSize = 12
 bestLabel.TextColor3 = UIColors.textTertiary
-bestLabel.Text = "최고 기록 -"
+bestLabel.Text = Text.get("scene.stage.bestNone")
 bestLabel.Parent = wrapper
 -- QUEUE-ALL1 01 A-5(아트 켬): 작은 글씨 대비 - 굵게 13 · 한 단계 밝게 · 어두운 외곽선(3D 화면 위) · 끔 = 옛 모습
 local function bestLook()
@@ -135,7 +135,7 @@ end)
 
 local function updateLabels()
 	stageLabel.Text = tostring(player:GetAttribute("InfiniteStage") or 1)
-	bestLabel.Text = ("최고 기록 %d"):format(player:GetAttribute("InfiniteStageBest") or 1)
+	bestLabel.Text = Text.get("scene.stage.best", { best = ("%d"):format(player:GetAttribute("InfiniteStageBest") or 1) })
 end
 
 player:GetAttributeChangedSignal("InfiniteStage"):Connect(updateLabels)

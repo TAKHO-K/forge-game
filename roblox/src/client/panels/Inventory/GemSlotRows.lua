@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local Gem = require(ReplicatedStorage.Shared.Gem)
+local Text = require(ReplicatedStorage.Shared.Text)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 
 local GemSlotRows = {}
@@ -65,7 +66,7 @@ function GemSlotRows.create(parent, hooks)
 		rerollButton.Position = UDim2.new(0, 8, 1, -20)
 		rerollButton.Font = Enum.Font.GothamBold
 		rerollButton.TextSize = Theme.textSize("caption")
-		rerollButton.Text = "리롤"
+		rerollButton.Text = Text.get("gear.gem.reroll")
 		rerollButton.BackgroundColor3 = UIColors.panel
 		rerollButton.BackgroundTransparency = UIColors.panelTransparency
 		rerollButton.TextColor3 = UIColors.textPrimary

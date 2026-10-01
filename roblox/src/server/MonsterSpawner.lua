@@ -8,6 +8,7 @@ local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
 
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
+local Text = require(ReplicatedStorage.Shared.Text)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local WorldLabelStyle = require(ReplicatedStorage.Shared.WorldLabelStyle)
 local BossLook = require(ReplicatedStorage.Shared.BossLook)
@@ -508,9 +509,9 @@ function MonsterSpawner.spawnChest(baseData, position, zoneKey)
 	MonsterState.init(model, chestData, position, zoneKey, { isChest = true })
 	MonsterSpawner.updateHpLabel(model)
 
-	local zoneLabel = ("tier %d %s 구역"):format(baseData.tierIndex or 0, baseData.displayName or "")
+	local zoneLabel = Text.get("srv.chest.zoneLabel", { tier = ("%d"):format(baseData.tierIndex or 0), zone = baseData.displayName or "" })
 	print(("[forge-game] 보물상자 등장: %s (%.0f, %.0f)"):format(zoneLabel, position.X, position.Z))
-	treasureChestNotice:FireAllClients(("보물상자가 %s에 나타났습니다! 함께 부수면 모두가 보상을 받습니다"):format(zoneLabel))
+	treasureChestNotice:FireAllClients(Text.get("srv.chest.spawned", { zone = zoneLabel }))
 
 	-- 소멸 타이머 - 파괴(CombatResolution)와 같은 경합 가드(tryClaimDeath)를 쓴다. 둘 중
 	-- 먼저 claim한 쪽만 진행하므로 "파괴 직후 소멸 처리"나 그 반대가 겹치지 않는다.
@@ -522,7 +523,7 @@ function MonsterSpawner.spawnChest(baseData, position, zoneKey)
 			return
 		end
 		print("[forge-game] 보물상자 소멸(시간 초과): " .. zoneLabel)
-		treasureChestNotice:FireAllClients(("%s의 보물상자가 사라졌습니다"):format(zoneLabel))
+		treasureChestNotice:FireAllClients(Text.get("srv.chest.vanished", { zone = zoneLabel }))
 		MonsterSpawner.despawn(model)
 	end)
 	return model

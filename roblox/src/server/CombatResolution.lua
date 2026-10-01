@@ -7,6 +7,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DropTableData = require(ReplicatedStorage.Shared.data.DropTableData) -- QUEUE-ALL1 P3 첫 보스 확정 전설
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local Loot = require(ReplicatedStorage.Shared.Loot)
@@ -352,8 +353,8 @@ local function handleBossDeath(attacker, target)
 			PlayerProfile.setBossCleared(member, monsterData.stageNumber)
 			PlayerProfile.raiseInfiniteBest(member, monsterData.stageNumber)
 		elseif verdict.reasons[i] == "low_damage" then
-			PartyState.notify(member, ("개인 최고 기록이 오르지 않았습니다 - 기여 %.1f%%(최소 %.0f%% 필요)"):format(
-				judgedInput[i].ratio * 100, CombatConfig.contributionRewardThreshold * 100))
+			PartyState.notify(member, Text.getFor(typeof(member) == "Instance" and member or nil, "srv.boss.recordLow", {
+				ratio = ("%.1f"):format(judgedInput[i].ratio * 100), min = ("%.0f"):format(CombatConfig.contributionRewardThreshold * 100) }))
 		end
 		table.insert(clearMembers, { player = member, advanced = verdict.advanced[i], reason = verdict.reasons[i], ratio = judgedInput[i].ratio })
 	end
@@ -423,7 +424,7 @@ local function handleChestBreak(target)
 	end
 	print(("[forge-game] 보물상자 파괴 - %d명 보상"):format(count))
 	if CombatResolution.treasureChestNotice then
-		CombatResolution.treasureChestNotice:FireAllClients(("보물상자가 열렸습니다 - %d명이 보상을 받았습니다"):format(count))
+		CombatResolution.treasureChestNotice:FireAllClients(Text.get("srv.chest.opened", { count = ("%d"):format(count) }))
 	end
 end
 

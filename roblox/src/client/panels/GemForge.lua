@@ -34,18 +34,19 @@ local gemSync = ReplicatedStorage:WaitForChild("GemSync")
 local craftRequest = ReplicatedStorage:WaitForChild("GemCraftRequest")
 local craftResult = ReplicatedStorage:WaitForChild("GemCraftResult")
 
-local REASON_TEXT = {
-	invalid = "잘못된 요청입니다",
-	no_class = "직업을 먼저 고르세요",
-	not_found = "보석을 찾을 수 없습니다",
-	same_gem = "같은 보석은 먹일 수 없습니다",
-	no_gain = "먹일 보석의 레벨이 대상보다 높아야 합니다",
-	no_gold = "골드가 부족합니다",
-	no_dust = "보석 가루가 부족합니다 - 보석을 분해하면 얻습니다",
-	none = "분해할 보석이 없습니다",
+local REASON_KEY = {
+	invalid = "forge.err.invalid",
+	no_class = "forge.err.noClass",
+	not_found = "forge.gem.err.notFound",
+	same_gem = "forge.gem.err.sameGem",
+	no_gain = "forge.gem.err.noGain",
+	no_gold = "forge.err.noGold",
+	no_dust = "forge.err.noDust",
+	none = "forge.gem.err.none",
 }
 GemForge.reasonText = function(reason)
-	return REASON_TEXT[reason] or ("거절되었습니다(" .. tostring(reason) .. ")")
+	local key = REASON_KEY[reason]
+	return key and Text.get(key) or Text.get("forge.err.rejected", { reason = tostring(reason) })
 end
 
 local state = { gems = { false, false, false, false, false }, gemInventory = {} }
@@ -81,7 +82,7 @@ local function optionText(gem)
 	for _, line in ipairs(lines) do
 		table.insert(texts, line.text)
 	end
-	return #texts > 0 and table.concat(texts, " · ") or "옵션 없음"
+	return #texts > 0 and table.concat(texts, " · ") or Text.get("forge.noOption")
 end
 
 -- 먹일 수 있는 보석(가방 · 대상보다 레벨이 높다 · 대상 자신 제외) - 레벨 높은 순.
@@ -107,7 +108,7 @@ local function build()
 	local panel = Panel.create({
 		id = GemForge.id,
 		kind = "window",
-		title = "보석 가공",
+		title = Text.get("forge.gem.title"),
 		size = PANEL_SIZE,
 		help = { -- G1-1: "낮아진" · "굴림 위치" · "먹여" 은어 정리 + 2단
 			short = Text.get("gemForge.help.short"),
@@ -123,14 +124,14 @@ local function build()
 
 	local refs = { panel = panel, rows = {} }
 	refs.refineTab = Button.build({
-		parent = content, name = "RefineTab", kind = "secondary", text = "재련", width = 112,
+		parent = content, name = "RefineTab", kind = "secondary", text = Text.get("forge.gem.refine"), width = 112,
 		position = UDim2.new(0, PAD, 0, PAD / 2),
 		onActivated = function()
 			GemForge.setMode("refine")
 		end,
 	})
 	refs.bulkTab = Button.build({
-		parent = content, name = "BulkTab", kind = "secondary", text = "일괄 분해", width = 112,
+		parent = content, name = "BulkTab", kind = "secondary", text = Text.get("forge.gem.bulk"), width = 112,
 		position = UDim2.new(0, PAD + 112 + 8, 0, PAD / 2),
 		onActivated = function()
 			GemForge.setMode("bulk")
@@ -178,14 +179,14 @@ local function build()
 	refs.cost.Position = UDim2.new(0, PAD, 0, PAD)
 	refs.cost.Size = UDim2.new(1, -(PAD * 3 + 240), 0, Theme.buttonHeight)
 	refs.action = Button.build({
-		parent = bottom, name = "ActionButton", kind = "primary", text = "재련", width = 112,
+		parent = bottom, name = "ActionButton", kind = "primary", text = Text.get("forge.gem.refine"), width = 112,
 		anchorPoint = Vector2.new(1, 0), position = UDim2.new(1, -PAD, 0, PAD),
 		onActivated = function()
 			GemForge.confirm()
 		end,
 	})
 	refs.back = Button.build({
-		parent = bottom, name = "BackButton", kind = "secondary", text = "닫기", width = 112,
+		parent = bottom, name = "BackButton", kind = "secondary", text = Text.get("forge.close"), width = 112,
 		anchorPoint = Vector2.new(1, 0), position = UDim2.new(1, -(PAD + 112 + 8), 0, PAD),
 		onActivated = function()
 			GemForge.back()
@@ -245,32 +246,32 @@ end
 local function renderRefine()
 	local gem = targetGem()
 	if not gem then
-		addLabel("재련할 보석이 없습니다 - 가방 · 보석 탭에서 보석을 고르고 [재련]을 누르세요", "body", "textSecondary", 44)
+		addLabel(Text.get("forge.gem.noTarget"), "body", "textSecondary", 44)
 		return nil
 	end
-	local where = target.kind == "slot" and ("%d번 홈(장착 중)"):format(target.key) or "보석 가방"
-	local head = addLabel(("대상: %s · Lv.%d · %s"):format(ItemDescribe.gem(gem).title, gem.itemLevel or 0, where), "body", "textPrimary")
+	local where = target.kind == "slot" and Text.get("forge.gem.whereSlot", { slot = ("%d"):format(target.key) }) or Text.get("forge.gem.whereBag")
+	local head = addLabel(Text.get("forge.gem.targetLine", { gem = ItemDescribe.gem(gem).title, level = ("%d"):format(gem.itemLevel or 0), where = where }), "body", "textPrimary")
 	head.Name = "TargetLine"
 	head.TextColor3 = gradeColor(gem.grade)
-	addLabel(("지금 옵션: %s"):format(optionText(gem)), "caption", "textSecondary")
+	addLabel(Text.get("forge.gem.currentOption", { option = optionText(gem) }), "caption", "textSecondary")
 	local fodder = fodderIndex and state.gemInventory[fodderIndex]
 	if fodder and GemCraft.refineBlockReason(gem, fodder) ~= nil then
 		fodderIndex, fodder = nil, nil
 	end
 	if fodder then
 		local after = GemCraft.refinedGem(gem, fodder)
-		local preview = addLabel(("재련 뒤: Lv.%d → Lv.%d · %s → %s"):format(gem.itemLevel or 0, after.itemLevel, optionText(gem), optionText(after)), "caption", "success", 36)
+		local preview = addLabel(Text.get("forge.gem.preview", { from = ("%d"):format(gem.itemLevel or 0), to = ("%d"):format(after.itemLevel), before = optionText(gem), after = optionText(after) }), "caption", "success", 36)
 		preview.Name = "PreviewLine"
 	end
 	local candidates = fodderCandidates(gem)
 	addLabel(Text.get("gemForge.fodderHeader", { count = #candidates }), "caption", "textSecondary") -- G1-1: 옛 "먹일 보석"
 	if #candidates == 0 then
-		addLabel("대상보다 레벨이 높은 보석이 가방에 없습니다", "body", "textTertiary", 36)
+		addLabel(Text.get("forge.gem.noCandidate"), "body", "textTertiary", 36)
 	end
 	for _, index in ipairs(candidates) do
 		local candidate = state.gemInventory[index]
 		addRow("Fodder_" .. index, ItemDescribe.gem(candidate).title, ("Lv.%d · %s"):format(candidate.itemLevel or 0, optionText(candidate)),
-			gradeColor(candidate.grade), fodderIndex == index, fodderIndex == index and "선택됨" or Text.get("gemForge.fodderPick"), not isPending(), function()
+			gradeColor(candidate.grade), fodderIndex == index, fodderIndex == index and Text.get("forge.gem.selected") or Text.get("gemForge.fodderPick"), not isPending(), function()
 				fodderIndex = index
 				GemForge.render()
 			end)
@@ -279,11 +280,11 @@ local function renderRefine()
 end
 
 local function renderBulk()
-	addLabel("기준 등급 이하의 가방 보석을 전부 가루로 바꿉니다(홈에 낀 보석은 대상이 아닙니다)", "caption", "textSecondary", 36)
+	addLabel(Text.get("forge.gem.bulkIntro"), "caption", "textSecondary", 36)
 	for _, gradeId in ipairs(GemCraft.bulkGradeChoices()) do
 		local count, dust = GemCraft.bulkEstimate(state.gemInventory, gradeId)
-		addRow("Grade_" .. gradeId, ("%s 이하"):format(gradeName(gradeId)), ("대상 %d개 → 가루 %s"):format(count, NumberFormat.format(dust)),
-			gradeColor(gradeId), bulkGrade == gradeId, bulkGrade == gradeId and "선택됨" or "고르기", not isPending(), function()
+		addRow("Grade_" .. gradeId, Text.get("forge.gem.gradeOrBelow", { grade = gradeName(gradeId) }), Text.get("forge.gem.bulkRowSub", { count = ("%d"):format(count), dust = NumberFormat.format(dust) }),
+			gradeColor(gradeId), bulkGrade == gradeId, bulkGrade == gradeId and Text.get("forge.gem.selected") or Text.get("forge.gem.pick"), not isPending(), function()
 				bulkGrade = gradeId
 				GemForge.render()
 			end)
@@ -305,17 +306,17 @@ function GemForge.render()
 	order = 0
 	local dustOwned = player:GetAttribute("GemDust") or 0
 	local gold = player:GetAttribute("Gold") or 0
-	built.dust.Text = ("보석 가루 %s"):format(NumberFormat.format(dustOwned))
+	built.dust.Text = Text.get("forge.gem.dustOwned", { dust = NumberFormat.format(dustOwned) })
 	built.refineTab.forceVisual(mode == "refine" and "pressed" or nil)
 	built.bulkTab.forceVisual(mode == "bulk" and "pressed" or nil)
 
 	if mode == "refine" then
 		local gem, fodder = renderRefine()
-		built.action.setText("재련")
+		built.action.setText(Text.get("forge.gem.refine"))
 		if gem and fodder then
 			local goldCost, dustCost = GemCraft.refineCost(gem.grade, player:GetAttribute("AccountBestStage") or 1)
-			built.cost.Text = ("비용 %s 골드 + 가루 %d"):format(NumberFormat.format(goldCost), dustCost)
-			local reason = (gold < goldCost and REASON_TEXT.no_gold) or (dustOwned < dustCost and REASON_TEXT.no_dust) or nil
+			built.cost.Text = Text.get("forge.gem.refineCost", { gold = NumberFormat.format(goldCost), dust = ("%d"):format(dustCost) })
+			local reason = (gold < goldCost and Text.get("forge.err.noGold")) or (dustOwned < dustCost and Text.get("forge.err.noDust")) or nil
 			built.cost.TextColor3 = reason and Theme.color("danger") or Theme.color("gold")
 			built.action.setEnabled(reason == nil and not isPending(), reason)
 		else
@@ -325,11 +326,11 @@ function GemForge.render()
 		end
 	else
 		renderBulk()
-		built.action.setText("일괄 분해")
+		built.action.setText(Text.get("forge.gem.bulk"))
 		local count, dust = GemCraft.bulkEstimate(state.gemInventory, bulkGrade)
-		built.cost.Text = ("%s 이하 %d개 → 가루 +%s"):format(gradeName(bulkGrade), count, NumberFormat.format(dust))
+		built.cost.Text = Text.get("forge.gem.bulkCost", { grade = gradeName(bulkGrade), count = ("%d"):format(count), dust = NumberFormat.format(dust) })
 		built.cost.TextColor3 = Theme.color("textPrimary")
-		built.action.setEnabled(count > 0 and not isPending(), count == 0 and REASON_TEXT.none or nil)
+		built.action.setEnabled(count > 0 and not isPending(), count == 0 and Text.get("forge.gem.err.none") or nil)
 	end
 end
 
@@ -401,10 +402,11 @@ function GemForge.confirm()
 		local goldCost, dustCost = GemCraft.refineCost(gem.grade, player:GetAttribute("AccountBestStage") or 1)
 		local requested, fodderAt = target, fodderIndex
 		Confirm.ask({
-			title = "재련 - 되돌릴 수 없습니다",
-			body = ("%s의 레벨이 Lv.%d → Lv.%d가 됩니다.\n먹인 보석(%s)은 사라집니다.\n비용: %s 골드 + 가루 %d"):format(
-				ItemDescribe.gem(gem).title, gem.itemLevel or 0, fodder.itemLevel, ItemDescribe.gem(fodder).title, NumberFormat.format(goldCost), dustCost),
-			primaryText = "재련",
+			title = Text.get("forge.gem.confirm.refineTitle"),
+			body = Text.get("forge.gem.confirm.refineBody", {
+				gem = ItemDescribe.gem(gem).title, from = ("%d"):format(gem.itemLevel or 0), to = ("%d"):format(fodder.itemLevel), fodder = ItemDescribe.gem(fodder).title,
+				gold = NumberFormat.format(goldCost), dust = ("%d"):format(dustCost) }),
+			primaryText = Text.get("forge.gem.refine"),
 			danger = true,
 			parentId = GemForge.id,
 		}, function(accepted)
@@ -419,10 +421,10 @@ function GemForge.confirm()
 		end
 		local chosen = bulkGrade
 		Confirm.ask({
-			title = "일괄 분해 - 되돌릴 수 없습니다",
-			body = ("%s 이하 보석 %d개를 가루 %s로 바꿉니다(대상 중 최고 등급: %s).\n홈에 낀 보석은 그대로입니다."):format(
-				gradeName(chosen), count, NumberFormat.format(dust), gradeName(highest)),
-			primaryText = "분해",
+			title = Text.get("forge.gem.confirm.bulkTitle"),
+			body = Text.get("forge.gem.confirm.bulkBody", {
+				grade = gradeName(chosen), count = ("%d"):format(count), dust = NumberFormat.format(dust), highest = gradeName(highest) }),
+			primaryText = Text.get("forge.gem.confirm.dismantle"),
 			danger = true,
 			parentId = GemForge.id,
 		}, function(accepted)
@@ -449,13 +451,13 @@ craftResult.OnClientEvent:Connect(function(action, success, reason, data)
 	if success then
 		local text
 		if action == "refine" then
-			text = "재련 완료 - 보석 레벨이 올랐습니다"
+			text = Text.get("forge.gem.done.refine")
 		elseif action == "dismantleBulk" then
-			text = ("보석 %d개를 분해해 가루 %s를 얻었습니다"):format(data and data.count or 0, NumberFormat.format(data and data.dust or 0))
+			text = Text.get("forge.gem.done.bulk", { count = ("%d"):format(data and data.count or 0), dust = NumberFormat.format(data and data.dust or 0) })
 		elseif action == "sell" then
-			text = ("보석을 판매해 골드 %s를 얻었습니다"):format(NumberFormat.format(data and data.gold or 0)) -- P3c E4
+			text = Text.get("forge.gem.done.sell", { gold = NumberFormat.format(data and data.gold or 0) }) -- P3c E4
 		else
-			text = ("보석을 분해해 가루 %s를 얻었습니다"):format(NumberFormat.format(data and data.dust or 0))
+			text = Text.get("forge.gem.done.dismantle", { dust = NumberFormat.format(data and data.dust or 0) })
 		end
 		Toast.push("TC", { text = text, colorName = "success", seconds = 4 })
 		if action == "refine" and UIManager.isOpen(GemForge.id) then

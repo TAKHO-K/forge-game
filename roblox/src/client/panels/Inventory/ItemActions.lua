@@ -15,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local Equip = require(ReplicatedStorage.Shared.Equip)
+local Text = require(ReplicatedStorage.Shared.Text)
 local GemActions = require(script.Parent.GemActions)
 local Toast = require(script.Parent.Parent.Parent.ui.kit.Toast)
 
@@ -26,15 +27,15 @@ local ItemActions = {}
 -- 이유 코드 → 문구(서버 EquipResult의 코드 + 클라 미리 판정과 같다).
 function ItemActions.reasonText(reason)
 	if reason == "full" then
-		return "가방이 가득 차 해제할 수 없습니다 - 칸을 비우세요"
+		return Text.get("gear.err.full")
 	elseif reason == "no_class" then
-		return "직업을 먼저 고르세요"
+		return Text.get("gear.err.noClass")
 	elseif reason == "not_found" then
-		return "장비를 찾을 수 없습니다"
+		return Text.get("gear.err.notFound")
 	elseif reason == "not_equipped" then
-		return "착용 중인 장비가 아닙니다"
+		return Text.get("gear.err.notEquipped")
 	end
-	return "장비를 바꿀 수 없습니다"
+	return Text.get("gear.err.generic")
 end
 
 -- 더블클릭 판정기: 같은 key를 doubleClickSeconds(0.35초) 안에 다시 누르면 true. 판정이 나면 기록을 비운다(세 번째 클릭이 또 더블이 되지 않게).

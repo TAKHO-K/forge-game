@@ -15,6 +15,7 @@ local PrimordialData = require(game:GetService("ReplicatedStorage").Shared.data.
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local EquipCompare = require(ReplicatedStorage.Shared.EquipCompare)
 local PlayerLabelFormat = require(ReplicatedStorage.Shared.PlayerLabelFormat)
+local Text = require(ReplicatedStorage.Shared.Text)
 local UIManager = require(script.Parent.Parent.UIManager)
 local Panel = require(script.Parent.Parent.ui.kit.Panel)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
@@ -33,14 +34,14 @@ local LABEL_WIDTH = 78
 local inspectRemote = ReplicatedStorage:WaitForChild("InspectPlayer")
 local localPlayer = Players.LocalPlayer
 
-local REASON_TEXT = {
-	rate_limited = "잠시 뒤 다시 시도하세요",
-	not_in_server = "서버를 떠난 플레이어입니다",
-	no_class = "아직 직업을 고르지 않은 플레이어입니다",
-	bad_request = "조회할 수 없습니다",
+local REASON_KEY = { -- 서버 거절 이유 → 문장 키(TextData_panels)
+	rate_limited = "ui.inspect.err.rateLimited",
+	not_in_server = "ui.inspect.err.notInServer",
+	no_class = "ui.inspect.err.noClass",
+	bad_request = "ui.inspect.err.badRequest",
 }
 
-local PART_TEXT = { weapon = "무기", armor = "갑옷", gloves = "장갑", shoes = "신발" }
+local PART_KEY = { weapon = "ui.inspect.part.weapon", armor = "ui.inspect.part.armor", gloves = "ui.inspect.part.gloves", shoes = "ui.inspect.part.shoes" }
 
 local built
 local requestToken = 0
@@ -69,7 +70,7 @@ local function detailLines(slotName)
 	local data = view.data
 	local item, hidden = EquipCompare.slotItem(data, slotName)
 	if hidden then
-		return { hidden = true, { label = PART_TEXT[slotName] or "장비", theirs = "리더보드에서는 무기 · 보석만 공개됩니다" } }
+		return { hidden = true, { label = Text.get(PART_KEY[slotName] or "ui.inspect.part.gear"), theirs = Text.get("ui.inspect.hiddenPart") } }
 	end
 	local compare = view.compare and view.mine ~= nil
 	local mineItem = compare and EquipCompare.slotItem(view.mine, slotName) or nil
@@ -84,7 +85,7 @@ local function build()
 	local panel = Panel.create({
 		id = Inspect.id,
 		kind = "window",
-		title = "장비 보기",
+		title = Text.get("ui.inspect.title"),
 		size = Vector2.new(560, 440),
 		onClose = function()
 			requestToken += 1 -- 늦게 온 응답이 닫힌 창을 다시 그리지 않게
@@ -120,7 +121,7 @@ local function build()
 	local compareToggle = Toggle.build({
 		parent = content,
 		name = "CompareToggle",
-		text = "내 장비와 비교",
+		text = Text.get("ui.inspect.compare"),
 		width = COMPARE_WIDTH - 8,
 		position = UDim2.new(1, -(PAD + COMPARE_WIDTH - 8), 0, 10),
 		value = false,
@@ -162,7 +163,7 @@ local function build()
 		local stroke = Theme.stroke(button)
 
 		local gemSlot = slotName:match("^gem(%d)$")
-		local partLabel = Theme.label(button, gemSlot and ("보석 " .. gemSlot) or PART_TEXT[slotName], "caption", "textSecondary")
+		local partLabel = Theme.label(button, gemSlot and Text.get("ui.inspect.part.gem", { slot = gemSlot }) or Text.get(PART_KEY[slotName]), "caption", "textSecondary")
 		partLabel.Position = UDim2.new(0, 10, 0, 0)
 		partLabel.Size = UDim2.new(0, 56, 1, 0)
 
@@ -225,9 +226,9 @@ local function fillDetail(frame, lines)
 	local rest = -(10 + LABEL_WIDTH + DIFF_WIDTH + 18)
 	if compare then
 		cell("", UDim.new(0, 10), UDim2.new(0, LABEL_WIDTH, 0, h), "textTertiary")
-		cell("상대", valueX, UDim2.new(0.5, rest / 2, 0, h), "textTertiary")
-		cell("나", UDim.new(0.5, 10 + LABEL_WIDTH + rest / 2), UDim2.new(0.5, rest / 2, 0, h), "textTertiary")
-		cell("차이", UDim.new(1, -(DIFF_WIDTH + 8)), UDim2.new(0, DIFF_WIDTH, 0, h), "textTertiary", true)
+		cell(Text.get("ui.inspect.col.theirs"), valueX, UDim2.new(0.5, rest / 2, 0, h), "textTertiary")
+		cell(Text.get("ui.inspect.col.mine"), UDim.new(0.5, 10 + LABEL_WIDTH + rest / 2), UDim2.new(0.5, rest / 2, 0, h), "textTertiary")
+		cell(Text.get("ui.inspect.col.diff"), UDim.new(1, -(DIFF_WIDTH + 8)), UDim2.new(0, DIFF_WIDTH, 0, h), "textTertiary", true)
 		y += h
 	end
 	for _, entry in ipairs(lines) do
@@ -262,7 +263,7 @@ local function render()
 			row.titleLabel.Text = text
 			row.titleLabel.TextColor3 = (visual and visual.color) or Theme.colors.textPrimary
 		else
-			row.titleLabel.Text = slotName:match("^gem") and "비어 있음" or "없음"
+			row.titleLabel.Text = Text.get(slotName:match("^gem") and "ui.inspect.emptyGem" or "ui.inspect.none")
 			row.titleLabel.TextColor3 = Theme.colors.textTertiary
 		end
 		local summaryText, sign
@@ -322,7 +323,7 @@ end
 local function showData(data, card)
 	local refs = built
 	view.data, view.card = data, card
-	refs.usernameLabel.Text = card and ("@%s · 리더보드 - 무기 · 보석만 공개"):format(data.name or "") or ("@%s"):format(data.name)
+	refs.usernameLabel.Text = card and Text.get("ui.inspect.cardUser", { name = data.name or "" }) or ("@%s"):format(data.name)
 	refs.nameLabel.Text = headerLine(data)
 	refs.statusLabel.Text = ""
 	refs.scroll.Visible = true
@@ -361,7 +362,7 @@ local function fetchMine(token)
 				return
 			end
 			if not (ok and type(result) == "table" and result.reason == "rate_limited") then
-				built.statusLabel.Text = "내 장비를 불러오지 못했습니다"
+				built.statusLabel.Text = Text.get("ui.inspect.mineFailed")
 				return
 			end
 			task.wait(0.6)
@@ -410,7 +411,7 @@ function Inspect.open(userId)
 	local token = resetView()
 	view.mine = nil -- 창을 열 때마다 내 장비도 새로(방금 바꿨을 수 있다)
 	local refs = built
-	refs.statusLabel.Text = "불러오는 중…"
+	refs.statusLabel.Text = Text.get("ui.inspect.loading")
 	local target = Players:GetPlayerByUserId(userId)
 	if target then
 		refs.nameLabel.Text = PlayerLabelFormat.richText(target.DisplayName, target:GetAttribute("CharacterLevel"), target:GetAttribute("RebirthCount"), Theme.textSize("header"))
@@ -441,7 +442,7 @@ function Inspect.open(userId)
 			end
 			showData(result.data, false)
 		else
-			refs.statusLabel.Text = REASON_TEXT[ok and type(result) == "table" and result.reason or "bad_request"] or "조회할 수 없습니다"
+			refs.statusLabel.Text = Text.get(REASON_KEY[ok and type(result) == "table" and result.reason or "bad_request"] or "ui.inspect.err.badRequest")
 		end
 	end)
 end

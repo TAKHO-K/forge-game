@@ -14,6 +14,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local TutorialData = require(ReplicatedStorage.Shared.data.TutorialData)
+local Text = require(ReplicatedStorage.Shared.Text)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local EquipSlots = require(ReplicatedStorage.Shared.data.EquipSlots)
 local Loot = require(ReplicatedStorage.Shared.Loot)
@@ -238,7 +239,7 @@ function TutorialState.onBossCleared(player, target)
 			step = step,
 			stepCount = TutorialData.stepCount,
 			completed = true,
-			text = "견습 졸업! 무한 모드가 열렸습니다.",
+			text = Text.getFor(player, "srv.tutorial.graduated"),
 		})
 		ImmediateSave.request(player)
 		print(("[forge-game] 견습 완료: %s"):format(player.Name))

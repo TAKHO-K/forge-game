@@ -12,6 +12,7 @@ local UserInputService = game:GetService("UserInputService")
 local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
 local MovementConfig = require(ReplicatedStorage.Shared.data.MovementConfig)
 local Wayfinder = require(script.Parent.Wayfinder)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local AutoWalk = {}
 
@@ -44,12 +45,12 @@ end
 
 local STOP_TEXT = {
 	input = nil, -- 사람이 직접 움직임 · 버튼으로 끔 = 조용히 끔(input-move · input-key · input-jump · input-skill도 같음 - 표에 없으면 문구 없음)
-	arrived = "도착했어요",
-	damaged = "공격받아 자동 이동을 멈췄어요",
+	arrived = "scene.autoWalk.arrived", -- 값 = 문장 키(TextData_scene)
+	damaged = "scene.autoWalk.damaged",
 	boss = nil,
 	route = nil,
-	drop = "앞이 절벽이에요 - 직접 내려가 주세요",
-	stuck = "길이 막혀 자동 이동을 멈췄어요",
+	drop = "scene.autoWalk.drop",
+	stuck = "scene.autoWalk.stuck",
 	dead = nil,
 }
 AutoWalk.stopText = STOP_TEXT
@@ -91,7 +92,7 @@ function AutoWalk.stop(reason)
 		return
 	end
 	active = false
-	reasonText = STOP_TEXT[reason]
+	reasonText = STOP_TEXT[reason] and Text.get(STOP_TEXT[reason])
 	moveTarget = nil
 	RunService:UnbindFromRenderStep("AutoWalkMove")
 	local humanoid, root = humanoidAndRoot()

@@ -15,8 +15,14 @@ local ItemDescribe = require(ReplicatedStorage.Shared.ItemDescribe)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local Option = require(ReplicatedStorage.Shared.Option)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local EquipCompare = {}
+
+-- 줄 머리 글(desc.cmp.label.* - TextData_shared). summary가 같은 함수로 찾는다.
+local function label(id)
+	return Text.get("desc.cmp.label." .. id)
+end
 
 EquipCompare.gemSlots = 5
 EquipCompare.parts = { "armor", "gloves", "shoes" }
@@ -85,11 +91,11 @@ end
 -- 부위 기본 효과의 글 · 수치(Inherit.baseStat).
 local function baseStatText(part, value)
 	if part == "armor" then
-		return ("방어력 %s"):format(NumberFormat.format(math.floor(value)))
+		return Text.get("desc.cmp.base.armor", { value = NumberFormat.format(math.floor(value)) })
 	elseif part == "gloves" then
-		return ("공격력 +%.1f%%"):format(value * 100)
+		return Text.get("desc.cmp.base.gloves", { value = ("%.1f"):format(value * 100) })
 	end
-	return ("이동+공속 +%.1f%%"):format(value * 100)
+	return Text.get("desc.cmp.base.shoes", { value = ("%.1f"):format(value * 100) })
 end
 
 local function baseStatDiff(part, delta)
@@ -128,20 +134,27 @@ end
 -- 한 칸의 상세 줄. mineItem · myClassId가 nil이면 비교 없음(상대 값만). theirClassId = 그 장비를 쥔 사람의 직업.
 function EquipCompare.lines(slotName, theirItem, mineItem, theirClassId, myClassId, compare)
 	local out = {}
+	local none = Text.get("desc.cmp.none")
 	local function mineOr(text)
-		return compare and (text or "없음") or nil
+		return compare and (text or none) or nil
+	end
+	local function steps(delta)
+		return Text.get("desc.cmp.gradeSteps", { n = ("%+d"):format(delta) })
+	end
+	local function gemSlots(weapon)
+		return Text.get("desc.cmp.gemSlots", { filled = ("%d"):format(filledGems(weapon)), total = ("%d"):format(EquipCompare.gemSlots) })
 	end
 	if slotName == "weapon" then
 		local t, m = theirItem, compare and mineItem or nil
-		table.insert(out, line("등급", gradeName(t.gradeId), mineOr(m and gradeName(m.gradeId)), m and ("%+d단계"):format(gradeIndex(t.gradeId) - gradeIndex(m.gradeId)) or nil,
+		table.insert(out, line(label("grade"), gradeName(t.gradeId), mineOr(m and gradeName(m.gradeId)), m and steps(gradeIndex(t.gradeId) - gradeIndex(m.gradeId)) or nil,
 			m and signOf(gradeIndex(t.gradeId) - gradeIndex(m.gradeId)) or nil))
-		table.insert(out, line("강화", ("+%d"):format(t.level or 0), mineOr(m and ("+%d"):format(m.level or 0)), m and ("%+d"):format((t.level or 0) - (m.level or 0)) or nil,
+		table.insert(out, line(label("enhance"), ("+%d"):format(t.level or 0), mineOr(m and ("+%d"):format(m.level or 0)), m and ("%+d"):format((t.level or 0) - (m.level or 0)) or nil,
 			m and signOf((t.level or 0) - (m.level or 0)) or nil))
 		local tm = EquipCompare.weaponMultiplier(t)
 		local mm = m and EquipCompare.weaponMultiplier(m)
-		table.insert(out, line("무기 배율", multText(tm), mineOr(mm and multText(mm)),
+		table.insert(out, line(label("weaponMult"), multText(tm), mineOr(mm and multText(mm)),
 			mm and mm > 0 and ("%+.1f%%"):format((tm / mm - 1) * 100) or nil, mm and signOf(tm - mm) or nil))
-		table.insert(out, line("보석", ("%d / %d칸"):format(filledGems(t), EquipCompare.gemSlots), mineOr(m and ("%d / %d칸"):format(filledGems(m), EquipCompare.gemSlots)),
+		table.insert(out, line(label("gem"), gemSlots(t), mineOr(m and gemSlots(m)),
 			m and ("%+d"):format(filledGems(t) - filledGems(m)) or nil, m and signOf(filledGems(t) - filledGems(m)) or nil))
 		return out
 	end
@@ -149,24 +162,24 @@ function EquipCompare.lines(slotName, theirItem, mineItem, theirClassId, myClass
 	local isGem = slotName:match("^gem") ~= nil
 	local t, m = theirItem, compare and mineItem or nil
 	if not t then
-		table.insert(out, line(isGem and "보석" or "장비", "없음", mineOr(m and (isGem and ItemDescribe.gem(m).title or ItemDescribe.item(m, myClassId).title)), nil, nil))
+		table.insert(out, line(label(isGem and "gem" or "gear"), none, mineOr(m and (isGem and ItemDescribe.gem(m).title or ItemDescribe.item(m, myClassId).title)), nil, nil))
 		return out
 	end
 	local ti = gradeIndex(t.grade)
 	local mi = m and gradeIndex(m.grade)
-	table.insert(out, line("등급", gradeName(t.grade), mineOr(m and gradeName(m.grade)), m and ("%+d단계"):format(ti - mi) or nil, m and signOf(ti - mi) or nil))
-	table.insert(out, line("레벨", ("Lv.%d"):format(t.itemLevel or 0), mineOr(m and ("Lv.%d"):format(m.itemLevel or 0)),
+	table.insert(out, line(label("grade"), gradeName(t.grade), mineOr(m and gradeName(m.grade)), m and steps(ti - mi) or nil, m and signOf(ti - mi) or nil))
+	table.insert(out, line(label("level"), ("Lv.%d"):format(t.itemLevel or 0), mineOr(m and ("Lv.%d"):format(m.itemLevel or 0)),
 		m and ("%+d"):format((t.itemLevel or 0) - (m.itemLevel or 0)) or nil, m and signOf((t.itemLevel or 0) - (m.itemLevel or 0)) or nil))
 	if not isGem then
 		local part = slotName
 		local tv = Inherit.baseStat(t)
 		local mv = m and Inherit.baseStat(m)
-		table.insert(out, line("기본 효과", baseStatText(part, tv), mineOr(m and baseStatText(part, mv)), m and baseStatDiff(part, tv - mv) or nil, m and signOf(tv - mv) or nil))
+		table.insert(out, line(label("base"), baseStatText(part, tv), mineOr(m and baseStatText(part, mv)), m and baseStatDiff(part, tv - mv) or nil, m and signOf(tv - mv) or nil))
 	end
 	local tOptions = optionValues(t, theirClassId)
 	local mOptions = m and optionValues(m, myClassId) or {}
 	if #tOptions == 0 then
-		table.insert(out, line("옵션", "없음", mineOr(m and (mOptions[1] and mOptions[1].text or "없음")), nil, nil))
+		table.insert(out, line(label("option"), none, mineOr(m and (mOptions[1] and mOptions[1].text or none)), nil, nil))
 	end
 	for i, option in ipairs(tOptions) do
 		local mineOption = mOptions[i]
@@ -177,12 +190,12 @@ function EquipCompare.lines(slotName, theirItem, mineItem, theirClassId, myClass
 			diffText = option.pct and ("%+.1f%%p"):format(delta * 100) or ("%+.2f"):format(delta)
 			sign = signOf(delta)
 		end
-		table.insert(out, line("옵션", option.text, mineOr(m and (mineOption and mineOption.text or "없음")), diffText, sign))
+		table.insert(out, line(label("option"), option.text, mineOr(m and (mineOption and mineOption.text or none)), diffText, sign))
 	end
 	if t.option and t.option.roll then
 		local tr = EquipCompare.rollPercent(t.option.roll)
 		local mr = m and m.option and m.option.roll and EquipCompare.rollPercent(m.option.roll)
-		table.insert(out, line("품질", ("%.0f%%"):format(tr), mineOr(mr and ("%.0f%%"):format(mr)), mr and ("%+.0f%%p"):format(tr - mr) or nil, mr and signOf(tr - mr) or nil))
+		table.insert(out, line(label("quality"), ("%.0f%%"):format(tr), mineOr(mr and ("%.0f%%"):format(mr)), mr and ("%+.0f%%p"):format(tr - mr) or nil, mr and signOf(tr - mr) or nil))
 	end
 	return out
 end
@@ -193,7 +206,7 @@ function EquipCompare.summary(slotName, theirItem, mineItem, theirClassId, myCla
 		return nil, nil
 	end
 	local lines = EquipCompare.lines(slotName, theirItem, mineItem, theirClassId, myClassId, true)
-	local wanted = slotName == "weapon" and "무기 배율" or (slotName:match("^gem") and "옵션" or "기본 효과")
+	local wanted = label(slotName == "weapon" and "weaponMult" or (slotName:match("^gem") and "option" or "base"))
 	for _, entry in ipairs(lines) do
 		if entry.label == wanted and entry.diff then
 			return entry.diff, entry.sign

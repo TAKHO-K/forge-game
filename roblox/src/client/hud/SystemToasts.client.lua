@@ -15,6 +15,7 @@ local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local DevToolsConfig = require(ReplicatedStorage.Shared.data.DevToolsConfig)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local Text = require(ReplicatedStorage.Shared.Text)
 local ScreenMap = require(script.Parent.Parent.ui.ScreenMap)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
 local Toast = require(script.Parent.Parent.ui.kit.Toast)
@@ -27,7 +28,7 @@ local SIGNALS = {
 		return { text = message, grade = "critical", seconds = 6, fadeSeconds = 0.5 }
 	end },
 	{ remote = "LevelUp", lane = "TC", make = function(newLevel)
-		return { text = ("레벨업! Lv.%d"):format(newLevel), grade = "important", colorName = "xp", seconds = 2, fadeSeconds = 0.5 }
+		return { text = Text.get("hud.toast.levelUp", { level = ("%d"):format(newLevel) }), grade = "important", colorName = "xp", seconds = 2, fadeSeconds = 0.5 }
 	end },
 	{ remote = "ZoneBlockedNotice", lane = "TC", make = function(message)
 		return { text = message, colorName = "ember", seconds = 2, fadeSeconds = 0.3 }
@@ -41,11 +42,11 @@ local SIGNALS = {
 	{ remote = "ItemPickedUp", lane = "BC", make = function(item)
 		local grade = ArmorData.grades[item.grade]
 		local visual = ItemVisualData.gradeVisuals[item.grade]
-		local partName = ItemVisualData.partDisplayNames[item.part or "armor"] or "장비"
-		local text = ("%s %s 획득 (Lv.%d)"):format(grade and grade.displayName or item.grade, partName, item.itemLevel)
+		local partName = ItemVisualData.partDisplayNames[item.part or "armor"] or Text.get("hud.feed.partFallback")
+		local text = Text.get("hud.toast.pickup", { grade = grade and grade.displayName or item.grade, part = partName, level = ("%d"):format(item.itemLevel) })
 		return {
 			richParts = { { text = text, color = visual and visual.color or Color3.new(1, 1, 1), size = visual and visual.toastTextSize or 18 } },
-			groupKey = "itemPickup", moreFormat = " 외 %d", seconds = 0.8, fadeSeconds = 0.8,
+			groupKey = "itemPickup", moreFormat = Text.get("hud.toast.more", { count = "%d" }), seconds = 0.8, fadeSeconds = 0.8,
 		}
 	end },
 }

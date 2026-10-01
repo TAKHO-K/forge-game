@@ -33,28 +33,30 @@ local partyFriendsFetch = Instance.new("RemoteFunction")
 partyFriendsFetch.Name = "PartyFriendsFetch"
 partyFriendsFetch.Parent = ReplicatedStorage
 
+-- 이유 코드 → 문장 키(TextData_server srv.party.err.*) - 보낼 때 그 플레이어 언어로
 local REASON_TEXT = {
-	self = "자기 자신은 초대할 수 없습니다",
-	target_in_party = "이미 다른 파티에 속한 플레이어입니다",
-	target_has_invite = "이미 초대를 받고 응답을 기다리는 중입니다",
-	not_leader = "리더만 할 수 있습니다",
-	party_full = "파티가 가득 찼습니다(최대 4인)",
-	no_invite = "유효한 초대가 없습니다",
-	already_in_party = "이미 파티에 속해 있습니다",
-	party_gone = "그 파티는 더 이상 없습니다",
-	not_member = "파티원이 아닙니다",
-	tutorial_self = "견습 모드 중에는 파티에 들어갈 수 없습니다", -- 다른 서버로 가는 길(코드 파티 만들기 · 코드 합류 · 원격 초대)만 남았다 - 같은 서버의 초대 · 수락은 견습 중에도 된다(S12)
-	in_boss = "보스전 중에는 파티원을 바꿀 수 없습니다",
-	no_profile = "아직 준비되지 않은 플레이어입니다",
-	joining = "합류 중에는 할 수 없습니다",
-	service_unavailable = "파티 서비스에 연결할 수 없습니다. 잠시 후 다시 시도하세요",
-	board_bad_tags = "모집 조건을 다시 골라 주세요",
-	board_gone = "그 모집은 이미 끝났습니다",
-	board_role = "모집 역할과 직업이 맞지 않습니다",
+	self = "srv.party.err.self",
+	target_in_party = "srv.party.err.targetInParty",
+	target_has_invite = "srv.party.err.targetHasInvite",
+	not_leader = "srv.party.err.notLeader",
+	party_full = "srv.party.err.full",
+	no_invite = "srv.party.err.noInvite",
+	already_in_party = "srv.party.err.alreadyInParty",
+	party_gone = "srv.party.err.partyGone",
+	not_member = "srv.party.err.notMember",
+	tutorial_self = "srv.party.err.tutorial", -- 다른 서버로 가는 길(코드 파티 만들기 · 코드 합류 · 원격 초대)만 남았다 - 같은 서버의 초대 · 수락은 견습 중에도 된다(S12)
+	in_boss = "srv.party.err.inBoss",
+	no_profile = "srv.party.err.noProfile",
+	joining = "srv.party.err.joining",
+	service_unavailable = "srv.party.err.service",
+	board_bad_tags = "srv.party.err.boardTags",
+	board_gone = "srv.party.err.boardGone",
+	board_role = "srv.party.err.boardRole",
 }
 
 local function fail(player, reason)
-	PartyState.notify(player, REASON_TEXT[reason] or PartyCrossServer.REASON_TEXT[reason] or ("실패: " .. tostring(reason)))
+	local key = REASON_TEXT[reason] or PartyCrossServer.REASON_TEXT[reason]
+	PartyState.notify(player, key and Text.getFor(player, key) or Text.getFor(player, "srv.party.err.unknown", { reason = tostring(reason) }))
 end
 
 -- 파티 구성 변경(초대·수락)의 공통 금지 조건은 PartyJoinRules에 있다(S12 - 자동 검증이 같은 함수를 부른다).
@@ -142,7 +144,7 @@ partyRequest.OnServerEvent:Connect(function(player, action, arg)
 		if not ok then
 			fail(player, reason)
 		else
-			PartyState.notify(player, Text.get("party.board.posted"))
+			PartyState.notify(player, Text.getFor(player, "party.board.posted"))
 		end
 		return
 	elseif action == "board_remove" then
@@ -182,7 +184,7 @@ partyRequest.OnServerEvent:Connect(function(player, action, arg)
 		if not ok then
 			fail(player, reason)
 		else
-			PartyState.notify(player, ("%s님을 초대했습니다"):format(target.Name))
+			PartyState.notify(player, Text.getFor(player, "srv.party.invited", { name = target.Name }))
 		end
 	elseif action == "invite_remote" then
 		-- 24-2: 다른 서버의 친구. 같은 서버에 있으면 PartyCrossServer가 로컬 초대로 돌린다.
@@ -219,7 +221,7 @@ partyRequest.OnServerEvent:Connect(function(player, action, arg)
 		if not ok then
 			fail(player, reason)
 		else
-			PartyState.notify(player, target and ("%s님을 초대했습니다"):format(target.Name) or "다른 서버의 친구에게 초대를 보냈습니다")
+			PartyState.notify(player, target and Text.getFor(player, "srv.party.invited", { name = target.Name }) or Text.getFor(player, "srv.party.invitedRemote"))
 		end
 	elseif action == "create" then
 		-- 24-2: 초대 없이 파티를 만들어 코드를 받는다(다른 서버의 친구에게 코드로 알려 주는 경로).
@@ -236,7 +238,7 @@ partyRequest.OnServerEvent:Connect(function(player, action, arg)
 		task.spawn(function()
 			local code = PartyCrossServer.ensureCode(party)
 			if code then
-				PartyState.notify(player, ("파티를 만들었습니다 - 코드 %s"):format(code))
+				PartyState.notify(player, Text.getFor(player, "srv.party.created", { code = code }))
 			else
 				fail(player, "service_unavailable")
 			end
@@ -253,7 +255,7 @@ partyRequest.OnServerEvent:Connect(function(player, action, arg)
 		end
 		-- G1-5 리뷰 1: 보스 생존 중 합류는 막는다(옛: 솔로 보스를 물려 −1 없이 빠졌다) · 잔류 중이면 잔류에서 먼저 빠진다(리뷰 2)
 		if BossEncounter.getActive(player) then
-			PartyState.notify(player, Text.get("boss.blockedInvite"))
+			PartyState.notify(player, Text.getFor(player, "boss.blockedInvite"))
 			return
 		end
 		if BossEncounter.isLingering(player) then
@@ -262,7 +264,7 @@ partyRequest.OnServerEvent:Connect(function(player, action, arg)
 		task.spawn(PartyCrossServer.requestJoin, player, arg)
 	elseif action == "cancel_join" then
 		if not PartyCrossServer.cancelJoin(player) then
-			PartyState.notify(player, "취소할 합류 대기가 없습니다")
+			PartyState.notify(player, Text.getFor(player, "srv.party.noJoinToCancel"))
 		end
 	elseif action == "accept" or action == "decline" then
 		local accept = action == "accept"
@@ -277,7 +279,7 @@ partyRequest.OnServerEvent:Connect(function(player, action, arg)
 				end
 				-- G1-5 우회로 막기: 보스가 살아 있는 동안 초대를 받으면 보스전이 −1 없이 끝났다(합류가 솔로 보스를 물린다) - 포기로만 나간다.
 				if BossEncounter.getActive(player) ~= nil then
-					PartyState.notify(player, Text.get("boss.blockedInvite"))
+					PartyState.notify(player, Text.getFor(player, "boss.blockedInvite"))
 					PartyState.respondInvite(player, false)
 					return
 				end
@@ -300,7 +302,7 @@ partyRequest.OnServerEvent:Connect(function(player, action, arg)
 			-- 24-2: 다른 서버에서 온 초대 - 수락은 코드 합류와 같은 파이프라인이다.
 			if accept then
 				if BossEncounter.getActive(player) then -- G1-5 리뷰 1: 다른 서버 초대 수락도 보스 생존 중에는 막는다
-					PartyState.notify(player, Text.get("boss.blockedInvite"))
+					PartyState.notify(player, Text.getFor(player, "boss.blockedInvite"))
 					return
 				end
 				if BossEncounter.isLingering(player) then

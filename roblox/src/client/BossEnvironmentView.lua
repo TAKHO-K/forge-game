@@ -12,6 +12,7 @@ local Workspace = game:GetService("Workspace")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local BossFx = require(script.Parent.BossFx)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local BossEnvironmentView = {}
 
@@ -350,7 +351,7 @@ function BossEnvironmentView.courseHelp(data)
 	label.Font = Enum.Font.GothamBold
 	label.TextSize = 22
 	label.TextColor3 = data.stage >= 2 and Color3.fromRGB(255, 200, 80) or Color3.fromRGB(120, 230, 255)
-	label.Text = data.stage >= 2 and "수정까지 날아가는 발판이 생겼어요!" or "도움 발판이 생겼어요!"
+	label.Text = Text.get(data.stage >= 2 and "scene.boss.env.padsToCrystal" or "scene.boss.env.pads")
 	label.Parent = gui
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, 10)

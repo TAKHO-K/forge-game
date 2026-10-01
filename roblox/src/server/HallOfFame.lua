@@ -7,6 +7,7 @@ local Workspace = game:GetService("Workspace")
 
 local PrimordialData = require(ReplicatedStorage.Shared.data.PrimordialData)
 local PrimordialStamp = require(ReplicatedStorage.Shared.PrimordialStamp)
+local Text = require(ReplicatedStorage.Shared.Text)
 local PrimordialRegistry = require(script.Parent.PrimordialRegistry)
 
 local HallOfFame = {}
@@ -45,7 +46,7 @@ local function makeFace(face)
 	title.Font = Enum.Font.GothamBlack
 	title.TextSize = 44
 	title.TextColor3 = PrimordialData.accentColor
-	title.Text = "★ 명예의 전당 · 초월 ★" -- QUEUE-ALL1 A-6: ✦ = GothamBold 두부
+	title.Text = Text.get("srv.hof.title") -- QUEUE-ALL1 A-6: ✦ = GothamBold 두부
 	title.Parent = gui
 	local labels = {}
 	for i = 1, PrimordialData.recentKeep do
@@ -71,7 +72,7 @@ local function makeFace(face)
 	empty.Font = Enum.Font.GothamBold
 	empty.TextSize = 28
 	empty.TextColor3 = Color3.fromRGB(90, 84, 110)
-	empty.Text = "아직 기록이 없어요 - 첫 태초의 주인은?"
+	empty.Text = Text.get("srv.hof.empty")
 	empty.Parent = gui
 	return labels, empty
 end
@@ -111,8 +112,9 @@ end
 
 local TranscendentData = require(ReplicatedStorage.Shared.data.TranscendentData) -- C5-7 명예의 전당 별도 칸(초월 줄 = 맨 앞 · ✦)
 local function lineFor(entry)
-	local mark = entry.grade == TranscendentData.gradeId and (TranscendentData.announce.glyph .. "초월 ") or ""
-	local head = ("%s#%s %s"):format(mark, tostring(entry.no or "?"), tostring(entry.name or PrimordialData.fallbackName))
+	local no, name = tostring(entry.no or "?"), tostring(entry.name or PrimordialData.fallbackName)
+	local head = entry.grade == TranscendentData.gradeId and Text.get("srv.hof.headTranscend", { glyph = TranscendentData.announce.glyph, no = no, name = name })
+		or ("#%s %s"):format(no, name)
 	local sourceText = PrimordialStamp.sourceText(entry.source)
 	local date = PrimordialStamp.dateText(entry.at)
 	local tail = table.concat({ date or "", sourceText or "" }, " · ")

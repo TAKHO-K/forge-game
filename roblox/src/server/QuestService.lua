@@ -13,6 +13,7 @@ local GoldCost = require(ReplicatedStorage.Shared.GoldCost)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local EggData = require(ReplicatedStorage.Shared.data.EggData)
 local NestData = require(ReplicatedStorage.Shared.data.NestData)
+local Text = require(ReplicatedStorage.Shared.Text)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 
 local QuestService = {}
@@ -136,11 +137,11 @@ function QuestService.grant(player, reward)
 	if reward.gold then
 		local gold = GoldCost.cost(MonsterData.tier1.goldDrop * reward.gold, PlayerProfile.getAccountBestStage(player), "quest")
 		PlayerProfile.addGold(player, gold)
-		table.insert(parts, ("골드 %d"):format(gold))
+		table.insert(parts, Text.getFor(player, "srv.reward.gold", { n = ("%d"):format(gold) }))
 	end
 	if reward.enhanceStone then
 		PlayerProfile.addMaterial(player, "enhanceStone", reward.enhanceStone)
-		table.insert(parts, ("강화석 %d"):format(reward.enhanceStone))
+		table.insert(parts, Text.getFor(player, "srv.reward.enhanceStone", { n = ("%d"):format(reward.enhanceStone) }))
 	end
 	for _ = 1, reward.egg or 0 do
 		local zones = {}
@@ -153,28 +154,28 @@ function QuestService.grant(player, reward)
 		local a = math.random(1, #pool)
 		local b = (a % #pool) + 1
 		local ok = PlayerProfile.addEgg(player, { zone = zoneKey, grade = "normal", species = { pool[a], pool[b] }, nest = "quest", at = os.time() }, NestData.eggCap)
-		table.insert(parts, ok and "알 1" or "알(가방 가득 - 못 받음)")
+		table.insert(parts, Text.getFor(player, ok and "srv.reward.egg" or "srv.reward.eggFull"))
 	end
 	if state and reward.sparkleShard then
 		state.currencies.sparkleShard = (state.currencies.sparkleShard or 0) + reward.sparkleShard
 		require(script.Parent.Telemetry).economy(player, "sparkleShard", "source", reward.sparkleShard, "TimedReward")
-		table.insert(parts, ("반짝 조각 %d"):format(reward.sparkleShard))
+		table.insert(parts, Text.getFor(player, "srv.reward.sparkleShard", { n = ("%d"):format(reward.sparkleShard) }))
 	end
 	if state and reward.rebirthTicket then -- Q12 7일 출석 2일차(자리 - 지금 환생은 비용이 없어 쓰는 곳 없음)
 		state.currencies.rebirthTicket = (state.currencies.rebirthTicket or 0) + reward.rebirthTicket
-		table.insert(parts, ("환생 무료권 %d"):format(reward.rebirthTicket))
+		table.insert(parts, Text.getFor(player, "srv.reward.rebirthTicket", { n = ("%d"):format(reward.rebirthTicket) }))
 	end
 	if reward.gemDust then -- QUEUE-ALL3 Q3: 보석 첫 장착 = 보석 가루(기존 재화)
 		PlayerProfile.addGemDust(player, reward.gemDust)
-		table.insert(parts, ("보석 가루 %d"):format(reward.gemDust))
+		table.insert(parts, Text.getFor(player, "srv.reward.gemDust", { n = ("%d"):format(reward.gemDust) }))
 	end
 	if reward.protectDrop then -- QUEUE-ALL3 Q3: 하락 구간 앞 = 하락 방지권(기존 재화)
 		PlayerProfile.addProtectionTicket(player, "drop", reward.protectDrop)
-		table.insert(parts, ("하락 방지권 %d"):format(reward.protectDrop))
+		table.insert(parts, Text.getFor(player, "srv.reward.protectDrop", { n = ("%d"):format(reward.protectDrop) }))
 	end
 	if state and reward.passExp then
 		state.currencies.passExp = (state.currencies.passExp or 0) + reward.passExp
-		table.insert(parts, ("패스 경험치 %d"):format(reward.passExp))
+		table.insert(parts, Text.getFor(player, "srv.reward.passExp", { n = ("%d"):format(reward.passExp) }))
 	end
 	return table.concat(parts, " · ")
 end

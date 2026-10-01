@@ -93,7 +93,7 @@ confirmYes.Position = UDim2.new(1, -12, 1, -12)
 confirmYes.Size = UDim2.new(0, 96, 0, 32)
 confirmYes.BackgroundColor3 = UIColors.danger
 confirmYes.BackgroundTransparency = 0.55
-confirmYes.Text = "판매한다"
+confirmYes.Text = Text.get("gear.bulk.yes")
 confirmYes.Font = Enum.Font.GothamBold
 confirmYes.TextSize = Theme.textSize("body")
 confirmYes.TextColor3 = Color3.fromRGB(255, 200, 200)
@@ -109,7 +109,7 @@ confirmNo.Position = UDim2.new(1, -116, 1, -12)
 confirmNo.Size = UDim2.new(0, 88, 0, 32)
 confirmNo.BackgroundColor3 = UIColors.panel
 confirmNo.BackgroundTransparency = UIColors.panelTransparency
-confirmNo.Text = "취소"
+confirmNo.Text = Text.get("gear.bulk.cancel")
 confirmNo.Font = Enum.Font.GothamBold
 confirmNo.TextSize = Theme.textSize("body")
 confirmNo.TextColor3 = UIColors.textPrimary
@@ -169,17 +169,16 @@ bulkSellButton.Activated:Connect(function()
 	if count == 0 then
 		return
 	end
-	confirmText.Text = ("잠기지 않고 착용 중이 아닌 %d개를 팔아 %s골드를 받는다. 되돌릴 수 없다."):format(
-		count, NumberFormat.format(total))
+	confirmText.Text = Text.get("gear.bulk.confirm", { count = ("%d"):format(count), gold = NumberFormat.format(total) })
 	local nd = dismantleCount()
-	confirmDismantle.Text = ("분해 %d"):format(nd) -- Q13: 영웅 이상만 보석으로(태초 · 초월 제외)
+	confirmDismantle.Text = Text.get("gear.bulk.dismantle", { count = ("%d"):format(nd) }) -- Q13: 영웅 이상만 보석으로(태초 · 초월 제외)
 	confirmDismantle.AutoButtonColor = nd > 0
 	confirmDismantle.TextTransparency = nd > 0 and 0 or 0.5
 	local visual = highestSoldGradeId and ItemVisualData.gradeVisuals[highestSoldGradeId]
 	confirmHighestDot.BackgroundColor3 = visual and visual.color or UIColors.textTertiary
 	confirmHighestLabel.TextColor3 = visual and visual.color or UIColors.textTertiary
 	confirmHighestLabel.Text = highestSoldGradeId
-		and ("대상에 포함된 최고 등급: %s"):format(ArmorData.grades[highestSoldGradeId].displayName)
+		and Text.get("gear.bulk.highest", { grade = ArmorData.grades[highestSoldGradeId].displayName })
 		or ""
 	confirmOverlay.Visible = true
 end)
@@ -266,7 +265,7 @@ for order, gradeId in ipairs(S.BULK_SELL_GRADE_CHOICES) do
 	label.TextSize = Theme.textSize("body")
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.TextColor3 = UIColors.textPrimary
-	label.Text = ArmorData.grades[gradeId].displayName .. " 이하"
+	label.Text = Text.get("gear.bulk.gradeOrLower", { grade = ArmorData.grades[gradeId].displayName })
 	label.Parent = row
 
 	row.Activated:Connect(function()

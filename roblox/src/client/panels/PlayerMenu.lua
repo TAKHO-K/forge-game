@@ -13,6 +13,7 @@ local TextChatService = game:GetService("TextChatService")
 
 local PlayerLabelFormat = require(ReplicatedStorage.Shared.PlayerLabelFormat)
 local SocialData = require(ReplicatedStorage.Shared.data.SocialData)
+local Text = require(ReplicatedStorage.Shared.Text)
 local UIManager = require(script.Parent.Parent.UIManager)
 local Button = require(script.Parent.Parent.ui.kit.Button)
 local Panel = require(script.Parent.Parent.ui.kit.Panel)
@@ -61,26 +62,26 @@ local function build()
 		rows[name] = { button = button, reasonLabel = reasonLabel, order = order, enabled = true }
 		return rows[name]
 	end
-	rows.friend = makeRow("FriendButton", "친구 추가", 1, function()
+	rows.friend = makeRow("FriendButton", Text.get("ui.playerMenu.addFriend"), 1, function()
 		if current and current.player then
 			local ok, err = pcall(StarterGui.SetCore, StarterGui, "PromptSendFriendRequest", current.player)
 			if not ok then
 				warn("[PlayerMenu] PromptSendFriendRequest 실패: " .. tostring(err))
-				Toast.push("TC", { text = "친구 요청 창을 열 수 없습니다", colorName = "danger" })
+				Toast.push("TC", { text = Text.get("ui.playerMenu.friendFailed"), colorName = "danger" })
 			end
 		end
 		UIManager.close(PlayerMenu.id)
 	end)
-	rows.whisper = makeRow("WhisperButton", "귓속말", 2, function()
+	rows.whisper = makeRow("WhisperButton", Text.get("ui.playerMenu.whisper"), 2, function()
 		local target = current and current.player
 		if target and PlayerMenu.whisperTo(target.Name) then
 			UIManager.close(PlayerMenu.id)
-			Toast.push("TC", { text = ("귓속말 대상: %s - 채팅창에 메시지를 입력하세요"):format(current.displayName), colorName = "textPrimary", seconds = 4 })
+			Toast.push("TC", { text = Text.get("ui.playerMenu.whisperSet", { name = current.displayName }), colorName = "textPrimary", seconds = 4 })
 		else
-			Toast.push("TC", { text = "귓속말 대상을 정할 수 없습니다", colorName = "danger" })
+			Toast.push("TC", { text = Text.get("ui.playerMenu.whisperFailed"), colorName = "danger" })
 		end
 	end)
-	rows.inspect = makeRow("InspectButton", "장비 보기", 3, function()
+	rows.inspect = makeRow("InspectButton", Text.get("ui.playerMenu.inspect"), 3, function()
 		local userId = current and current.userId
 		UIManager.close(PlayerMenu.id, true)
 		if userId then
@@ -134,7 +135,7 @@ function PlayerMenu.open(target)
 	built.panel.titleLabel.Text = PlayerLabelFormat.richText(current.displayName, level, rebirth, Theme.textSize("header"))
 	local rows = built.rows
 	local left = targetPlayer == nil
-	local leftReason = "서버를 떠난 플레이어"
+	local leftReason = Text.get("ui.playerMenu.left")
 
 	-- 세로 자리: 보이는 버튼이 위에서부터 차곡차곡(자기 이름이면 [장비 보기]만 첫 줄).
 	local visibleOrder = 0
@@ -163,7 +164,7 @@ function PlayerMenu.open(target)
 		task.spawn(function()
 			local ok, isFriend = pcall(localPlayer.IsFriendsWith, localPlayer, target.userId)
 			if ok and isFriend and openToken == token then
-				setRow(rows.friend, true, false, "이미 친구입니다")
+				setRow(rows.friend, true, false, Text.get("ui.playerMenu.alreadyFriend"))
 			end
 		end)
 		task.spawn(function()
@@ -172,12 +173,12 @@ function PlayerMenu.open(target)
 				return
 			end
 			if okSelf and canChatSelf == false then
-				setRow(rows.whisper, true, false, "내 계정의 채팅이 제한되어 있습니다")
+				setRow(rows.whisper, true, false, Text.get("ui.playerMenu.chatLockedSelf"))
 				return
 			end
 			local okPair, canChatPair = pcall(TextChatService.CanUsersChatAsync, TextChatService, localPlayer.UserId, target.userId)
 			if okPair and canChatPair == false and openToken == token then
-				setRow(rows.whisper, true, false, "상대의 채팅이 제한되어 있습니다")
+				setRow(rows.whisper, true, false, Text.get("ui.playerMenu.chatLockedPair"))
 			end
 		end)
 	end

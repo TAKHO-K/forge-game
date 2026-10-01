@@ -33,29 +33,30 @@ local previewRemote = ReplicatedStorage:WaitForChild("InheritPreview")
 local requestRemote = ReplicatedStorage:WaitForChild("InheritRequest")
 local resultRemote = ReplicatedStorage:WaitForChild("InheritResult")
 
-local REASON_TEXT = {
-	invalid = "잘못된 요청입니다",
-	no_class = "직업을 먼저 고르세요",
-	not_equipped = "같은 부위에 착용 중인 장비가 없습니다",
-	not_found = "가방에서 장비를 찾을 수 없습니다",
-	part_mismatch = "같은 부위끼리만 계승할 수 있습니다",
-	locked = "새 장비가 잠겨 있습니다 - 가방에서 잠금을 먼저 푸세요",
-	a_locked = "착용 중 장비가 잠겨 있습니다 - 해제한 뒤 잠금을 풀고 다시 착용하세요",
-	a_transcendent = "초월 장비는 계승 재료로 쓸 수 없습니다(분해 · 판매 불가와 같은 규칙)",
-	b_grade_lower = "새 장비 등급이 낮아 착용 장비의 옵션을 옮길 수 없습니다",
-	no_gold = "골드가 부족합니다",
+local REASON_KEY = {
+	invalid = "forge.err.invalid",
+	no_class = "forge.err.noClass",
+	not_equipped = "forge.inherit.err.notEquipped",
+	not_found = "forge.inherit.err.notFound",
+	part_mismatch = "forge.inherit.err.partMismatch",
+	locked = "forge.inherit.err.locked",
+	a_locked = "forge.inherit.err.aLocked",
+	a_transcendent = "forge.inherit.err.aTranscendent",
+	b_grade_lower = "forge.inherit.err.bGradeLower",
+	no_gold = "forge.err.noGold",
 }
 InheritPanel.reasonText = function(reason)
-	return REASON_TEXT[reason] or ("계승할 수 없습니다(" .. tostring(reason) .. ")")
+	local key = REASON_KEY[reason]
+	return key and Text.get(key) or Text.get("forge.inherit.err.unknown", { reason = tostring(reason) })
 end
 
 local STAT_ROWS = {
-	{ key = "attack", label = "공격력", fmt = function(v) return NumberFormat.format(math.floor(v)) end },
-	{ key = "defense", label = "방어력", fmt = function(v) return NumberFormat.format(math.floor(v)) end },
-	{ key = "maxHp", label = "최대 체력", fmt = function(v) return NumberFormat.format(math.floor(v)) end },
-	{ key = "speedPercent", label = "이동 · 공격 속도", fmt = function(v) return ("+%.1f%%"):format(v * 100) end },
-	{ key = "critRate", label = "치명 확률(레벨 · 환생 · 옵션)", fmt = function(v) return ("+%.1f%%p"):format(v * 100) end },
-	{ key = "critDmg", label = "치명 피해(옵션 · 태초 장갑)", fmt = function(v) return ("+%.2f"):format(v) end },
+	{ key = "attack", label = Text.get("forge.inherit.stat.attack"), fmt = function(v) return NumberFormat.format(math.floor(v)) end },
+	{ key = "defense", label = Text.get("forge.inherit.stat.defense"), fmt = function(v) return NumberFormat.format(math.floor(v)) end },
+	{ key = "maxHp", label = Text.get("forge.inherit.stat.maxHp"), fmt = function(v) return NumberFormat.format(math.floor(v)) end },
+	{ key = "speedPercent", label = Text.get("forge.inherit.stat.speed"), fmt = function(v) return ("+%.1f%%"):format(v * 100) end },
+	{ key = "critRate", label = Text.get("forge.inherit.stat.critRate"), fmt = function(v) return ("+%.1f%%p"):format(v * 100) end },
+	{ key = "critDmg", label = Text.get("forge.inherit.stat.critDmg"), fmt = function(v) return ("+%.2f"):format(v) end },
 }
 
 local built -- refs
@@ -72,7 +73,7 @@ end
 local function setText(sourceItem, onItem)
 	local option = sourceItem and sourceItem.option
 	if not option or not OptionData.options[option.id] then
-		return "옵션 없음"
+		return Text.get("forge.noOption")
 	end
 	local probe = { grade = onItem.grade, itemLevel = onItem.itemLevel, option = option }
 	local lines = ItemDescribe.optionLines(probe, player:GetAttribute("ClassId"))
@@ -81,7 +82,7 @@ local function setText(sourceItem, onItem)
 		table.insert(texts, line.text)
 	end
 	local span = OptionData.rollMax - OptionData.rollMin
-	return ("%s · 품질 %d%%"):format(table.concat(texts, " · "), math.floor((option.roll - OptionData.rollMin) / span * 100 + 0.5))
+	return Text.get("forge.inherit.setLine", { options = table.concat(texts, " · "), quality = ("%d"):format(math.floor((option.roll - OptionData.rollMin) / span * 100 + 0.5)) })
 end
 
 local function refundText(refund)
@@ -89,17 +90,17 @@ local function refundText(refund)
 		return ""
 	end
 	if refund.kind == "gold" then
-		return ("판매가 %s 골드"):format(NumberFormat.format(refund.gold))
+		return Text.get("forge.inherit.refundGold", { gold = NumberFormat.format(refund.gold) })
 	end
 	local gem = refund.gem
-	return ("%s(보석 가방) · 옵션 %s"):format(ItemDescribe.gem(gem).title, setText(gem, gem):match("^[^·]+") or "없음")
+	return Text.get("forge.inherit.refundGem", { gem = ItemDescribe.gem(gem).title, option = setText(gem, gem):match("^[^·]+") or Text.get("forge.inherit.none") })
 end
 
 local function build()
 	local panel = Panel.create({
 		id = InheritPanel.id,
 		kind = "window",
-		title = "장비 계승",
+		title = Text.get("forge.inherit.title"),
 		size = PANEL_SIZE,
 		help = { -- G1-1: "굴림 위치" 은어 · 돌려받는 것 명시 + 2단
 			short = Text.get("inherit.help.short"),
@@ -137,7 +138,7 @@ local function build()
 	lineA.Name = "ItemA"
 	local lineB = Theme.label(scroll, "", "body", "textPrimary")
 	lineB.Name = "ItemB"
-	local chooseLabel = Theme.label(scroll, "남길 옵션 세트", "caption", "textSecondary")
+	local chooseLabel = Theme.label(scroll, Text.get("forge.inherit.chooseSet"), "caption", "textSecondary")
 
 	local function makeCard(name, onActivated)
 		local card = Instance.new("TextButton")
@@ -179,7 +180,7 @@ local function build()
 	refs.statHeader = Theme.label(scroll, "", "caption", "textSecondary")
 	-- 0번 행 = 열 머리(능력치 · 현재 · 계승 후 · 변화) - 값 행과 같은 칸 배치.
 	for index = 0, #STAT_ROWS do
-		local row = STAT_ROWS[index] or { key = "Header", label = "능력치" }
+		local row = STAT_ROWS[index] or { key = "Header", label = Text.get("forge.inherit.stat.header") }
 		local frame = Instance.new("Frame")
 		frame.Name = "Stat_" .. row.key
 		frame.BackgroundTransparency = (index == 0 or index % 2 == 1) and 1 or 0.85
@@ -209,7 +210,7 @@ local function build()
 		parent = bottom,
 		name = "InheritButton",
 		kind = "primary",
-		text = "계승",
+		text = Text.get("forge.inherit.button"),
 		width = 112,
 		anchorPoint = Vector2.new(1, 0),
 		position = UDim2.new(1, -PAD, 0, PAD),
@@ -221,7 +222,7 @@ local function build()
 		parent = bottom,
 		name = "CancelButton",
 		kind = "secondary",
-		text = "취소",
+		text = Text.get("forge.cancel"),
 		width = 112,
 		anchorPoint = Vector2.new(1, 0),
 		position = UDim2.new(1, -(PAD + 112 + 8), 0, PAD),
@@ -307,7 +308,7 @@ function InheritPanel.render()
 	end
 	local refs = built
 	local a, b = target.a, target.b
-	refs.heading.Text = ("착용 중 %s → 새 장비"):format(ItemVisualData.partDisplayNames[b.part or "armor"] or "장비")
+	refs.heading.Text = Text.get("forge.inherit.heading", { part = ItemVisualData.partDisplayNames[b.part or "armor"] or Text.get("forge.inherit.partFallback") })
 	local describedA = ItemDescribe.item(a, player:GetAttribute("ClassId"))
 	local describedB = ItemDescribe.item(b, player:GetAttribute("ClassId"))
 	-- meta의 첫 조각은 부위 이름이다(제목에 이미 있다) - 레벨 · 기본 효과만 붙인다. 문자 집합([^·])은 바이트 단위라 한글(옷 = … B7)과 섞여 못 쓴다 - 평문 find.
@@ -315,23 +316,23 @@ function InheritPanel.render()
 		local at = meta:find(" · ", 1, true)
 		return at and meta:sub(at + #" · ") or meta
 	end
-	refs.lineA.Text = ("A(착용) %s · %s"):format(describedA.title, withoutPart(describedA.meta))
+	refs.lineA.Text = Text.get("forge.inherit.lineA", { title = describedA.title, meta = withoutPart(describedA.meta) })
 	refs.lineA.TextColor3 = gradeColor(a.grade)
-	refs.lineB.Text = ("B(새 장비) %s · %s"):format(describedB.title, withoutPart(describedB.meta))
+	refs.lineB.Text = Text.get("forge.inherit.lineB", { title = describedB.title, meta = withoutPart(describedB.meta) })
 	refs.lineB.TextColor3 = gradeColor(b.grade)
 
 	local blockA = preview and preview.keepABlock or Inherit.keepABlockReason(a, b)
 	if blockA and keep == "a" then
 		keep = "b"
 	end
-	paintCard(refs.cardA, keep == "a", not blockA, "A 옵션 세트 남기기", setText(a, b), blockA and InheritPanel.reasonText(blockA) or nil)
-	paintCard(refs.cardB, keep == "b", true, "B 옵션 세트 남기기", setText(b, b), nil)
+	paintCard(refs.cardA, keep == "a", not blockA, Text.get("forge.inherit.keepA"), setText(a, b), blockA and InheritPanel.reasonText(blockA) or nil)
+	paintCard(refs.cardB, keep == "b", true, Text.get("forge.inherit.keepB"), setText(b, b), nil)
 
 	local stats = preview and preview.stats
 	local after = stats and stats[keep]
-	refs.statHeader.Text = ("최종 능력치 비교 - 계승 후 = %s 옵션 세트를 남겼을 때"):format(keep == "a" and "A" or "B")
+	refs.statHeader.Text = Text.get("forge.inherit.statHeader", { set = keep == "a" and "A" or "B" })
 	local header = refs.statRows[0]
-	header.now.Text, header.after.Text, header.delta.Text = "현재", "계승 후", "변화"
+	header.now.Text, header.after.Text, header.delta.Text = Text.get("forge.inherit.col.now"), Text.get("forge.inherit.col.after"), Text.get("forge.inherit.col.delta")
 	for _, cell in ipairs({ header.label, header.now, header.after, header.delta }) do
 		cell.TextColor3 = Theme.color("textTertiary")
 	end
@@ -345,7 +346,7 @@ function InheritPanel.render()
 			local diff = afterValue - nowValue
 			local relative = math.abs(nowValue) > 1e-9 and diff / math.abs(nowValue) or 0
 			if math.abs(relative) < 1e-6 and math.abs(diff) < 1e-9 then
-				cells.delta.Text = "변화 없음"
+				cells.delta.Text = Text.get("forge.inherit.noChange")
 				cells.delta.TextColor3 = Theme.color("textTertiary")
 			else
 				cells.delta.Text = math.abs(nowValue) > 1e-9 and ("%+.1f%%"):format(relative * 100) or row.fmt(diff)
@@ -356,17 +357,17 @@ function InheritPanel.render()
 		end
 	end
 	local refund = preview and preview.refund and preview.refund[keep]
-	refs.refund.Text = refund and ("A 환급: %s"):format(refundText(refund)) or ""
+	refs.refund.Text = refund and Text.get("forge.inherit.refundLine", { refund = refundText(refund) }) or ""
 
 	local cost, gold = preview and preview.cost, player:GetAttribute("Gold") or 0
 	if cost then
-		refs.cost.Text = ("비용 %s 골드(보유 %s)"):format(NumberFormat.format(cost), NumberFormat.format(gold))
+		refs.cost.Text = Text.get("forge.inherit.cost", { cost = NumberFormat.format(cost), gold = NumberFormat.format(gold) })
 		refs.cost.TextColor3 = gold >= cost and Theme.color("gold") or Theme.color("danger")
 	elseif preview and preview.error then
-		refs.cost.Text = "계승할 수 없습니다"
+		refs.cost.Text = Text.get("forge.inherit.cannot")
 		refs.cost.TextColor3 = Theme.color("danger")
 	else
-		refs.cost.Text = "비용 계산 중…"
+		refs.cost.Text = Text.get("forge.inherit.costLoading")
 		refs.cost.TextColor3 = Theme.color("textSecondary")
 	end
 	local reason
@@ -375,9 +376,9 @@ function InheritPanel.render()
 	elseif preview.error then
 		reason = InheritPanel.reasonText(preview.error)
 	elseif gold < cost then
-		reason = REASON_TEXT.no_gold
+		reason = Text.get("forge.err.noGold")
 	end
-	refs.status.Text = preview and preview.error and InheritPanel.reasonText(preview.error) or (preview and "" or "불러오는 중…")
+	refs.status.Text = preview and preview.error and InheritPanel.reasonText(preview.error) or (preview and "" or Text.get("forge.inherit.loading"))
 	refs.inheritButton.setEnabled(preview ~= nil and not preview.error and gold >= cost and not pendingSince, reason)
 	layoutBody()
 end
@@ -428,10 +429,10 @@ function InheritPanel.confirm()
 	local chosen, requested = keep, target
 	local refund = preview.refund and preview.refund[chosen]
 	Confirm.ask({
-		title = "계승 - 되돌릴 수 없습니다",
-		body = ("A(착용 중)는 사라지고 B가 %s 옵션 세트로 착용됩니다.\nA 환급: %s\n비용: %s 골드"):format(
-			chosen == "a" and "A" or "B", refundText(refund), NumberFormat.format(preview.cost)),
-		primaryText = "계승",
+		title = Text.get("forge.inherit.confirm.title"),
+		body = Text.get("forge.inherit.confirm.body", {
+			set = chosen == "a" and "A" or "B", refund = refundText(refund), cost = NumberFormat.format(preview.cost) }),
+		primaryText = Text.get("forge.inherit.button"),
 		danger = true,
 		parentId = InheritPanel.id,
 	}, function(accepted)
@@ -459,7 +460,7 @@ resultRemote.OnClientEvent:Connect(function(success, reason)
 		built.inheritButton.setBusy(false)
 	end
 	if success then
-		Toast.push("TC", { text = reason == "gem" and "계승 완료 - 착용 장비는 보석으로 돌려받았습니다" or "계승 완료 - 착용 장비는 골드로 돌려받았습니다", colorName = "success", seconds = 4 })
+		Toast.push("TC", { text = reason == "gem" and Text.get("forge.inherit.done.gem") or Text.get("forge.inherit.done.gold"), colorName = "success", seconds = 4 })
 		if UIManager.isOpen(InheritPanel.id) then
 			InheritPanel.back()
 		end

@@ -9,6 +9,7 @@ local WD = require(ReplicatedStorage.Shared.data.WeeklyChallengeData)
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local Theme = require(script.Parent.ui.kit.Theme)
 local Toast = require(script.Parent.ui.kit.Toast)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local player = Players.LocalPlayer
 local INK = Color3.fromRGB(30, 27, 46)
@@ -139,15 +140,15 @@ mine.Position, mine.Size = UDim2.new(0, 12, 1, -24), UDim2.new(1, -24, 0, 18)
 local function refreshPanel()
 	local bossId = Workspace:GetAttribute("WeeklyChallengeBoss")
 	local b = bossId and BossData.bosses[bossId]
-	head.Text = ("%s · %s(스테이지 %d)"):format(b and b.displayName or "?", tostring(Workspace:GetAttribute("WeeklyChallengeLabel") or ""), WD.stage)
+	head.Text = Text.get("scene.weekly.head", { boss = b and b.displayName or "?", label = tostring(Workspace:GetAttribute("WeeklyChallengeLabel") or ""), stage = ("%d"):format(WD.stage) })
 	local ok, r = pcall(function()
 		return ReplicatedStorage:WaitForChild("WeeklyChallengeTop"):InvokeServer()
 	end)
 	for i, l in ipairs(rankRows) do
 		local row = ok and type(r) == "table" and r.rows and r.rows[i]
-		l.Text = row and ("%d. %s  %.1f초"):format(row.rank, row.name, row.seconds) or (i == 1 and WD.text.none or "")
+		l.Text = row and Text.get("scene.weekly.row", { rank = ("%d"):format(row.rank), name = tostring(row.name), seconds = ("%.1f"):format(row.seconds) }) or (i == 1 and WD.text.none or "")
 	end
-	mine.Text = (ok and type(r) == "table" and r.myBest) and ("내 기록 %.1f초"):format(r.myBest) or ""
+	mine.Text = (ok and type(r) == "table" and r.myBest) and Text.get("scene.weekly.mine", { seconds = ("%.1f"):format(r.myBest) }) or ""
 end
 btn.Activated:Connect(function()
 	panel.Visible = not panel.Visible

@@ -25,6 +25,12 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
+local Text = require(ReplicatedStorage.Shared.Text)
+
+-- 그 플레이어 언어의 문장(스탠드인 · 더미 = 테이블/nil → 서버 기본 언어 ko)
+local function textFor(player, key, args)
+	return Text.getFor(typeof(player) == "Instance" and player or nil, key, args)
+end
 
 local PartyState = {}
 
@@ -448,7 +454,7 @@ local function removeRecord(party, record, reason)
 			-- 25-4(B1 결함 수정): 추방 시엔 알림이 있는데(448행) 자동 해산엔 없었다 - 남은
 			-- 멤버(더미 제외)에게 알린다. removeRecord가 partyOf를 지우기 전에 보낸다.
 			if remaining.player then
-				PartyState.notify(remaining.player, "파티가 해산되었습니다")
+				PartyState.notify(remaining.player, textFor(remaining.player, "srv.party.err.disbanded"))
 			end
 			removeRecord(party, remaining, "disband")
 		end
@@ -493,7 +499,7 @@ local function reviveRecord(party, record, player)
 	record.name = player.Name
 	partyOf[player] = party
 	PartyState.pushState(party)
-	PartyState.notify(player, "파티에 복귀했습니다")
+	PartyState.notify(player, textFor(player, "srv.party.rejoined"))
 	print(("[forge-game] 파티 복귀: #%d %s (%d/%d)"):format(party.id, player.Name, #party.members, PartyConfig.maxMembers))
 	fireChanged(party, "return", record)
 end
@@ -529,7 +535,7 @@ function PartyState.invite(inviter, invitee)
 	invite.thread = task.delay(PartyConfig.inviteTimeoutSeconds, function()
 		if invites[invitee] == invite then
 			invites[invitee] = nil
-			PartyState.notify(inviter, ("%s님이 초대에 응답하지 않았습니다"):format(invitee.Name))
+			PartyState.notify(inviter, textFor(inviter, "srv.party.inviteNoReply", { name = invitee.Name }))
 		end
 	end)
 	fireClient(partyInviteNotice, invitee, { inviterName = inviter.Name, seconds = PartyConfig.inviteTimeoutSeconds })
@@ -547,7 +553,7 @@ function PartyState.respondInvite(invitee, accept)
 	local party = invite.party
 	local inviter = invite.inviter
 	if not accept then
-		PartyState.notify(inviter, ("%s님이 초대를 거절했습니다"):format(invitee.Name))
+		PartyState.notify(inviter, textFor(inviter, "srv.party.inviteDeclined", { name = invitee.Name }))
 		return true, "declined"
 	end
 	if partyOf[invitee] then
@@ -690,7 +696,7 @@ function PartyState.kick(leader, targetUserId)
 		if record.userId == targetUserId and record ~= party.leader then
 			print(("[forge-game] 파티 추방: #%d %s"):format(party.id, record.name))
 			if record.player then
-				PartyState.notify(record.player, "파티에서 추방되었습니다")
+				PartyState.notify(record.player, textFor(record.player, "srv.party.kicked"))
 			end
 			removeRecord(party, record, "kick")
 			return true

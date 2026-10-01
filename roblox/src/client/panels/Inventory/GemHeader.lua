@@ -78,8 +78,8 @@ function GemHeader.createStatus(parent, hooks)
 	hint.Parent = parent
 
 	local used, phone = false, false
-	local usedText = "변환 · 리롤은 보석상인에게서"
-	local unusedText = "변환 · 리롤은 커뮤니티 센터 보석상인에게서 - 눌러서 [위치 안내]"
+	local usedText = Text.get("gear.gem.merchantShort")
+	local unusedText = Text.get("gear.gem.merchantGuide")
 	local self = {}
 
 	-- 줄 높이: 안 써 봤다 = 눈에 띄는 버튼(폰은 터치 44) · 써 봤다 = 작은 회색 글 한 줄 + ? 도움말(폰은 ? 를 터치 44로 키우고 그 줄이 44라 안내 한 줄도 같은 줄에 놓는다).

@@ -35,6 +35,7 @@ local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local SkillIconData = require(ReplicatedStorage.Shared.data.SkillIconData)
 local HudIcons = require(script.Parent.HudIcons)
 local SkillTooltip = require(script.Parent.hud.SkillTooltip)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local skillCastResult = ReplicatedStorage:WaitForChild("SkillCastResult")
 local dashResult = ReplicatedStorage:WaitForChild("DashResult")
@@ -136,7 +137,7 @@ local ATTACK_BUTTON_GAP = 12
 local attackButton = Instance.new("TextButton")
 attackButton.Name = "AttackButton"
 attackButton.AutoButtonColor = false
-attackButton.Text = "공격"
+attackButton.Text = Text.get("scene.hud.attack")
 attackButton.Font = Enum.Font.GothamBold
 attackButton.TextScaled = true
 attackButton.TextColor3 = Color3.fromRGB(255, 255, 255)

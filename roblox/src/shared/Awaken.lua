@@ -6,6 +6,7 @@ local GoldCost = require(ReplicatedStorage.Shared.GoldCost)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local PrimordialData = require(ReplicatedStorage.Shared.data.PrimordialData)
 local TranscendentData = require(ReplicatedStorage.Shared.data.TranscendentData) -- C5-7
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local Awaken = {}
 
@@ -31,11 +32,18 @@ function Awaken.blockReason(item, accountBestStage)
 	return nil
 end
 
-Awaken.reasonText = {
-	not_found = "장비를 찾을 수 없어요",
-	not_primordial = "각성은 태초 · 초월 장비만 할 수 있어요",
-	already_max = "이미 역대 최고 스테이지예요",
-	no_gold = "골드가 부족해요",
+-- 이유 → 글(desc.awaken.* - TextData_shared). 읽을 때 Text.get(그때의 언어) - 모르는 이유는 nil(호출부가 tostring으로 보여 준다).
+local REASON_KEYS = {
+	not_found = "desc.awaken.notFound",
+	not_primordial = "desc.awaken.notPrimordial",
+	already_max = "desc.awaken.alreadyMax",
+	no_gold = "desc.awaken.noGold",
 }
+Awaken.reasonText = setmetatable({}, {
+	__index = function(_, reason)
+		local key = REASON_KEYS[reason]
+		return key and Text.get(key) or nil
+	end,
+})
 
 return Awaken

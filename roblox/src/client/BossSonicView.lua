@@ -9,6 +9,7 @@ local Workspace = game:GetService("Workspace")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local BossFx = require(script.Parent.BossFx)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local BossSonicView = {}
 
@@ -144,12 +145,12 @@ function BossSonicView.tick(data)
 	local me = player.UserId
 	for _, id in ipairs(data.shielded or {}) do
 		if id == me then
-			floatText("가려짐! 0", SAFE)
+			floatText(Text.get("scene.boss.sonic.covered"), SAFE)
 		end
 	end
 	for _, id in ipairs(data.hit or {}) do
 		if id == me then
-			floatText("음파!", DANGER)
+			floatText(Text.get("scene.boss.sonic.hit"), DANGER)
 		end
 	end
 end

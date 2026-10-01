@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GoldCost = require(ReplicatedStorage.Shared.GoldCost)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
+local Text = require(ReplicatedStorage.Shared.Text)
 local Theme = require(script.Parent.kit.Theme)
 local ArtImage = require(script.Parent.ArtImage)
 
@@ -15,7 +16,8 @@ local RewardIcons = {}
 RewardIcons.order = { "gold", "goldKills", "enhanceStone", "highEnhanceStone", "egg", "gemDust", "sparkleShard", "protectDrop", "protectReset", "rerollTicket", "rebirthTicket", "passExp", "title" }
 RewardIcons.icon = { gold = "gold", goldKills = "gold", enhanceStone = "enhanceStone", highEnhanceStone = "highEnhanceStone", egg = "egg", eggZone = "egg", gemDust = "gemDust",
 	sparkleShard = "sparkleShard", protectDrop = "protectDrop", protectReset = "protectReset", rerollTicket = "rerollTicket", rebirthTicket = "rebirthTicket", passExp = "passExp", title = "title" }
-local SHORT = { gold = "G", goldKills = "G", enhanceStone = "석", egg = "알", gemDust = "가루", sparkleShard = "조각", protectDrop = "방지", passExp = "EXP", title = "칭호", rebirthTicket = "권" }
+local SHORT = { gold = "G", goldKills = "G", passExp = "EXP" }
+local SHORT_KEY = { enhanceStone = "ui.reward.short.enhanceStone", egg = "ui.reward.short.egg", gemDust = "ui.reward.short.gemDust", sparkleShard = "ui.reward.short.sparkleShard", protectDrop = "ui.reward.short.protectDrop", title = "ui.reward.short.title", rebirthTicket = "ui.reward.short.rebirthTicket" }
 
 -- 몇 마리분 → 실제 골드 글자(서버 grant와 같은 식)
 function RewardIcons.goldText(kills)
@@ -50,7 +52,7 @@ function RewardIcons.row(parent, reward, size, opts)
 			cell.BackgroundTransparency = 1
 			cell.Size = UDim2.fromOffset(key == "title" and size or size + 34, size)
 			cell.Parent = row
-			local img = ArtImage.label(cell, "icons/reward/" .. (RewardIcons.icon[key] or key), UDim2.fromOffset(size, size), SHORT[key] or "?")
+			local img = ArtImage.label(cell, "icons/reward/" .. (RewardIcons.icon[key] or key), UDim2.fromOffset(size, size), SHORT[key] or (SHORT_KEY[key] and Text.get(SHORT_KEY[key])) or "?")
 			img.Name = "Icon"
 			if key ~= "title" then
 				local qty = Instance.new("TextLabel")

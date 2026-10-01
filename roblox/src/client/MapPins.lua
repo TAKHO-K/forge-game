@@ -7,6 +7,7 @@ local Workspace = game:GetService("Workspace")
 local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
 local WorldMapLayout = require(ReplicatedStorage.Shared.WorldMapLayout)
 local RoadNet = require(ReplicatedStorage.Shared.RoadNet)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local MapPins = {}
 
@@ -58,7 +59,7 @@ function MapPins.toggleAt(position, radius)
 	end
 	nextId += 1
 	local ground = position.Y ~= 0 and position.Y or WorldMapData.floorTopY
-	local pin = { id = nextId, position = Vector3.new(position.X, ground, position.Z), label = ("핀 %d"):format(nextId) }
+	local pin = { id = nextId, position = Vector3.new(position.X, ground, position.Z), label = Text.get("scene.map.pin", { n = ("%d"):format(nextId) }) }
 	beacon(pin)
 	table.insert(pins, pin)
 	changed:Fire()

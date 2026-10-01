@@ -74,7 +74,7 @@ end
 function StageRewardBand.gradeHelpText(rebirthCount)
 	local lines = {}
 	for _, row in ipairs(StageRewardBand.gradeRows(rebirthCount)) do
-		table.insert(lines, ("%s %s"):format(row.name, percentText(row.chance)))
+		table.insert(lines, Text.get("band.gradeChance", { grade = row.name, percent = percentText(row.chance) }))
 	end
 	return table.concat(lines, "\n"), #lines
 end
@@ -108,19 +108,20 @@ function StageRewardBand.describe(stage, entry, rebirthCount)
 
 	local grades = StageRewardBand.gradeRows(rebirthCount)
 	local low, high = itemLevelDeltaRange()
-	local gearBody = ("장비 1개 확정(%s 이상 · Lv %d~%d) [직업]"):format(grades[1].name, stage + low, stage + high)
+	local gearArgs = { grade = grades[1].name, min = ("%d"):format(stage + low), max = ("%d"):format(stage + high) }
+	local gearBody
 	if entry.gearClaimed then
-		gearBody = colored(gearBody .. " ✓ 받음", "textTertiary")
+		gearBody = colored(Text.get("hud.band.gearClaimed", gearArgs), "textTertiary")
 	else
-		gearBody = colored(gearBody, "textPrimary")
+		gearBody = colored(Text.get("hud.band.gear", gearArgs), "textPrimary")
 	end
-	table.insert(rows, { head = "첫 클리어", text = gearBody, claimed = entry.gearClaimed, isGear = true })
+	table.insert(rows, { head = Text.get("hud.band.firstHead"), text = gearBody, claimed = entry.gearClaimed, isGear = true })
 
 	local dropCount, resetCount = Enhance.getBossGrant(stage)
 	local ticketParts, claimedCount = {}, 0
 	for _, spec in ipairs({
-		{ state = entry.dropTicket, text = ("하락 방지권 ×%d"):format(dropCount) },
-		{ state = entry.resetTicket, text = ("초기화 방지권 ×%d"):format(resetCount) },
+		{ state = entry.dropTicket, text = Text.get("hud.band.dropTicket", { count = ("%d"):format(dropCount) }) },
+		{ state = entry.resetTicket, text = Text.get("hud.band.resetTicket", { count = ("%d"):format(resetCount) }) },
 	}) do
 		if spec.state ~= "none" then
 			table.insert(ticketParts, { text = spec.text, claimed = spec.state == "claimed" })
@@ -133,13 +134,14 @@ function StageRewardBand.describe(stage, entry, rebirthCount)
 		local allClaimed = claimedCount == #ticketParts
 		local segments = {}
 		for _, part in ipairs(ticketParts) do
-			table.insert(segments, (part.claimed and not allClaimed) and colored(part.text .. " ✓", "textTertiary") or part.text)
+			table.insert(segments, (part.claimed and not allClaimed) and colored(Text.get("hud.band.ticketClaimed", { ticket = part.text }), "textTertiary") or part.text)
 		end
-		local body = table.concat(segments, " · ") .. " [계정]"
+		local tickets = table.concat(segments, " · ")
+		local body
 		if allClaimed then
-			body = colored(plainOf(body) .. " ✓ 받음", "textTertiary")
+			body = colored(Text.get("hud.band.ticketRowClaimed", { tickets = plainOf(tickets) }), "textTertiary")
 		else
-			body = colored(body, "textPrimary")
+			body = colored(Text.get("hud.band.ticketRow", { tickets = tickets }), "textPrimary")
 		end
 		table.insert(rows, { head = "", text = body, claimed = allClaimed })
 	end
@@ -161,7 +163,7 @@ function StageRewardBand.describe(stage, entry, rebirthCount)
 		row.plain = plainOf(row.text)
 	end
 	local help, helpLines = StageRewardBand.gradeHelpText(rebirthCount)
-	return { title = ("스테이지 %d 보스 · %s"):format(stage, boss.displayName), rows = rows, help = help, helpLines = helpLines }
+	return { title = Text.get("hud.band.title", { stage = ("%d"):format(stage), boss = boss.displayName }), rows = rows, help = help, helpLines = helpLines }
 end
 
 -- 띠를 짓는다. props = { parent, position, width, onChallenge(stage) }. 반환 refs = { root, height, update(stage, entry, rebirthCount, codex), setChallengeEnabled }.
@@ -216,7 +218,7 @@ function StageRewardBand.build(props)
 			child:Destroy()
 		end
 		if not (boss and boss.intro) then
-			gimmickText.Text = "보스 칸이나 도감 점을 누르면 그 보스의 전멸기가 보입니다"
+			gimmickText.Text = Text.get("hud.band.gimmickEmpty")
 			return
 		end
 		BossIntroDiagram.draw(gimmickDiagram, boss.intro.diagram)
@@ -225,14 +227,18 @@ function StageRewardBand.build(props)
 				d.ZIndex = 21
 			end
 		end
-		gimmickText.Text = ("<b>%s · %s</b>\n%s"):format(boss.displayName, boss.intro.title, (boss.intro.line:gsub("{N}", "2(솔로) ~ 5(4인)")) .. (boss.intro.sub and ("\n" .. boss.intro.sub) or "")) -- BR1-3 보조 한 줄
+		local gimmickN = Text.get("hud.band.gimmickN")
+		gimmickText.Text = Text.get(boss.intro.sub and "hud.band.gimmickSub" or "hud.band.gimmick", { boss = boss.displayName, title = boss.intro.title,
+			line = (boss.intro.line:gsub("{N}", function()
+				return gimmickN
+			end)), sub = boss.intro.sub }) -- BR1-3 보조 한 줄
 	end
 	-- M1(사용자): [여기로 안내] - 고른 보스의 구역 관문까지 길 안내(Wayfinder - 바닥 빛줄기 · 화살표). 구역이 없는 보스(섬 예정)는 숨긴다.
 	local guideButton = Button.build({
 		parent = gimmickPanel,
 		name = "GuideHereButton",
 		kind = "secondary",
-		text = "여기로 안내",
+		text = Text.get("hud.band.guideHere"),
 		width = 92,
 		height = 24,
 		anchorPoint = Vector2.new(1, 1),
@@ -252,7 +258,7 @@ function StageRewardBand.build(props)
 		parent = root,
 		name = "GimmickHelpButton",
 		kind = "secondary",
-		text = "기믹 도움말",
+		text = Text.get("hud.band.gimmickHelp"),
 		width = 92,
 		height = math.max(titleHeight, 24),
 		anchorPoint = Vector2.new(1, 0),
@@ -291,7 +297,7 @@ function StageRewardBand.build(props)
 	help.root.Visible = false
 
 	-- 도감: 점 6개(BossData 선언 순) + 눌린 점의 보스 이름 한 줄 + [도전].
-	local codexLabel = Theme.label(root, "도감", "caption", "textSecondary")
+	local codexLabel = Theme.label(root, Text.get("hud.band.codex"), "caption", "textSecondary")
 	codexLabel.Position = UDim2.new(0, 0, 0, codexTop)
 	codexLabel.Size = UDim2.new(0, 34, 0, codexHeight)
 	local codexBossIds = BossData.pools[1].bossIds
@@ -331,7 +337,7 @@ function StageRewardBand.build(props)
 		parent = root,
 		name = "ChallengeButton",
 		kind = "primary",
-		text = "도전",
+		text = Text.get("hud.band.challenge"),
 		width = 88,
 		height = codexHeight,
 		anchorPoint = Vector2.new(1, 0),
@@ -348,7 +354,7 @@ function StageRewardBand.build(props)
 		parent = root,
 		name = "GateGuideButton",
 		kind = "secondary",
-		text = "관문 안내",
+		text = Text.get("hud.band.gateGuide"),
 		width = 84,
 		height = codexHeight,
 		anchorPoint = Vector2.new(1, 0),
@@ -396,8 +402,8 @@ function StageRewardBand.build(props)
 			usable = usable or (g ~= nil and id == g.bossId)
 		end
 		refs.gateState = g == nil and "none" or (usable and "remote" or "locked")
-		refs.lockText = refs.gateState == "locked" and "🔒 원격 입장 - 관문을 한 번 찾아가면 열립니다" or nil
-		challenge.setText(g and "원격 입장" or "도전")
+		refs.lockText = refs.gateState == "locked" and Text.get("hud.band.remoteLocked") or nil
+		challenge.setText(Text.get(g and "hud.band.remoteEntry" or "hud.band.challenge"))
 		challenge.setEnabled(stage ~= nil and refs.gateState ~= "locked") -- 잠금 이유는 창 아래 상태 줄 한 줄(버튼 밑 사유 글씨는 잘려서 뺐다)
 		gateGuide.root.Visible = refs.gateState == "locked"
 	end
@@ -408,14 +414,14 @@ function StageRewardBand.build(props)
 		setCodex(codex)
 		clearRows()
 		if stage == nil then
-			title.Text = "보스 칸을 누르면 보상이 보입니다"
+			title.Text = Text.get("hud.band.empty")
 			title.TextColor3 = UIColors.textSecondary
 			return
 		end
 		title.TextColor3 = UIColors.textPrimary
 		if entry == nil then
-			title.Text = ("스테이지 %d 보스"):format(stage)
-			rowViews[1].body.Text = "보상을 불러오는 중…"
+			title.Text = Text.get("hud.band.titleLoading", { stage = ("%d"):format(stage) })
+			rowViews[1].body.Text = Text.get("hud.band.loading")
 			return
 		end
 		gimmickBossId = entry.bossId

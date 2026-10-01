@@ -2,6 +2,8 @@
 -- 가방(B, S20 사전 작업에서 I → B) · 파티(P, S12b) · 스테이지 선택(M, S15) - 나머지(상점 · 펫 · 보상)는 그 창을 만드는 세션이 한 줄씩 넣는다(O는 못 쓴다 - 아래 swallowedKeys). menuOrder가 있는 항목이 메뉴바(hud/MenuBar.client.lua)의 칸이 된다(S16).
 -- 금지 키(PRD 20.81 [D-1]): W A S D Q E F Space Shift X Backspace Tab Esc + 숫자열(스킬 슬롯 확장 몫) - 등록하면 error.
 
+local Text = require(game:GetService("ReplicatedStorage").Shared.Text)
+
 local PanelRegistry = {}
 
 PanelRegistry.forbiddenKeys = {
@@ -21,17 +23,17 @@ PanelRegistry.swallowedKeys = { [Enum.KeyCode.I] = true, [Enum.KeyCode.O] = true
 --   왼쪽 메뉴 = menuOrder 순 7칸(가방 · 캐릭터 · 지도 상시 - menuPinned) · menuMore = "더보기"(…) 안으로(파티 · 순위 · 설정). 모든 창 = 같은 키로 열고 닫기 + X · Backspace 닫기(Esc = 로블록스 메뉴 전용 - 18-1 [2]).
 --   opener(선택) = 등록 전(처음 열 때 짓는) 창을 여는 모듈 이름(panels/<이름>.toggle) - 메뉴 버튼 · 단축키가 그 함수를 부른다.
 PanelRegistry.panels = {
-	{ id = "inventory", kind = "window", hotkey = Enum.KeyCode.G, menuOrder = 1, iconKey = "bag", menuLabel = "가방", menuPinned = true },
-	{ id = "character", kind = "window", hotkey = Enum.KeyCode.C, menuOrder = 2, iconKey = "character", menuLabel = "캐릭터", menuPinned = true, menuHiddenWhile = { "noClass" } }, -- 성장 · 능력치 · 직업 변경(panels/Character)
-	{ id = "worldMap", kind = "window", hotkey = Enum.KeyCode.M, menuOrder = 3, iconKey = "map", menuLabel = "지도", menuPinned = true }, -- 전체 지도 · 핀 · 자동 이동 · 체크포인트(panels/WorldMapPanel)
+	{ id = "inventory", kind = "window", hotkey = Enum.KeyCode.G, menuOrder = 1, iconKey = "bag", menuLabel = Text.get("ui.panel.menu.inventory"), menuPinned = true },
+	{ id = "character", kind = "window", hotkey = Enum.KeyCode.C, menuOrder = 2, iconKey = "character", menuLabel = Text.get("ui.panel.menu.character"), menuPinned = true, menuHiddenWhile = { "noClass" } }, -- 성장 · 능력치 · 직업 변경(panels/Character)
+	{ id = "worldMap", kind = "window", hotkey = Enum.KeyCode.M, menuOrder = 3, iconKey = "map", menuLabel = Text.get("ui.panel.menu.worldMap"), menuPinned = true }, -- 전체 지도 · 핀 · 자동 이동 · 체크포인트(panels/WorldMapPanel)
 	-- S15: 구역(스테이지) 선택(StageSelectPanel.lua) - QUEUE-ALL2: 키 M → N · 이름 "구역 선택". 견습 중에는 UIManager의 canOpen이 막는다.
-	{ id = "stageSelect", kind = "station", hotkey = Enum.KeyCode.N, menuOrder = 4, iconKey = "zone_select", menuLabel = "구역 선택", menuHiddenWhile = { "tutorial", "noClass" } },
-	{ id = "quests", kind = "window", hotkey = Enum.KeyCode.J, menuOrder = 5, iconKey = "quest", menuLabel = "퀘스트", menuHiddenWhile = { "noClass" } }, -- QUEUE-10h Q7(panels/Quests) · QUEUE-ALL3 Q3 탭
-	{ id = "codex", kind = "window", hotkey = Enum.KeyCode.K, menuOrder = 6, iconKey = "codex", menuLabel = "도감", menuHiddenWhile = { "tutorial", "noClass" } }, -- QUEUE-ALL1 P5 도감 v2(panels/Codex)
-	{ id = "training", kind = "window", hotkey = Enum.KeyCode.U, menuOrder = 7, iconKey = "training", menuLabel = "수련", menuHiddenWhile = { "tutorial", "noClass" } }, -- QUEUE-ALL3 Q2(panels/Training - 옛 퀘스트 창 수련 줄)
-	{ id = "party", kind = "window", hotkey = Enum.KeyCode.P, menuOrder = 8, iconKey = "party", menuLabel = "파티", menuMore = true }, -- S12b 파티창(panels/Party.lua) · 친구 초대 = 창 맨 위
-	{ id = "leaderboard", kind = "window", hotkey = Enum.KeyCode.L, menuOrder = 9, iconKey = "rank", menuLabel = "순위", menuMore = true, opener = "Leaderboard" }, -- panels/Leaderboard(처음 열 때 짓는다)
-	{ id = "settings", kind = "window", menuOrder = 10, iconKey = "settings", menuLabel = "설정", menuMore = true, opener = "Settings" }, -- panels/Settings(분류 탭 · 단축키 보기)
+	{ id = "stageSelect", kind = "station", hotkey = Enum.KeyCode.N, menuOrder = 4, iconKey = "zone_select", menuLabel = Text.get("ui.panel.menu.stageSelect"), menuHiddenWhile = { "tutorial", "noClass" } },
+	{ id = "quests", kind = "window", hotkey = Enum.KeyCode.J, menuOrder = 5, iconKey = "quest", menuLabel = Text.get("ui.panel.menu.quests"), menuHiddenWhile = { "noClass" } }, -- QUEUE-10h Q7(panels/Quests) · QUEUE-ALL3 Q3 탭
+	{ id = "codex", kind = "window", hotkey = Enum.KeyCode.K, menuOrder = 6, iconKey = "codex", menuLabel = Text.get("ui.panel.menu.codex"), menuHiddenWhile = { "tutorial", "noClass" } }, -- QUEUE-ALL1 P5 도감 v2(panels/Codex)
+	{ id = "training", kind = "window", hotkey = Enum.KeyCode.U, menuOrder = 7, iconKey = "training", menuLabel = Text.get("ui.panel.menu.training"), menuHiddenWhile = { "tutorial", "noClass" } }, -- QUEUE-ALL3 Q2(panels/Training - 옛 퀘스트 창 수련 줄)
+	{ id = "party", kind = "window", hotkey = Enum.KeyCode.P, menuOrder = 8, iconKey = "party", menuLabel = Text.get("ui.panel.menu.party"), menuMore = true }, -- S12b 파티창(panels/Party.lua) · 친구 초대 = 창 맨 위
+	{ id = "leaderboard", kind = "window", hotkey = Enum.KeyCode.L, menuOrder = 9, iconKey = "rank", menuLabel = Text.get("ui.panel.menu.leaderboard"), menuMore = true, opener = "Leaderboard" }, -- panels/Leaderboard(처음 열 때 짓는다)
+	{ id = "settings", kind = "window", menuOrder = 10, iconKey = "settings", menuLabel = Text.get("ui.panel.menu.settings"), menuMore = true, opener = "Settings" }, -- panels/Settings(분류 탭 · 단축키 보기)
 }
 
 -- 창이 아닌 단축키(버튼 동작) - 패널 단축키 · 금지 키와 겹치면 validate가 error. 처리 = 그 버튼 코드(귀환 = WorldClient - 시전 중 다시 누르면 취소).

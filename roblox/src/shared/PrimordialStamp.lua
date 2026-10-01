@@ -3,6 +3,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local PrimordialStamp = {}
 
@@ -23,20 +24,20 @@ function PrimordialStamp.sourceText(source)
 		local boss = BossData.bosses[source.bossId]
 		where = boss and boss.displayName or source.bossId
 		if source.kind == "raid" then
-			where = "토벌: " .. where
+			where = Text.get("desc.stamp.raid", { where = where })
 		end
 	elseif source.zone then
 		where = zoneNames[source.zone] or source.zone
 		if source.kind == "sparkle" then
-			where = where .. "(반짝이)"
+			where = Text.get("desc.stamp.sparkle", { where = where })
 		end
 	elseif source.kind == "dev" then
-		where = "시험"
+		where = Text.get("desc.stamp.dev")
 	end
 	if not where then
 		return nil
 	end
-	return source.stage and ("%s · 스테이지 %d"):format(where, source.stage) or where
+	return source.stage and Text.get("desc.stamp.withStage", { where = where, stage = ("%d"):format(source.stage) }) or where
 end
 
 -- 번호 줄: "세계 37번째 태초" · 옛 태초 = "이전 태초" · 번호 확정 실패 = "태초(번호 없음)"
@@ -45,15 +46,15 @@ function PrimordialStamp.numberText(stamp)
 		return nil
 	end
 	if stamp.legacy then
-		return "이전 태초"
+		return Text.get("desc.stamp.legacy")
 	end
 	if stamp.no then
-		return ("세계 %d번째 태초"):format(stamp.no)
+		return Text.get("desc.stamp.number", { no = ("%d"):format(stamp.no) })
 	end
 	if stamp.pending then
-		return "태초(세계 번호 확인 중)"
+		return Text.get("desc.stamp.pending")
 	end
-	return "태초(번호 없음)"
+	return Text.get("desc.stamp.noNumber")
 end
 
 function PrimordialStamp.dateText(at)

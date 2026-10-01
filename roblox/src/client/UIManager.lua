@@ -14,6 +14,7 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 
 local PanelRegistry = require(script.Parent.ui.PanelRegistry)
+local Text = require(game:GetService("ReplicatedStorage").Shared.Text)
 
 local UIManager = {}
 
@@ -339,7 +340,7 @@ end
 
 -- S17 사전 작업(S16 결정 2): 메뉴바 버튼이 쓰는 "전환" 규칙. 단축키 · 다른 열기 버튼은 위 open의 규칙(window가 열려 있으면 station은 안 열린다)을 그대로 쓴다.
 -- 전환을 막는 이유(없으면 nil)와 토스트에 쓸 글: "overlay" = 확인 · 구매창이 떠 있다(뒤 패널은 그 창에 답한 뒤에) · "canOpen" = 그 창의 canOpen이 false(견습 중 스테이지 선택 등 - config.blockedText가 글).
-UIManager.blockedTexts = { overlay = "확인창을 먼저 닫아 주세요", canOpen = "지금은 열 수 없습니다" }
+UIManager.blockedTexts = { overlay = Text.get("ui.panel.blockedOverlay"), canOpen = Text.get("ui.panel.blockedCanOpen") }
 
 function UIManager.switchBlockedReason(id)
 	local win = windows[id]

@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UIManager = require(script.Parent.UIManager)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local classSelectRequest = ReplicatedStorage:WaitForChild("ClassSelectRequest")
 local classSummaryFetch = ReplicatedStorage:WaitForChild("ClassSummaryFetch")
@@ -37,7 +38,7 @@ panel.Parent = screenGui
 local title = Instance.new("TextLabel")
 title.BackgroundTransparency = 1
 title.Size = UDim2.new(1, 0, 0, 30)
-title.Text = "직업을 선택하세요"
+title.Text = Text.get("ui.class.title")
 title.Font = Enum.Font.GothamBold
 title.TextSize = 20
 title.TextColor3 = Color3.new(1, 1, 1)
@@ -66,7 +67,7 @@ hint.Font = Enum.Font.Gotham
 hint.TextSize = 12
 hint.TextWrapped = true
 hint.TextColor3 = UIColors.textSecondary
-hint.Text = "친구와 레벨이 달라도 바로 같이 사냥할 수 있어요. 직업은 언제든 바꿀 수 있습니다."
+hint.Text = Text.get("ui.class.hint")
 hint.Parent = body
 
 local layout = Instance.new("UIListLayout")
@@ -103,7 +104,7 @@ local confirmYes = Instance.new("TextButton")
 confirmYes.AnchorPoint = Vector2.new(0, 1)
 confirmYes.Position = UDim2.new(0, 12, 1, -12)
 confirmYes.Size = UDim2.new(0, 150, 0, 40)
-confirmYes.Text = "전환"
+confirmYes.Text = Text.get("ui.class.switch")
 confirmYes.Font = Enum.Font.GothamBold
 confirmYes.TextSize = 16
 confirmYes.BackgroundColor3 = Color3.fromRGB(60, 100, 60)
@@ -115,7 +116,7 @@ local confirmNo = Instance.new("TextButton")
 confirmNo.AnchorPoint = Vector2.new(1, 1)
 confirmNo.Position = UDim2.new(1, -12, 1, -12)
 confirmNo.Size = UDim2.new(0, 150, 0, 40)
-confirmNo.Text = "취소"
+confirmNo.Text = Text.get("ui.class.cancel")
 confirmNo.Font = Enum.Font.Gotham
 confirmNo.TextSize = 16
 confirmNo.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
@@ -145,7 +146,7 @@ end)
 -- 남아있다는 걸 알려주는 게 목적이다.
 local function showConfirm(classInfo)
 	pendingClassId = classInfo.id
-	confirmText.Text = ("%s(으)로 전환합니다...\n확인 중"):format(classInfo.displayName)
+	confirmText.Text = Text.get("ui.class.confirmChecking", { class = classInfo.displayName })
 	confirmPanel.Visible = true
 
 	-- InvokeServer는 yield한다 - 그 사이 다른 직업을 다시 눌러 pendingClassId가 바뀌면
@@ -160,11 +161,11 @@ local function showConfirm(classInfo)
 
 	local summary = ok and summaries and summaries[requestedId]
 	if summary and summary.level > 1 then
-		confirmText.Text = ("%s(으)로 전환합니다.\n레벨 %d · 최고 스테이지 %d로 이어집니다."):format(
-			classInfo.displayName, summary.level, summary.stageBest)
+		confirmText.Text = Text.get("ui.class.confirmContinue", {
+			class = classInfo.displayName, level = ("%d"):format(summary.level), stage = ("%d"):format(summary.stageBest) })
 	else
-		confirmText.Text = ("%s(으)로 전환합니다.\n레벨 1부터 시작합니다. 골드와 가방은 유지됩니다."):format(
-			classInfo.displayName)
+		confirmText.Text = Text.get("ui.class.confirmFresh", {
+			class = classInfo.displayName })
 	end
 end
 
@@ -190,8 +191,8 @@ local function makeButton(classInfo, order)
 	button.TextColor3 = Color3.new(1, 1, 1)
 	button.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
 	button.LayoutOrder = order
-	button.Text = ("%s   공격 %.2fx / 방어 %.2fx / 속도 %.2fx"):format(
-		classInfo.displayName, classInfo.atk, classInfo.def, classInfo.atkSpeed)
+	button.Text = Text.get("ui.class.row", {
+		class = classInfo.displayName, atk = ("%.2f"):format(classInfo.atk), def = ("%.2f"):format(classInfo.def), speed = ("%.2f"):format(classInfo.atkSpeed) })
 	button.Parent = body
 
 	button.Activated:Connect(function()
@@ -260,7 +261,7 @@ reopenButton.Name = "ClassReopenButton"
 reopenButton.AnchorPoint = Vector2.new(0, 1)
 reopenButton.Position = UDim2.new(0, 24, 1, -34)
 reopenButton.Size = UDim2.new(0, 90, 0, 36)
-reopenButton.Text = "직업 변경"
+reopenButton.Text = Text.get("ui.class.reopen")
 reopenButton.Font = Enum.Font.Gotham
 reopenButton.TextSize = 14
 reopenButton.BackgroundColor3 = Color3.fromRGB(60, 60, 70)

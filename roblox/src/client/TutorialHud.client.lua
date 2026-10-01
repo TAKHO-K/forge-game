@@ -13,6 +13,7 @@ local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local FriendInvite = require(script.Parent.FriendInvite)
 local HudChip = require(script.Parent.HudChip)
 local Theme = require(script.Parent.ui.kit.Theme)
+local Text = require(ReplicatedStorage.Shared.Text)
 
 local tutorialStepNotice = ReplicatedStorage:WaitForChild("TutorialStepNotice")
 local tutorialChallengeBossRequest = ReplicatedStorage:WaitForChild("TutorialChallengeBossRequest")
@@ -115,10 +116,10 @@ end
 
 tutorialStepNotice.OnClientEvent:Connect(function(payload)
 	if payload.completed then
-		showToast("견습 졸업", payload.text)
+		showToast(Text.get("scene.tutorial.graduated"), payload.text)
 		return
 	end
-	local title = ("견습 %d/%d단계 - %s 구역"):format(payload.step, payload.stepCount, payload.zoneName)
+	local title = Text.get("scene.tutorial.stepTitle", { step = ("%d"):format(payload.step), total = ("%d"):format(payload.stepCount), zone = payload.zoneName })
 	-- 1단계만 안내 뒤에 친구 부르기 한 줄이 붙는다(S12 - 문구는 TutorialData.steps[1].friendHintText).
 	showToast(title, payload.friendHint and (payload.text .. "\n" .. payload.friendHint) or payload.text)
 end)
@@ -152,7 +153,7 @@ chipLabel.Size = UDim2.new(0, 0, 1, 0)
 chipLabel.Font = Enum.Font.GothamBold
 chipLabel.TextSize = 13
 chipLabel.TextColor3 = UIColors.textPrimary
-chipLabel.Text = "견습"
+chipLabel.Text = Text.get("scene.tutorial.chip")
 chipLabel.Parent = chip
 
 local challengeButton = Instance.new("TextButton")
@@ -162,7 +163,7 @@ challengeButton.AutomaticSize = Enum.AutomaticSize.X
 challengeButton.Size = UDim2.new(0, 0, 0, 24)
 challengeButton.Font = Enum.Font.GothamBold
 challengeButton.TextSize = 12
-challengeButton.Text = "보스 도전"
+challengeButton.Text = Text.get("scene.tutorial.challenge")
 challengeButton.BackgroundColor3 = UIColors.ember
 challengeButton.TextColor3 = UIColors.textPrimary
 challengeButton.AutoButtonColor = true
@@ -190,7 +191,7 @@ inviteButton.AutomaticSize = Enum.AutomaticSize.X
 inviteButton.Size = UDim2.new(0, 0, 0, Theme.isMobile and 44 or 26)
 inviteButton.Font = Enum.Font.GothamBold
 inviteButton.TextSize = 12
-inviteButton.Text = "친구 부르기"
+inviteButton.Text = Text.get("scene.tutorial.invite")
 inviteButton.BackgroundColor3 = UIColors.panel
 inviteButton.BackgroundTransparency = UIColors.panelTransparency
 inviteButton.TextColor3 = UIColors.textPrimary
@@ -228,7 +229,7 @@ local function updateHud()
 	local target = player:GetAttribute("TutorialKillTarget") or 0
 	local count = player:GetAttribute("TutorialKillCount") or 0
 	local canChallenge = player:GetAttribute("TutorialCanChallenge")
-	chipLabel.Text = ("견습 %d/7 · %d/%d마리"):format(step, math.min(count, target), target)
+	chipLabel.Text = Text.get("scene.tutorial.chipProgress", { step = ("%d"):format(step), count = ("%d"):format(math.min(count, target)), target = ("%d"):format(target) })
 	challengeButton.Visible = canChallenge == true
 	inviteButton.Visible = step == 1 and FriendInvite.isAvailable()
 end

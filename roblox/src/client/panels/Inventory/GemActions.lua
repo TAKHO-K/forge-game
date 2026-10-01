@@ -15,6 +15,7 @@ local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local Gem = require(ReplicatedStorage.Shared.Gem)
 local ItemDescribe = require(ReplicatedStorage.Shared.ItemDescribe)
+local Text = require(ReplicatedStorage.Shared.Text)
 local Toast = require(script.Parent.Parent.Parent.ui.kit.Toast)
 
 local gemEquipRequest = ReplicatedStorage:WaitForChild("GemEquipRequest")
@@ -30,20 +31,20 @@ end
 -- 이유 코드 → 토스트 문구. slot = 요청한 홈(자동 장착이면 nil). 이유 코드는 서버 GemEquipResult의 것과 같다(slot_locked · grade_too_high · not_found · no_class · invalid) + 클라 미리 판정의 no_slot_open.
 function GemActions.reasonText(reason, gemGradeId, slot)
 	if reason == "slot_locked" then
-		return ("%d번 홈은 환생 %d회 뒤에 열립니다"):format(slot or 0, GemData.slotUnlockRequiredRebirth[slot or 1] or 0)
+		return Text.get("gear.gem.err.slotLocked", { slot = ("%d"):format(slot or 0), rebirth = ("%d"):format(GemData.slotUnlockRequiredRebirth[slot or 1] or 0) })
 	elseif reason == "grade_too_high" then
 		if slot then
-			return ("%d번 홈은 %s 이하 보석만 받습니다"):format(slot, gradeName(Gem.gradeCapForSlot(slot)))
+			return Text.get("gear.gem.err.slotCap", { slot = ("%d"):format(slot), grade = gradeName(Gem.gradeCapForSlot(slot)) })
 		end
-		return ("%s 등급은 %s 이상 홈에만 장착할 수 있습니다"):format(gradeName(gemGradeId), gradeName(gemGradeId))
+		return Text.get("gear.gem.err.gradeTooHigh", { grade = gradeName(gemGradeId) })
 	elseif reason == "no_slot_open" then
-		return "열린 홈이 없습니다 - 환생하면 홈이 열립니다"
+		return Text.get("gear.gem.err.noSlotOpen")
 	elseif reason == "not_found" then
-		return "보석을 찾을 수 없습니다"
+		return Text.get("gear.gem.err.notFound")
 	elseif reason == "no_class" then
-		return "직업을 먼저 고르세요"
+		return Text.get("gear.err.noClass")
 	end
-	return "보석을 장착할 수 없습니다"
+	return Text.get("gear.gem.err.generic")
 end
 
 -- 보석 등급의 표시 색(G1-1: 태초도 제 색 - shared/GradeColor).
@@ -144,7 +145,7 @@ function GemActions.create(deps)
 		if not replaced then
 			return nil
 		end
-		return ("교체될 보석: %s (%d번 홈)"):format(ItemDescribe.gem(replaced).title, slot)
+		return Text.get("gear.gem.replaceHint", { name = ItemDescribe.gem(replaced).title, slot = ("%d"):format(slot) })
 	end
 
 	-- [장착] 버튼 · 강조용: 지금 자동 장착이 되는가. 반환: true 또는 false + 이유.

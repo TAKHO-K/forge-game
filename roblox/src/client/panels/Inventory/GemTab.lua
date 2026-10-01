@@ -26,6 +26,7 @@ local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local Gem = require(ReplicatedStorage.Shared.Gem)
 local ItemDescribe = require(ReplicatedStorage.Shared.ItemDescribe)
+local Text = require(ReplicatedStorage.Shared.Text)
 local Toast = require(script.Parent.Parent.Parent.ui.kit.Toast)
 local Hint = require(script.Parent.Parent.GemWorkshop.Hint)
 local GemActions = require(script.Parent.GemActions)
@@ -93,7 +94,7 @@ weaponPaneLine.BackgroundTransparency = UIColors.rimTransparency
 weaponPaneLine.BorderSizePixel = 0
 weaponPaneLine.Parent = weaponPane
 
-local weaponLabel = makeSectionLabel(weaponPane, "내 무기 - 홈 5칸", 8)
+local weaponLabel = makeSectionLabel(weaponPane, Text.get("gear.gem.weaponLabel"), 8)
 
 local slots = GemSlots.create(weaponPane) -- 홈 5칸(Socket1~5) - 드롭 · 탭 대상
 slots.row.Position = UDim2.new(0, 14, 0, 26)
@@ -109,7 +110,7 @@ infoPane.Size = UDim2.new(1, -220, 1, 0)
 infoPane.BackgroundTransparency = 1
 infoPane.Parent = gemBody
 
-local slotLabel = makeSectionLabel(infoPane, "홈 상세 (등급 상한 이하는 전부 장착 가능)", 8)
+local slotLabel = makeSectionLabel(infoPane, Text.get("gear.gem.slotLabel"), 8)
 
 -- S20e: 변환 · 리롤은 보석상인의 "보석 공방"에서만 된다 - 이 행의 [리롤]은 진입점으로만 남아 누르면 토스트 "보석상인에게서 가능" + [위치 안내]가 나온다(변환권 구매 버튼은 공방으로 옮겼다).
 local slotList = GemSlotRows.create(infoPane, {
@@ -117,7 +118,7 @@ local slotList = GemSlotRows.create(infoPane, {
 })
 local slotListScroll, slotRows = slotList.scroll, slotList.rows
 
-local invLabel = makeSectionLabel(infoPane, "보유 보석", 250)
+local invLabel = makeSectionLabel(infoPane, Text.get("gear.gem.invLabel"), 250)
 
 local bag = GemBag.create(infoPane, { applyGradeVisual = applyGradeVisual, screenGui = screenGui })
 local gemInvScroll = bag.scroll
@@ -233,13 +234,13 @@ local function hintText()
 	local kind = deps.getSelection()
 	local phone = tapMode()
 	if armedSlot() then
-		return phone and "교체할 보석을 탭 - 밝은 보석만 가능 · 빈 곳 탭 = 취소" or "교체할 보석을 클릭하세요 - 밝은 보석만 가능 · Esc · 빈 곳 클릭 = 취소"
+		return phone and Text.get("gear.gem.hint.armedPhone") or Text.get("gear.gem.hint.armedPc")
 	elseif kind == "gemBag" then
-		return phone and "[장착] = 자동 장착 · 강조된 홈을 탭 = 그 홈에 장착" or "더블클릭 · 우클릭 · [장착] = 자동 장착 · 끌어서 원하는 홈에 놓기"
+		return phone and Text.get("gear.gem.hint.bagPhone") or Text.get("gear.gem.hint.bagPc")
 	elseif kind == "gemSlot" then
-		return "다른 보석으로 교체하려면 보석칸에서 선택"
+		return Text.get("gear.gem.hint.slot")
 	end
-	return phone and "보석 탭 → [장착] 또는 홈 탭 · 홈 탭 → 보석 탭" or "보석 더블클릭 · 우클릭 = 자동 장착 · 홈 더블클릭 · 우클릭 = 홈 골라 교체"
+	return phone and Text.get("gear.gem.hint.idlePhone") or Text.get("gear.gem.hint.idlePc")
 end
 
 local function paintHint()
@@ -497,7 +498,7 @@ updateGemTab = function()
 		local capInfo = ArmorData.grades[capGradeId]
 
 		if not unlocked then
-			ui.label.Text = ("홈%d(상한 %s) - 잠김, 환생 %d회 필요"):format(slot, capInfo.displayName, GemData.slotUnlockRequiredRebirth[slot])
+			ui.label.Text = Text.get("gear.gem.slot.locked", { slot = ("%d"):format(slot), grade = capInfo.displayName, rebirth = ("%d"):format(GemData.slotUnlockRequiredRebirth[slot]) })
 			ui.rerollButton.Visible = false
 			continue
 		end
@@ -506,18 +507,18 @@ updateGemTab = function()
 		local filled = type(gem) == "table"
 		-- 26-3(PRD 20.67 [9][12]) - "N번 홈 · 상한 <등급> · <등급> <옵션명> 보석 · Lv.N · +X%" 형식으로 통일한다(옛 "홈N(상한 X) - 등급: 옵션(값)" 형식을 대신한다).
 		if not filled then
-			ui.label.Text = ("%d번 홈 · 상한 %s · 빈 홈"):format(slot, capInfo.displayName)
+			ui.label.Text = Text.get("gear.gem.slot.empty", { slot = ("%d"):format(slot), grade = capInfo.displayName })
 		else
 			local valueText = ""
 			if gem.option then
 				local value = Option.valueOf(gem.option, gem.grade, gem.itemLevel, classId)
 				if type(value) == "table" then
-					valueText = (" · 치확+%.1f%%p 치피+%.2f"):format(value.critRate * 100, value.critDmg * 100)
+					valueText = Text.get("gear.gem.valueCrit", { rate = ("%.1f"):format(value.critRate * 100), dmg = ("%.2f"):format(value.critDmg * 100) })
 				else
-					valueText = (" · %+.1f%%"):format(value * 100)
+					valueText = Text.get("gear.gem.value", { value = ("%+.1f"):format(value * 100) })
 				end
 			end
-			ui.label.Text = ("%d번 홈 · 상한 %s · %s%s"):format(slot, capInfo.displayName, ItemDescribe.gem(gem).title, valueText)
+			ui.label.Text = Text.get("gear.gem.slot.filled", { slot = ("%d"):format(slot), grade = capInfo.displayName, name = ItemDescribe.gem(gem).title, value = valueText })
 		end
 
 		local rerollable = filled and Gem.isRerollableGrade(gem.grade)
@@ -525,7 +526,7 @@ updateGemTab = function()
 		if rerollable then
 			-- S20e: 진입점으로만 남는다 - 항상 눌린다(변환권이 없어도 "보석상인에게서 가능"을 알려야 하므로 회색으로 막지 않는다).
 			local tickets = currentGemState.rerollTickets[gem.grade] or 0
-			ui.rerollButton.Text = ("리롤(%d장)"):format(tickets)
+			ui.rerollButton.Text = Text.get("inv.act.reroll", { count = ("%d"):format(tickets) })
 		end
 	end
 
@@ -542,10 +543,10 @@ end
 -- 분해로 보석이 늘면 토스트로 알린다(누르면 보석 탭). 보석칸 수가 늘어나는 경로는 분해뿐이다(교체는 1대1 · 환생 · 리롤은 수가 그대로다).
 local function pushGainToast()
 	Toast.push("TC", {
-		text = "보석 획득 [보석 탭 열기]",
+		text = Text.get("gear.gem.gainToast"),
 		richParts = {
-			{ text = "보석 획득 ", colorName = "textPrimary" },
-			{ text = "[보석 탭 열기]", colorName = "success", bold = true, onActivate = function()
+			{ text = Text.get("gear.gem.gainLabel"), colorName = "textPrimary" },
+			{ text = Text.get("gear.gem.gainOpen"), colorName = "success", bold = true, onActivate = function()
 				deps.selectTab("보석")
 			end },
 		},
@@ -675,7 +676,7 @@ local function layout(L)
 	-- 폰 = 홈 한 줄(왼쪽 300)과 보유 보석(오른쪽)을 같은 높이에 나란히 놓는다 - 상세 시트(84)가 올라와 본문이 106만 남아도 홈과 보석이 스크롤 없이 함께 보여야 탭 → 탭 장착이 된다.
 	header.setLayout(phone)
 	invLabel.Visible = not phone
-	invLabel.Text = "보유 보석 - 더블클릭 · 우클릭 · 드래그"
+	invLabel.Text = Text.get("gear.gem.invLabelPc")
 	local top = header.height()
 	local bagTop = phone and 4 or 26
 	local invHeight = phone and 66 or 134

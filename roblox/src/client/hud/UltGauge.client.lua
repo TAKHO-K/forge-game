@@ -7,6 +7,7 @@ local Workspace = game:GetService("Workspace")
 
 local UltimateData = require(ReplicatedStorage.Shared.data.UltimateData)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local Text = require(ReplicatedStorage.Shared.Text)
 local SkillEffects = require(script.Parent.Parent.SkillEffects)
 local UIManager = require(script.Parent.Parent.UIManager)
 
@@ -51,7 +52,7 @@ label.Size = UDim2.fromScale(1, 1)
 label.Font = Enum.Font.GothamBold
 label.TextSize = 16
 label.TextColor3 = Color3.new(1, 1, 1)
-label.Text = "T 0%"
+label.Text = Text.get("hud.ult.percent", { percent = "0" })
 label.ZIndex = 2
 label.Parent = button
 
@@ -59,7 +60,7 @@ local function refresh()
 	local value = player:GetAttribute("UltGauge") or 0
 	local ratio = math.clamp(value / UltimateData.max, 0, 1)
 	fill.Size = UDim2.new(1, 0, ratio, 0)
-	label.Text = ratio >= 1 and "T 궁극기" or ("T %d%%"):format(math.floor(ratio * 100))
+	label.Text = ratio >= 1 and Text.get("hud.ult.full") or Text.get("hud.ult.percent", { percent = ("%d"):format(math.floor(ratio * 100)) })
 	stroke.Color = ratio >= 1 and Color3.fromRGB(255, 215, 90) or Color3.fromRGB(90, 90, 110)
 end
 player:GetAttributeChangedSignal("UltGauge"):Connect(refresh)
@@ -126,7 +127,7 @@ ReplicatedStorage:WaitForChild("SkillCastResult").OnClientEvent:Connect(function
 	end
 	local classId = player:GetAttribute("ClassId")
 	local def = classId and UltimateData.skills[classId]
-	cutin.Text = def and def.name or "궁극기"
+	cutin.Text = def and def.name or Text.get("hud.ult.name")
 	cutin.Visible = true
 	task.delay(0.3, function()
 		cutin.Visible = false
