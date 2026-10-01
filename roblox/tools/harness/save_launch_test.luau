@@ -342,6 +342,13 @@ local function main()
 		check("MIG", "현재 버전 꽉 찬 표본 다시 이관 = 그대로(멱등)", deepEqual(SaveA.migrate(full), before))
 		local fresh = SaveA.migrate({})
 		check("MIG", "새 계정 migrate({}) = 현재 버전 · 이정표 1 · 출석 0 · 유효", fresh.version == V and fresh.quests.guide == 1 and fresh.quests.attendance.count == 0 and SaveA.isValidProfile(fresh) and SaveA.repairProfile ~= nil and #SaveA.repairProfile(deepCopy(fresh)) == 0)
+		-- QUEUE-ALL7 D3 · ALL7B 1-4: 미니맵 설정(settings 표 안 새 키 - SAVE 버전 변경 없음 · 없는 키 = 기본 꺼짐)
+		local SD = MODS.SettingsData
+		check("MIG", ("미니맵 설정 기본 = 꺼짐(minimapOn %s · 회전 %s · 멀리 %s · 첫 안내 %s) · 새 계정 settings = 빈 표"):format(tostring(SD.keys.minimapOn.default), tostring(SD.keys.minimapRotate.default), tostring(SD.keys.minimapFar.default), tostring(SD.keys.mapHintSeen.default)),
+			SD.keys.minimapOn.default == false and SD.keys.minimapRotate.default == false and SD.keys.minimapFar.default == false and SD.keys.mapHintSeen.default == false and type(fresh.settings) == "table" and fresh.settings.minimapOn == nil)
+		local withMap = SaveA.migrate({})
+		withMap.settings = { minimapOn = true, minimapFar = true, mapHintSeen = true }
+		check("MIG", "미니맵 켬 · 멀리 · 첫 안내 본 것 = 다시 이관해도 그대로", deepEqual(SaveA.migrate(deepCopy(withMap)).settings, withMap.settings))
 	end
 
 	-- ═══ 2. 손상 복구(loadProfile 전체 경로 - 가짜 DataStore에 손상 값을 넣고 읽는다) ═══

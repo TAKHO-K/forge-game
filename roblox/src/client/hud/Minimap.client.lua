@@ -1,20 +1,24 @@
--- 미니맵(QUEUE-ALL3 Q4 · 10 문서 4절). 화면 오른쪽 위 작은 원형 - 자리 = ScreenMap TR.minimap(칩 스택 아래 · 폰은 칩 스택 왼쪽 열 옆 - place()).
---   그림 = 전체 지도(panels/WorldMapPanel)와 같은 세계 → 지도 식 · 같은 도형 지도(세계 원 · 6구역 원 · 허브 원 · 안 가 본 구역 흐리게)를 세계 전체 크기 캔버스로
---   한 번 그려 두고, 둥근 사각형 자르는 칸(ClipsDescendants) 안에서 캔버스만 옮겨 내가 가운데 오게 한다(3D 다시 그리기 · ViewportFrame 없음). 북쪽 위 고정 · 내 화살표만 돈다.
---   표시 = 나(화살표) · 파티원(파티원 색 점 - PartyColors) · 길 안내 목적지(Wayfinder - 별 · 밖이면 테두리에 붙음) · 허브 · 대장간 · 관문(열린 · 들른 구역) ·
---   발견한 체크포인트(CheckpointsFound) · 내 지도 핀(MapPins). 둥지 · 탐험 지점은 안 그린다(전체 지도와 같은 규칙).
---   보스 아레나(BossEncounterId)에서 숨김. 누르면 전체 지도(worldMap). 갱신 = updateHz(10 Hz) - 캔버스 위치 · 화살표 · 파티원 · 목적지만, 정적 아이콘은 바뀔 때만 다시 짓는다.
---   드랍 피드(Toast TR)는 투명 칸 MinimapFeedAnchor(ScreenMap TR.minimapColumn) 아래에 놓인다 - 미니맵이 칩 스택 아래에 있으면 그 칸이 미니맵 아래 끝까지 늘어난다.
+-- 미니맵(QUEUE-ALL3 Q4 → QUEUE-ALL7 D3 · ALL7B 1 다시 짬). 화면 오른쪽 위 원형 - 자리 = ScreenMap TR.minimap(칩 스택 · 지역 이름 아래 · 폰은 칩 스택 왼쪽 열 옆 - place()).
+--   켜기 = 플레이어 설정 minimapOn(기본 꺼짐 · 지도 창 M의 "미니맵 표시" 토글 · 이 미니맵의 톱니 메뉴 "미니맵 끄기") - 상태 = Attribute MinimapOn 한 곳(ui/SettingSave가 저장).
+--   그림 = 구운 지도 한 장(MapImageData.mini - 1024²) · ImageLabel 하나의 ImageRect로 보이는 칸만 자르고 UICorner(반지름 0.5)로 원형 · 회전 = Rotation
+--     (ClipsDescendants는 사각형만 자르고 돌린 자식을 못 자른다 · CanvasGroup 금지 · ViewportFrame은 데칼을 안 그린다 - 2026-10-02 실측).
+--   기본 = 북쪽 위 고정 + 내 화살표가 돈다 · 설정 minimapRotate = 내 방향이 위(지도가 돈다) · 확대 2단계(minimapFar = 반경 × 2).
+--   아이콘 = 글자 없이 모양 + 색(같은 크기) · 가까운 순 최대 30개 · 10 Hz · 허브 · 대장간 · 관문(열린 · 들른 구역) · 발견한 체크포인트 · 내 핀 · 파티원 · 길 안내 목적지(밖이면 테두리).
+--   둥지 · 탐험 지점은 안 그린다. 숨김 = 보스 아레나(BossEncounterId) · 입력 막힘(창 · 보스 등장 연출 - UIManager.isInputBlocked). 누르면 전체 지도(worldMap).
+--   드랍 피드(Toast TR)는 투명 칸 MinimapFeedAnchor(ScreenMap TR.minimapColumn) 아래에 놓인다.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
+local MapImageData = require(ReplicatedStorage.Shared.data.MapImageData)
 local WorldMapLayout = require(ReplicatedStorage.Shared.WorldMapLayout)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local Text = require(ReplicatedStorage.Shared.Text)
 local ScreenMap = require(script.Parent.Parent.ui.ScreenMap)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
 local ArtImage = require(script.Parent.Parent.ui.ArtImage)
+local SettingSave = require(script.Parent.Parent.ui.SettingSave)
 local UIManager = require(script.Parent.Parent.UIManager)
 local MapPins = require(script.Parent.Parent.MapPins)
 local Wayfinder = require(script.Parent.Parent.Wayfinder)
@@ -24,7 +28,8 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local D = WorldMapData
 local MM = D.map.minimap
-local EDGE = D.edge.radius
+local ICON_MAX = 30
+local GEAR_HIT = 44 -- 톱니 터치 영역(모바일 최소)
 -- 자리를 피해야 하는 칩 스택 왼쪽 열 · 위 줄 HUD(보일 때만)
 local NEIGHBORS = { "TravelHubButton", "TravelBackButton", "TravelPartyButton", "RegionLabel" }
 
@@ -46,28 +51,25 @@ local refs
 local size = 0 -- 지금 미니맵 한 변(px)
 local visited = {} -- [zoneKey] = true(이번 접속에 들른 구역 - 전체 지도와 같은 규칙)
 
-local function toMap(position)
-	return Vector2.new((position.X + EDGE) / (2 * EDGE), (position.Z + EDGE) / (2 * EDGE))
+local function enabled()
+	return player:GetAttribute("MinimapOn") == true
+end
+local function rangeStuds()
+	return MM.rangeStuds * (player:GetAttribute("MinimapFar") == true and 2 or 1)
+end
+local function rotating()
+	return player:GetAttribute("MinimapRotate") == true
 end
 
 local function zoneBright(zone, index)
 	return index <= (player:GetAttribute("ZonesUnlocked") or D.progress.startUnlocked) or visited[zone.key] == true
 end
 
-local function circle(parent, name, color, center, radiusRatio)
-	local f = Instance.new("Frame")
-	f.Name = name
-	f.AnchorPoint = Vector2.new(0.5, 0.5)
-	f.Position = UDim2.fromScale(center.X, center.Y)
-	f.Size = UDim2.fromScale(radiusRatio * 2, radiusRatio * 2)
-	f.BackgroundColor3 = color
-	f.BorderSizePixel = 0
-	f.Parent = parent
-	Theme.corner(f, 9999)
-	return f
+local function iconPx()
+	return Theme.isMobile and MM.iconPhone or MM.icon
 end
 
--- 아이콘 하나(이미지가 아직 없으면 색 점). parent = 캔버스(비율 자리) 또는 겉 칸(px 자리)
+-- 아이콘 하나(이미지가 아직 없으면 색 점) - 겉 칸 px 자리
 local function icon(parent, iconName, px, fallbackColor)
 	local img = ArtImage.get("icons/ui/" .. iconName)
 	local inst
@@ -90,30 +92,19 @@ local function icon(parent, iconName, px, fallbackColor)
 	return inst
 end
 
-local function iconPx()
-	return Theme.isMobile and MM.iconPhone or MM.icon
-end
-
--- 정적 아이콘: 허브 · 대장간 · 관문 · 발견한 체크포인트 · 핀(캔버스 비율 자리 - 캔버스와 같이 움직인다)
-local function renderMarkers()
-	if not refs then
-		return
-	end
-	refs.markers:ClearAllChildren()
-	local px = iconPx()
+-- 정적 장소(월드 자리 목록 - 바뀔 때만 다시) · 화면 자리는 10 Hz에 계산
+local places = {}
+local function rebuildPlaces()
+	places = {}
 	local function put(iconName, position, color)
-		local r = toMap(position)
-		icon(refs.markers, iconName, px, color).Position = UDim2.fromScale(r.X, r.Y)
+		table.insert(places, { icon = iconName, position = position, color = color })
 	end
 	put("pin_hub", Vector3.new(0, D.floorTopY, 0), Theme.color("gold"))
 	put("pin_forge", WorldMapLayout.facility("forge"), Theme.color("gold"))
 	for index, zone in ipairs(D.zones) do
-		local bright = zoneBright(zone, index)
-		if bright then
+		if zoneBright(zone, index) then
 			put("pin_gate", WorldMapLayout.gate(zone), Color3.fromRGB(230, 90, 90))
 		end
-		local disc = refs.zoneDiscs[index]
-		disc.BackgroundTransparency = bright and 0 or 0.55
 	end
 	local found = player:GetAttribute("CheckpointsFound")
 	if D.checkpoints and type(found) == "string" and found ~= "" then
@@ -127,135 +118,58 @@ local function renderMarkers()
 	for _, pin in ipairs(MapPins.list()) do
 		put("pin_user", pin.position, Color3.fromRGB(176, 120, 255))
 	end
-end
-
--- QUEUE-ALL6 L 정적 상세 지도(캔버스 비율 자리 - 캔버스와 같이 움직인다 · 갱신 없음): 길(RoadNet 본길 · 갈림길) · 물(폭포 · 만) · 랜드마크(탐험 지형 · 구역 상징) ·
---   세부 지역 경계(구역 축에 수직인 줄) · 세부 지역 이름(WorldMapData.subAreas - 글씨 12 · 외곽선). 판정과 무관한 그림만.
-local buildDetail
-local function segment(parent, a, b, px, color, transparency)
-	local pa, pb = toMap(a), toMap(b)
-	local mid, d = (pa + pb) / 2, pb - pa
-	local f = Instance.new("Frame")
-	f.AnchorPoint = Vector2.new(0.5, 0.5)
-	f.Position = UDim2.fromScale(mid.X, mid.Y)
-	f.Size = UDim2.new(d.Magnitude, 0, 0, px)
-	f.Rotation = math.deg(math.atan2(d.Y, d.X))
-	f.BackgroundColor3 = color
-	f.BackgroundTransparency = transparency or 0
-	f.BorderSizePixel = 0
-	f.Parent = parent
-	return f
-end
-buildDetail = function(canvas)
-	local RoadNet = require(ReplicatedStorage.Shared.RoadNet)
-	local Text = require(ReplicatedStorage.Shared.Text)
-	local detail = Instance.new("Frame")
-	detail.Name = "Detail"
-	detail.BackgroundTransparency = 1
-	detail.Size = UDim2.fromScale(1, 1)
-	detail.ZIndex = 2
-	detail.Parent = canvas
-	local ROAD, WATER, LINE, MARK = Color3.fromRGB(214, 196, 150), Color3.fromRGB(72, 142, 204), Color3.fromRGB(235, 240, 245), Color3.fromRGB(70, 74, 84)
-	local SA = D.subAreas
-	for _, zone in ipairs(D.zones) do
-		-- 길(본길 · 갈림길) - 약 60 stud마다 한 조각
-		for _, path in ipairs({ RoadNet.zonePath(zone), RoadNet.branchPath(zone) }) do
-			local last
-			for _, q in ipairs(path and path.pts or {}) do
-				local p = Vector3.new(q.x, 0, q.z)
-				if not last then
-					last = p
-				elseif (p - last).Magnitude >= 60 then
-					segment(detail, last, p, 2, ROAD).Name = "Road"
-					last = p
-				end
-			end
+	if refs then
+		for _, inst in ipairs(refs.icons) do
+			inst:Destroy()
 		end
-		-- 물: 폭포 지형 · 물 관문(만)
-		for _, f in ipairs(zone.features or {}) do
-			local at = WorldMapLayout.toWorld(zone, f.r, f.lat)
-			if f.kind == "falls" then
-				circle(detail, "Water", WATER, toMap(at), 45 / (2 * EDGE))
-			elseif f.explore then
-				circle(detail, "Landmark", MARK, toMap(at), 22 / (2 * EDGE)) -- 탐험 지형(탑 · 굴 · 언덕)
-			end
-		end
-		local site = D.layout.gateSites and D.layout.gateSites[zone.key]
-		if site and site.water then
-			circle(detail, "Water", WATER, toMap(WorldMapLayout.toWorld(zone, site.r, 0)), 140 / (2 * EDGE))
-		end
-		-- 세부 지역 경계(구역 원 안 현) · 이름
-		local R, C = D.layout.regionRadius, D.layout.regionCenterR
-		for _, edgeR in ipairs(SA.bandsR) do
-			local half = math.sqrt(math.max(0, R * R - (edgeR - C) ^ 2))
-			segment(detail, WorldMapLayout.toWorld(zone, edgeR, -half), WorldMapLayout.toWorld(zone, edgeR, half), 1, LINE, 0.55).Name = "AreaEdge"
-		end
-		for index, name in ipairs(SA.names[zone.key]) do
-			local c = toMap(WorldMapLayout.subAreaCenter(zone, index))
-			local label = Instance.new("TextLabel")
-			label.Name = "AreaName"
-			label.AnchorPoint = Vector2.new(0.5, 0.5)
-			label.Position = UDim2.fromScale(c.X, c.Y)
-			label.Size = UDim2.fromOffset(120, 14)
-			label.BackgroundTransparency = 1
-			label.Font = Theme.font
-			label.TextSize = 12
-			label.TextColor3 = Color3.new(1, 1, 1)
-			label.TextStrokeTransparency = 0.3
-			label.Text = Text.name(name)
-			label.ZIndex = 3
-			label.Parent = detail
-		end
+		refs.icons = {}
 	end
 end
 
+local function textButton(parent, name, text, y)
+	local b = Instance.new("TextButton")
+	b.Name = name
+	b.Size = UDim2.new(1, -12, 0, GEAR_HIT)
+	b.Position = UDim2.fromOffset(6, y)
+	b.BackgroundColor3 = Color3.fromRGB(52, 58, 76)
+	b.AutoButtonColor = true
+	b.Font = Theme.font
+	b.TextSize = 14
+	b.TextColor3 = Color3.new(1, 1, 1)
+	b.Text = text
+	b.ZIndex = 21
+	b.Parent = parent
+	Theme.corner(b, 8)
+	return b
+end
+
 local function build()
-	local root = Instance.new("TextButton")
+	local root = Instance.new("Frame")
 	root.Name = "Minimap"
-	root.Text = ""
-	root.AutoButtonColor = false
 	root.BackgroundTransparency = 1
 	root.Visible = false
 	root.Parent = gui
 
-	-- 둥근 사각형 칸 + ClipsDescendants(사각형 자름). CanvasGroup(원형 자름)은 대체 경로로 떨어지면 아예 안 잘려 세계 원이 화면 반을 덮었다(Studio Play 실측 - GPU 여유가 없는 폰도 같은 경로)
-	local clip = Instance.new("Frame")
-	clip.Name = "Clip"
-	clip.Size = UDim2.fromScale(1, 1)
-	clip.BackgroundColor3 = Color3.fromRGB(24, 30, 44)
-	clip.BorderSizePixel = 0
-	clip.ClipsDescendants = true
-	clip.Parent = root
-	Theme.corner(clip, MM.corner)
+	-- 지도 = 한 장(원형 · ImageRect)
+	local mapImage = Instance.new("ImageLabel")
+	mapImage.Name = "MapImage"
+	mapImage.AnchorPoint = Vector2.new(0.5, 0.5)
+	mapImage.Position = UDim2.fromScale(0.5, 0.5)
+	mapImage.Size = UDim2.fromScale(1, 1)
+	mapImage.BackgroundColor3 = Color3.fromRGB(40, 52, 66)
+	mapImage.Image = ArtImage.get(MapImageData.mini) or ""
+	mapImage.ScaleType = Enum.ScaleType.Stretch
+	mapImage.ZIndex = 2
+	mapImage.Parent = root
+	Theme.corner(mapImage, 9999)
 
-	local canvas = Instance.new("Frame")
-	canvas.Name = "Canvas"
-	canvas.BackgroundTransparency = 1
-	canvas.Parent = clip
-	-- 바탕(전체 지도 drawVectorMap과 같은 도형 · 같은 색 - 구역 이름 글씨만 뺐다)
-	circle(canvas, "World", Color3.fromRGB(46, 70, 92), Vector2.new(0.5, 0.5), 0.5)
-	local zoneDiscs = {}
-	for index, zone in ipairs(D.zones) do
-		local tint = zone.floorTint or { 140, 150, 140 }
-		local color = Color3.fromRGB(tint[1], tint[2], tint[3]):Lerp(Color3.fromRGB(96, 160, 90), 0.35)
-		zoneDiscs[index] = circle(canvas, "Zone_" .. zone.key, color, toMap(WorldMapLayout.regionCenter(zone)), D.layout.regionRadius / (2 * EDGE))
-	end
-	circle(canvas, "Hub", Color3.fromRGB(120, 190, 100), Vector2.new(0.5, 0.5), D.hub.safeRadius / (2 * EDGE))
-	buildDetail(canvas) -- QUEUE-ALL6 L: 길 · 물 · 랜드마크 · 세부 지역 경계 · 이름(정적 - 한 번만 짓는다)
-	local markers = Instance.new("Frame")
-	markers.Name = "Markers"
-	markers.BackgroundTransparency = 1
-	markers.Size = UDim2.fromScale(1, 1)
-	markers.ZIndex = 4
-	markers.Parent = canvas
-
-	-- 움직이는 것(겉 칸 px 자리): 파티원 점 · 목적지 별 · 내 화살표(가운데 고정)
+	-- 움직이는 것(px 자리): 장소 아이콘 · 파티원 점 · 목적지 · 내 화살표(가운데 고정)
 	local overlay = Instance.new("Frame")
 	overlay.Name = "Overlay"
 	overlay.BackgroundTransparency = 1
 	overlay.Size = UDim2.fromScale(1, 1)
 	overlay.ZIndex = 6
-	overlay.Parent = clip
+	overlay.Parent = root
 	local quest = icon(overlay, "pin_quest", iconPx() + 2, Theme.color("gold"))
 	quest.Name = "QuestMark"
 	quest.ZIndex = 7
@@ -269,23 +183,92 @@ local function build()
 	me.Parent = overlay
 	ArtImage.label(me, "icons/ui/pin_player", UDim2.fromScale(1, 1), "▲").ZIndex = 8
 
-	-- 테두리(자르는 칸 밖 - 잘리지 않게)
+	-- 테두리(원)
 	local ring = Instance.new("Frame")
 	ring.Name = "Ring"
 	ring.BackgroundTransparency = 1
 	ring.Size = UDim2.fromScale(1, 1)
 	ring.ZIndex = 9
 	ring.Parent = root
-	Theme.corner(ring, MM.corner)
+	Theme.corner(ring, 9999)
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = UIColors.rim
 	stroke.Thickness = 2
 	stroke.Parent = ring
 
-	root.Activated:Connect(function()
+	-- 누르면 전체 지도(톱니 밖 전체)
+	local open = Instance.new("TextButton")
+	open.Name = "OpenMap"
+	open.Text = ""
+	open.BackgroundTransparency = 1
+	open.Size = UDim2.fromScale(1, 1)
+	open.ZIndex = 10
+	open.Parent = root
+	open.Activated:Connect(function()
 		UIManager.openLazy("worldMap")
 	end)
-	refs = { root = root, canvas = canvas, markers = markers, zoneDiscs = zoneDiscs, overlay = overlay, quest = quest, me = me, dots = {} }
+
+	-- 톱니(설정 메뉴) - 그림 작게 · 터치 44 × 44
+	local gear = Instance.new("TextButton")
+	gear.Name = "GearButton"
+	gear.AnchorPoint = Vector2.new(0.5, 0.5)
+	gear.Size = UDim2.fromOffset(GEAR_HIT, GEAR_HIT)
+	gear.BackgroundTransparency = 1
+	gear.Text = ""
+	gear.ZIndex = 12
+	gear.Parent = root
+	local gearDot = Instance.new("Frame")
+	gearDot.Name = "Glyph"
+	gearDot.AnchorPoint = Vector2.new(0.5, 0.5)
+	gearDot.Position = UDim2.fromScale(0.5, 0.5)
+	gearDot.Size = UDim2.fromOffset(24, 24)
+	gearDot.BackgroundColor3 = Color3.fromRGB(34, 40, 56)
+	gearDot.ZIndex = 12
+	gearDot.Parent = gear
+	Theme.corner(gearDot, 9999)
+	local gearImg = ArtImage.label(gearDot, "icons/hud/settings", UDim2.fromOffset(18, 18), "≡") -- 설정 메뉴 아이콘(HUD 설정과 같은 그림)
+	gearImg.AnchorPoint = Vector2.new(0.5, 0.5)
+	gearImg.Position = UDim2.fromScale(0.5, 0.5)
+	gearImg.ZIndex = 13
+	local gs = Instance.new("UIStroke")
+	gs.Color = UIColors.rim
+	gs.Thickness = 1
+	gs.Parent = gearDot
+
+	local menu = Instance.new("Frame")
+	menu.Name = "GearMenu"
+	menu.AnchorPoint = Vector2.new(1, 0)
+	menu.Size = UDim2.fromOffset(170, 6 + 3 * (GEAR_HIT + 4) + 2)
+	menu.BackgroundColor3 = Color3.fromRGB(26, 30, 44)
+	menu.BackgroundTransparency = 0.05
+	menu.Visible = false
+	menu.ZIndex = 20
+	menu.Parent = gui
+	Theme.corner(menu, 10)
+	local offBtn = textButton(menu, "MinimapOff", Text.get("minimap.off"), 6)
+	local zoomBtn = textButton(menu, "MinimapZoom", "", 6 + GEAR_HIT + 4)
+	local rotateBtn = textButton(menu, "MinimapRotate", "", 6 + 2 * (GEAR_HIT + 4))
+	local function renderMenu()
+		zoomBtn.Text = Text.get(player:GetAttribute("MinimapFar") == true and "minimap.zoomNear" or "minimap.zoomFar")
+		rotateBtn.Text = Text.get(rotating() and "minimap.rotateOff" or "minimap.rotateOn")
+	end
+	gear.Activated:Connect(function()
+		menu.Visible = not menu.Visible
+		renderMenu()
+	end)
+	offBtn.Activated:Connect(function()
+		menu.Visible = false
+		SettingSave("minimapOn", false)
+	end)
+	zoomBtn.Activated:Connect(function()
+		SettingSave("minimapFar", player:GetAttribute("MinimapFar") ~= true)
+		renderMenu()
+	end)
+	rotateBtn.Activated:Connect(function()
+		SettingSave("minimapRotate", not rotating())
+		renderMenu()
+	end)
+	refs = { root = root, mapImage = mapImage, overlay = overlay, quest = quest, me = me, gear = gear, menu = menu, icons = {}, dots = {} }
 end
 
 -- ═══ 자리 ═══
@@ -381,8 +364,13 @@ local function place()
 	return nil, nil, chips
 end
 
-local function applyPlace()
-	local mode, r, chips = place()
+local function applyPlace(show)
+	local mode, r, chips = nil, nil, nil
+	if show then
+		mode, r, chips = place()
+	else
+		chips = shownRect("TopChipsRow")
+	end
 	if chips then
 		local top = chips.min
 		local bottomRight = chips.max
@@ -402,36 +390,77 @@ local function applyPlace()
 	if s ~= size then
 		size = s
 		refs.root.Size = UDim2.fromOffset(s, s)
-		local side = EDGE * s / MM.rangeStuds -- 세계 지름(2 × EDGE)을 2 × rangeStuds = s px로
-		refs.canvas.Size = UDim2.fromOffset(side, side)
 		local arrow = iconPx() + 4
 		refs.me.Size = UDim2.fromOffset(arrow, arrow)
+		local d = s / 2 * 0.7071 -- 원의 오른쪽 위(45°) 테두리
+		refs.gear.Position = UDim2.fromOffset(s / 2 + d, s / 2 - d)
 	end
+	refs.menu.Position = UDim2.fromOffset(r.max.X, r.max.Y + 4)
 	return true
 end
 
 -- ═══ 10 Hz 갱신 ═══
--- 가운데에서 offset(px)만큼 떨어진 점 - 원 밖이면 테두리 안쪽에 붙인다
+-- 원 안으로 붙이기(margin = 아이콘 반) - 밖이면 테두리 안쪽, ok = 원 안이었나
 local function rimClamp(offset, margin)
 	local limit = size / 2 - margin
 	if offset.Magnitude > limit then
-		return offset.Unit * limit, true
+		return offset.Unit * limit, false
 	end
-	return offset, false
+	return offset, true
 end
 
 local function updateDynamic(root)
 	local me = root.Position
-	local ppu = size / (2 * MM.rangeStuds)
-	local r = toMap(me)
-	local side = EDGE * size / MM.rangeStuds
-	refs.canvas.Position = UDim2.fromOffset(size / 2 - r.X * side, size / 2 - r.Y * side)
+	local range = rangeStuds()
+	local ppu = size / (2 * range) -- px / stud
 	local look = root.CFrame.LookVector
-	refs.me.Rotation = math.deg(math.atan2(look.X, -look.Z))
-	-- 목적지
+	local heading = math.atan2(look.X, -look.Z) -- 북쪽(−Z) 기준 시계 방향(rad)
+	local rot = rotating() and -heading or 0 -- 지도 회전(내 방향이 위)
+	-- 그림: 보이는 칸 = 반경 range를 덮는 정사각형(회전해도 원 안이 다 차게 √2배)
+	local uv = MapImageData.toUV(me.X, me.Z)
+	local px = MapImageData.miniPixels
+	-- 회전해도 원(정사각형에 내접)은 돌린 정사각형 안에 늘 다 들어간다 → 같은 칸 · 같은 크기로 Rotation만
+	local spanPx = (2 * range) / (2 * MapImageData.half) * px
+	refs.mapImage.ImageRectOffset = Vector2.new(uv.X * px - spanPx / 2, uv.Y * px - spanPx / 2)
+	refs.mapImage.ImageRectSize = Vector2.new(spanPx, spanPx)
+	refs.mapImage.Rotation = math.deg(rot)
+	refs.me.Rotation = rotating() and 0 or math.deg(heading)
+	local cosR, sinR = math.cos(rot), math.sin(rot)
+	local function toScreen(p)
+		local dx, dz = (p.X - me.X) * ppu, (p.Z - me.Z) * ppu
+		return Vector2.new(dx * cosR - dz * sinR, dx * sinR + dz * cosR)
+	end
+	-- 장소 아이콘: 가까운 순 ICON_MAX · 원 안만
+	local px2 = iconPx()
+	local sorted = {}
+	for _, pl in ipairs(places) do
+		table.insert(sorted, { pl = pl, d = (Vector2.new(pl.position.X - me.X, pl.position.Z - me.Z)).Magnitude })
+	end
+	table.sort(sorted, function(a, b)
+		return a.d < b.d
+	end)
+	for i = 1, math.max(#sorted, #refs.icons) do
+		local item = sorted[i]
+		local inst = refs.icons[i]
+		if item and i <= ICON_MAX then
+			local offset, inside = rimClamp(toScreen(item.pl.position), px2 / 2 + 1)
+			if not inst or inst.Name ~= "Icon_" .. item.pl.icon then
+				if inst then
+					inst:Destroy()
+				end
+				inst = icon(refs.overlay, item.pl.icon, px2, item.pl.color)
+				refs.icons[i] = inst
+			end
+			inst.Visible = inside
+			inst.Position = UDim2.fromOffset(size / 2 + offset.X, size / 2 + offset.Y)
+		elseif inst then
+			inst.Visible = false
+		end
+	end
+	-- 목적지(밖이면 테두리)
 	local dest = Wayfinder.isShowing() and Wayfinder.destination()
 	if typeof(dest) == "Vector3" then
-		local offset = rimClamp(Vector2.new(dest.X - me.X, dest.Z - me.Z) * ppu, iconPx() / 2 + 2)
+		local offset = rimClamp(toScreen(dest), px2 / 2 + 2)
 		refs.quest.Position = UDim2.fromOffset(size / 2 + offset.X, size / 2 + offset.Y)
 		refs.quest.Visible = true
 	else
@@ -459,8 +488,7 @@ local function updateDynamic(root)
 				st.Parent = dot
 				refs.dots[other] = dot
 			end
-			local p = otherRoot.Position
-			local offset = rimClamp(Vector2.new(p.X - me.X, p.Z - me.Z) * ppu, dotPx / 2 + 1)
+			local offset = rimClamp(toScreen(otherRoot.Position), dotPx / 2 + 1)
 			dot.Size = UDim2.fromOffset(dotPx, dotPx)
 			dot.BackgroundColor3 = color
 			dot.Position = UDim2.fromOffset(size / 2 + offset.X, size / 2 + offset.Y)
@@ -475,16 +503,31 @@ local function updateDynamic(root)
 end
 
 build()
-renderMarkers()
-MapPins.changed:Connect(renderMarkers)
+rebuildPlaces()
+MapPins.changed:Connect(rebuildPlaces)
 for _, name in ipairs({ "ZonesUnlocked", "CheckpointsFound" }) do
-	player:GetAttributeChangedSignal(name):Connect(renderMarkers)
+	player:GetAttributeChangedSignal(name):Connect(rebuildPlaces)
 end
+player:GetAttributeChangedSignal("MinimapOn"):Connect(function()
+	if not enabled() then
+		refs.menu.Visible = false
+	end
+end)
 player:GetAttributeChangedSignal("ForceTouchLayout"):Connect(function()
 	Theme.recompute()
 	size = 0 -- 폰 · PC 크기 · 아이콘 크기 다시
-	renderMarkers()
+	rebuildPlaces()
 end)
+
+-- 검증 · 촬영 훅(Studio): 상태 읽기
+if RunService:IsStudio() then
+	local hook = Instance.new("BindableFunction")
+	hook.Name = "MinimapHook"
+	hook.OnInvoke = function()
+		return { on = enabled(), shown = refs.root.Visible, size = size, rotate = rotating(), far = player:GetAttribute("MinimapFar") == true, icons = #refs.icons, menu = refs.menu.Visible }
+	end
+	hook.Parent = gui
+end
 
 local elapsed = 0
 RunService.Heartbeat:Connect(function(dt)
@@ -493,18 +536,21 @@ RunService.Heartbeat:Connect(function(dt)
 		return
 	end
 	elapsed = 0
-	local placed = applyPlace()
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	local show = placed and root ~= nil and player:GetAttribute("BossEncounterId") == nil
+	-- ALL7B 1-6: 켜져 있어도 보스 아레나 · 보스 등장 연출 · 창(모달)이 열려 있으면 잠시 숨김
+	local want = enabled() and root ~= nil and player:GetAttribute("BossEncounterId") == nil and not UIManager.isInputBlocked()
+	local placed = applyPlace(want)
+	local show = want and placed
 	refs.root.Visible = show
 	if not show then
+		refs.menu.Visible = false
 		return
 	end
 	local zone = WorldMapLayout.zoneAt(root.Position)
 	if zone and not visited[zone.key] then
 		visited[zone.key] = true
-		renderMarkers()
+		rebuildPlaces()
 	end
 	updateDynamic(root)
 end)

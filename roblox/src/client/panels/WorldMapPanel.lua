@@ -16,6 +16,10 @@ local Theme = require(script.Parent.Parent.ui.kit.Theme)
 local ArtImage = require(script.Parent.Parent.ui.ArtImage)
 local UIManager = require(script.Parent.Parent.UIManager)
 local MapPins = require(script.Parent.Parent.MapPins)
+local MapImageData = require(ReplicatedStorage.Shared.data.MapImageData)
+local Toggle = require(script.Parent.Parent.ui.kit.Toggle)
+local SettingSave = require(script.Parent.Parent.ui.SettingSave)
+local TweenService = game:GetService("TweenService")
 
 local WorldMapPanel = {}
 WorldMapPanel.id = "worldMap"
@@ -32,12 +36,12 @@ local zoom, offset = 1, Vector2.zero -- 확대 배율 · 지도 가운데 이동
 local selected -- { kind, name, position, checkpointId }
 local visited = {} -- [zoneKey] = true(이번 접속에 들른 구역)
 
--- 월드 X · Z → 지도 캔버스 비율(0 ~ 1) · 위 = −Z(석조 평원 쪽)
+-- 월드 X · Z → 지도 캔버스 비율(0 ~ 1) · 위 = −Z(석조 평원 쪽) - QUEUE-ALL7 D2 공통 식(MapImageData 한 곳 - 미니맵 · 핀 · 굽기와 같다)
 local function toMap(position)
-	return Vector2.new((position.X + EDGE) / (2 * EDGE), (position.Z + EDGE) / (2 * EDGE))
+	return MapImageData.toUV(position.X, position.Z)
 end
 local function toWorld(ratio)
-	return Vector3.new(ratio.X * 2 * EDGE - EDGE, D.floorTopY, ratio.Y * 2 * EDGE - EDGE)
+	return MapImageData.toWorld(ratio.X, ratio.Y, D.floorTopY)
 end
 
 local function zoneBright(zone, index)
@@ -60,8 +64,8 @@ local function places()
 			for _, g in ipairs(WorldMapLayout.grounds(zone)) do
 				table.insert(list, { kind = "ground", icon = "pin_quest", name = Text.get("map.ground", { zone = zone.hunt.name, n = tostring(g.index) }), position = g.center, small = true })
 			end
-			table.insert(list, { kind = "gate", icon = "pin_gate", name = Text.get("map.gate", { zone = zone.theme }), position = WorldMapLayout.gate(zone) })
 		end
+		table.insert(list, { kind = "gate", icon = "pin_gate", name = Text.get("map.gate", { zone = zone.theme }), position = WorldMapLayout.gate(zone) }) -- QUEUE-ALL7 D4: 관문은 안 가 본 구역도 늘 보인다(길 잃지 않게)
 	end
 	-- 체크포인트(Q5 - 발견한 것만 · 스위치 켬일 때)
 	local found = player:GetAttribute("CheckpointsFound")
@@ -140,6 +144,59 @@ local function drawVectorMap(canvas)
 	Theme.corner(hub, 9999)
 end
 
+-- QUEUE-ALL7 D4 구운 지도 위 UI 층: 안 가 본 구역 흐림(어두운 원 - 갈 수 있는 곳만 또렷하게) · 구역 이름 · 세부 지역 이름(ko/en - 이미지에 굽지 않는다)
+local function drawImageMap(canvas)
+	for r = 1, #MapImageData.tiles do
+		for c = 1, #MapImageData.tiles[r] do
+			local tile = Instance.new("ImageLabel")
+			tile.Name = ("MapTile_%d_%d"):format(r - 1, c - 1)
+			tile.BackgroundTransparency = 1
+			tile.Image = ArtImage.get(MapImageData.tiles[r][c]) or ""
+			tile.Size = UDim2.fromScale(1 / #MapImageData.tiles[r], 1 / #MapImageData.tiles)
+			tile.Position = UDim2.fromScale((c - 1) / #MapImageData.tiles[r], (r - 1) / #MapImageData.tiles)
+			tile.ZIndex = 1
+			tile.Parent = canvas
+		end
+	end
+	for index, zone in ipairs(D.zones) do
+		local c = toMap(WorldMapLayout.regionCenter(zone))
+		local rr = D.layout.regionRadius / (2 * EDGE)
+		local fog = Instance.new("Frame")
+		fog.Name = "Fog_" .. zone.key
+		fog.AnchorPoint = Vector2.new(0.5, 0.5)
+		fog.Position = UDim2.fromScale(c.X, c.Y)
+		fog.Size = UDim2.fromScale(rr * 2, rr * 2)
+		fog.BackgroundColor3 = Color3.fromRGB(28, 34, 48)
+		fog.BackgroundTransparency = 1
+		fog.ZIndex = 2
+		fog:SetAttribute("ZoneIndex", index)
+		fog.Parent = canvas
+		Theme.corner(fog, 9999)
+		local name = Theme.label(canvas, Text.name(zone.theme), "header", "textPrimary")
+		name.Name = "ZoneName_" .. zone.key
+		name.AnchorPoint = Vector2.new(0.5, 0.5)
+		name.Position = UDim2.fromScale(c.X, c.Y)
+		name.Size = UDim2.fromOffset(220, 24)
+		name.TextXAlignment = Enum.TextXAlignment.Center
+		name.TextStrokeTransparency = 0.2
+		name.ZIndex = 3
+		name:SetAttribute("ZoneIndex", index)
+		for i, area in ipairs(D.subAreas.names[zone.key] or {}) do
+			local ac = toMap(WorldMapLayout.subAreaCenter(zone, i))
+			local a = Theme.label(canvas, Text.name(area), "caption", "textPrimary")
+			a.Name = "AreaName"
+			a.AnchorPoint = Vector2.new(0.5, 0.5)
+			a.Position = UDim2.fromScale(ac.X, ac.Y + 0.012)
+			a.Size = UDim2.fromOffset(140, 16)
+			a.TextXAlignment = Enum.TextXAlignment.Center
+			a.TextStrokeTransparency = 0.3
+			a.ZIndex = 3
+			a:SetAttribute("ZoneIndex", index)
+			a:SetAttribute("SubArea", true)
+		end
+	end
+end
+
 local function refreshDim()
 	if not built then
 		return
@@ -148,8 +205,20 @@ local function refreshDim()
 		local index = child:GetAttribute("ZoneIndex")
 		if index then
 			local bright = zoneBright(D.zones[index], index)
-			child.BackgroundTransparency = bright and 0 or 0.55
-			child.ZoneName.TextTransparency = bright and 0 or 0.5
+			if child.Name:match("^Fog_") then
+				child.BackgroundTransparency = bright and 1 or 0.45
+			elseif child:IsA("TextLabel") then
+				child.TextTransparency = bright and 0 or 0.5
+				if child:GetAttribute("SubArea") then
+					child.Visible = bright and zoom >= 1.6 -- 세부 지역 이름 = 확대했을 때만(겹침 · 지저분함 방지)
+				end
+			else
+				child.BackgroundTransparency = bright and 0 or 0.55
+				local zn = child:FindFirstChild("ZoneName")
+				if zn then
+					zn.TextTransparency = bright and 0 or 0.5
+				end
+			end
 		end
 	end
 end
@@ -159,6 +228,7 @@ local function applyView()
 	local side = math.min(base.X, base.Y) * zoom
 	built.canvas.Size = UDim2.fromOffset(side, side)
 	built.canvas.Position = UDim2.fromOffset(base.X / 2 - side / 2 + offset.X, base.Y / 2 - side / 2 + offset.Y)
+	refreshDim()
 end
 
 local function renderMarkers()
@@ -192,6 +262,22 @@ local function build()
 				applyView()
 				renderMarkers()
 				WorldMapPanel.select(selected)
+				-- ALL7B 1-5: 처음 연 한 번만 "미니맵 표시" 토글이 은은하게 반짝(0.8 Hz · 4번 - 깜빡임 < 3/s) + 한 줄 안내
+				if player:GetAttribute("MapHintSeen") ~= true and built then
+					SettingSave("mapHintSeen", true)
+					built.firstHint.Visible = true
+					local glow = Instance.new("UIStroke")
+					glow.Name = "FirstGlow"
+					glow.Color = Theme.color("gold")
+					glow.Thickness = 2
+					glow.Transparency = 1
+					glow.Parent = built.minimapToggle.root
+					local t = TweenService:Create(glow, TweenInfo.new(0.625, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 7, true), { Transparency = 0.1 })
+					t:Play()
+					t.Completed:Connect(function()
+						glow:Destroy()
+					end)
+				end
 			end)
 		end })
 	local content = panel.content
@@ -208,14 +294,8 @@ local function build()
 	canvas.Name = "Canvas"
 	canvas.BackgroundTransparency = 1
 	canvas.Parent = view
-	local image = MAP.image and ArtImage.get(MAP.image)
-	if image then
-		local bg = Instance.new("ImageLabel")
-		bg.Name = "MapImage"
-		bg.BackgroundTransparency = 1
-		bg.Image = image
-		bg.Size = UDim2.fromScale(1, 1)
-		bg.Parent = canvas
+	if ArtImage.get(MapImageData.tiles[1][1]) then -- QUEUE-ALL7 D: 구운 지도 2 × 2 타일 + UI 층 · 없으면 옛 도형 지도
+		drawImageMap(canvas)
 	else
 		drawVectorMap(canvas)
 	end
@@ -275,7 +355,25 @@ local function build()
 	local hint = Theme.label(side, Text.get("map.pinHint", { n = tostring(MAP.maxPins) }), "caption", "textSecondary")
 	hint.TextWrapped = true
 	hint.Position = UDim2.fromOffset(0, 244)
-	hint.Size = UDim2.new(1, 0, 0, 52)
+	hint.Size = UDim2.new(1, 0, 0, 40)
+	-- QUEUE-ALL7 D3 · ALL7B 1-2: 미니맵 표시 토글(상태 = 설정 minimapOn 한 곳 - 미니맵 톱니 "끄기"도 같은 값) · 1-5 첫 안내(한 번만 은은하게)
+	local minimapToggle = Toggle.build({ parent = side, name = "MinimapToggle", text = Text.get("map.minimapToggle"), value = player:GetAttribute("MinimapOn") == true,
+		width = SIDE_W, position = UDim2.fromOffset(0, 288), onChanged = function(v)
+			SettingSave("minimapOn", v)
+		end })
+	player:GetAttributeChangedSignal("MinimapOn"):Connect(function()
+		minimapToggle.setValue(player:GetAttribute("MinimapOn") == true, true)
+	end)
+	local firstHint = Theme.label(side, Text.get("map.minimapHint"), "caption", "gold")
+	firstHint.Name = "MinimapFirstHint"
+	firstHint.TextWrapped = true
+	firstHint.Position = UDim2.fromOffset(0, 288 + 46)
+	firstHint.Size = UDim2.new(1, 0, 0, 18)
+	firstHint.Visible = false
+	local legendButton = Button.build({ parent = side, kind = "secondary", width = 64, height = 48, text = "?", position = UDim2.new(0, 144, 1, -48), onActivated = function()
+		built.legend.Visible = not built.legend.Visible
+	end })
+	legendButton.root.Name = "LegendButton"
 	local zoomIn = Button.build({ parent = side, kind = "secondary", width = 64, height = 48, text = "+", position = UDim2.new(0, 0, 1, -48), onActivated = function()
 		zoom = math.clamp(zoom * 1.4, MAP.zoomMin, MAP.zoomMax)
 		applyView()
@@ -329,7 +427,28 @@ local function build()
 			dragStart = nil
 		end
 	end)
-	built = { panel = panel, view = view, canvas = canvas, markers = markers, me = me, title = title, autoButton = autoButton, guideButton = guideButton, teleButton = teleButton }
+	-- QUEUE-ALL7 D4 범례(아이콘 뜻 - [?])
+	local legend = Instance.new("Frame")
+	legend.Name = "Legend"
+	legend.AnchorPoint = Vector2.new(0, 1)
+	legend.Position = UDim2.new(0, 8, 1, -8)
+	legend.Size = UDim2.fromOffset(200, 10 + 6 * 26)
+	legend.BackgroundColor3 = Color3.fromRGB(22, 26, 38)
+	legend.BackgroundTransparency = 0.1
+	legend.ZIndex = 20
+	legend.Visible = false
+	legend.Parent = view
+	Theme.corner(legend, 8)
+	for i, item in ipairs({ { "pin_player", "map.legend.me" }, { "pin_hub", "map.legend.hub" }, { "pin_forge", "map.legend.forge" }, { "pin_gate", "map.legend.gate" }, { "pin_checkpoint", "map.legend.checkpoint" }, { "pin_user", "map.legend.pin" } }) do
+		local ic = ArtImage.label(legend, "icons/ui/" .. item[1], UDim2.fromOffset(20, 20), "•")
+		ic.Position = UDim2.fromOffset(8, 6 + (i - 1) * 26)
+		ic.ZIndex = 21
+		local t = Theme.label(legend, Text.get(item[2]), "caption", "textPrimary")
+		t.Position = UDim2.fromOffset(34, 6 + (i - 1) * 26)
+		t.Size = UDim2.new(1, -40, 0, 20)
+		t.ZIndex = 21
+	end
+	built = { panel = panel, view = view, canvas = canvas, markers = markers, me = me, title = title, autoButton = autoButton, guideButton = guideButton, teleButton = teleButton, legend = legend, minimapToggle = minimapToggle, firstHint = firstHint }
 	view:GetPropertyChangedSignal("AbsoluteSize"):Connect(applyView)
 end
 

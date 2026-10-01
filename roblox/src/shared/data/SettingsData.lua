@@ -3,13 +3,18 @@
 --   B4 사운드: kind volume(0 ~ 1 숫자) = 카테고리별 음량(SoundData.categories가 settingKey로 가리킨다 · 클라 SoundHooks가 Attribute로 읽는다). 저장은 같은 settings 표(없는 키 = 기본값 - 이관 없음).
 --   reduceFlashes = 번개 · 태초 화면 섬광 끄기(관문 날씨 섬광 끔 · 피뢰침 방전은 흰 번쩍 대신 밝기만 · 태초 연출의 화면 밝아짐 없음 - 보스 경고 표시는 그대로).
 return {
-	order = { "cameraTopDown", "reduceFlashes", "screenShake", "dimOthersTrail", "autoStage", "volumeSfx", "volumeMusic", "volumeUi", "volumeBossCue", "transcendNotice", "fxLevel", "volumeAmbient", "graphics", "language", "quietOthersSfx" },
+	order = { "cameraTopDown", "reduceFlashes", "screenShake", "dimOthersTrail", "autoStage", "volumeSfx", "volumeMusic", "volumeUi", "volumeBossCue", "transcendNotice", "fxLevel", "volumeAmbient", "graphics", "language", "quietOthersSfx", "minimapOn", "minimapRotate", "minimapFar", "mapHintSeen" },
 	keys = {
 		cameraTopDown = { kind = "boolean", default = false, attrs = { "CameraTopDown" } },
 		reduceFlashes = { kind = "boolean", default = false, attrs = { "ReduceFlashes" } },
 		screenShake = { kind = "boolean", default = true, attrs = { "SettingScreenShake", "SettingBossScreenShake" } },
 		dimOthersTrail = { kind = "boolean", default = false, attrs = { "SettingDimOthers" } },
 		quietOthersSfx = { kind = "boolean", default = false, attrs = { "QuietOthersSfx" } }, -- QUEUE-ALL7 C3 다른 플레이어 효과음 줄이기(켬 = 남 소리 × SoundMixData.otherQuietScale · 끔 = × otherScale) - 없는 키 = 기본값(이관 없음)
+		-- QUEUE-ALL7 D3 · ALL7B 1: 미니맵 = 기본 꺼짐(지도 창 M의 토글 · 미니맵 톱니 메뉴) · 회전(내 방향이 위) · 멀리(반경 × 2) · 지도 창 첫 안내 본 적 있음 - 없는 키 = 기본값(이관 없음)
+		minimapOn = { kind = "boolean", default = false, attrs = { "MinimapOn" } },
+		minimapRotate = { kind = "boolean", default = false, attrs = { "MinimapRotate" } },
+		minimapFar = { kind = "boolean", default = false, attrs = { "MinimapFar" } },
+		mapHintSeen = { kind = "boolean", default = false, attrs = { "MapHintSeen" } },
 		autoStage = { kind = "preset", attrs = { "AutoStage" } }, -- 값 = AutoStageData.presets[].id · 기본 = AutoStageData.default
 		volumeSfx = { kind = "volume", default = 1, attrs = { "SoundVolumeSfx" } }, -- B4 효과음
 		volumeMusic = { kind = "volume", default = 1, attrs = { "SoundVolumeMusic" } }, -- B4 음악
