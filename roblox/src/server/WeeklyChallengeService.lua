@@ -10,6 +10,7 @@ local RunService = game:GetService("RunService")
 local D = require(ReplicatedStorage.Shared.data.WeeklyChallengeData)
 local WeeklyChallenge = require(ReplicatedStorage.Shared.WeeklyChallenge)
 local PlayerProfile = require(script.Parent.PlayerProfile)
+local RequestGate = require(script.Parent.RequestGate) -- QUEUE-ALL4 B: 공통 요청 제한
 
 local WeeklyChallengeService = {}
 local suffix = RunService:IsStudio() and D.studioSuffix or ""
@@ -49,6 +50,9 @@ local function publishWeek()
 end
 
 startRemote.OnServerEvent:Connect(function(player)
+	if not RequestGate.allow(player, "WeeklyChallengeStart") then
+		return -- QUEUE-ALL4 B: 입장 = 아레나 · 보스 스폰(연타 = 서버 비용)
+	end
 	local BossEncounter = require(script.Parent.BossEncounter)
 	if BossEncounter.getEncounter(player) or player:GetAttribute("TutorialActive") then
 		noticeRemote:FireClient(player, "지금은 시작할 수 없어요")
@@ -63,7 +67,7 @@ end)
 
 function WeeklyChallengeService.onCleared(player, fightSeconds)
 	local r = recordOf(player)
-	if not r or type(fightSeconds) ~= "number" or fightSeconds <= 0 then
+	if not r or type(fightSeconds) ~= "number" or fightSeconds ~= fightSeconds or fightSeconds <= 0 or fightSeconds == math.huge then -- QUEUE-ALL4 B: NaN · inf가 순위 저장소에 가지 않게
 		return
 	end
 	local week = r.week
@@ -90,21 +94,39 @@ function WeeklyChallengeService.onCleared(player, fightSeconds)
 	require(script.Parent.ImmediateSave).request(player)
 end
 
-topRemote.OnServerInvoke = function(player)
-	local w = WeeklyChallenge.weekOf()
-	local rows = {}
-	local ok = pcall(function()
-		local page = board(w):GetSortedAsync(true, D.topShown):GetCurrentPage()
-		for i, entry in ipairs(page) do
-			local name = "?"
-			pcall(function()
-				name = Players:GetNameFromUserIdAsync(tonumber(entry.key))
-			end)
-			rows[i] = { rank = i, name = name, seconds = entry.value / 100 }
+-- QUEUE-ALL4 B(보안 - 읽기 증폭): 순위 표 = 서버 공용 캐시(topCacheSeconds). 읽는 동안 온 요청은 직전 표를 받는다(읽기 1회).
+local top = { week = nil, at = -math.huge, ok = false, rows = {} }
+local function topRows(w)
+	if top.week ~= w then
+		top.ok, top.rows = false, {}
+	end
+	if top.week ~= w or os.clock() - top.at >= D.topCacheSeconds then
+		top.week, top.at = w, os.clock()
+		local rows = {}
+		local ok = pcall(function()
+			local page = board(w):GetSortedAsync(true, D.topShown):GetCurrentPage()
+			for i, entry in ipairs(page) do
+				local name = "?"
+				pcall(function()
+					name = Players:GetNameFromUserIdAsync(tonumber(entry.key))
+				end)
+				rows[i] = { rank = i, name = name, seconds = entry.value / 100 }
+			end
+		end)
+		if top.week == w then
+			top.ok, top.rows = ok, rows
 		end
+	end
+	return top.ok, top.rows
+end
+WeeklyChallengeService.debugTop = top -- 하네스 · 검증
+
+topRemote.OnServerInvoke = function(player)
+	return RequestGate.invoke(player, "WeeklyChallengeTop", "", function() -- QUEUE-ALL4 B: 공통 요청 제한
+		local ok, rows = topRows(WeeklyChallenge.weekOf())
+		local mine = recordOf(player)
+		return { ok = ok, rows = rows, myBest = mine and mine.best, label = workspace:GetAttribute("WeeklyChallengeLabel"), bossId = workspace:GetAttribute("WeeklyChallengeBoss") }
 	end)
-	local mine = recordOf(player)
-	return { ok = ok, rows = rows, myBest = mine and mine.best, label = workspace:GetAttribute("WeeklyChallengeLabel"), bossId = workspace:GetAttribute("WeeklyChallengeBoss") }
 end
 
 -- 지난주 순위 보상(접속 때 한 번)
@@ -117,9 +139,11 @@ function WeeklyChallengeService.onLoaded(player)
 	if (r.rankClaimedWeek or 0) >= last then
 		return
 	end
+	local before = r.rankClaimedWeek
+	r.rankClaimedWeek = last -- QUEUE-ALL4 B: 읽기(yield) 전에 표시 = 두 번 불려도 한 번만 지급
 	task.spawn(function()
 		local rank = nil
-		pcall(function()
+		local okRead = pcall(function()
 			local page = board(last):GetSortedAsync(true, D.rankRewards[#D.rankRewards].upTo):GetCurrentPage()
 			for i, entry in ipairs(page) do
 				if entry.key == tostring(player.UserId) then
@@ -128,7 +152,10 @@ function WeeklyChallengeService.onLoaded(player)
 				end
 			end
 		end)
-		r.rankClaimedWeek = last
+		if not okRead then
+			r.rankClaimedWeek = before -- 읽기 실패 = 받은 것으로 치지 않는다(다음 접속에 다시 본다 - 옛 코드는 보상이 사라졌다)
+			return
+		end
 		if not rank then
 			return
 		end

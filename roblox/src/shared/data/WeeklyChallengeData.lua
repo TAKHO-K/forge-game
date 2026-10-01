@@ -16,5 +16,6 @@ return {
 	participation = { sparkleShard = 20 },
 	rankRewards = { { upTo = 1, reward = { sparkleShard = 100 }, title = "weeklyChampion" }, { upTo = 10, reward = { sparkleShard = 50 } } },
 	topShown = 5,
+	topCacheSeconds = 30, -- QUEUE-ALL4 B: 순위 표(GetSortedAsync + 이름 조회 topShown번)는 서버 공용 캐시 - 창을 여는 사람 수만큼 DataStore 읽기가 늘지 않게
 	text = { button = "주간 도전", start = "도전", rank = "이번 주 순위(처치 시간)", none = "아직 기록 없음", done = "주간 도전 완료! %.1f초", reward = "지난주 주간 도전 %d위 보상" },
 }

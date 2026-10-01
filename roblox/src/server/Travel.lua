@@ -23,6 +23,7 @@ local LaunchPermit = require(script.Parent.LaunchPermit)
 local TeleportArrival = require(script.Parent.TeleportArrival)
 local BossGate = require(script.Parent.BossGate)
 local ImmediateSave = require(script.Parent.ImmediateSave)
+local RequestGate = require(script.Parent.RequestGate) -- QUEUE-ALL4 B: 공통 요청 제한(TravelRequest)
 local MonetizationData = require(ReplicatedStorage.Shared.data.MonetizationData) -- QUEUE-B1 B2: 귀환 쿨 게임패스(편의)
 
 local Travel = {}
@@ -264,6 +265,9 @@ function Travel.requestCheckpoint(player, id, now)
 	end
 	if not cp or not rec or not table.find(rec.found, cp.id) then
 		return false, "cp_unknown"
+	end
+	if cp.zone and not Travel.isZoneOpen(player, cp.zone) then
+		return false, "cp_locked" -- QUEUE-ALL4 B: 견습(단계마다 구역이 잠깐 열린다) 중 찾은 체크포인트로 아직 잠긴 구역에 들어가지 않게([돌아가기]와 같은 규칙)
 	end
 	if BossEncounter.getEncounter(player) then
 		return false, "in_boss"
@@ -802,6 +806,9 @@ function Travel.start(downPads)
 		workspace:SetAttribute(CP.attribute, CP.enabledByDefault)
 	end
 	request.OnServerEvent:Connect(function(player, kind, targetUserId)
+		if not RequestGate.allow(player, "TravelRequest") then
+			return -- QUEUE-ALL4 B: 공통 요청 제한(기본 통)
+		end
 		local ok, why
 		if kind == "hub" then
 			ok, why = Travel.requestHub(player)
@@ -813,6 +820,9 @@ function Travel.start(downPads)
 		elseif kind == "back" then
 			ok, why = Travel.requestBack(player)
 		elseif kind == "tutorialZone" then -- QUEUE-ALL1 R1 견습 바로 가기
+			if not RequestGate.allow(player, "TravelTutorialZone") then
+				return -- QUEUE-ALL4 B: 쿨 없는 순간이동(+ 미리 불러오기) 연타 방지
+			end
 			ok, why = Travel.requestTutorialZone(player)
 		elseif kind == "party" then
 			ok, why = Travel.requestParty(player, type(targetUserId) == "number" and Players:GetPlayerByUserId(targetUserId) or Travel.defaultPartyTarget(player))
@@ -822,7 +832,7 @@ function Travel.start(downPads)
 		if not ok then
 			local text = ({ in_boss = "보스전 중에는 못 간다", cooldown = "아직 쿨타임", combat = "전투 중(최근 피해)에는 못 간다", locked_zone = "그 사람은 나에게 잠긴 구역에 있다",
 				not_party = "파티원만", no_target = "대상을 찾지 못했다", not_tutorial = "견습 중에만 바로 갈 수 있다",
-				casting_already = "이미 귀환 중", cp_off = "체크포인트 이동이 꺼져 있다", cp_unknown = "아직 찾지 않은 체크포인트", no_back = "돌아갈 자리가 없다(5분 · 1회)", no_character = "캐릭터가 없다" })[why] or why
+				casting_already = "이미 귀환 중", cp_off = "체크포인트 이동이 꺼져 있다", cp_unknown = "아직 찾지 않은 체크포인트", cp_locked = "아직 열리지 않은 구역의 체크포인트", no_back = "돌아갈 자리가 없다(5분 · 1회)", no_character = "캐릭터가 없다" })[why] or why
 			PartyState.notify(player, "이동 불가 - " .. text)
 		end
 	end)

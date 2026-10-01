@@ -10,6 +10,9 @@ return {
 	dailyMapName = "CommunityGoalDaily",
 	weights = { bossKill = 1, transcendent = 300 }, -- 초월 = 큰 칸
 	dailyCapPerPlayer = 60, -- 1인 하루 기여 상한(보스 처치 60회분)
+	-- QUEUE-ALL4 C: 하루 상한 키(MemoryStore) 수명 = 그날 UTC 끝 + 이 여유(초). 옛 TTL 2일은 키가 이틀치 쌓였다 - MemoryStore 메모리 한도(64KB + 1.2KB × 동시 접속)는
+	-- 동시 접속 기준이라 "하루 접속자 수 ÷ 동시 접속"이 크면 이 키가 한도를 먼저 채워 파티 레코드 쓰기까지 막을 수 있다(docs/design/save-audit-launch.md §4).
+	dailyTtlMarginSeconds = 600,
 	flushSeconds = 45,
 	baselineWeights = { 0.5, 0.3, 0.2 }, -- 지난주 · 2주 전 · 3주 전
 	weeklyChangeCap = 0.25,

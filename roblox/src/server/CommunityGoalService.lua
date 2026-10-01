@@ -13,7 +13,10 @@ local Workspace = game:GetService("Workspace")
 local D = require(ReplicatedStorage.Shared.data.CommunityGoalData)
 local Rules = require(ReplicatedStorage.Shared.CommunityGoalRules)
 local Quest = require(ReplicatedStorage.Shared.Quest)
+local Text = require(ReplicatedStorage.Shared.Text)
+local NestData = require(ReplicatedStorage.Shared.data.NestData)
 local PlayerProfile = require(script.Parent.PlayerProfile)
+local RequestGate = require(script.Parent.RequestGate) -- QUEUE-ALL4 B: 공통 요청 제한
 
 local CommunityGoalService = {}
 local store = DataStoreService:GetDataStore(D.storeName)
@@ -64,7 +67,7 @@ local function acceptDaily(player, amount)
 				current = tonumber(current) or 0
 				accepted = math.max(0, math.min(amount, D.dailyCapPerPlayer - current))
 				return current + accepted
-			end, 2 * 86400)
+			end, (day + 1) * 86400 - os.time() + D.dailyTtlMarginSeconds) -- QUEUE-ALL4 C: 그날 UTC 끝 + 여유(옛 = 2일 - 메모리 한도가 동시 접속 기준이라 하루 접속자 키가 두 배로 쌓였다)
 		end)
 		if ok and accepted then
 			return accepted
@@ -157,7 +160,7 @@ local function flush()
 	end
 end
 
-claimRemote.OnServerInvoke = function(player, tierIndex)
+local function claim(player, tierIndex)
 	local t = type(tierIndex) == "number" and D.tiers[tierIndex]
 	local r = recordOf(player)
 	if not (t and r) then
@@ -172,6 +175,9 @@ claimRemote.OnServerInvoke = function(player, tierIndex)
 	end
 	if r.claimed[tostring(tierIndex)] then
 		return { ok = false, message = D.text.claimed }
+	end
+	if t.reward.egg and #PlayerProfile.getEggs(player) + t.reward.egg > NestData.eggCap then
+		return { ok = false, message = Text.get("shop.reason.eggFull") } -- QUEUE-ALL4 B: 받은 표시 전에(옛 코드 = 칸은 받음 · 알은 가방 가득으로 사라짐 - QuestService.claim과 같은 규칙)
 	end
 	r.claimed[tostring(tierIndex)] = true
 	if t.reward.title then
@@ -190,6 +196,12 @@ claimRemote.OnServerInvoke = function(player, tierIndex)
 		return list
 	end)(), ","))
 	return { ok = true, message = t.label }
+end
+CommunityGoalService.claim = claim -- 하네스 · 검증
+claimRemote.OnServerInvoke = function(player, tierIndex)
+	return RequestGate.invoke(player, "CommunityGoalClaim", tostring(tierIndex), function() -- QUEUE-ALL4 B: 공통 요청 제한(함수 기본 통)
+		return claim(player, tierIndex)
+	end)
 end
 
 function CommunityGoalService.onLoaded(player)
