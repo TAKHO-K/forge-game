@@ -203,7 +203,7 @@ end
 -- 장비 빙고판
 local function renderArmor(S, scroll)
 	local view = S.view
-	local LABEL_W, CW, CH = 54, 108, 70
+	local LABEL_W, CW, CH = 84, 108, 70 -- QUEUE-ALL6 B4: 54 → 84(영어 Legendary · Primordial 줄 머리 잘림 - 가로 스크롤 칸이라 폭은 늘어도 된다)
 	local ts = Theme.textSize("caption")
 	for col, z in ipairs(Info.zones) do
 		local line = view.lines["armorZone:" .. z.key]

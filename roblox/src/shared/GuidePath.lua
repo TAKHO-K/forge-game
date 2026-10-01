@@ -126,7 +126,9 @@ function GuidePath.liftRange(route, params, lo, hi)
 		local h = (flat(b) - flat(a)).Magnitude
 		if route.ok[i - 1] and route.ok[i] and h >= 0.5 then
 			local mid = (a + b) / 2
-			if math.abs(b.Y - a.Y) > h * G.steepRatio or GuidePath.buried(mid, params) then
+			-- QUEUE-ALL6 B1: 가파르지 않은데 가운데만 묻힌 선분(높이가 같은 두 점 사이의 작은 지면 혹)은 꺾은 선이 퇴화(꺾은 점 = 끝점)해 못 고쳤다 → 아래 가운데 점 들기로
+			local steep = math.abs(b.Y - a.Y) > h * G.steepRatio
+			if steep or (GuidePath.buried(mid, params) and math.abs(b.Y - a.Y) > 0.5) then
 				-- 절벽(길찾기 뛰어내림 · 올라감) · 턱(바위 · 계단 옆면): 비스듬한 선은 옆면을 파고든다 → 높은 쪽 높이로 수평 이동 뒤 낮은 쪽 줄에서 수직
 				table.insert(pts, b.Y < a.Y and Vector3.new(b.X, a.Y, b.Z) or Vector3.new(a.X, b.Y, a.Z))
 				table.insert(ok, true)

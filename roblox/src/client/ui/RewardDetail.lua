@@ -93,6 +93,10 @@ local function build()
 	hint.Position = UDim2.new(1, -10, 0, 8)
 	hint.Size = UDim2.fromOffset(80, 16)
 	refs = { icon = icon, name = name, qty = qty, owned = owned, desc = desc, hint = hint }
+	-- 창이 열리거나 닫히면 접는다(닫힌 창의 칸에 붙은 카드가 남던 것 - Play 확인)
+	require(script.Parent.Parent.UIManager).changed:Connect(function()
+		RewardDetail.hide()
+	end)
 	-- 다른 곳을 누르면 접는다(카드 · 지금 칸 안은 제외)
 	UserInputService.InputBegan:Connect(function(input)
 		if not current or not card.Visible then

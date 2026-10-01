@@ -44,8 +44,8 @@ local en = {
 	["석조 평원"] = "Stone Plains", ["수정 동굴"] = "Crystal Cave", ["수몰 사원"] = "Sunken Temple", ["모래 유적"] = "Sand Ruins", ["폭풍 첨탑"] = "Storm Spire", ["빙하 동굴"] = "Glacier Cave",
 	["석조 평원 세트"] = "Stone Plains Set", ["수정 동굴 세트"] = "Crystal Cave Set", ["수몰 사원 세트"] = "Sunken Temple Set", ["모래 유적 세트"] = "Sand Ruins Set", ["폭풍 첨탑 세트"] = "Storm Spire Set", ["빙하 동굴 세트"] = "Glacier Cave Set",
 	["석조 평원 사냥터"] = "Stone Plains Hunt", ["수정 굴 사냥터"] = "Crystal Cave Hunt", ["수몰 사원 사냥터"] = "Sunken Temple Hunt", ["모래 유적 사냥터"] = "Sand Ruins Hunt", ["폭풍 첨탑 사냥터"] = "Storm Spire Hunt", ["빙하 동굴 사냥터"] = "Glacier Cave Hunt",
-	["수호자의 석조 평원"] = "Guardian's Stone Plains",
-	["수호자의 석조 평원 세트"] = "Guardian's Stone Plains Set", -- SetBonus.setName(tier1 테마)
+	["수호자의 석조 평원"] = "Guardian Plains",
+	["수호자의 석조 평원 세트"] = "Guardian Plains Set", -- SetBonus.setName(tier1 테마)
 	["%s 관문 등록! 이제 어디서든 입장할 수 있어요."] = "%s Gate saved! Now you can enter from anywhere.",
 	["편함"] = "Easy", ["끄기"] = "Off", -- AutoStageData 프리셋
 	["석조 평원 입구"] = "Stone Plains Gate", ["수정 동굴 입구"] = "Crystal Cave Gate", ["수몰 사원 입구"] = "Sunken Temple Gate", ["모래 유적 입구"] = "Sand Ruins Gate", ["폭풍 첨탑 입구"] = "Storm Spire Gate", ["빙하 동굴 입구"] = "Glacier Cave Gate",
@@ -141,7 +141,7 @@ local en = {
 	["목을 젖히면 앞으로 서리 숨결, 꼬리를 들면 뒤를 쓸어요. 날개를 펴면 밀려나요."] = "Head back = frost breath. Tail up = sweep. Wings = push!",
 
 	-- ═══ 퀘스트 이름(QuestData - {n} 자리는 그대로) ═══
-	["몬스터 {n}마리 처치"] = "Defeat {n} monsters", ["보스 {n}번 처치"] = "Defeat bosses {n} times", ["무기 강화 {n}번 시도"] = "Try weapon enhance {n} times",
+	["몬스터 {n}마리 처치"] = "Defeat {n} monsters", ["보스 {n}번 처치"] = "Defeat {n} bosses", ["무기 강화 {n}번 시도"] = "Try weapon enhance {n} times",
 	["보석 장착 · 재련 {n}번"] = "Socket or refine gems {n} times", ["둥지에서 알 {n}개 줍기"] = "Pick up {n} eggs from nests", ["수련 · 직업 능력 {n}번 올리기"] = "Raise Training {n} times",
 	["토벌 {n}번"] = "Raid {n} times", ["반짝이 몬스터 {n}마리 처치"] = "Defeat {n} Sparkle Monsters", ["견습 과정 마치기"] = "Finish the Apprentice course",
 	["사냥터에서 몬스터 {n}마리 처치"] = "Defeat {n} monsters in a hunt zone", ["주운 장비 입기(가방 G)"] = "Wear gear you found (Bag G)", ["첫 보스(스테이지 5) 처치"] = "Defeat the first boss (Stage 5)",
