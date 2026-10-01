@@ -395,7 +395,7 @@ local function applyPlace(show)
 		local d = s / 2 * 0.7071 -- 원의 오른쪽 위(45°) 테두리
 		refs.gear.Position = UDim2.fromOffset(s / 2 + d, s / 2 - d)
 	end
-	refs.menu.Position = UDim2.fromOffset(r.max.X, r.max.Y + 4)
+	refs.menu.Position = UDim2.fromOffset(r.min.X - 6, math.clamp(r.min.Y, 0, math.max(0, gui.AbsoluteSize.Y - refs.menu.AbsoluteSize.Y))) -- 미니맵 왼쪽으로 연다(아래는 폰 · 낮은 창에서 잘린다)
 	return true
 end
 

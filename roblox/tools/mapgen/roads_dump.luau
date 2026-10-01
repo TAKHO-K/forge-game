@@ -24,6 +24,8 @@ for _, zone in ipairs(D.zones) do
 			print(("[POINT] ground %s_%d %.1f,%.1f"):format(zone.key, i, p.X, p.Z))
 		end
 	end
+	local lw = Layout.toWorld(zone, zone.landmark.r, 0)
+	print(("[POINT] landmark %s %.1f,%.1f"):format(zone.key, lw.X, lw.Z))
 	local gate = Layout.gate(zone)
 	local gp = gate.position or gate.center or gate
 	print(("[POINT] gate %s %.1f,%.1f"):format(zone.key, gp.X, gp.Z))

@@ -276,6 +276,7 @@ local function build()
 					t:Play()
 					t.Completed:Connect(function()
 						glow:Destroy()
+						built.firstHint.Visible = false -- 안내 줄도 반짝임과 같이 끝(두 번째부터 안 뜸 = mapHintSeen)
 					end)
 				end
 			end)
