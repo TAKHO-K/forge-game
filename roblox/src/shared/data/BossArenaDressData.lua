@@ -35,8 +35,8 @@ BossArenaDressData.rim = {
 	curbHeight = 0.7, curbWidth = 2,
 	braziers = 4, pillars = 4,
 	pillarWidth = 5, pillarHeight = { 19, 25 }, fallenOut = 9,
-	bowlSize = Vector3.new(1.4, 3.2, 3.2), flameSize = 2, flameTransparency = 0.15,
-	fireLight = { brightness = 1.6, range = 18, flicker = 0.25 },
+	bowlSize = Vector3.new(2.6, 5.6, 5.6), flameSize = 3.8, flameTransparency = 0.15, -- QUEUE-ALL4 A1: 3.2 그릇은 반경 140 아레나 전경에서 점으로만 보임(Play 캡처) → 약 1.8배
+	fireLight = { brightness = 1.6, range = 26, flicker = 0.25 },
 	centerLight = { height = 26, brightness = 0.9, range = 60, color = Color3.fromRGB(232, 238, 255) },
 	phoneLights = false,
 }

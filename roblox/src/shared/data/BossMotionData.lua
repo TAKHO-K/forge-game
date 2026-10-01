@@ -790,7 +790,7 @@ D.impacts = {
 -- QUEUE-ALL4 A4(ALL2 결정 7): heavy = true 땅 치기의 무게감(client/BossBodyFx.heavyGround - 판정 무관 · 가로 퍼짐 debrisSide stud/초 이하 = 판정 원 밖으로 안 나감 · 바깥 고리 없음)
 --   개수 × 연출 세기 · 크기 × 보스 S · 소리 = 기존 시트 큐(새 에셋 없음) · 흔들림 = 짧게(shakeSeconds · 설정 · 3초 규칙 따름)
 D.heavyGround = {
-	debris = 10, debrisUp = { 18, 26 }, debrisSide = 1.6, debrisSize = { 0.12, 0.22 }, debrisLife = { 0.9, 1.2 },
+	debris = 10, debrisUp = { 18, 26 }, debrisSide = 1.6, debrisSize = { 0.2, 0.34 }, debrisLife = { 0.9, 1.2 },
 	column = 5, columnStep = 0.55, columnJitter = 0.25, columnSize = { 0.7, 1.0 }, columnRise = { 6, 10 }, columnLife = 0.45,
 	sound = "hurt_big", soundPitch = 0.75, soundVolume = 0.9, soundMinInterval = 0.15,
 	shakeWeight = 1.0, shakeSeconds = 0.1,

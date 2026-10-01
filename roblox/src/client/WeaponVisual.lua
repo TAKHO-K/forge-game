@@ -338,7 +338,11 @@ local function handScaleOf(character)
 	if not hand or not hand:IsA("BasePart") then
 		return 1
 	end
-	local s = math.clamp(hand.Size.Y / cfg.refHandSizeY, cfg.min, cfg.max)
+	local original = hand:FindFirstChild("OriginalSize") -- R15 배율의 기준 크기(패키지마다 손 크기가 달라 고정 기준값을 못 쓴다 - Play 실측 손 Y 0.89)
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	local height = humanoid and humanoid:FindFirstChild("BodyHeightScale")
+	local raw = (original and original:IsA("Vector3Value") and original.Value.Y > 0) and hand.Size.Y / original.Value.Y or (height and height.Value) or 1
+	local s = math.clamp(raw, cfg.min, cfg.max)
 	return math.floor(s / cfg.step + 0.5) * cfg.step
 end
 
