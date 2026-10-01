@@ -556,6 +556,7 @@ local TextData = {
 		["settings.graphics"] = "그래픽",
 		["settings.gfx.normal"] = "보통",
 		["settings.gfx.lite"] = "가벼움",
+		["settings.gfx.liteHint"] = "가벼움: 먼 산 · 풀 덤불 · 나무 바람이 꺼져요. 처음엔 기기에 맞춰 골라 둬요.",
 		["settings.transcendNotice"] = "다른 서버 초월 알림",
 		["settings.codePlaceholder"] = "코드 입력",
 		["settings.codeRedeem"] = "받기",

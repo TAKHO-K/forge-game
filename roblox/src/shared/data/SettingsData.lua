@@ -19,10 +19,14 @@ return {
 		-- QUEUE-ALL2 P2 B-4 ⑤ · 09 문서 B-2: 연출 세기 하나로 흔들림 · 번쩍임 · 남의 효과를 함께 줄인다(client/FxSettings가 옛 Attribute로 풀어 준다 - 흔들림 끔 = 옛 screenShake false와 같음)
 		fxLevel = { kind = "choice", default = "normal", options = { "normal", "low", "off" }, attrs = { "FxLevel" } },
 		volumeAmbient = { kind = "volume", default = 1, attrs = { "SoundVolumeAmbient" } }, -- QUEUE-ALL2 P5 환경음(SoundGroup Ambient)
-		graphics = { kind = "choice", default = "normal", options = { "normal", "lite" }, attrs = { "GraphicsMode" } }, -- 가벼움 = 먼 산 LOD · 나무 바람 · 풀 끔(게임 쪽 부담만 - 로블록스 품질 설정은 그대로)
+		-- 가벼움 = 먼 산 LOD · 나무 바람 · 풀 덤불 끔(게임 쪽 부담만 - 로블록스 품질 설정은 그대로). QUEUE-ALL6 A2: 기본 "auto"(안 고름 - 저장 안 됨) = 클라 GraphicsMode가 기기로 판별(graphicsAuto).
+		--   고를 수 있는 값은 options(normal · lite)뿐 - 설정 창에서 바꾸면 그 값이 저장되고 이후 유지.
+		graphics = { kind = "choice", default = "auto", options = { "normal", "lite" }, attrs = { "GraphicsMode" } },
 		-- QUEUE-ALL4 E 화면 언어(shared/Text가 읽는다): ko(기본 - 영어 켜기는 사용자 결정 전까지 꺼짐) · en(강제) · auto(로블록스 계정 언어 - 한국어면 ko, 아니면 en).
 		--   설정 창 줄은 아직 없다(바꾸는 곳 = 개발 /gg lang). 같은 settings 표 - 없는 키 = 기본값(이관 없음).
 		language = { kind = "choice", default = "ko", options = { "ko", "en", "auto" }, attrs = { "Language" } },
 	},
+	-- QUEUE-ALL6 A2 첫 접속 기본 그래픽(아직 안 고른 사람): 폰(터치 전용) · 로블록스 품질을 1 ~ 3으로 직접 낮춘 기기 = lite, 그 밖(PC) = normal
+	graphicsAuto = { liteWhenTouchOnly = true, liteAtSavedQualityAtMost = 3 },
 	volumeStep = 0.1, -- B4 설정 창 [−] [+] 한 번에 바뀌는 양
 }

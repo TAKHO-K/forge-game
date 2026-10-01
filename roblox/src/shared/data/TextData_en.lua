@@ -551,6 +551,7 @@ return {
 	["settings.graphics"] = "Graphics",
 	["settings.gfx.normal"] = "Normal",
 	["settings.gfx.lite"] = "Lite",
+	["settings.gfx.liteHint"] = "Lite turns off far hills, grass and tree sway. First set for your device.",
 	["settings.transcendNotice"] = "Transcendent alerts from other servers",
 	["settings.codePlaceholder"] = "Enter code",
 	["settings.codeRedeem"] = "Redeem",

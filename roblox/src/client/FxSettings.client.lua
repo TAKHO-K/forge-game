@@ -5,6 +5,7 @@
 local Players = game:GetService("Players")
 
 local AttackTrail = require(script.Parent.AttackTrail)
+local GraphicsMode = require(script.Parent.GraphicsMode)
 
 local player = Players.LocalPlayer
 local SCALE = { normal = 1, low = 0.5, off = 0 }
@@ -27,7 +28,7 @@ apply()
 
 -- QUEUE-ALL3 Q10: 그래픽 "가벼움" = 먼 산 LOD 줄(Workspace.DistantMountains.Far)을 내 화면에서 숨김
 local function applyGraphics()
-	local lite = player:GetAttribute("GraphicsMode") == "lite"
+	local lite = GraphicsMode.isLite() -- QUEUE-ALL6 A2: 안 골랐으면 기기 기본
 	local far = workspace:FindFirstChild("DistantMountains") and workspace.DistantMountains:FindFirstChild("Far")
 	for _, d in ipairs(far and far:GetDescendants() or {}) do
 		if d:IsA("BasePart") then

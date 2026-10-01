@@ -19,6 +19,7 @@ local Theme = require(script.Parent.Parent.ui.kit.Theme)
 local PanelRegistry = require(script.Parent.Parent.ui.PanelRegistry)
 local UIManager = require(script.Parent.Parent.UIManager)
 local AttackTrail = require(script.Parent.Parent.AttackTrail)
+local GraphicsMode = require(script.Parent.Parent.GraphicsMode)
 
 local SettingsPanel = {}
 SettingsPanel.id = "settings"
@@ -54,12 +55,15 @@ local function page(parent, name)
 end
 
 -- 순환 버튼 줄(이름 · [값]) - choice 키
-local function cycleRow(body, y, labelText, key, names, refs)
+local function cycleRow(body, y, labelText, key, names, refs, resolve)
 	local def = SettingsData.keys[key]
 	local label = Theme.label(body, labelText, "body", "textPrimary")
 	label.Position = UDim2.fromOffset(PAD, y)
 	label.Size = UDim2.new(1, -PAD * 2 - 130, 0, 36)
 	local function current()
+		if resolve then -- QUEUE-ALL6 A2: 저장 전(auto)이면 실효값(기기 기본)을 보여 주고 거기서 다음 값으로
+			return resolve()
+		end
 		return player:GetAttribute(def.attrs[1]) or def.default
 	end
 	local b = Button.build({ parent = body, kind = "secondary", width = 120, position = UDim2.new(1, -PAD - 120, 0, y), text = names[current()] or tostring(current()),
@@ -117,10 +121,15 @@ local function build()
 			AttackTrail.setDimOthers(v)
 			save("dimOthersTrail", v)
 		end })
-	cycleRow(s, PAD + 62 + ROW * 3, Text.get("settings.graphics"), "graphics", { normal = Text.get("settings.gfx.normal"), lite = Text.get("settings.gfx.lite") }, refs)
+	cycleRow(s, PAD + 62 + ROW * 3, Text.get("settings.graphics"), "graphics", { normal = Text.get("settings.gfx.normal"), lite = Text.get("settings.gfx.lite") }, refs, GraphicsMode.effective)
+	local gfxHint = Theme.label(s, Text.get("settings.gfx.liteHint"), "caption", "textSecondary") -- QUEUE-ALL6 A2: 가벼움에서 꺼지는 것
+	gfxHint.Name = "GraphicsLiteHint"
+	gfxHint.TextWrapped = true
+	gfxHint.Position = UDim2.fromOffset(PAD, PAD + 62 + ROW * 3 + 38)
+	gfxHint.Size = UDim2.new(1, -PAD * 2, 0, 36)
 	local shiftHint = Theme.label(s, Text.get("settings.shiftLockHint"), "caption", "textSecondary")
 	shiftHint.TextWrapped = true
-	shiftHint.Position = UDim2.fromOffset(PAD, PAD + 62 + ROW * 4)
+	shiftHint.Position = UDim2.fromOffset(PAD, PAD + 62 + ROW * 4 + 30)
 	shiftHint.Size = UDim2.new(1, -PAD * 2, 0, 36)
 
 	-- [소리] 음량 4줄(효과 · UI · 환경 · 음악)

@@ -2,15 +2,20 @@
 --   잎 밑동(경계 상자 아래 가운데) 기준으로 아주 작게 흔든다(degrees · periodSeconds). 폰(터치 전용) · 그래픽 품질 3 이하 = 끔(TreeArtData.wind.mobile).
 --   서버 파트의 CFrame을 로컬에서만 바꾼다(복제 없음) · 멀어지면 원래 자리로 되돌린다.
 local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local W = require(ReplicatedStorage.Shared.data.TreeArtData).wind
+local GraphicsMode = require(script.Parent.GraphicsMode)
 
 local function allowed()
-	if not W.mobile and UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+	if GraphicsMode.isLite() then -- QUEUE-ALL6 A2: 그래픽 가벼움 = 바람 끔(폰 · 저사양 첫 접속 기본)
+		return false
+	end
+	if not W.mobile and UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled and Players.LocalPlayer:GetAttribute("GraphicsMode") ~= "normal" then -- 폰이라도 "보통"을 직접 고르면 켬
 		return false
 	end
 	local ok, level = pcall(function()

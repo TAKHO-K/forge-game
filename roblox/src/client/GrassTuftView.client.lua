@@ -11,6 +11,7 @@ local RoadData = require(ReplicatedStorage.Shared.data.RoadData)
 local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
 local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit)
 local RoadNet = require(ReplicatedStorage.Shared.RoadNet)
+local GraphicsMode = require(script.Parent.GraphicsMode)
 
 local T = ArtV1ZoneData.edgeTufts
 local player = Players.LocalPlayer
@@ -70,7 +71,7 @@ local function clearAll()
 end
 
 local function step()
-	if Workspace:GetAttribute(ArtStyleV1Data.attribute) ~= true then
+	if Workspace:GetAttribute(ArtStyleV1Data.attribute) ~= true or GraphicsMode.isLite() then -- QUEUE-ALL6 A2: 그래픽 가벼움 = 풀 덤불 끔
 		if folder then
 			clearAll()
 		end
