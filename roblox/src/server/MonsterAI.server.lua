@@ -73,12 +73,16 @@ end
 -- 재사용한다(몬스터마다 다시 계산하면 의미가 없다). idle 상태 스캔만 건너뛴다 - 이미
 -- chasing/returning 중인 몬스터는 그 구역이 방금 비었어도 하던 행동을 끝까지 마친다
 -- (갑자기 얼어붙는 것보다 자연스럽고, 어차피 리쉬·구역 이탈 조건으로 곧 스스로 끝난다).
+-- QUEUE-ALL6 B3: 이 틱의 (플레이어, 루트) 목록을 같이 모은다 - 몬스터마다 GetPlayers · FindFirstChild를 다시 하지 않는다(findNearestPlayerRootInRange가 읽는다).
+local tickRoots = {}
 local function computeOccupiedZones()
 	local occupied = {}
+	table.clear(tickRoots)
 	for _, player in ipairs(Players:GetPlayers()) do
 		local character = player.Character
 		local rootPart = character and character:FindFirstChild("HumanoidRootPart")
 		if rootPart then
+			table.insert(tickRoots, { player = player, root = rootPart })
 			local position = rootPart.Position
 			for _, zoneKey in ipairs(WorldConfig.tierZoneOrder) do
 				if not occupied[zoneKey] then
@@ -96,15 +100,16 @@ end
 local function findNearestPlayerRootInRange(position, maxRange, model, filter)
 	local nearestRoot, nearestPlayer, nearestDistance = nil, nil, math.huge
 
-	for _, player in ipairs(Players:GetPlayers()) do
-		local character = player.Character
-		local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-		-- C1 후속(리뷰 1): 잡몹은 기준 − 10보다 낮은 사람 · 막힐 사람을 어그로하지 않는다(MonsterState.canChase)
-		if rootPart and (model == nil or MonsterState.canChase(model, player, TutorialState.getMonsterStage(player))) then
+	-- QUEUE-ALL6 B3: 이 틱 목록(computeOccupiedZones) · 싼 거리 판정을 먼저(조건은 전부 AND라 결과 같음 - 멀리 있는 사람마다 canChase · 스테이지 조회를 하지 않는다)
+	for _, entry in ipairs(tickRoots) do
+		local player, rootPart = entry.player, entry.root
+		if rootPart.Parent then
 			-- 22-4: 수평 거리 + 높이차 상한(Reach). 절벽 위 플레이어는 어그로 대상이 아니다.
 			local distance = Reach.horizontalDistance(rootPart.Position, position)
-			if distance <= maxRange and distance < nearestDistance
-				and Reach.sameLayer(rootPart.Position, position) and (filter == nil or filter(rootPart, player)) then -- M2: 성향 필터(안전 지대 · 추적 상한)
+			if distance <= maxRange and distance < nearestDistance and Reach.sameLayer(rootPart.Position, position)
+				-- C1 후속(리뷰 1): 잡몹은 기준 − 10보다 낮은 사람 · 막힐 사람을 어그로하지 않는다(MonsterState.canChase)
+				and (model == nil or MonsterState.canChase(model, player, TutorialState.getMonsterStage(player)))
+				and (filter == nil or filter(rootPart, player)) then -- M2: 성향 필터(안전 지대 · 추적 상한)
 				nearestRoot, nearestPlayer, nearestDistance = rootPart, player, distance
 			end
 		end
