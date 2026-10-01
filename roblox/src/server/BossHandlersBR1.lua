@@ -925,7 +925,7 @@ BossHandlersBR1.sweep = {
 		end
 		-- 걸린 사람: 도트(시전당 상한) · 끌림 끝 → 풀림 + 면역
 		for p, lock in pairs(st.beamLocks) do
-			if (PlayerState.getHp(p) or 0) <= 0 then
+			if (PlayerState.getHp(p) or 0) <= 0 or (st.members and not table.find(st.members, p)) then -- QUEUE-ALL5 D②: 끌리는 중 보스전을 떠난 사람(파티 탈퇴 · [마을])은 도트를 그만 받는다
 				st.beamLocks[p] = nil
 			else
 				while c.now >= lock.nextTickAt and lock.ticks < lock.maxTicks do

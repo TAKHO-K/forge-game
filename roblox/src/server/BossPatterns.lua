@@ -1887,7 +1887,7 @@ local function beginSplit(c, seconds)
 					task.defer(function() -- 같은 틱에 진짜도 맞았으면(광역기) 벌이 없다
 						local now = os.clock()
 						local last = state.lastPunishAt[player]
-						if state.solved or (last and now - last < mechanics.reflect.windowSeconds) then
+						if state.solved or state.resolved or (last and now - last < mechanics.reflect.windowSeconds) then -- QUEUE-ALL5 D②: 같은 틱에 제한 시간으로 끝난 분열에 벌이 한 번 더 들어가지 않게
 							return
 						end
 						state.lastPunishAt[player] = now

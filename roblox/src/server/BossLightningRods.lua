@@ -128,6 +128,7 @@ BossLightningRods.handler = {
 		st.rodsCount = 0
 		st.rodsDone = 0
 		st.rodsTurn = 0
+		st.rodsLockAt = nil -- QUEUE-ALL5 D②: 지난 시전의 마지막 낙뢰 자리가 이번 시전 첫 방전의 대체 자리로 쓰이지 않게
 		st.rodsRequired = BossLightningRods.requiredFor(skill, #aliveVictims(st), #st.rodsList)
 		st.rodsAmbientAt = c.now + skill.telegraphSeconds + skill.ambient.everySeconds
 		st.rodsAmbient = {}

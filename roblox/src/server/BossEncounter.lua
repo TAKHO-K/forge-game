@@ -314,6 +314,7 @@ local bossIntroCinema = Instance.new("RemoteEvent")
 bossIntroCinema.Name = "BossIntroCinema"
 bossIntroCinema.Parent = game:GetService("ReplicatedStorage")
 
+local introOwner = setmetatable({}, { __mode = "k" }) -- [Player] = 지금 걸린 진입 연출 토큰(QUEUE-ALL5 D② - 옛 연출 타이머가 새 연출을 일찍 풀지 않게)
 local function startIntro(encounter, full)
 	if encounter.isTutorial or not encounter.model then
 		return 0
@@ -339,7 +340,9 @@ local function startIntro(encounter, full)
 	for _, member in ipairs(realMembers) do
 		table.insert(ids, member.UserId)
 	end
+	local introToken = {}
 	for _, member in ipairs(realMembers) do
+		introOwner[member] = introToken
 		member:SetAttribute("BossIntroLock", true)
 		PlayerState.setAnchorHold(member, "intro", true)
 		bossIntroCinema:FireClient(member, { model = model, displayName = encounter.data.displayName, bossId = encounter.data.id, members = ids,
@@ -347,7 +350,8 @@ local function startIntro(encounter, full)
 	end
 	task.delay(seconds, function()
 		for _, member in ipairs(realMembers) do
-			if member.Parent then
+			if member.Parent and introOwner[member] == introToken then -- QUEUE-ALL5 D②: 그 사이 새 보스전 연출이 시작됐으면 그 연출의 고정 · 잠금을 일찍 풀지 않는다
+				introOwner[member] = nil
 				member:SetAttribute("BossIntroLock", nil)
 				PlayerState.setAnchorHold(member, "intro", false)
 			end

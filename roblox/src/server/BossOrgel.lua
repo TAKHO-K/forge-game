@@ -166,9 +166,10 @@ local function shatter(c)
 	for _, s in ipairs(o.statues) do
 		if BossTrap.getRecord(s.player) and BossTrap.getRecord(s.player).kind == "statue" then
 			BossTrap.release(s.player, "shatter") -- 해제 유예 없이(피해가 바로 뒤에 들어간다)
+			-- QUEUE-ALL5 D②: 피해는 아직 조각상인 사람만(옛 = 블록 밖 - 그 사이 파티 탈퇴 · [마을]로 풀려 허브에 간 사람도 맞았다)
+			PlayerDamage.applyMaxHpFraction(s.player, skill.failMaxHpFraction, skill.damageLabel, { ignoresShield = true })
+			BossTrap.noteSkillHit(s.player)
 		end
-		PlayerDamage.applyMaxHpFraction(s.player, skill.failMaxHpFraction, skill.damageLabel, { ignoresShield = true })
-		BossTrap.noteSkillHit(s.player)
 	end
 	st.orgel = nil
 	kit.send(st, "orgelEnd", { success = false })
