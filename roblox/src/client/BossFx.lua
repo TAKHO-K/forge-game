@@ -138,7 +138,7 @@ function BossFx.setShakeEnabled(enabled)
 end
 
 -- position에서 가까울수록 세게(nearStuds 밖이면 없음). weight = 배율(돌진 대상이 나면 chargeTargetBonus).
-function BossFx.shake(position, weight)
+function BossFx.shake(position, weight, seconds)
 	if not BossFx.shakeEnabled() then
 		return false
 	end
@@ -151,7 +151,7 @@ function BossFx.shake(position, weight)
 	if d > cfg.nearStuds then
 		return false
 	end
-	CameraShake.trigger(cfg.seconds, cfg.amplitudeStuds * (1 - d / cfg.nearStuds) * (weight or 1), "boss")
+	CameraShake.trigger(seconds or cfg.seconds, cfg.amplitudeStuds * (1 - d / cfg.nearStuds) * (weight or 1), "boss")
 	return true
 end
 

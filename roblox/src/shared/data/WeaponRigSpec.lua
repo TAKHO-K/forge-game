@@ -33,6 +33,8 @@ local SPEC = {
 	attachments = { grip = "Grip", tip = "Tip", support = "Support", stringNock = "StringNock" },
 	-- 손바닥 점(손 파트 로컬 - 쥔 주먹 가운데)
 	palm = { RightHand = Vector3.new(0, -0.18, -0.05), LeftHand = Vector3.new(0, -0.18, -0.05) },
+	-- QUEUE-ALL4 A3: 손 크기 배율(겉모습만) = RightHand.Size.Y ÷ 기준(배율 1 손) · 범위 · 단계(단계가 바뀔 때만 무기를 다시 짓는다)
+	bodyScale = { refHandSizeY = 0.3, min = 0.7, max = 1.45, step = 0.05 },
 	-- 규격 검사 허용치(WeaponRigCheck): 길이 ±10% · 보조 손 거리(손잡이 점에서 stud). 축 = 모델의 가장 긴 축이 tipAxis + Tip이 손잡이보다 끝 쪽
 	check = { lengthTolerance = 0.1, supportMinStuds = 0.35, supportMaxStuds = 2.2 },
 	-- 교체 모델 자리(PropModels와 같은 방식): ReplicatedStorage.Shared.WeaponModels.<직업>(조각이 여럿이면 자식 이름 = 조각 이름) - 없으면 지금 메시

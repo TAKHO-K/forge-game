@@ -1148,6 +1148,7 @@ local HELP_TEXT = table.concat({
 	"/gg keycheck <스테이지> [save] - 실제 보스 처치 1회로 첫 클리어 확정 드랍 호출 횟수 · 저장 집합의 실제 키 타입을 찍는다(S05b) - save를 붙이면 두 기록(스테이지 · 견습 4단계)만 남기고 저장, Play 재시작 뒤 다시 불러 왕복을 확인 · /gg keyclean <스테이지> - 그 두 기록을 지우고 저장",
 	"/gg save unlock - 원본 복원 없이 저장 차단만 영구 해제(백업 삭제, 지금 상태가 실제로 저장됨) - 재접속 지속성 검증 전용, 기본은 차단 유지(23-6)",
 	"/gg mesh check <리그id> [모델경로] - B3 가져온 메시 모델 검사(이름 · 관절 · 삼각형 · 크기 · 팔레트 · 재질 O/X - 출력 창 [MeshCheck]) · /gg mesh swap <리그id> [모델경로] [배율] - 내 앞 미리보기 리그에 1:1 교체 · /gg mesh clear",
+	"/gg lang <ko|en|auto> - 화면 언어 설정(SettingsData language - 저장됨 · 이미 지은 창은 다시 열어야 바뀜 · 접속 때부터 영어로 보려면 Studio Workspace Attribute TextLanguageDev = en)",
 }, "\n")
 
 -- /gg party selftest의 본문(24-1) - 자동 검증(S12(나))이 같은 코드를 회귀 확인으로 돌리려고 함수로 뺐다. 반환 = results(줄 목록) 또는 nil, 안내 문구.
@@ -1241,6 +1242,10 @@ local function handleCommand(player, args)
 
 	if sub == "help" or sub == nil then
 		reply(player, "\n" .. HELP_TEXT)
+	elseif sub == "lang" and args[2] then
+		-- QUEUE-ALL4 E: 설정 키 language를 바꾼다(SettingsService 입구 하나 - 검증 · 저장 · Attribute 적용)
+		local ok = require(script.Parent.SettingsService).set(player, "language", args[2])
+		reply(player, ("lang %s %s · 지금 = %s"):format(args[2], ok and "적용" or "거절(ko|en|auto)", tostring(player:GetAttribute("Language"))))
 	elseif sub == "econ" then
 		-- P0 E8 경제 시뮬 - 한 번에 계산(수십 초, 중간중간 양보)하므로 명령 처리 스레드를 붙잡지 않게 따로 돌린다. 모듈은 여기서만 require(서버 시작 비용 0).
 		task.spawn(function()
@@ -3032,6 +3037,10 @@ local function handleCommand(player, args)
 			print(("[ArtV1] 스위치 %s · 조명 %s"):format(args[2], profile))
 			reply(player, ("아트 샘플 %s(조명 %s · 몬스터는 새로 나는 몹부터)"):format(args[2], profile))
 		end
+	elseif sub == "capture" and (args[2] == "on" or args[2] == "off") then
+		-- QUEUE-ALL4 A5 촬영 모드: 내 이름표 · 칭호 · 기본 플레이어 목록 · 채팅 · 개발 UI 숨김(client/Nameplate - 썸네일 · 아이콘에 계정 이름이 안 보이게)
+		player:SetAttribute("CaptureMode", args[2] == "on" or nil)
+		reply(player, "촬영 모드 " .. args[2])
 	elseif sub == "body" and args[2] == "std" and (args[3] == "on" or args[3] == "off") then
 		-- A2-N4 P0-3 B안 비교: 표준 체형 스위치(Workspace StandardBodyV1) → 캐릭터 다시 불러 적용
 		local cfg = require(game:GetService("ReplicatedStorage").Shared.data.ArtStyleV1Data).standardBody

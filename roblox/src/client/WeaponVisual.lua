@@ -171,7 +171,8 @@ local function buildBowExtras(folder, model, p)
 	p.arrow = arrow
 end
 
-local function buildWeapon(classId, colorOverride, parentFolder, artModel)
+local function buildWeapon(classId, colorOverride, parentFolder, artModel, bodyScale)
+	bodyScale = bodyScale or 1
 	local model = WeaponModelData[classId]
 	local rig = WeaponRigSpec.weapons[classId]
 	if not model or not rig then
@@ -190,8 +191,8 @@ local function buildWeapon(classId, colorOverride, parentFolder, artModel)
 
 	for _, spec in ipairs(rig.pieces) do
 		local key = spec.name or "main"
-		local scale = WeaponRigSpec.scaleOf(spec)
-		local p = { spec = spec, scale = scale, key = key }
+		local scale = WeaponRigSpec.scaleOf(spec) * (model.kind == "bow" and 1 or bodyScale) -- 활 몸(가지 · 시위 자리 표)은 배율 밖 - 손 자리만 따라간다
+		local p = { spec = spec, scale = scale, key = key, bodyScale = bodyScale }
 		local custom = overrideModel(classId, spec.name, artModel)
 		if custom then
 			local clone = custom:Clone()
@@ -202,6 +203,9 @@ local function buildWeapon(classId, colorOverride, parentFolder, artModel)
 			end
 			if clone:IsA("BasePart") then
 				clone.Anchored, clone.CanCollide, clone.CanQuery, clone.CanTouch = true, false, false, false
+			end
+			if bodyScale ~= 1 and clone:IsA("Model") then -- QUEUE-ALL4 A3: 손 크기 배율(겉모습만)
+				clone:ScaleTo(clone:GetScale() * bodyScale)
 			end
 			clone.Parent = folder
 			local frame = clone:IsA("Model") and clone.WorldPivot or clone.CFrame
@@ -215,7 +219,7 @@ local function buildWeapon(classId, colorOverride, parentFolder, artModel)
 			end
 			p.custom = clone
 			if TrailData.ribbon.classes[classId] and clone:GetAttribute("TrailTop") and clone.PrimaryPart then -- A2-S: 교체 모델도 칼날 리본(부착점 = 모델 Attribute · PrimaryPart 로컬)
-				p.trail, p.gloss = attachTrail(clone.PrimaryPart, clone:GetAttribute("TrailTop"), clone:GetAttribute("TrailBottom"))
+				p.trail, p.gloss = attachTrail(clone.PrimaryPart, clone:GetAttribute("TrailTop") * bodyScale, clone:GetAttribute("TrailBottom") * bodyScale)
 			end
 			p.gripLocal = localOf(WeaponRigSpec.attachments.grip)
 			p.supportLocal = localOf(WeaponRigSpec.attachments.support)
@@ -234,14 +238,14 @@ local function buildWeapon(classId, colorOverride, parentFolder, artModel)
 			part:FindFirstChildOfClass("SpecialMesh").Scale = Vector3.one * scale
 			p.part, p.mesh = part, part:FindFirstChildOfClass("SpecialMesh")
 			if TrailData.ribbon.classes[classId] and model.trailTop then
-				p.trail, p.gloss = attachTrail(part, model.trailTop, model.trailBottom)
+				p.trail, p.gloss = attachTrail(part, model.trailTop * bodyScale, model.trailBottom * bodyScale)
 			end
 		elseif model.kind == "specialmesh" then
 			local part = buildMeshPart(folder, "Staff", model.meshId, model.size, model.color, model.textureId)
 			part:FindFirstChildOfClass("SpecialMesh").Scale = Vector3.one * scale
 			p.part, p.mesh = part, part:FindFirstChildOfClass("SpecialMesh")
 			if TrailData.ribbon.closeClasses[classId] and model.trailTop then -- W2-4 가까운 대상 휘두르기 리본
-				p.trail, p.gloss = attachTrail(part, model.trailTop, model.trailBottom)
+				p.trail, p.gloss = attachTrail(part, model.trailTop * bodyScale, model.trailBottom * bodyScale)
 			end
 		elseif model.kind == "bow" then
 			local root = Instance.new("Part")
@@ -327,6 +331,17 @@ local function inCombat(st, now)
 	return untilAt ~= nil and Workspace:GetServerTimeNow() < untilAt
 end
 
+-- QUEUE-ALL4 A3: 아바타 배율(0.8 · 1.35)에서 무기 크기 · 쥔 자리를 손 크기에 맞춘다(겉모습만 - 판정 불변). 옛 = 고정 크기라 0.8배 몸에서 칼이 얼굴 앞을 지났다.
+local function handScaleOf(character)
+	local hand = character and character:FindFirstChild("RightHand")
+	local cfg = WeaponRigSpec.bodyScale
+	if not hand or not hand:IsA("BasePart") then
+		return 1
+	end
+	local s = math.clamp(hand.Size.Y / cfg.refHandSizeY, cfg.min, cfg.max)
+	return math.floor(s / cfg.step + 0.5) * cfg.step
+end
+
 local function rebuild(st)
 	if st.weapon then
 		if st.key == player then
@@ -351,7 +366,8 @@ local function rebuild(st)
 		artModel = ArtV1Models.greatsword(look, GradeColor.of(gradeId))
 	end
 	local primordialWeapon = artModel == nil and grade >= 6
-	st.weapon = buildWeapon(classId, primordialWeapon and Color3.fromRGB(245, 245, 250) or nil, Workspace, artModel)
+	st.bodyScale = handScaleOf(st.character)
+	st.weapon = buildWeapon(classId, primordialWeapon and Color3.fromRGB(245, 245, 250) or nil, Workspace, artModel, st.bodyScale)
 	if artModel then
 		artModel:Destroy() -- 무기 폴더에는 복제본이 들어간다
 	end
@@ -895,7 +911,7 @@ end
 
 -- ① 포즈(PreSimulation = 애니메이터 다음 · 물리 전 - RenderStepped에 쓰면 애니메이터가 덮어써 물리 풀이에 안 들어간다: W1 실측)
 local function pieceCFrame(p, handCF, heavyMul)
-	return handCF * CFrame.new(PALM[p.spec.hand]) * p.spec.hold * CFrame.new(-p.gripLocal * heavyMul)
+	return handCF * CFrame.new(PALM[p.spec.hand] * p.bodyScale) * p.spec.hold * CFrame.new(-p.gripLocal * heavyMul)
 end
 
 local LEG_JOINTS = { RightHip = true, LeftHip = true, RightKnee = true, LeftKnee = true, RightAnkle = true, LeftAnkle = true }
@@ -1101,7 +1117,8 @@ local function placeWeapon(st, now, camPos)
 		else
 			local mount = character:FindFirstChild(p.spec.sheath.mount == "hip" and "LowerTorso" or "UpperTorso")
 			if mount then
-				wcf = mount.CFrame * WeaponRigSpec.sheathCFrame(p.spec.sheath) * CFrame.new(-p.gripLocal)
+				local sheath = WeaponRigSpec.sheathCFrame(p.spec.sheath)
+				wcf = mount.CFrame * (sheath - sheath.Position + sheath.Position * p.bodyScale) * CFrame.new(-p.gripLocal)
 			end
 		end
 		if wcf then
@@ -1160,9 +1177,24 @@ local function bindPlayer(p)
 		st.respawnStart = died and os.clock() or nil
 		rebuild(st)
 	end
-	p.CharacterAdded:Connect(function()
+	local function watchHand(character) -- A3: 입힌 뒤 배율이 적용되면 손 Size가 바뀐다 → 배율 단계가 달라질 때만 다시 짓는다
+		local hand = character and character:WaitForChild("RightHand", 10)
+		if not hand then
+			return
+		end
+		hand:GetPropertyChangedSignal("Size"):Connect(function()
+			if st.character == character and handScaleOf(character) ~= st.bodyScale then
+				rebuild(st)
+			end
+		end)
+	end
+	p.CharacterAdded:Connect(function(character)
 		task.defer(refresh)
+		task.spawn(watchHand, character)
 	end)
+	if p.Character then
+		task.spawn(watchHand, p.Character)
+	end
 	for _, attr in ipairs({ "ClassId", "WeaponGrade", "ArtV1WeaponLook" }) do
 		p:GetAttributeChangedSignal(attr):Connect(refresh)
 	end

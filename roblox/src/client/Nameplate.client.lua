@@ -199,7 +199,8 @@ end
 local localPlayer = Players.LocalPlayer
 local function applyOwnHidden()
 	local character = localPlayer.Character
-	local hide = workspace:GetAttribute("ArtStyleV1") == true and localPlayer:GetAttribute("BossEncounterId") ~= nil
+	local hide = (workspace:GetAttribute("ArtStyleV1") == true and localPlayer:GetAttribute("BossEncounterId") ~= nil)
+		or localPlayer:GetAttribute("CaptureMode") == true -- QUEUE-ALL4 A5 촬영 모드(/gg capture on - Studio 전용 명령)
 	for _, name in ipairs({ BILLBOARD_NAME, "PlayerTitle" }) do
 		local gui = character and character:FindFirstChild(name)
 		if gui then
@@ -214,6 +215,33 @@ local function applyOwnHidden()
 	end
 end
 localPlayer:GetAttributeChangedSignal("BossEncounterId"):Connect(applyOwnHidden)
+-- QUEUE-ALL4 A5 촬영 모드: 내 이름표 · 칭호(위) + 로블록스 기본 UI(플레이어 목록 · 채팅 - 계정 이름이 보인다) + 개발 UI(DevToolsConfig.captureHideGuis)를 숨긴다
+local captureHidden = {}
+local function applyCapture()
+	applyOwnHidden()
+	local on = localPlayer:GetAttribute("CaptureMode") == true
+	local StarterGui = game:GetService("StarterGui")
+	for _, coreType in ipairs({ Enum.CoreGuiType.PlayerList, Enum.CoreGuiType.Chat }) do
+		pcall(function()
+			StarterGui:SetCoreGuiEnabled(coreType, not on)
+		end)
+	end
+	local names = require(game:GetService("ReplicatedStorage").Shared.data.DevToolsConfig).captureHideGuis or {}
+	local playerGui = localPlayer:FindFirstChildOfClass("PlayerGui")
+	for _, name in ipairs(names) do
+		local gui = playerGui and playerGui:FindFirstChild(name)
+		if gui and gui:IsA("ScreenGui") then
+			if on and gui.Enabled then
+				gui.Enabled = false
+				captureHidden[gui] = true
+			elseif not on and captureHidden[gui] then
+				gui.Enabled = true
+				captureHidden[gui] = nil
+			end
+		end
+	end
+end
+localPlayer:GetAttributeChangedSignal("CaptureMode"):Connect(applyCapture)
 localPlayer.CharacterAdded:Connect(function()
 	task.wait(1)
 	applyOwnHidden()

@@ -7,6 +7,7 @@ local Workspace = game:GetService("Workspace")
 
 local BossMotionData = require(ReplicatedStorage.Shared.data.BossMotionData)
 local BossFx = require(script.Parent.BossFx)
+local SoundSheet = require(script.Parent.SoundSheet)
 
 local BossBodyFx = {}
 
@@ -126,6 +127,30 @@ end
 
 local KINDS = { ground = ground, whoosh = whoosh, spark = spark, roar = roar }
 
+-- QUEUE-ALL4 A4: 판정 원 안으로 줄인 땅 치기(slam · smash_in · punch_in)의 무게감 = 위로 튀는 파편 · 짧은 먼지 기둥 · 묵직한 소리 · 아주 짧은 흔들림.
+--   가로로 거의 안 퍼진다(바깥으로 퍼지는 고리 없음 - 범위 착시 금지) · 개수 × 연출 세기(FxScale - 끔 0이면 없음) · 흔들림 = BossFx.shake(설정 · 3초 규칙 · 세기 따름).
+local function heavyGround(e, at)
+	local H = BossMotionData.heavyGround
+	local fx = player:GetAttribute("FxScale")
+	fx = type(fx) == "number" and fx or 1
+	if fx <= 0 then
+		return
+	end
+	local c = colorsOf(e)
+	local p = Vector3.new(at.X, floorY(e) + 0.3, at.Z)
+	for _ = 1, math.max(1, math.floor(H.debris * fx + 0.5)) do
+		local a = math.random() * math.pi * 2
+		local side = rnd(0, H.debrisSide)
+		BossFx.chunk(p, Vector3.new(math.cos(a) * side, rnd(H.debrisUp[1], H.debrisUp[2]), math.sin(a) * side), rnd(H.debrisSize[1], H.debrisSize[2]) * e.S, c.debris, rnd(H.debrisLife[1], H.debrisLife[2]))
+	end
+	for i = 1, math.max(1, math.floor(H.column * fx + 0.5)) do
+		local off = Vector3.new(rnd(-1, 1), 0, rnd(-1, 1)) * H.columnJitter * e.S
+		BossFx.puff(p + off + Vector3.new(0, (i - 1) * H.columnStep * e.S, 0), rnd(H.columnSize[1], H.columnSize[2]) * e.S, c.dust, H.columnLife, Vector3.new(0, rnd(H.columnRise[1], H.columnRise[2]), 0))
+	end
+	SoundSheet.play(H.sound, { part = e.root, pitch = H.soundPitch, volume = H.soundVolume, minInterval = H.soundMinInterval })
+	BossFx.shake(p, H.shakeWeight, H.shakeSeconds)
+end
+
 -- 동작 접촉 순간(BossAnimator가 시각에 맞춰 부른다)
 function BossBodyFx.impact(e, clipName)
 	local spec = BossMotionData.impacts[clipName or ""]
@@ -133,10 +158,12 @@ function BossBodyFx.impact(e, clipName)
 		return
 	end
 	local f = KINDS[spec.kind]
+	local sum, n = Vector3.zero, 0
 	for _, name in ipairs(spec.parts) do
 		local at = partPos(e, name)
 		if at and f then
-			f(e, at, spec.size or 1, spec.shake)
+			sum, n = sum + at, n + 1
+			f(e, at, spec.size or 1, not spec.heavy and spec.shake or nil) -- 무거운 땅 치기 = 흔들림은 아래 한 번(짧게)
 			if spec.floorDust then -- A2-M1 2차: 휩쓴 자리 바닥에 먼지 호(리뷰: 꼬리 궤적이 몸에 가려 안 읽힘)
 				local c = colorsOf(e)
 				local center = e.visPos or e.root.Position
@@ -150,6 +177,9 @@ function BossBodyFx.impact(e, clipName)
 				end
 			end
 		end
+	end
+	if spec.heavy and n > 0 then
+		heavyGround(e, sum / n)
 	end
 end
 

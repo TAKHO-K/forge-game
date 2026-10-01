@@ -21,6 +21,8 @@ local RunService = game:GetService("RunService")
 
 local config = {
 	allowedUserIds = {},
+	-- QUEUE-ALL4 A5 촬영 모드(/gg capture on)가 숨기는 개발 ScreenGui 이름(client/Nameplate)
+	captureHideGuis = { "PartyHudCheckGui", "HitboxDebug" },
 
 	-- P0 경제 시뮬(server/EconSim* · /gg econ) 스위치. EconSim.isAllowed() = RunService:IsStudio() and 이 값 - 라이브 서버에서는 IsStudio가 거짓이라 켜져 있어도 안 돈다
 	-- (그 위에 DevTools.server.lua 자체가 라이브에서 첫 줄에서 죽는다 - 이중 차단). 끄면 Studio에서도 /gg econ · P0(가)가 에러로 멈춘다.

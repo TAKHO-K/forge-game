@@ -761,10 +761,10 @@ D.prepFlash = { color = Color3.fromRGB(255, 255, 255), peak = 0.28 }
 --   QUEUE-ALL1 01 C-2(판정보다 큰 이펙트): 땅 치기는 부위 자리에서 약 4.35 × S × size까지 퍼진다(네온 조각 1.2 + 속도 7 × 0.45초 · 고리 3.2). 원 판정 보스 스킬은
 --   부위 거리 + 퍼짐 ≤ max(판정 × 1.1, 몸 도달)로 맞춤 - slam(수호자 강공격 14 · 서리 빙결 강타 18) 1.1 → 0.26 · 원 안 강공격(smash_in · punch_in) 0.26.
 D.impacts = {
-	slam = { kind = "ground", parts = { "Hand_L", "Hand_R" }, size = 0.26, shake = 1.0 },
+	slam = { kind = "ground", parts = { "Hand_L", "Hand_R" }, size = 0.26, shake = 1.0, heavy = true },
 	slam_wide = { kind = "ground", parts = { "Hand_L", "Hand_R" }, size = 1.1, shake = 1.0 }, -- 심해 군주 sweep(원 24 - 옛 크기 그대로 1.11)
-	smash_in = { kind = "ground", parts = { "Hand_L", "Hand_R" }, size = 0.26, shake = 1.0 },
-	punch_in = { kind = "ground", parts = { "Hand_R" }, size = 0.26, shake = 0.6 },
+	smash_in = { kind = "ground", parts = { "Hand_L", "Hand_R" }, size = 0.26, shake = 1.0, heavy = true },
+	punch_in = { kind = "ground", parts = { "Hand_R" }, size = 0.26, shake = 0.6, heavy = true },
 	quake_finish = { kind = "ground", parts = { "Hand_L", "Hand_R" }, size = 1.3, shake = 1.2 },
 	stomp = { kind = "ground", parts = { "Foot_R" }, size = 0.9, shake = 0.8 },
 	hopSlam = { kind = "ground", parts = { "Foot_L", "Foot_R" }, size = 1.0, shake = 1.0 },
@@ -787,6 +787,15 @@ D.impacts = {
 	throw_push = { kind = "spark", parts = { "Hand_R", "Hand_L" }, size = 0.9 },
 	throw_staff = { kind = "whoosh", parts = { "Hand_R" }, size = 1.0 },
 }
+-- QUEUE-ALL4 A4(ALL2 결정 7): heavy = true 땅 치기의 무게감(client/BossBodyFx.heavyGround - 판정 무관 · 가로 퍼짐 debrisSide stud/초 이하 = 판정 원 밖으로 안 나감 · 바깥 고리 없음)
+--   개수 × 연출 세기 · 크기 × 보스 S · 소리 = 기존 시트 큐(새 에셋 없음) · 흔들림 = 짧게(shakeSeconds · 설정 · 3초 규칙 따름)
+D.heavyGround = {
+	debris = 10, debrisUp = { 18, 26 }, debrisSide = 1.6, debrisSize = { 0.12, 0.22 }, debrisLife = { 0.9, 1.2 },
+	column = 5, columnStep = 0.55, columnJitter = 0.25, columnSize = { 0.7, 1.0 }, columnRise = { 6, 10 }, columnLife = 0.45,
+	sound = "hurt_big", soundPitch = 0.75, soundVolume = 0.9, soundMinInterval = 0.15,
+	shakeWeight = 1.0, shakeSeconds = 0.1,
+}
+
 -- A2-M1 분노(체력이 phaseAt 아래로 - 모든 보스 공통 겉모습 · 판정 무관): 한 번 포효 효과 + 빛나는 부위(수정 · 룬 · 눈)가 위험색 쪽으로 짙어진다(tint - UIColors.danger로 섞는 비율)
 D.enrage = { phaseAt = 0.5, tint = 0.45, eyeTint = 0.7, seconds = 0.6 }
 
