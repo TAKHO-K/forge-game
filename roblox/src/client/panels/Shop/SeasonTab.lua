@@ -8,6 +8,7 @@ local Text = require(ReplicatedStorage.Shared.Text)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 local Layout = require(script.Parent.Layout)
 local CosmeticTab = require(script.Parent.CosmeticTab)
+local RewardDetail = require(script.Parent.Parent.Parent.ui.RewardDetail)
 
 local SeasonTab = {}
 
@@ -86,6 +87,18 @@ local function tierRow(ctx, env, season, tier)
 		text.TextWrapped = true
 		text.Position = UDim2.new(0, 4, 0, 2)
 		text.Size = UDim2.new(1, -(88 + 12), 1, -4)
+		-- QUEUE-ALL6 C: 재화 칸(반짝 조각 · 알)은 글자 칸을 누르면 상세 카드(RewardDetail - 다른 보상 칸과 같은 문구)
+		local detailKey = type(reward) == "table" and ((reward.sparkleShard and "sparkleShard") or (reward.egg and "egg")) or nil
+		if detailKey then
+			local hit = Instance.new("TextButton")
+			hit.Name = "DetailHit"
+			hit.Text = ""
+			hit.BackgroundTransparency = 1
+			hit.AutoButtonColor = false
+			hit.Position, hit.Size = text.Position, text.Size
+			hit.Parent = cell
+			RewardDetail.attach(hit, detailKey, "×" .. tostring(reward[detailKey]))
+		end
 		local state = SeasonTab.cellState(season, rowName, tier)
 		ctx.button(cell, {
 			name = ("Claim_%s_%d"):format(rowName, tier),

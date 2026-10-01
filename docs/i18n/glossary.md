@@ -50,3 +50,19 @@
 | 치명 확률 · 치명 피해 | Crit / Crit Rate · Crit DMG | "Dmg" · "%p" 표기 금지(en은 %p 대신 %) |
 
 > 확정(QUEUE-STUDIO 0-1 · 사용자 10-01): 직업 영어 이름 = Swordsman · Rogue · Archer · Healer(다음 직업 Paladin과 같은 역할형). 화면은 `Text.get("class.name." .. classId)`로 읽는다(ko 값 = `ClassData.displayName`과 같게 유지 - 서버 로그 · 개발 도구는 displayName 그대로). 보스 · 구역 · 등급 · 수련 이름은 여전히 데이터의 한국어 `displayName`이라 영어를 켜도 한국어로 나온다(남은 일).
+
+## QUEUE-ALL6 A4 - 데이터 이름 고정 번역(전체 표 = `roblox/src/shared/data/TextData_names.lua`)
+
+> 데이터 파일은 한국어 원문 그대로 두고 화면에서 `Text.name(원문)`으로 바꾼다(사전 = 원문 → 영어 · 458개 · 검사 `python roblox/tools/i18n/check_names.py`). 아래는 자주 보이는 고정 용어만.
+
+| 한국어 | 영어(고정) | 비고 |
+|---|---|---|
+| 석조 평원 · 수정 동굴 · 수몰 사원 · 모래 유적 · 폭풍 첨탑 · 빙하 동굴 | Stone Plains · Crystal Cave · Sunken Temple · Sand Ruins · Storm Spire · Glacier Cave | 구역(세트 = "… Set" · 알 = "… Egg" · 입구 = "… Gate" · 사냥터 = "… Hunt") |
+| 큰 나무 마을 · 대장간 거리 · 시장 · 커뮤니티 광장 · 포탈 광장 | Big Tree Village · Forge Street · Market · Community Plaza · Portal Plaza | 허브 |
+| 갑옷 · 장갑 · 신발 · 무기 | Armor · Gloves · Shoes · Weapon | 장비 칸 |
+| 위력 · 신속 · 치명 · 건강 · 방어 · 성장 · 재생 · 흡혈 | Might · Haste · Crit · Vitality · Guard · Growth · Regen · Lifesteal | 옵션 · 세트 축 |
+| 관통돌진 · 회전베기 · 강궁 · 백스텝샷 · 그림자분신 · 난무 · 치유 · 딜링모드 | Piercing Dash · Spin Slash · Power Shot · Backstep Shot · Shadow Clone · Blade Flurry · Heal · Battle Mode | 스킬 |
+| 파괴의 화신 · 천궁의 폭우 · 죽음의 계약 · 생명의 성역 | Avatar of Ruin · Sky Arrow Storm · Death Pact · Sanctuary of Life | 궁극기 |
+| 초월자 · 태초의 선택 · 주간 챔피언 · 모두의 영웅 | Transcender · Primordial Chosen · Weekly Champion · Everyone's Hero | 칭호(도감 줄 칭호 틀 "%s 수집가" = "%s Collector" 등) |
+| 하락 방지권 · 초기화 방지권 | Drop Protection Ticket · Reset Protection Ticket | 좁은 칸 줄임 = Drop/Reset Guard(위 표) |
+| 별빛 · 불씨 · 서리꽃 · 말랑 젤리 | Starlight · Ember · Frost Bloom · Squishy Jelly | 꾸미기 테마 |

@@ -74,6 +74,26 @@ function Attendance.render()
 		local day = Theme.label(cell, Text.get("attendance.dayShort", { day = key }), "body", "textPrimary")
 		day.Size = UDim2.new(1, 0, 0, 24)
 		day.TextXAlignment = Enum.TextXAlignment.Center
+		-- QUEUE-ALL6 C: 오늘 칸 = 금색 "오늘" 띠 · 받은 칸 = 큰 체크 · 앞으로 받을 칸도 보상 그림을 누르면 상세(RewardIcons 칸 = RewardDetail)
+		if today then
+			local badge = Theme.label(cell, Text.get("item.attendance.today"), "caption", "panel")
+			badge.Name = "TodayBadge"
+			badge.BackgroundTransparency = 0
+			badge.BackgroundColor3 = Theme.color("gold")
+			badge.TextXAlignment = Enum.TextXAlignment.Center
+			badge.AnchorPoint = Vector2.new(0.5, 0.5)
+			badge.Position = UDim2.new(0.5, 0, 0, 0)
+			badge.Size = UDim2.fromOffset(48, 18)
+			badge.ZIndex = 3
+			Theme.corner(badge, 6)
+		end
+		if claimed then
+			local check = Theme.label(cell, "✓", "title", "success")
+			check.Name = "ClaimedCheck"
+			check.TextXAlignment = Enum.TextXAlignment.Right
+			check.Position = UDim2.new(1, -24, 0, 0)
+			check.Size = UDim2.fromOffset(20, 24)
+		end
 		local icons = RewardIcons.row(cell, entry.reward, 28, { frameSize = UDim2.new(1, -8, 0, 64), position = UDim2.fromOffset(4, 30) })
 		icons.UIListLayout.FillDirection = Enum.FillDirection.Vertical
 		icons.UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center

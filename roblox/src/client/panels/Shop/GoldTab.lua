@@ -38,7 +38,7 @@ function GoldTab.render(ctx, env)
 		ctx.row({
 			name = "Protection_" .. kind,
 			title = Text.get("shop.gold.protectionRow", { name = config.displayName, count = tostring(protectionCount(kind)) }),
-			subtitle = Text.get("shop.gold.protectionSub"),
+			subtitle = Text.get(kind == "drop" and "item.desc.protectDrop" or "item.desc.protectReset"), -- QUEUE-ALL6 C: 아이템 설명 표(보상 카드와 같은 문구)
 			buttons = { { name = "Buy_protection_" .. kind, text = Text.get("shop.buy"), kind = "primary", enabled = not env.busy(), onActivated = function()
 				env.requestProtection(kind)
 			end } },

@@ -26,8 +26,8 @@ return {
 		["item.desc.passExp"] = "모으면 시즌 패스 칸이 열려요",
 		["item.desc.title"] = "이름표 위에 보여요",
 		["item.owned"] = "가진 것: {n}",
-		["item.expandHint"] = "▸ 눌러서 자세히",
 		["item.collapseHint"] = "▾ 접기",
+		["item.attendance.today"] = "오늘",
 	},
 	en = {
 		["item.name.gold"] = "Gold",
@@ -55,7 +55,7 @@ return {
 		["item.desc.passExp"] = "Collect it to open Season Pass rewards",
 		["item.desc.title"] = "Shows on your name tag",
 		["item.owned"] = "You have: {n}",
-		["item.expandHint"] = "▸ Tap for details",
 		["item.collapseHint"] = "▾ Close",
+		["item.attendance.today"] = "Today",
 	},
 }
