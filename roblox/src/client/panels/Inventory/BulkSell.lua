@@ -160,12 +160,14 @@ confirmOverlay.Activated:Connect(function()
 	confirmOverlay.Visible = false
 end)
 
+-- QUEUE-ALL8 F 리뷰: 확인 창에 "보여 준" 개수 · 등급을 잡아 둔다(누른 순간 다시 세면 창이 떠 있는 동안 주운 장비까지 팔렸다)
+local pendingKey, pendingCount = nil, 0
 confirmYes.Activated:Connect(function()
 	confirmOverlay.Visible = false
-	local count = S.bulkSellEstimate()
-	if count > 0 then -- QUEUE-ALL8 G1: 체크한 등급 + 확인 창 개수(서버가 다시 세서 다르면 안 판다)
-		sellRequest:FireServer("sellGrades", S.sellCheckedKey(), count)
+	if pendingKey and pendingCount > 0 then -- QUEUE-ALL8 G1: 체크한 등급 + 확인 창 개수(서버가 다시 세서 다르면 안 판다)
+		sellRequest:FireServer("sellGrades", pendingKey, pendingCount)
 	end
+	pendingKey, pendingCount = nil, 0
 end)
 
 bulkSellButton.Activated:Connect(function()
@@ -173,6 +175,7 @@ bulkSellButton.Activated:Connect(function()
 	if count == 0 then
 		return
 	end
+	pendingKey, pendingCount = S.sellCheckedKey(), count
 	confirmText.Text = Text.get("gear.bulk.confirm", { count = ("%d"):format(count), gold = NumberFormat.format(total) })
 	local nd = dismantleCount()
 	confirmDismantle.Text = Text.get("gear.bulk.dismantle", { count = ("%d"):format(nd) }) -- Q13: 영웅 이상만 보석으로(태초 · 초월 제외)

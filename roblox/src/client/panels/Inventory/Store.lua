@@ -5,6 +5,7 @@ local UserInputService = game:GetService("UserInputService")
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
+local SettingsData = require(ReplicatedStorage.Shared.data.SettingsData)
 local EquipSlots = require(ReplicatedStorage.Shared.data.EquipSlots)
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local Text = require(ReplicatedStorage.Shared.Text)
@@ -50,7 +51,7 @@ S.bulkSellDropdownOpen = false
 -- QUEUE-ALL8 G1: 등급별 일괄 판매 체크(설정 bulkSellGrades - Attribute BulkSellGrades · 쉼표 문자열) · 전설 이상은 고를 수 없다(ArmorData.bulkSellGrades)
 local function parseChecked(value)
 	local set = {}
-	for _, id in ipairs(string.split(type(value) == "string" and value or "normal,rare", ",")) do
+	for _, id in ipairs(string.split(type(value) == "string" and value or SettingsData.keys.bulkSellGrades.default, ",")) do -- 기본값 = 설정 데이터 한 곳(F 리뷰)
 		if table.find(ArmorData.bulkSellGrades, id) then
 			set[id] = true
 		end
