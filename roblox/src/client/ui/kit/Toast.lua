@@ -591,6 +591,32 @@ end
 -- item = { text, colorName, seconds, priority, groupKey, richParts, fadeSeconds, moreFormat, rainbow, grade }.
 -- grade = nil(일반) · "important" · "critical" · "notice" (Toast.grades).
 -- 반환: "shown" · "merged" · "queued" · "evicted"(TR: 보이긴 했고 가장 오래된 줄이 밀려났다) (전시장 · 검사용).
+-- QUEUE-ALL9A 3-3: 줄 오른쪽 끝 제한(GUI px · nil = 슬롯 그대로). 폰에서 위 오른쪽 미니맵이 TC 줄과 겹칠 때 hud/Minimap이 부른다.
+--   왼쪽 끝은 슬롯 그대로 두고 폭만 줄인다(행 폭 = 줄 폭 - 새로 뜨는 행부터).
+function Toast.setRightLimit(laneName, rightPx, topPx)
+	ensureGui()
+	local lane = lanes[laneName]
+	if lane and rightPx and topPx then -- 가리는 것(미니맵) 위 끝이 줄 아래 끝보다 아래면 겹치지 않는다
+		local slotDef = ScreenMap.slot(lane.cfg.zone, lane.cfg.slot)
+		if topPx >= slotDef.position.Y.Offset + slotDef.size.Y.Offset * math.max(1, lane.capacity) then
+			rightPx = nil
+		end
+	end
+	if not lane or lane.rightLimit == rightPx then
+		return
+	end
+	lane.rightLimit = rightPx
+	local slotDef = ScreenMap.place(lane.frame, lane.cfg.zone, lane.cfg.slot)
+	lane.frame.Size = slotDef.size
+	local w = slotDef.size.X.Offset
+	local left = slotDef.position.X.Scale * lane.gui.AbsoluteSize.X + slotDef.position.X.Offset - slotDef.anchor.X * w
+	if rightPx and left + w > rightPx then
+		lane.frame.AnchorPoint = Vector2.new(0, slotDef.anchor.Y)
+		lane.frame.Position = UDim2.new(0, left, slotDef.position.Y.Scale, slotDef.position.Y.Offset)
+		lane.frame.Size = UDim2.new(0, math.max(160, rightPx - left), slotDef.size.Y.Scale, slotDef.size.Y.Offset)
+	end
+end
+
 function Toast.push(laneName, item)
 	ensureGui()
 	local lane = lanes[laneName]

@@ -340,7 +340,7 @@ local function renderMarkers()
 	for _, place in ipairs(places()) do
 		local size = place.small and 14 or 22
 		marker(built.markers, place, size)
-		if place.named then
+		if place.named and not place.nameHidden then -- QUEUE-ALL9A 3-1 자기 건물 가까운 기능 = 건물 이름만
 			table.insert(built.labels, { place = place, icon = size, inst = nameLabel(built.markers, place) })
 		end
 	end

@@ -6,14 +6,16 @@ return {
 	promptDistance = 10, -- 프롬프트가 뜨는 거리(stud - 다른 허브 프롬프트와 같은 손 거리)
 	introRadius = 22, -- 이만큼 다가가면 첫 소개 한 줄(한 번만)
 	iconOffsetY = 9, -- 자리 기둥 위 이름표 위로(stud)
+	-- QUEUE-ALL9A 3-1 지도 이름 "한 기능 = 이름 하나": building = 자기 건물(HubArtData.buildingNames 키) · 기능 자리가 그 건물에서 이 거리(stud · 수평) 안이면 지도 · 미니맵에 건물 이름만
+	ownBuildingRadius = 25,
 	services = {
-		{ id = "hallOfFame", spot = "hallOfFame", panel = "leaderboard", icon = "icons/hud/rank", nameKey = "hub.service.hallOfFame", actionKey = "hub.service.hallOfFame.action", introKey = "hub.service.hallOfFame.intro", intro = "hubIntroRank" },
+		{ id = "hallOfFame", spot = "hallOfFame", building = "hub_hall", panel = "leaderboard", icon = "icons/hud/rank", nameKey = "hub.service.hallOfFame", actionKey = "hub.service.hallOfFame.action", introKey = "hub.service.hallOfFame.intro", intro = "hubIntroRank" },
 		{ id = "noticeBoard", spot = "noticeBoard", panel = "board", icon = "icons/hud/attendance", nameKey = "hub.service.noticeBoard", actionKey = "hub.service.noticeBoard.action", introKey = "hub.service.noticeBoard.intro", intro = "hubIntroBoard" },
 		{ id = "challengeKnight", spot = "challengeKnight", panel = "quests", focus = "challenge", icon = "icons/ui/pin_boss", nameKey = "hub.service.challengeKnight", actionKey = "hub.service.challengeKnight.action", introKey = "hub.service.challengeKnight.intro", intro = "hubIntroChallenge" },
 		-- QUEUE-ALL8 A: 출시 기능 자리(정식 이름 + 프롬프트 · 설명 = hintKey 한 줄 · 첫 소개 없음)
 		{ id = "refine", spot = "refine", panel = "inventory", icon = "icons/hud/forge", nameKey = "hub.service.refine", actionKey = "hub.service.refine.action", hintKey = "hub.service.refine.hint" },
 		{ id = "gemcraft", spot = "gemcraft", panel = "inventory", icon = "icons/hud/codex", nameKey = "hub.service.gemcraft", actionKey = "hub.service.gemcraft.action", hintKey = "hub.service.gemcraft.hint" },
-		{ id = "shop", spot = "shop", panel = "shop", focus = "recommend", icon = "icons/hud/shop", nameKey = "hub.service.shop", actionKey = "hub.service.shop.action" },
-		{ id = "tailor", spot = "tailor", panel = "character", focus = "cosmetics", icon = "icons/codex/tab_equipment", nameKey = "hub.service.tailor", actionKey = "hub.service.tailor.action", introKey = "hub.service.tailor.intro", intro = "hubIntroTailor" },
+		{ id = "shop", spot = "shop", building = "hub_shop", panel = "shop", focus = "recommend", icon = "icons/hud/shop", nameKey = "hub.service.shop", actionKey = "hub.service.shop.action" },
+		{ id = "tailor", spot = "tailor", building = "hub_tailor", panel = "character", focus = "cosmetics", icon = "icons/codex/tab_equipment", nameKey = "hub.service.tailor", actionKey = "hub.service.tailor.action", introKey = "hub.service.tailor.intro", intro = "hubIntroTailor" },
 	},
 }

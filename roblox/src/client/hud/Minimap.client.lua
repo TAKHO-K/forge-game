@@ -24,6 +24,7 @@ local UIManager = require(script.Parent.Parent.UIManager)
 local MapPins = require(script.Parent.Parent.MapPins)
 local Wayfinder = require(script.Parent.Parent.Wayfinder)
 local PartyColors = require(script.Parent.Parent.PartyColors)
+local Toast = require(script.Parent.Parent.ui.kit.Toast)
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -642,6 +643,8 @@ RunService.Heartbeat:Connect(function(dt)
 	local placed = applyPlace(want)
 	local show = want and placed
 	refs.root.Visible = show
+	-- QUEUE-ALL9A 3-3: 폰 = 위 가운데 알림 줄(TC)이 미니맵을 가리지 않게 알림 폭을 미니맵 왼쪽까지로
+	Toast.setRightLimit("TC", (show and Theme.isMobile) and math.floor(refs.root.AbsolutePosition.X - MM.gap) or nil, refs.root.AbsolutePosition.Y)
 	if not show then
 		refs.menu.Visible = false
 		return

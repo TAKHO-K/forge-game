@@ -9,20 +9,31 @@ local Text = require(ReplicatedStorage.Shared.Text)
 
 local HubPlaces = {}
 
-function HubPlaces.list()
-	local out = {}
-	for _, s in ipairs(HubServiceData.services) do
-		local pos = WorldMapLayout.spot(s.spot)
-		if pos then
-			table.insert(out, { kind = "service", icon = s.icon, name = Text.get(s.nameKey), position = pos, priority = 2 })
+-- QUEUE-ALL9A 3-1: 기능 자리가 자기 건물(HubServiceData building)에서 ownBuildingRadius 안이면 지도 이름은 건물 하나만(같은 이름 두 번 · 재봉집/재봉사 겹침)
+local function nearOwnBuilding(service, pos, buildings)
+	for _, b in ipairs(buildings) do
+		if service.building == b.kind and ((b.position - pos) * Vector3.new(1, 0, 1)).Magnitude <= HubServiceData.ownBuildingRadius then
+			return true
 		end
 	end
+	return false
+end
+
+function HubPlaces.list()
+	local out, buildings = {}, {}
 	for _, name in ipairs(WorldMapLayout.facilityOrder) do
 		for _, b in ipairs(WorldMapLayout.rowBuildings(name)) do
 			local label = b.kind and HubArtData.buildingNames[b.kind]
 			if label then
+				table.insert(buildings, { kind = b.kind, position = b.cf.Position })
 				table.insert(out, { kind = "building", name = Text.name(label), position = b.cf.Position, priority = 1 })
 			end
+		end
+	end
+	for _, s in ipairs(HubServiceData.services) do
+		local pos = WorldMapLayout.spot(s.spot)
+		if pos then -- nameHidden = 지도 이름 층에서 빼고 아이콘 · 누르면 길 안내는 그대로(미니맵 말풍선도 그대로)
+			table.insert(out, { kind = "service", icon = s.icon, name = Text.get(s.nameKey), position = pos, priority = 2, nameHidden = nearOwnBuilding(s, pos, buildings) })
 		end
 	end
 	for _, n in ipairs(HubArtData.npcs) do

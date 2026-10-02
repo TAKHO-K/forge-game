@@ -151,38 +151,39 @@ local function buildFace(board)
 end
 
 -- 누르면(마을 게시판 프롬프트 - HubServiceData panel "board") 전체 소식 · 코드 창 + [코드 입력](설정 창 게임 탭 코드 칸)
-local full
+--   QUEUE-ALL9A 3-2: 다른 창과 같은 창 관리자(Panel.create → UIManager) - 닫기 키(X · Backspace) · 폰에서 열면 전투 버튼 숨김 · 스택이 같다
+local BOARD_ID = "updateBoard"
+local built
 local function openFull()
-	if full then
-		full.Visible = true
+	local UIManager = require(script.Parent.UIManager)
+	if built then
+		UIManager.open(BOARD_ID)
 		return
 	end
-	full = Instance.new("Frame")
-	full.Name = "UpdateBoardFull"
-	full.AnchorPoint = Vector2.new(0.5, 0.5)
-	full.Position = UDim2.fromScale(0.5, 0.5)
-	full.Size = UDim2.fromOffset(360, 0)
-	full.AutomaticSize = Enum.AutomaticSize.Y
-	full.BackgroundColor3 = INK
-	full.BackgroundTransparency = 0.08
-	full.Parent = gui
-	Instance.new("UICorner", full).CornerRadius = UDim.new(0, 10)
-	local pad = Instance.new("UIPadding")
-	pad.PaddingLeft, pad.PaddingRight, pad.PaddingTop, pad.PaddingBottom = UDim.new(0, 12), UDim.new(0, 12), UDim.new(0, 10), UDim.new(0, 12)
-	pad.Parent = full
+	local Panel = require(script.Parent.ui.kit.Panel)
+	local panel = Panel.create({ id = BOARD_ID, kind = "window", title = Text.get("update.board.title"), size = Vector2.new(400, 380) })
+	local scroll = Instance.new("ScrollingFrame")
+	scroll.Name = "UpdateBoardFull"
+	scroll.BackgroundTransparency = 1
+	scroll.BorderSizePixel = 0
+	scroll.Position = UDim2.fromOffset(12, 8)
+	scroll.Size = UDim2.new(1, -24, 1, -60)
+	scroll.CanvasSize = UDim2.new()
+	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	scroll.ScrollBarThickness = 4
+	scroll.Parent = panel.content
 	local list = Instance.new("UIListLayout")
 	list.SortOrder = Enum.SortOrder.LayoutOrder
 	list.Padding = UDim.new(0, 6)
-	list.Parent = full
+	list.Parent = scroll
 	local order = 0
 	local function row(text, size, color, font)
 		order += 1
-		local l = label(full, text, size, color, font)
-		l.Size = UDim2.new(1, 0, 0, 0)
+		local l = label(scroll, text, size, color, font)
+		l.Size = UDim2.new(1, -6, 0, 0)
 		l.AutomaticSize = Enum.AutomaticSize.Y
 		l.LayoutOrder = order
 	end
-	row(Text.get("update.board.title"), 18, GOLD, Theme.font)
 	for _, n in ipairs(SD.news) do
 		row(Text.get("update.board.newsLine", { date = n.date, text = Text.get(n.textKey) }), 14)
 	end
@@ -190,21 +191,18 @@ local function openFull()
 	for _, s in ipairs(validCodes()) do
 		row(s, 14, Color3.fromRGB(220, 230, 255))
 	end
-	local bar = Instance.new("Frame")
-	bar.BackgroundTransparency = 1
-	bar.Size = UDim2.new(1, 0, 0, 36)
-	bar.LayoutOrder = order + 1
-	bar.Parent = full
 	local Button = require(script.Parent.ui.kit.Button)
-	Button.build({ parent = bar, name = "UpdateBoardCode", kind = "primary", width = 120, position = UDim2.fromOffset(0, 2), text = Text.get("update.board.enterCode"),
+	Button.build({ parent = panel.content, name = "UpdateBoardCode", kind = "primary", width = 120, anchorPoint = Vector2.new(0, 1), position = UDim2.new(0, 12, 1, -10), text = Text.get("update.board.enterCode"),
 		onActivated = function()
-			full.Visible = false
+			UIManager.close(BOARD_ID, true)
 			require(script.Parent.panels.Settings).open("game")
 		end })
-	Button.build({ parent = bar, name = "UpdateBoardClose", kind = "secondary", width = 90, anchorPoint = Vector2.new(1, 0), position = UDim2.new(1, 0, 0, 2), text = Text.get("update.board.close"),
+	Button.build({ parent = panel.content, name = "UpdateBoardClose", kind = "secondary", width = 90, anchorPoint = Vector2.new(1, 1), position = UDim2.new(1, -12, 1, -10), text = Text.get("update.board.close"),
 		onActivated = function()
-			full.Visible = false
+			UIManager.close(BOARD_ID)
 		end })
+	built = panel
+	UIManager.open(BOARD_ID)
 end
 game:GetService("ProximityPromptService").PromptTriggered:Connect(function(prompt, who)
 	if who == player and prompt:GetAttribute("HubService") == "noticeBoard" then
