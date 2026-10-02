@@ -61,4 +61,19 @@ return {
 	floor = { material = "Pavement", -- Cobblestone은 길찾기가 돌아가는 비용으로 본다(실측 9.91 vs 9.38초 · 3회 같음) → 돌 판 Pavement
 		 rgb = { 222, 204, 164 }, curbRgb = { 130, 100, 66 }, texture = "terrain/hub_cobble", studsPerTile = 14, -- 무늬 = roblox/tools/mapgen/cobble_texture.py
 		 curbW = 1.2, curbH = 0.45, ringSegments = 24 },
+	-- QUEUE-ALL9A 4 큰 나무 카툰 껍질 · 발코니 나무 판(자갈과 같은 방식 - 평면 재질 위 Texture · 무늬 = roblox/tools/mapgen/bark_texture.py).
+	--   looks = 무늬(rgb = 바탕 조각 색 - 옛 단색보다 한 톤 밝게 · 무늬가 안 덮는 면도 같은 톤) · parts = 메시 키 → 조각 이름 → 무늬. 뿌리(tree_root) · 발판 모양은 이번에 안 함.
+	treeTexture = {
+		looks = {
+			bark = { texture = "terrain/tree_bark", studsPerTile = 48, rgb = { 178, 120, 80 }, faces = { "Front", "Back", "Left", "Right" } },
+			plank = { texture = "terrain/tree_plank", studsPerTile = 12, rgb = { 204, 154, 102 }, faces = { "Top" } },
+		},
+		parts = {
+			tree_trunk_base = { Bark = "bark" },
+			tree_trunk_section = { Bark = "bark" },
+			tree_branch = { Bark = "bark" },
+			tree_stem = { Bark = "bark" },
+			tree_deck = { Deck = "plank" },
+		},
+	},
 }

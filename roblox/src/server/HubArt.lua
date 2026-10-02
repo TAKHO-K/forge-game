@@ -224,6 +224,26 @@ end
 
 -- QUEUE-ALL8 H 큰 나무 겉모습(TreeArtMeta 메시 · 충돌 · 기능 = 코드 도형 그대로 - 투명으로 남긴다)
 --   s = 축마다 배율(단위 메시를 코드 도형 크기로) · 조각 색 = 표
+-- QUEUE-ALL9A 4: 껍질 · 판 무늬(HubPropsData.treeTexture) - 조각 색을 무늬 바탕 톤으로 + 면마다 Texture
+local function dressTreeTexture(m, key)
+	local T = HubPropsData.treeTexture
+	local lookName = T.parts[key] and T.parts[key][m.Name]
+	local look = lookName and T.looks[lookName]
+	local img = look and ArtAssetIds[look.texture]
+	if not img or not img.image then
+		return
+	end
+	m.Color = rgb(look.rgb)
+	for _, face in ipairs(look.faces) do
+		local tex = Instance.new("Texture")
+		tex.Name = "TreeSkin_" .. lookName
+		tex.Texture = "rbxassetid://" .. tostring(img.image)
+		tex.StudsPerTileU, tex.StudsPerTileV = look.studsPerTile, look.studsPerTile
+		tex.Face = Enum.NormalId[face]
+		tex.Parent = m
+	end
+end
+
 local function placeScaled(key, frame, s, parent)
 	local src = ArtMeshKit.get("props/" .. key)
 	local meta = TreeArtMeta[key]
@@ -243,6 +263,7 @@ local function placeScaled(key, frame, s, parent)
 				m.Color = rgb(pm.rgb)
 				m.Material = Enum.Material.SmoothPlastic
 			end
+			dressTreeTexture(m, key)
 			m.CastShadow = true
 			m.Parent = parent
 			n += 1

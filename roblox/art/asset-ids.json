@@ -4502,6 +4502,20 @@
   "status": "Approved",
   "imageId": 130606383702352
  },
+ "terrain/tree_bark.png": {
+  "sha256": "1f3e840ce657842f02b32d010ec57556ae916c6bcf76e362f39b47dcc842f011",
+  "assetType": "Decal",
+  "assetId": 87025210639683,
+  "status": "Approved",
+  "imageId": 108360915363125
+ },
+ "terrain/tree_plank.png": {
+  "sha256": "cb1908a3c2d22a8e2f1260a191150afe3abbee77fe0a5be9eff3c63f41f13b16",
+  "assetType": "Decal",
+  "assetId": 108104032203754,
+  "status": "Approved",
+  "imageId": 127730561493160
+ },
  "weapons/bow_ancient.fbx": {
   "sha256": "742f05a890664cd259cc7dd622d39ba8216ae168234344937ed13b13b41f6853",
   "assetType": "Model",

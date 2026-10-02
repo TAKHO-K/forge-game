@@ -681,6 +681,8 @@ return {
 	["terrain/grass_v1"] = { id = 72202465493370, kind = "Decal", image = 89106913778439, status = "Approved" },
 	["terrain/grass_v2"] = { id = 138632611508765, kind = "Decal", image = 102054407406703, status = "Approved" },
 	["terrain/hub_cobble"] = { id = 82773734116988, kind = "Decal", image = 130606383702352, status = "Approved" },
+	["terrain/tree_bark"] = { id = 87025210639683, kind = "Decal", image = 108360915363125, status = "Approved" },
+	["terrain/tree_plank"] = { id = 108104032203754, kind = "Decal", image = 127730561493160, status = "Approved" },
 	["weapons/bow_ancient"] = { id = 91008731478084, kind = "Model", status = "Approved" },
 	["weapons/bow_epic"] = { id = 83178122944040, kind = "Model", status = "Approved" },
 	["weapons/bow_legendary"] = { id = 101525014852880, kind = "Model", status = "Approved" },
