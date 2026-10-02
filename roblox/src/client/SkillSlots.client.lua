@@ -730,3 +730,17 @@ end)
 dashResult.OnClientEvent:Connect(function(data)
 	applyServerResult("dash", data)
 end)
+
+-- QUEUE-ALL8 E5: 폰(터치 배치)에서 창(window · station)이 열려 있는 동안 전투 버튼(공격 · 대시 · 스킬 - 이 화면 전체)을 숨긴다.
+--   창 열림 = 전투 안 함 · 작은 폰에서 메뉴가 1열로 접히며 대시 버튼과 겹쳤다. PC는 그대로(키 입력 · 겹침 없음).
+do
+	local UIManager = require(script.Parent.UIManager)
+	local function hideForWindow()
+		screenGui.Enabled = not (isTouchLayout() and UIManager.anyPanelOpen())
+	end
+	UIManager.changed:Connect(function()
+		task.defer(hideForWindow)
+	end)
+	player:GetAttributeChangedSignal("ForceTouchLayout"):Connect(hideForWindow)
+	hideForWindow()
+end

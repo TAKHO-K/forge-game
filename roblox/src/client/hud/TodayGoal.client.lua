@@ -108,6 +108,25 @@ local function place()
 		end
 	end
 	box.Size = UDim2.fromOffset(width, 26 + shown * (LINE_H + 2))
+	-- QUEUE-ALL8 E4: 위 가운데 알림 줄(세부 지역 배너 등 - Toast TC)이 이 칸과 겹치는 동안만 그 아래로 살짝 내린다(폰 = 칸이 메뉴 오른쪽 위라 배너와 겹쳤다)
+	local tc = player.PlayerGui:FindFirstChild("ToastGuiTC")
+	if tc then
+		local offset = gui.AbsolutePosition
+		local bx, by = offset.X + box.Position.X.Offset, offset.Y + box.Position.Y.Offset
+		local bw, bh = box.Size.X.Offset, box.Size.Y.Offset
+		local push = 0
+		for _, row in ipairs(tc:GetDescendants()) do
+			if row.Name == "ToastRow" and row:IsA("GuiObject") and row.Visible then
+				local p, s = row.AbsolutePosition, row.AbsoluteSize
+				if s.X > 0 and p.X < bx + bw and bx < p.X + s.X and p.Y < by + bh + push and by + push < p.Y + s.Y then
+					push = math.max(push, p.Y + s.Y + 6 - by)
+				end
+			end
+		end
+		if push > 0 then
+			box.Position = UDim2.fromOffset(box.Position.X.Offset, box.Position.Y.Offset + push)
+		end
+	end
 end
 
 local function refresh()
@@ -165,7 +184,12 @@ for _, name in ipairs({ "TrainingReady", "BossEncounterId", "ClassId" }) do
 end
 -- 전투(맞음) 감지 = 체력이 줄면 COMBAT_SECONDS 동안 접힘
 local wasCollapsed = false
+local placeAt = 0
 RunService.Heartbeat:Connect(function()
+	if os.clock() - placeAt > 0.2 then -- E4: 알림 줄이 뜨고 지는 것을 따라간다(5 Hz)
+		placeAt = os.clock()
+		place()
+	end
 	local hp = player:GetAttribute("Hp")
 	if lastHp and hp and hp < lastHp - 0.01 then
 		hitAt = os.clock()

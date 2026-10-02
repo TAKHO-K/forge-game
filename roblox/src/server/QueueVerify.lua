@@ -589,7 +589,15 @@ function V.runPure()
 		for _, key in ipairs(SettingsData.order) do
 			attrsOk = attrsOk and SettingsData.keys[key] ~= nil and #SettingsData.keys[key].attrs >= 1
 		end
-		check(("설정 키 %d(기대 14) = 적용 Attribute(카메라 · 섬광 · 흔들림 · 궤적 · 자동 이동 · B4 음량 4 · QUEUE-ALL1 P3 초월 알림 · ALL2 P2-5 연출 세기 · 환경 음량 · 그래픽 · ALL4 E 언어)"):format(#SettingsData.order), attrsOk and #SettingsData.order == 14) -- QUEUE-STUDIO V2: 기대 10 → 14(ALL2 · ALL4가 키를 더한 뒤 갱신 안 됨)
+		-- QUEUE-ALL8 E6: 개수 고정(14 - 키가 늘 때마다 낡았다) 대신 "꼭 있어야 할 키가 모두 order에 있나" + 모든 키 = 적용 Attribute
+		local REQUIRED = { "cameraTopDown", "reduceFlashes", "screenShake", "dimOthersTrail", "autoStage", "volumeSfx", "volumeMusic", "volumeUi", "volumeBossCue", "transcendNotice", "fxLevel", "volumeAmbient", "graphics", "language" }
+		local missing = {}
+		for _, key in ipairs(REQUIRED) do
+			if not table.find(SettingsData.order, key) then
+				table.insert(missing, key)
+			end
+		end
+		check(("설정 키 %d개 · 필수 %d개 빠짐 %d(%s) · 모든 키 = 적용 Attribute(카메라 · 섬광 · 흔들림 · 궤적 · 자동 이동 · 음량 4 · 초월 알림 · 연출 세기 · 환경 음량 · 그래픽 · 언어 …)"):format(#SettingsData.order, #REQUIRED, #missing, table.concat(missing, ",")), attrsOk and #missing == 0)
 		local SaveSystem = require(script.Parent.SaveSystem)
 		local ok, m = pcall(SaveSystem.migrate, { version = 53, gold = 0, classes = {}, inventory = {}, quests = { main = 1 } })
 		check(("이관 v53 → v%s: settings 빈 표(= 기본값)"):format(ok and tostring(m.version) or "에러"), ok and m.version >= 54 and type(m.settings) == "table" and next(m.settings) == nil)

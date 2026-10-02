@@ -143,7 +143,7 @@ local function ensureBoard()
 	board.Name = "CommunityGoalBoard"
 	board.Size = UDim2.fromOffset(260, 56)
 	board.StudsOffsetWorldSpace = Vector3.new(0, 16, 0)
-	board.MaxDistance = 160
+	board.MaxDistance = D.board.nearStuds
 	board.Adornee = adornee
 	board.Parent = gui
 	local bg = Instance.new("Frame")
@@ -211,8 +211,20 @@ Workspace.ChildAdded:Connect(function(c)
 end)
 refresh()
 
+local showToken = 0
 ReplicatedStorage:WaitForChild("CommunityGoalBanner").OnClientEvent:Connect(function(info)
 	if type(info) == "table" then
+		local b = ensureBoard()
+		if b then -- QUEUE-ALL8 E3: 달성 순간만 멀리서도 보이기(그 뒤 가까이만)
+			showToken += 1
+			local my = showToken
+			b.MaxDistance = math.huge
+			task.delay(D.board.showSeconds, function()
+				if my == showToken then
+					b.MaxDistance = D.board.nearStuds
+				end
+			end)
+		end
 		Toast.push("TC", { richParts = { { text = Text.name(D.text.tierBanner):format(info.percent or 0, Text.name(tostring(info.label or ""))), color = GOLD, bold = true } }, seconds = 6, fadeSeconds = 0.4, rainbow = info.tier == #D.tiers })
 	end
 end)

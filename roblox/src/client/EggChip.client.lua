@@ -79,6 +79,7 @@ countCorner.Parent = count
 
 local function update()
 	local n = #NestState.eggs
+	button.Visible = n > 0 -- QUEUE-ALL8 E3: 기다리는 알이 있을 때만(없으면 칩 자체를 숨긴다 - 안내 없이)
 	count.Visible = n > 0
 	count.Text = tostring(n)
 end

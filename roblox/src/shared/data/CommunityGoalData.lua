@@ -6,6 +6,8 @@
 --   MemoryStore 한도(서버당 분당 1000 + 인원 × 100 요청)는 처치당 1회라 넉넉하다. 실패하면 이 서버 세션 안에서만 센다(안전 쪽).
 return {
 	storeName = "CommunityGoal_v1",
+	-- QUEUE-ALL8 E3: 명예의 전당 위 게이지(떠 있는 판) = 가까이(nearStuds 안)만 · 칸 달성 순간 = 거리 무관 showSeconds 동안(멀리서 HUD처럼 화면 위를 덮던 것)
+	board = { nearStuds = 45, showSeconds = 5 },
 	studioKeyPrefix = "studio_", -- Studio(수동 · 검증)는 라이브 합계를 안 건드린다
 	dailyMapName = "CommunityGoalDaily",
 	weights = { bossKill = 1, transcendent = 300 }, -- 초월 = 큰 칸

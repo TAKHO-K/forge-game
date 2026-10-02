@@ -29,6 +29,8 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local D = WorldMapData
 local MM = D.map.minimap
+local miniImage = ArtImage.get(MapImageData.mini) or ""
+local hubImage = ArtImage.get(MapImageData.hub.key) -- QUEUE-ALL8 D2(없으면 nil = 세계 한 장만)
 local ICON_MAX = 30
 local GEAR_HIT = 44 -- 톱니 터치 영역(모바일 최소)
 -- 자리를 피해야 하는 칩 스택 왼쪽 열 · 위 줄 HUD(보일 때만)
@@ -156,7 +158,7 @@ local function build()
 	mapImage.Position = UDim2.fromScale(0.5, 0.5)
 	mapImage.Size = UDim2.fromScale(1, 1)
 	mapImage.BackgroundColor3 = Color3.fromRGB(40, 52, 66)
-	mapImage.Image = ArtImage.get(MapImageData.mini) or ""
+	mapImage.Image = miniImage
 	mapImage.ScaleType = Enum.ScaleType.Stretch
 	mapImage.ZIndex = 2
 	mapImage.Parent = root
@@ -194,6 +196,20 @@ local function build()
 	stroke.Color = UIColors.rim
 	stroke.Thickness = 2
 	stroke.Parent = ring
+	-- QUEUE-ALL8 E2: 북쪽 표지 "N"(테두리 위 - 지도 회전을 켰을 때만 · 북쪽 방향으로 같이 돈다 · 끄면 위가 늘 북쪽이라 숨김)
+	local north = Instance.new("TextLabel")
+	north.Name = "North"
+	north.AnchorPoint = Vector2.new(0.5, 0.5)
+	north.Size = UDim2.fromOffset(16, 16)
+	north.BackgroundColor3 = UIColors.rim
+	north.TextColor3 = Color3.new(1, 1, 1)
+	north.Font = Theme.font
+	north.TextSize = 11
+	north.Text = "N"
+	north.ZIndex = 10
+	north.Visible = false
+	north.Parent = root
+	Theme.corner(north, 9999)
 
 	-- 누르면 전체 지도(톱니 밖 전체)
 	local open = Instance.new("TextButton")
@@ -337,7 +353,7 @@ local function build()
 		SettingSave("minimapRotate", not rotating())
 		renderMenu()
 	end)
-	refs = { root = root, mapImage = mapImage, overlay = overlay, quest = quest, me = me, gear = gear, menu = menu, icons = {}, dots = {}, bubble = bubble }
+	refs = { root = root, mapImage = mapImage, overlay = overlay, quest = quest, me = me, gear = gear, menu = menu, icons = {}, dots = {}, bubble = bubble, north = north }
 end
 
 -- ═══ 자리 ═══
@@ -486,14 +502,26 @@ local function updateDynamic(root)
 	local heading = math.atan2(look.X, -look.Z) -- 북쪽(−Z) 기준 시계 방향(rad)
 	local rot = rotating() and -heading or 0 -- 지도 회전(내 방향이 위)
 	-- 그림: 보이는 칸 = 반경 range를 덮는 정사각형(회전해도 원 안이 다 차게 √2배)
-	local uv = MapImageData.toUV(me.X, me.Z)
-	local px = MapImageData.miniPixels
+	-- QUEUE-ALL8 D2: 허브 안 + 보이는 칸이 허브 고해상도 그림 안 = 그 그림(1.6 stud/px) · 아니면 세계 한 장(5.8 stud/px)
+	local H = MapImageData.hub
+	local useHub = hubImage ~= nil and math.max(math.abs(me.X), math.abs(me.Z)) + range <= H.half
+	local img = useHub and hubImage or miniImage
+	if refs.mapImage.Image ~= img then
+		refs.mapImage.Image = img
+	end
+	local uv = useHub and MapImageData.toHubUV(me.X, me.Z) or MapImageData.toUV(me.X, me.Z)
+	local px = useHub and H.pixels or MapImageData.miniPixels
 	-- 회전해도 원(정사각형에 내접)은 돌린 정사각형 안에 늘 다 들어간다 → 같은 칸 · 같은 크기로 Rotation만
-	local spanPx = (2 * range) / (2 * MapImageData.half) * px
+	local spanPx = (2 * range) / (2 * (useHub and H.half or MapImageData.half)) * px
 	refs.mapImage.ImageRectOffset = Vector2.new(uv.X * px - spanPx / 2, uv.Y * px - spanPx / 2)
 	refs.mapImage.ImageRectSize = Vector2.new(spanPx, spanPx)
 	refs.mapImage.Rotation = math.deg(rot)
 	refs.me.Rotation = rotating() and 0 or math.deg(heading)
+	refs.north.Visible = rotating()
+	if rotating() then -- 북(월드 −Z)을 화면으로 돌린 방향 = (sin, −cos)(아래 toScreen과 같은 회전) · 테두리 안쪽 반 칸
+		local r = size / 2 - 2
+		refs.north.Position = UDim2.new(0.5, math.sin(rot) * r, 0.5, -math.cos(rot) * r)
+	end
 	local cosR, sinR = math.cos(rot), math.sin(rot)
 	local function toScreen(p)
 		local dx, dz = (p.X - me.X) * ppu, (p.Z - me.Z) * ppu

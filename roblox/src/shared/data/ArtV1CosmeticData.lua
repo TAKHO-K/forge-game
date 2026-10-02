@@ -30,7 +30,9 @@ return {
 			dash = { width = 2.0, lifetime = 0.3, transparency = { 0.1, 1 }, drops = { every = 0.07, size = 0.7, seconds = 0.9 } },
 			jump = { ring = 5.5, particles = 10, speed = 7, gravity = 10, size = 0.5, spread = 70, squash = { widen = 1.5, seconds = 0.3 } },
 			-- QUEUE-ALL6R 5(사용자: 거품이 작고 옅다 - 조금 키우고 진하게 · 피로 금지 범위): 크기 0.34 → 0.46 · 발광 1 → 0.2(밝은 바닥에서 하얗게 날아가던 것) · 색 = 테 민트(옅은 particle 대신) · 개수 · 수명 그대로(번쩍임 · 흔들림 없음)
-			glide = { width = 0.7, lifetime = 0.9, particles = 7, particleLife = 1.1, gravity = -2, size = 0.46, particleLightEmission = 0.2, particleColor = C(120, 226, 170), particleSpeed = { 2.5, 4.5 } }, -- QUEUE-ALL7 E1: 거품이 몸에 가려 안 보였다 → 몸 밖으로 퍼지게(속도만)
+			glide = { width = 0.7, lifetime = 0.9, particles = 7, particleLife = 1.1, gravity = -2, size = 0.46, particleLightEmission = 0.2, particleColor = C(120, 226, 170), particleSpeed = { 2.5, 4.5 }, -- QUEUE-ALL7 E1: 거품이 몸에 가려 안 보였다 → 몸 밖으로 퍼지게(속도만)
+				-- QUEUE-ALL8 E1: 풀 위에서 민트가 묻혔다 → 거품 그림(진한 민트 몸 + 얇은 진한 청록 테 + 하이라이트 - roblox/tools/fx/bubble_texture.py) · 그림 색 그대로(입자 색 흰 · 발광 0)
+				particleTexture = "fx/jelly_bubble", particleTextureColor = C(255, 255, 255), particleTextureLightEmission = 0 },
 			footstep = { size = 1.4, seconds = 1.3, shape = "puddle", neon = false },
 		},
 		ember = {

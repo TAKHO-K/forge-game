@@ -11,6 +11,7 @@ local Workspace = game:GetService("Workspace")
 
 local CosData = require(ReplicatedStorage.Shared.data.ArtV1CosmeticData)
 local CosmeticSlotData = require(ReplicatedStorage.Shared.data.CosmeticSlotData)
+local ArtAssetIds = require(ReplicatedStorage.Shared.data.ArtAssetIds)
 local FxData = require(ReplicatedStorage.Shared.data.ArtV1FxData)
 local TrailSkin = require(ReplicatedStorage.Shared.TrailSkin)
 local Fx = require(script.Parent.ArtV1Fx)
@@ -324,6 +325,13 @@ RunService.Heartbeat:Connect(function(dt)
 					e.Color = ColorSequence.new(g.particleColor or glideTheme.particle) -- QUEUE-ALL6R 5: 테마가 정하면(젤리 = 진한 민트)
 					e.Transparency = seq(0, 1)
 					e.LightEmission = g.particleLightEmission or 1
+					local tex = g.particleTexture and ArtAssetIds[g.particleTexture]
+					if tex and tex.image then -- QUEUE-ALL8 E1: 테마 입자 그림(없으면 기본 반짝임 · 위 색)
+						e.Texture = "rbxassetid://" .. tostring(tex.image)
+						e.Color = ColorSequence.new(g.particleTextureColor or Color3.new(1, 1, 1))
+						e.LightEmission = g.particleTextureLightEmission or 0
+						e.Transparency = seq(0, 0.9)
+					end
 					e.Parent = st.glide.Attachment1
 					st.glideEmitter = e
 				end
