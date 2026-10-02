@@ -3605,18 +3605,18 @@
   "imageId": 110503464485228
  },
  "map/world_0_0.png": {
-  "sha256": "fb15e1077112ccc2c78a75827a53bb777628a245a06a4fced0983197826d85a8",
+  "sha256": "10a6d48c5f21e5c274e925a5c13f09510c4d49921c89ff2ca8f77efe6356d30e",
   "assetType": "Decal",
-  "assetId": 118164884250027,
+  "assetId": 138024365506000,
   "status": "Approved",
-  "imageId": 93304537163218
+  "imageId": 124222889646468
  },
  "map/world_0_1.png": {
-  "sha256": "bddc1d8c598e779632245fca99c96f2ea9572e149bc161c98df0038e434b73ff",
+  "sha256": "e01b1cbfb97f73fedaa6bb57a24e13aad2a9868d025e33785e8c70a63aadfb30",
   "assetType": "Decal",
-  "assetId": 90340026823027,
+  "assetId": 118408433321488,
   "status": "Approved",
-  "imageId": 102569254322881
+  "imageId": 97460442342635
  },
  "map/world_1_0.png": {
   "sha256": "48c4cd5586a2de3d5901ff5868ba4be229fc126a29da8ceb0610fc0d81e2ee97",
@@ -3633,11 +3633,11 @@
   "imageId": 139214670917259
  },
  "map/world_mini.png": {
-  "sha256": "09a5c5bca30be623c31023d8c3696561eefb0c7dbe14126ce3cd9746237e4e76",
+  "sha256": "6594f0ef57d273ca03e13f34bf813de32581e3f3a2a449c0b5cdd13703837f19",
   "assetType": "Decal",
-  "assetId": 121926840582695,
+  "assetId": 120475272437192,
   "status": "Approved",
-  "imageId": 87068358733565
+  "imageId": 140539985221988
  },
  "monsters/amethyst_bat.fbx": {
   "sha256": "98430076d61b2274e3641c2b7188f3dfde8c6c0c92ba8cc7ca178c2c4dce3e96",

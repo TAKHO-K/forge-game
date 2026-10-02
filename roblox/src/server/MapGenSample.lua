@@ -107,7 +107,8 @@ return function(ROW0, ROWS)
 				local inst = hit.Instance
 				local pc = inst ~= workspace.Terrain and inst:IsA("BasePart") and classOfPart(inst, hit.Position) or nil
 				-- 다시 쏘기(그 밑 지형): 투명 · 둥지 이름 파트 · 소품(P - 바위 · 수정 기둥 같은 들판 소품은 지도에 안 그린다) · 나무가 아닌 안 막는 파트
-				if pc and (inst.Transparency > 0.85 or inst.Name:match("^Nest") or pc == "P" or (not inst.CanCollide and pc ~= "T")) then
+				--   QUEUE-ALL7B 3b: 허브 건물 충돌 상자(HubBuilding)는 메시를 입으면 투명이지만 건물 자리 = 그대로 B
+				if pc and ((inst.Transparency > 0.85 and not inst:GetAttribute("HubBuilding")) or inst.Name:match("^Nest") or pc == "P" or (not inst.CanCollide and pc ~= "T")) then
 					origin = hit.Position - Vector3.new(0, 0.05, 0)
 				else
 					local c = pc or (TERRAIN[hit.Material] or "G")
