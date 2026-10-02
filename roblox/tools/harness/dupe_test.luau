@@ -41,6 +41,27 @@ local ok, err = pcall(function()
 	local n2 = PlayerProfile.dismantleItemsUpTo(player, "legendary")
 	line("일괄 분해 연타", n1 == 2 and n2 == 0 and #cs.gemInventory - gems0 == 2 and #p.inventory == 1, ("%d · %d · 보석 +%d"):format(n1, n2, #cs.gemInventory - gems0))
 
+	-- ③-2 QUEUE-ALL8 G1 등급별 일괄 판매: 같은 요청 두 번 → 두 번째 0 · 골드 한 번 · 전설 · 잠금 · 스킬 변형 남음 · 전설 체크 · 겹친 등급 · 개수 불일치 = 거부
+	p.inventory = {
+		{ grade = "normal", part = "armor", itemLevel = 5, dropStage = 5, tierIndex = 1 },
+		{ grade = "rare", part = "gloves", itemLevel = 5, dropStage = 5, tierIndex = 1 },
+		{ grade = "rare", part = "shoes", itemLevel = 5, dropStage = 5, tierIndex = 1, locked = true },
+		{ grade = "epic", part = "helmet", itemLevel = 5, dropStage = 5, tierIndex = 1, skillVariant = "x" },
+		{ grade = "legendary", part = "armor", itemLevel = 5, dropStage = 5, tierIndex = 1 },
+	}
+	local gA = p.gold
+	local bad1 = PlayerProfile.sellItemsByGrades(player, { "legendary" }, 1)
+	local bad2 = PlayerProfile.sellItemsByGrades(player, { "rare", "rare" }, 1)
+	local bad3 = PlayerProfile.sellItemsByGrades(player, { "normal", "rare" }, 5)
+	local sold1, gold1 = PlayerProfile.sellItemsByGrades(player, { "normal", "rare", "epic" }, 2)
+	local sold2 = PlayerProfile.sellItemsByGrades(player, { "normal", "rare", "epic" }, 2)
+	local left = {}
+	for _, it in ipairs(p.inventory) do
+		table.insert(left, it.grade)
+	end
+	line("등급별 일괄 판매 연타 · 거부", bad1 == 0 and bad2 == 0 and bad3 == 0 and sold1 == 2 and sold2 == 0 and p.gold - gA == gold1 and #p.inventory == 3,
+		("전설 %d · 겹침 %d · 개수 다름 %d · 1회 %d(+%d골드) · 2회 %d · 남은 %s"):format(bad1, bad2, bad3, sold1, gold1 or 0, sold2, table.concat(left, ",")))
+
 	-- ④ 부화 연타(같은 알 번호 + 획득 시각) → 두 번째 거부 · 받기 두 번 → 두 번째 거부
 	local PetService = MODS.PetService
 	p.eggs = { { zone = "tier1", grade = "normal", species = { "stoneTurtle", "mossHare" }, nest = "t", at = 111 }, { zone = "tier2", grade = "good", species = { "crystalBat", "prismLizard" }, nest = "t", at = 222 } }

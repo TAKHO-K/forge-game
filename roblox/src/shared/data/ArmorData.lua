@@ -80,6 +80,11 @@ return {
 	-- PlayerProfile.sellItemsBulkUpTo가 서버 쪽 강제 상한으로, InventoryUI.client.lua가
 	-- 선택지 목록을 이 등급까지만 만드는 데 같이 쓴다(단일 출처).
 	bulkSellMaxGrade = "legendary",
+	-- QUEUE-ALL8 G1: 가방 등급별 일괄 판매(체크) = 이 등급만 고를 수 있다(전설 이상은 체크 자체가 없다 · 서버 PlayerProfile.sellItemsByGrades도 같은 표로 거부).
+	--   잠금 · 스킬 변형 장비 = 제외 · 착용 중 = 가방 밖이라 구조적으로 제외(sellItemsBulkUpTo와 같은 원칙).
+	bulkSellGrades = { "normal", "rare", "epic" },
+	-- QUEUE-ALL8 G4: 가방이 처음 이만큼 차면 한 번만 가방 버튼이 은은하게 반짝 + 한 줄(설정 sellHintSeen - 재접속 유지) · 반짝 = 0.8 Hz × cycles(깜빡임 < 3/s)
+	sellHint = { fillRatio = 0.7, glowHz = 0.8, cycles = 3 },
 
 	-- defenseGradeMultiplier = Loot.getArmorDefense의 갑옷 배율(D1 - 1.184 × dropPower) · fairnessMultiplier = 몬스터 tier 공정성 계산(MonsterData, 16-6)의
 	-- 고정 입력(D1 전 값 1.184 × 1.45^n - 몬스터 HP · 골드 · 드랍 개수가 안 바뀐다) · dropPower = 드랍 장비 등급 위력(장갑 · 신발 배율 - D1).

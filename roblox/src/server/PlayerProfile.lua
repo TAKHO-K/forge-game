@@ -2128,6 +2128,47 @@ function PlayerProfile.sellItemsBulkUpTo(player, gradeId)
 	return soldCount, totalGold
 end
 
+-- QUEUE-ALL8 G1 등급별 일괄 판매(체크한 등급만 · 서버만 호출): grades = ArmorData.bulkSellGrades 안의 등급 목록(겹침 · 밖의 등급 = 거부) ·
+--   expectedCount = 클라 확인 창에 보인 개수 - 서버가 다시 센 수와 다르면(확인 뒤 가방이 바뀜 · 같은 요청 두 번) 아무것도 팔지 않는다(복사 · 엉뚱한 판매 방지).
+--   대상 = 잠기지 않음 · 스킬 변형 아님 · 그 등급(착용 중 = 가방 밖). 목록을 다 계산한 뒤 한 번에 반영(중간 yield 없음). 반환 = (판매 개수, 총 골드, 실패 이유).
+function PlayerProfile.sellItemsByGrades(player, grades, expectedCount)
+	local profile = profiles[player]
+	if not profile or type(grades) ~= "table" or type(expectedCount) ~= "number" or expectedCount ~= math.floor(expectedCount) or expectedCount < 1 then
+		return 0, 0, "bad_request"
+	end
+	local allowed, want = {}, {}
+	for _, id in ipairs(ArmorData.bulkSellGrades) do
+		allowed[id] = true
+	end
+	if #grades < 1 or #grades > #ArmorData.bulkSellGrades then
+		return 0, 0, "bad_request"
+	end
+	for _, id in ipairs(grades) do
+		if type(id) ~= "string" or not allowed[id] or want[id] then
+			return 0, 0, "bad_grade"
+		end
+		want[id] = true
+	end
+	local remaining, totalGold, soldCount = {}, 0, 0
+	for _, item in ipairs(profile.inventory) do
+		if not item.locked and not item.skillVariant and want[item.grade] then
+			totalGold += Loot.getSellPrice(item)
+			soldCount += 1
+		else
+			table.insert(remaining, item)
+		end
+	end
+	if soldCount == 0 or soldCount ~= expectedCount then
+		return 0, 0, soldCount == 0 and "none" or "count_mismatch"
+	end
+	profile.inventory = remaining
+	profile.gold += totalGold
+	Telemetry.economy(player, "gold", "source", totalGold, "Shop") -- 일괄 판매(옛 sellItemsBulkUpTo와 같은 출처 이름 - EconSim 흐름 그대로)
+	player:SetAttribute("Gold", profile.gold)
+	InventorySync.push(player, profile)
+	return soldCount, totalGold
+end
+
 function PlayerProfile.getBulkSellCutoffGrade(player)
 	local profile = profiles[player]
 	return profile and profile.bulkSellCutoffGrade

@@ -332,7 +332,7 @@ end
 local sortButton = makeHeaderPill(S.SORT_LABELS[S.sortMode], 1, nil, true)
 
 -- 일괄판매 기준 등급 선택 버튼(20-3) - 클릭하면 등급 목록(색 점 포함)이 드롭다운으로 열린다.
--- 라벨은 rebuildGrid에서 bulkSellCutoffGrade가 바뀔 때마다 다시 맞춘다.
+-- 라벨은 rebuildGrid에서 판매 등급 체크(bulkSellChecked)가 바뀔 때마다 다시 맞춘다.
 local cutoffButton = makeHeaderPill("", 2, nil, true)
 
 local bulkSellButton = makeHeaderPill(Text.get("gear.bag.bulkSell"), 3)

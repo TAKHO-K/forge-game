@@ -22,6 +22,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData) -- QUEUE-ALL8 G4 sellHint
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local Text = require(ReplicatedStorage.Shared.Text)
 local FullTextTip = require(script.Parent.ui.kit.FullTextTip)
@@ -181,7 +182,36 @@ local function onStateChanged(state)
 	end
 end
 
-inventorySync.OnClientEvent:Connect(onStateChanged)
+-- QUEUE-ALL8 G4 첫 판매 안내: 가방이 처음 fillRatio 이상 차면 한 번만(설정 sellHintSeen) 가방 메뉴 버튼이 은은하게 반짝 + 한 줄(창 위 알림)
+local SettingSave = require(script.Parent.ui.SettingSave)
+local Toast = require(script.Parent.ui.kit.Toast)
+local function maybeSellHint()
+	local H = ArmorData.sellHint
+	if not gotSnapshot or player:GetAttribute("SellHintSeen") ~= false or not S.bagSlots or #S.inventory < math.ceil(S.bagSlots * H.fillRatio) then
+		return -- 설정 로드 전(nil) · 이미 봄 · 덜 참
+	end
+	SettingSave("sellHintSeen", true)
+	Toast.push("TC", { text = Text.get(Theme.isMobile and "bag.sellHint.phone" or "bag.sellHint.pc"), grade = "notice", seconds = 5 })
+	local gui = player.PlayerGui:FindFirstChild("MenuBarGui")
+	local button = gui and gui:FindFirstChild("MenuButton_inventory", true)
+	if button then
+		local glow = Instance.new("UIStroke")
+		glow.Name = "SellHintGlow"
+		glow.Color = UIColors.gold
+		glow.Thickness = 3
+		glow.Transparency = 1
+		glow.Parent = button
+		local t = TweenService:Create(glow, TweenInfo.new(0.5 / H.glowHz, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, H.cycles * 2 - 1, true), { Transparency = 0.1 })
+		t:Play()
+		t.Completed:Connect(function()
+			glow:Destroy()
+		end)
+	end
+end
+inventorySync.OnClientEvent:Connect(function(state)
+	onStateChanged(state)
+	maybeSellHint()
+end)
 
 local ok, initialState = pcall(function()
 	return inventoryFetch:InvokeServer()

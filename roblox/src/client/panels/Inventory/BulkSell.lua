@@ -15,7 +15,7 @@ local player = S.player
 local content = R.content
 local bulkSellButton, cutoffButton = R.bulkSellButton, R.cutoffButton
 local sellRequest = ReplicatedStorage:WaitForChild("SellRequest")
-local bulkSellCutoffRequest = ReplicatedStorage:WaitForChild("BulkSellCutoffRequest")
+local SettingSave = require(script.Parent.Parent.Parent.ui.SettingSave)
 local autoProcessRequest = ReplicatedStorage:WaitForChild("AutoProcessRequest")
 local cutoffDropdown, cutoffDropdownDim
 
@@ -138,8 +138,9 @@ confirmDismantleCorner.CornerRadius = UDim.new(0, 8)
 confirmDismantleCorner.Parent = confirmDismantle
 local function dismantleCount()
 	local n = 0
+	local top = S.sellCheckedTop()
 	for _, item in ipairs(S.inventory) do
-		if Loot.isBulkDismantleTarget(item, S.bulkSellCutoffGrade) then
+		if top and Loot.isBulkDismantleTarget(item, top) then
 			n += 1
 		end
 	end
@@ -148,7 +149,7 @@ end
 confirmDismantle.Activated:Connect(function()
 	confirmOverlay.Visible = false
 	if dismantleCount() > 0 then
-		sellRequest:FireServer("dismantleBulk", S.bulkSellCutoffGrade)
+		sellRequest:FireServer("dismantleBulk", S.sellCheckedTop()) -- QUEUE-ALL8 G1: 기준 = 체크한 가장 높은 등급
 	end
 end)
 
@@ -161,7 +162,10 @@ end)
 
 confirmYes.Activated:Connect(function()
 	confirmOverlay.Visible = false
-	sellRequest:FireServer("sellBulk", S.bulkSellCutoffGrade)
+	local count = S.bulkSellEstimate()
+	if count > 0 then -- QUEUE-ALL8 G1: 체크한 등급 + 확인 창 개수(서버가 다시 세서 다르면 안 판다)
+		sellRequest:FireServer("sellGrades", S.sellCheckedKey(), count)
+	end
 end)
 
 bulkSellButton.Activated:Connect(function()
@@ -199,7 +203,7 @@ cutoffDropdownDim.Parent = content
 cutoffDropdown = Instance.new("Frame")
 cutoffDropdown.Name = "CutoffDropdown"
 cutoffDropdown.Position = UDim2.new(0, 0, 1, 4)
-cutoffDropdown.Size = UDim2.new(0, 170, 0, 0) -- G1-2: 자동 처리 줄("자동 처리: 영웅 이하")이 들어가게 130 → 170
+cutoffDropdown.Size = UDim2.new(0, 230, 0, 0) -- G1-2: 자동 처리 줄("자동 처리: 영웅 이하")이 들어가게 130 → 170 · ALL8 G1: 제외 안내 한 줄이 두 줄로 접혀 들어가게 230
 cutoffDropdown.AutomaticSize = Enum.AutomaticSize.Y
 cutoffDropdown.BackgroundColor3 = UIColors.panel
 cutoffDropdown.BackgroundTransparency = 0.05
@@ -230,10 +234,17 @@ local function closeCutoffDropdown()
 	cutoffDropdownDim.Visible = false
 end
 
--- 등급 목록에 색 점을 찍는다(지시 - "텍스트만으로는 서열이 안 읽힌다"). BULK_SELL_GRADE_CHOICES가
--- 이미 bulkSellMaxGrade까지만 잘라낸 목록이라 유물 이상은 여기 나타날 수가 없다.
+-- 등급 목록에 색 점을 찍는다(지시 - "텍스트만으로는 서열이 안 읽힌다"). QUEUE-ALL8 G1: 목록 = ArmorData.bulkSellGrades(전설 이상은 줄 자체가 없다).
 local dropdownRows = {}
-for order, gradeId in ipairs(S.BULK_SELL_GRADE_CHOICES) do
+local checkBoxes = {} -- [gradeId] = { box, mark } - 그린 체크 상자(글자 기호는 폰트에서 너무 작게 나왔다)
+local function refreshChecks()
+	for id, c in pairs(checkBoxes) do
+		local on = S.bulkSellChecked[id] == true
+		c.box.BackgroundTransparency = on and 0 or 1
+		c.mark.Visible = on
+	end
+end
+for order, gradeId in ipairs(ArmorData.bulkSellGrades) do -- QUEUE-ALL8 G1: 체크 목록(전설 이상은 줄 자체가 없다)
 	local row = Instance.new("TextButton")
 	row.LayoutOrder = order
 	row.Text = ""
@@ -265,22 +276,67 @@ for order, gradeId in ipairs(S.BULK_SELL_GRADE_CHOICES) do
 	label.TextSize = Theme.textSize("body")
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.TextColor3 = UIColors.textPrimary
-	label.Text = Text.get("gear.bulk.gradeOrLower", { grade = ArmorData.grades[gradeId].displayName })
+	label.Text = ArmorData.grades[gradeId].displayName
 	label.Parent = row
+	label.Position = UDim2.new(0, 50, 0.5, 0)
+	label.Size = UDim2.new(1, -58, 1, 0)
+	local box = Instance.new("Frame") -- 체크 상자(점 오른쪽)
+	box.Name = "CheckBox"
+	box.AnchorPoint = Vector2.new(0, 0.5)
+	box.Position = UDim2.new(0, 24, 0.5, 0)
+	box.Size = UDim2.fromOffset(18, 18)
+	box.BackgroundColor3 = UIColors.gold
+	box.ZIndex = 25
+	box.Parent = row
+	Instance.new("UICorner", box).CornerRadius = UDim.new(0, 4)
+	local boxStroke = Instance.new("UIStroke")
+	boxStroke.Color = UIColors.textPrimary
+	boxStroke.Thickness = 2
+	boxStroke.Parent = box
+	local mark = Instance.new("TextLabel")
+	mark.BackgroundTransparency = 1
+	mark.Size = UDim2.fromScale(1, 1)
+	mark.Font = Enum.Font.GothamBlack
+	mark.TextSize = 14
+	mark.TextColor3 = UIColors.panel
+	mark.Text = "V"
+	mark.ZIndex = 26
+	mark.Parent = box
+	checkBoxes[gradeId] = { box = box, mark = mark }
 
-	row.Activated:Connect(function()
-		S.bulkSellCutoffGrade = gradeId
-		bulkSellCutoffRequest:FireServer(gradeId)
-		closeCutoffDropdown()
+	row.Activated:Connect(function() -- 누를 때마다 체크 켬/끔(하나는 늘 남긴다) · 드롭다운은 열린 채
+		local was = S.bulkSellChecked[gradeId]
+		S.bulkSellChecked[gradeId] = not was or nil
+		if S.sellCheckedKey() == "" then
+			S.bulkSellChecked[gradeId] = true
+		end
+		SettingSave("bulkSellGrades", S.sellCheckedKey())
+		refreshChecks()
 		S.rebuildGrid()
 	end)
 end
+refreshChecks()
+-- 안내 한 줄(누를 수 없음): 전설 이상 · 잠긴 · 착용 중 장비는 팔리지 않는다
+local noteRow = Instance.new("TextLabel")
+noteRow.Name = "BulkSellNote"
+noteRow.LayoutOrder = #ArmorData.bulkSellGrades + 5
+noteRow.BackgroundTransparency = 1
+noteRow.Size = UDim2.new(1, -20, 0, 34)
+noteRow.Position = UDim2.fromOffset(10, 0)
+noteRow.TextXAlignment = Enum.TextXAlignment.Left
+noteRow.TextWrapped = true
+noteRow.ZIndex = 25
+noteRow.Font = Enum.Font.Gotham
+noteRow.TextSize = Theme.textSize("caption")
+noteRow.TextColor3 = UIColors.textSecondary
+noteRow.Text = Text.get("gear.bulk.excludeNote")
+noteRow.Parent = cutoffDropdown
 
 -- G1-2: 줍는 순간 자동 처리 토글 - 드롭다운 맨 아래 한 줄. 누를 때마다 끔 → 영웅 이하 → 희귀 이하 → 일반 이하 → 끔(서버가 값 검사 · Attribute AutoProcess로 되돌려 준다).
 -- 기준 이하 · 잠기지 않은 장비: 영웅은 분해(보석), 일반 · 희귀는 판매(골드). 문구는 TextData.
 local autoRow = Instance.new("TextButton")
 autoRow.Name = "AutoProcessRow"
-autoRow.LayoutOrder = #S.BULK_SELL_GRADE_CHOICES + 10
+autoRow.LayoutOrder = #ArmorData.bulkSellGrades + 10
 autoRow.BackgroundTransparency = 1
 autoRow.Size = UDim2.new(1, 0, 0, 28)
 autoRow.ZIndex = 25
@@ -320,13 +376,11 @@ cutoffDropdownDim.Activated:Connect(closeCutoffDropdown)
 
 -- 재접속 등으로 서버 값이 늦게 도착해도(로드 중엔 목록의 가장 낮은 등급으로 임시 시작했다)
 -- 실제 저장된 기준으로 맞춰준다 - ClassId 등 다른 Attribute와 같은 패턴.
-player:GetAttributeChangedSignal("BulkSellCutoffGrade"):Connect(function()
-	local grade = player:GetAttribute("BulkSellCutoffGrade")
-	if grade and grade ~= S.bulkSellCutoffGrade then
-		S.bulkSellCutoffGrade = grade
-		if S.isOpen then
-			S.rebuildGrid()
-		end
+player:GetAttributeChangedSignal("BulkSellGrades"):Connect(function() -- QUEUE-ALL8 G1: 저장된 체크(접속 뒤 늦게 도착)
+	S.bulkSellChecked = S.parseSellChecked(player:GetAttribute("BulkSellGrades"))
+	refreshChecks()
+	if S.isOpen then
+		S.rebuildGrid()
 	end
 end)
 

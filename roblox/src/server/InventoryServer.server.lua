@@ -20,7 +20,7 @@ local equipResult = Instance.new("RemoteEvent")
 equipResult.Name = "EquipResult"
 equipResult.Parent = ReplicatedStorage
 
--- action: "sell"(index 필요) 또는 "sellBulk"(gradeId 필요, 13-1).
+-- action: "sell"(index 필요) · "sellGrades"(체크한 등급 + 확인 개수 - QUEUE-ALL8 G1) · "dismantleBulk". 옛 "sellBulk"(기준 이하)는 닫힘.
 local sellRequest = Instance.new("RemoteEvent")
 sellRequest.Name = "SellRequest"
 sellRequest.Parent = ReplicatedStorage
@@ -88,14 +88,17 @@ sellRequest.OnServerEvent:Connect(function(player, action, arg, signature)
 		if price then
 			ImmediateSave.request(player)
 		end
-	elseif action == "sellBulk" then
-		if type(arg) ~= "string" then
+	elseif action == "sellGrades" then -- QUEUE-ALL8 G1: 체크한 등급(쉼표 문자열 · 최대 3개) + 확인 창 개수(signature 자리) - 검사 · 판매는 서버(PlayerProfile.sellItemsByGrades)
+		if type(arg) ~= "string" or #arg > 40 or type(signature) ~= "number" then
 			return
 		end
-		local soldCount = PlayerProfile.sellItemsBulkUpTo(player, arg)
+		local grades = string.split(arg, ",")
+		local soldCount = PlayerProfile.sellItemsByGrades(player, grades, signature)
 		if soldCount > 0 then
 			ImmediateSave.request(player)
 		end
+	elseif action == "sellBulk" then -- QUEUE-ALL8 G1: 옛 "기준 등급 이하" 일괄 판매(상한 전설) = 닫음 - 가방 UI가 sellGrades로 바뀌었다(전설 이상 일괄 판매 경로를 남기지 않는다)
+		return
 	elseif action == "dismantleBulk" then -- Q13: 등급 선택 일괄 분해(무료 · 잠금 · 초월 · 태초 보호 = Loot.isBulkDismantleTarget)
 		if type(arg) ~= "string" then
 			return

@@ -71,7 +71,7 @@ return {
 				spots = { { id = "refine", label = "재련대", along = -38, side = 0 }, { id = "gemcraft", label = "보석 가공대", along = 38, side = 0 }, -- QUEUE-ALL8 A: 정식 이름만(설명 = 프롬프트를 누르면 한 줄)
 					{ id = "smith", label = "대장장이", along = 8, side = -2 } } }, -- QUEUE-ALL7B 3: 강화대 옆 NPC 자리(HubArtData)
 			market = { angleDeg = -115, r = 175, displayName = "시장", street = { w = 104, d = 34 }, row = { count = 3, w = 26, d = 16, h = 12, gap = 10, buildings = { "hub_tailor", "hub_shop", "hub_house_a" } }, -- 가운데 = 보석상인(보석 공방) · 재봉집 = 체크포인트 쪽 끝(안 C 동선 - 반대 끝은 11.6초)
-				spots = { { id = "shop", label = "상점", along = -38, side = 0 }, { id = "sell", label = "판매", along = 38, side = 0 },
+				spots = { { id = "shop", label = "상점", along = -38, side = 0 }, { id = "sell", label = "판매", along = 38, side = 0, disabled = true }, -- QUEUE-ALL8 G2: 판매 = 가방(G)에서 · 자리 숨김(id는 그대로)
 					{ id = "tailor", label = "재봉사", along = -27, side = 12 } } }, -- QUEUE-ALL7B 2: 꾸미기(HubServiceData) · 3: 재봉집 문 앞(체크포인트 쪽)
 			community = { angleDeg = -60, r = 250, displayName = "커뮤니티 광장", plaza = 50, row = { count = 3, w = 24, d = 18, h = 18, gap = 12, buildings = { "hub_house_a", "hub_hall", "hub_house_b" } }, -- 가운데 = 환생 제단 · 건물 가운데 = 명예의 전당
 				spots = { { id = "hatchery", label = "부화장", along = -34, side = -8, soon = true }, -- QUEUE-ALL8 A: 아직 안 여는 기능 = 자물쇠 + "곧 열려요" { id = "partyBoard", label = "파티 게시판", along = 34, side = -8 }, { id = "rankBoard", label = "순위판", along = 0, side = -30 },

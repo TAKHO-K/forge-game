@@ -343,7 +343,13 @@ local function rebuildGrid()
 	refs.slotCount.Text = Text.get("inv.bag.count", { used = tostring(#S.inventory), total = tostring(totalSlots) })
 	local _, sellTotal = S.bulkSellEstimate()
 	refs.bulkEstimatePillLabel.Text = Text.get("gear.bag.bulkEstimate", { gold = NumberFormat.format(sellTotal) })
-	cutoffButton.Text = Text.get("gear.bag.cutoff", { grade = ArmorData.grades[S.bulkSellCutoffGrade].displayName }) -- QUEUE-ALL1 A-2(꺾쇠 = 도형)
+	local names = {} -- QUEUE-ALL8 G1: 체크한 판매 등급(등급 순)
+	for _, id in ipairs(ArmorData.bulkSellGrades) do
+		if S.bulkSellChecked[id] then
+			table.insert(names, ArmorData.grades[id].displayName)
+		end
+	end
+	cutoffButton.Text = Text.get("gear.bag.sellGrades", { grades = table.concat(names, " · ") })
 	refs.goldPillLabel.Text = Text.get("gear.bag.gold", { gold = NumberFormat.format(player:GetAttribute("Gold") or 0) })
 
 	if S.selectedKind == "bag" and not S.inventory[S.selectedValue] then

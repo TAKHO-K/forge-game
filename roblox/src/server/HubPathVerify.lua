@@ -41,7 +41,9 @@ local function targets()
 	for _, name in ipairs(WorldMapLayout.facilityOrder) do
 		add("시설 " .. name, WorldMapLayout.facility(name))
 		for _, sp in ipairs(H.facilities[name].spots or {}) do
-			add("자리 " .. sp.id, WorldMapLayout.spot(sp.id))
+			if not sp.disabled then -- QUEUE-ALL8 G5: 판매 자리 없음
+				add("자리 " .. sp.id, WorldMapLayout.spot(sp.id))
+			end
 		end
 	end
 	for _, zone in ipairs(WorldMapData.zones) do

@@ -3,7 +3,7 @@
 --   B4 사운드: kind volume(0 ~ 1 숫자) = 카테고리별 음량(SoundData.categories가 settingKey로 가리킨다 · 클라 SoundHooks가 Attribute로 읽는다). 저장은 같은 settings 표(없는 키 = 기본값 - 이관 없음).
 --   reduceFlashes = 번개 · 태초 화면 섬광 끄기(관문 날씨 섬광 끔 · 피뢰침 방전은 흰 번쩍 대신 밝기만 · 태초 연출의 화면 밝아짐 없음 - 보스 경고 표시는 그대로).
 return {
-	order = { "cameraTopDown", "reduceFlashes", "screenShake", "dimOthersTrail", "autoStage", "volumeSfx", "volumeMusic", "volumeUi", "volumeBossCue", "transcendNotice", "fxLevel", "volumeAmbient", "graphics", "language", "quietOthersSfx", "minimapOn", "minimapRotate", "minimapFar", "mapHintSeen", "hubIntroRank", "hubIntroBoard", "hubIntroChallenge", "hubIntroTailor" },
+	order = { "cameraTopDown", "reduceFlashes", "screenShake", "dimOthersTrail", "autoStage", "volumeSfx", "volumeMusic", "volumeUi", "volumeBossCue", "transcendNotice", "fxLevel", "volumeAmbient", "graphics", "language", "quietOthersSfx", "minimapOn", "minimapRotate", "minimapFar", "mapHintSeen", "hubIntroRank", "hubIntroBoard", "hubIntroChallenge", "hubIntroTailor", "bulkSellGrades", "sellHintSeen" },
 	keys = {
 		cameraTopDown = { kind = "boolean", default = false, attrs = { "CameraTopDown" } },
 		reduceFlashes = { kind = "boolean", default = false, attrs = { "ReduceFlashes" } },
@@ -20,6 +20,9 @@ return {
 		hubIntroBoard = { kind = "boolean", default = false, attrs = { "HubIntroSeen_noticeBoard" } },
 		hubIntroChallenge = { kind = "boolean", default = false, attrs = { "HubIntroSeen_challengeKnight" } },
 		hubIntroTailor = { kind = "boolean", default = false, attrs = { "HubIntroSeen_tailor" } },
+		-- QUEUE-ALL8 G1: 가방 등급별 일괄 판매 체크(ArmorData.bulkSellGrades 조합 · 순서 = 등급 순 · 쉼표) - 없는 키 = 기본값(이관 없음)
+		sellHintSeen = { kind = "boolean", default = false, attrs = { "SellHintSeen" } }, -- QUEUE-ALL8 G4 첫 판매 안내 본 적 있음(없는 키 = 기본값)
+		bulkSellGrades = { kind = "choice", default = "normal,rare", options = { "normal", "rare", "epic", "normal,rare", "normal,epic", "rare,epic", "normal,rare,epic" }, attrs = { "BulkSellGrades" } },
 		autoStage = { kind = "preset", attrs = { "AutoStage" } }, -- 값 = AutoStageData.presets[].id · 기본 = AutoStageData.default
 		volumeSfx = { kind = "volume", default = 1, attrs = { "SoundVolumeSfx" } }, -- B4 효과음
 		volumeMusic = { kind = "volume", default = 1, attrs = { "SoundVolumeMusic" } }, -- B4 음악

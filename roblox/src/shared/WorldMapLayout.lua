@@ -172,7 +172,7 @@ function Layout.spot(spotId)
 	for _, name in ipairs(Layout.facilityOrder) do
 		local f = D.hub.facilities[name]
 		for _, sp in ipairs(f.spots or {}) do
-			if sp.id == spotId then
+			if sp.id == spotId and not sp.disabled then
 				local p = Layout.facility(name)
 				local base = Vector3.new(p.X, FLOOR, p.Z)
 				return (CFrame.lookAt(base, base - dirOf(f.angleDeg)) * CFrame.new(sp.along, 0, sp.side)).Position
@@ -1339,6 +1339,9 @@ function Layout.buildHub(list)
 					{ attrs = { Facility = name, Label = b.mid and f.displayName or nil, HubBuilding = b.kind } })
 			end
 			for _, sp in ipairs(f.spots) do
+				if sp.disabled then -- QUEUE-ALL8 G2: 비활성 자리(판매 - 가방으로 옮김) = 짓지 않는다
+					continue
+				end
 				column(list, "Hub", "Spot_" .. sp.id, cf * CFrame.new(sp.along, 0, sp.side), 6, 2, 5, D.colors.block, { attrs = { Spot = sp.id, Label = sp.label, District = name, Soon = sp.soon or nil } })
 			end
 		end

@@ -46,18 +46,37 @@ S.sortMode = "grade" -- "grade" | "level" | "part" - 클라 전용 표시 순서
 S.SORT_MODES = { "grade", "level", "part" }
 S.SORT_LABELS = { grade = Text.get("gear.bag.sortGrade"), level = Text.get("gear.bag.sortLevel"), part = Text.get("gear.bag.sortPart") } -- QUEUE-ALL1 01 A-2 문구(등급 → 레벨 → 부위)
 
--- 일괄판매 기준 등급 선택지(20-3) - ArmorData.gradeOrder에서 bulkSellMaxGrade까지만 잘라낸다(단일 출처 - 서버도 같은 두 값으로 같은 상한을 강제한다).
-local BULK_SELL_GRADE_CHOICES = {}
-for _, id in ipairs(ArmorData.gradeOrder) do
-	table.insert(BULK_SELL_GRADE_CHOICES, id)
-	if id == ArmorData.bulkSellMaxGrade then
-		break
-	end
-end
-S.BULK_SELL_GRADE_CHOICES = BULK_SELL_GRADE_CHOICES
--- 서버가 이미 골라 둔 값을 Attribute로 갖고 있으면(재접속) 그걸 초기값으로 쓴다 - 아직 안 왔으면 목록의 가장 낮은 등급으로 시작하고 Attribute가 오는 대로 BulkSell이 맞춘다.
-S.bulkSellCutoffGrade = player:GetAttribute("BulkSellCutoffGrade") or BULK_SELL_GRADE_CHOICES[1]
 S.bulkSellDropdownOpen = false
+-- QUEUE-ALL8 G1: 등급별 일괄 판매 체크(설정 bulkSellGrades - Attribute BulkSellGrades · 쉼표 문자열) · 전설 이상은 고를 수 없다(ArmorData.bulkSellGrades)
+local function parseChecked(value)
+	local set = {}
+	for _, id in ipairs(string.split(type(value) == "string" and value or "normal,rare", ",")) do
+		if table.find(ArmorData.bulkSellGrades, id) then
+			set[id] = true
+		end
+	end
+	return set
+end
+S.bulkSellChecked = parseChecked(player:GetAttribute("BulkSellGrades"))
+S.parseSellChecked = parseChecked
+function S.sellCheckedKey() -- 등급 순 쉼표(설정 options와 같은 꼴)
+	local out = {}
+	for _, id in ipairs(ArmorData.bulkSellGrades) do
+		if S.bulkSellChecked[id] then
+			table.insert(out, id)
+		end
+	end
+	return table.concat(out, ",")
+end
+function S.sellCheckedTop() -- 체크한 가장 높은 등급(일괄 분해 기준 = 그 등급 이하 · 분해 대상은 영웅 이상만)
+	local top
+	for _, id in ipairs(ArmorData.bulkSellGrades) do
+		if S.bulkSellChecked[id] then
+			top = id
+		end
+	end
+	return top
+end
 
 -- 선택 상태: kind="bag"이면 value=서버 인덱스, kind="equip"이면 value="weapon"/"armor", kind="gemSlot"이면 value=슬롯(1~5), kind="gemBag"이면 value=gemInventory 인덱스(26-3).
 S.selectedKind, S.selectedValue = nil, nil
@@ -214,29 +233,14 @@ local function sortedEntries()
 	return entries
 end
 
-local function isSellableGrade(gradeId, cutoffId)
-	local cutoffIndex
-	for i, id in ipairs(ArmorData.gradeOrder) do
-		if id == cutoffId then
-			cutoffIndex = i
-		end
-	end
-	for i, id in ipairs(ArmorData.gradeOrder) do
-		if id == gradeId then
-			return cutoffIndex ~= nil and i <= cutoffIndex
-		end
-	end
-	return false
-end
-
 -- 반환값에 highestSoldGradeId를 더했다(20-3) - 확인창이 "대상에 포함된 최고 등급"을
--- 이름·색으로 보여주려면 기준 등급(S.bulkSellCutoffGrade)이 아니라 실제로 팔릴 아이템 중
+-- 이름·색으로 보여주려면 체크한 등급(S.bulkSellChecked)이 아니라 실제로 팔릴 아이템 중
 -- 가장 높은 등급을 알아야 한다(인벤토리에 그 기준보다 낮은 등급만 있을 수도 있다).
 local function bulkSellEstimate()
 	local count, total = 0, 0
 	local highestSoldGradeId, highestSoldGradeIndex = nil, 0
 	for _, item in ipairs(S.inventory) do
-		if not item.locked and not item.skillVariant and isSellableGrade(item.grade, S.bulkSellCutoffGrade) then -- 서버 sellItemsBulkUpTo와 같은 조건(QUEUE-ALL1 A-2 스킬 변형 제외)
+		if not item.locked and not item.skillVariant and S.bulkSellChecked[item.grade] then -- 서버 sellItemsByGrades와 같은 조건(QUEUE-ALL8 G1 체크한 등급 · 스킬 변형 · 잠금 제외)
 			count += 1
 			total += Loot.getSellPrice(item)
 			for i, id in ipairs(ArmorData.gradeOrder) do

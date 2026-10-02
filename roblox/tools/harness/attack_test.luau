@@ -46,11 +46,13 @@ local ok, err = pcall(function()
 	p.inventory = {}
 	for i = 1, 5 do table.insert(p.inventory, { grade = "epic", part = "armor", itemLevel = 5, dropStage = 5, tierIndex = 1 }) end
 	local bad = {}
-	for _, args in ipairs({ { "sell", "x" }, { "sell", 0 / 0 }, { "sell", 1e308 }, { "sell", -5 }, { "sell", 99 }, { "sellBulk", {} }, { "nope", 1 }, { nil } }) do
+	for _, args in ipairs({ { "sell", "x" }, { "sell", 0 / 0 }, { "sell", 1e308 }, { "sell", -5 }, { "sell", 99 }, { "sellBulk", {} }, { "sellGrades", "legendary", 1 }, { "sellGrades", {}, 1 }, { "sellGrades", "normal", "x" }, { "nope", 1 }, { nil } }) do
 		local r = fire("SellRequest", table.unpack(args))
 		if r ~= "ok" then table.insert(bad, tostring(args[1]) .. "/" .. tostring(args[2]) .. "=" .. r) end
 	end
-	check("판매 잘못된 인자 8종 = 에러 없이 무시", #bad == 0 and #p.inventory == 5, table.concat(bad, " · "))
+	check("판매 잘못된 인자 11종(QUEUE-ALL8 G1 sellGrades 3종 포함) = 에러 없이 무시", #bad == 0 and #p.inventory == 5, table.concat(bad, " · "))
+	local tGap = os.clock()
+	while os.clock() - tGap < 1.1 do end -- 잘못된 인자 11번이 공통 요청 제한 통(10)을 다 썼다 → 채워질 때까지(사람 손 간격)
 	p.inventory[1].option = nil
 	p.inventory[2].itemLevel = 6 -- 칸마다 다른 장비(확인값이 달라지게)
 	local sig = MODS.Loot.itemSignature(p.inventory[1])
