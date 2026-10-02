@@ -54,6 +54,7 @@ local en = {
 	["재련대(준비 · 가방에서도 된다)"] = "Refine Bench (also in your bag)", ["보석 가공대(준비 · 가방에서도 된다)"] = "Gem Bench (also in your bag)",
 	["상점(준비)"] = "Shop", ["판매"] = "Sell", ["부화장(펫 단계)"] = "Hatchery", ["파티 게시판"] = "Party Board", ["순위판"] = "Rankings", ["명예의 전당"] = "Hall of Fame",
 	["재봉사"] = "Tailor", ["마을 게시판"] = "Village Board", ["도전 기사"] = "Challenge Knight", ["대장장이"] = "Blacksmith", -- QUEUE-ALL7B 2 · 3
+	["대장간"] = "Forge", ["상점"] = "Shop", ["상인"] = "Merchant", ["게시판지기"] = "Board Keeper", ["재봉집"] = "Tailor's House", -- QUEUE-ALL7B 4 지도 이름
 	["하루 1회 보상(펫 단계 - 무료 알)"] = "Daily Gift (free egg)", ["덩굴 리프트"] = "Vine Lift",
 	-- 큰 나무 구간 · 정거장
 	["뿌리 가지"] = "Root Branch", ["덩굴 숲"] = "Vine Woods", ["말랑 열매 골"] = "Squishy Fruit Gully", ["점프대 가지"] = "Bounce Branch", ["높은 가지"] = "High Branch", ["정상 오르기"] = "Climb to the Top",

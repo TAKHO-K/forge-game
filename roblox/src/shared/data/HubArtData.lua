@@ -8,24 +8,26 @@ return {
 	motionRadius = 150, -- 이 거리 안 NPC만 움직인다(stud)
 	tagGap = 1.4, -- 이름표 = 메시 꼭대기 + 이만큼 · 기능 아이콘은 그 위 iconGap
 	iconGap = 3.4,
+	-- QUEUE-ALL7B 4 지도 이름(지도 창 = 이름 + 아이콘 · 미니맵 = 아이콘 + 말풍선) - 이름 = TextData_names(ko 원문 → en)
+	buildingNames = { hub_forge = "대장간", hub_shop = "상점", hub_hall = "명예의 전당", hub_tailor = "재봉집" },
 	npcs = {
-		{ id = "smith", model = "props/npc_smith", spot = "smith", motion = {
+		{ id = "smith", name = "대장장이", icon = "icons/hud/forge", model = "props/npc_smith", spot = "smith", motion = {
 			{ parts = { "ArmR", "ToolR" }, pivot = "ArmR", axis = "X", offset = 25, amp = 35, period = 1.1 }, -- 망치질
 			{ parts = HEAD, pivot = "Head", axis = "X", offset = 6, amp = 4, period = 1.1 },
 		} },
-		{ id = "merchant", model = "props/npc_merchant", spot = "shop", motion = {
+		{ id = "merchant", name = "상인", icon = "icons/hud/shop", model = "props/npc_merchant", spot = "shop", motion = {
 			{ parts = { "ArmR" }, pivot = "ArmR", axis = "Z", offset = 30, amp = 18, period = 1.4 }, -- 손님 부르기
 			{ parts = HEAD, pivot = "Head", axis = "Y", offset = 0, amp = 12, period = 3.2 },
 		} },
-		{ id = "tailor", model = "props/npc_tailor", spot = "tailor", motion = {
+		{ id = "tailor", name = "재봉사", model = "props/npc_tailor", spot = "tailor", motion = { -- 아이콘 없음 = 같은 자리 마을 기능(HubServiceData)이 지도에 나온다
 			{ parts = { "ArmR", "ToolR" }, pivot = "ArmR", axis = "X", offset = 35, amp = 10, period = 0.55 }, -- 가위질
 			{ parts = HEAD, pivot = "Head", axis = "X", offset = 10, amp = 3, period = 2.2 },
 		} },
-		{ id = "knight", model = "props/npc_knight", spot = "challengeKnight", motion = {
+		{ id = "knight", name = "도전 기사", model = "props/npc_knight", spot = "challengeKnight", motion = {
 			{ parts = HEAD, pivot = "Head", axis = "Y", offset = 0, amp = 18, period = 4.5 }, -- 둘러보기
 			{ parts = { "ArmL", "ToolL" }, pivot = "ArmL", axis = "X", offset = 8, amp = 3, period = 3 },
 		} },
-		{ id = "keeper", model = "props/npc_keeper", spot = "noticeBoard", offset = { 5.5, -1.5 }, motion = {
+		{ id = "keeper", name = "게시판지기", model = "props/npc_keeper", spot = "noticeBoard", offset = { 5.5, -1.5 }, motion = {
 			{ parts = { "ArmR", "ToolR" }, pivot = "ArmR", axis = "X", offset = 40, amp = 8, period = 2 }, -- 두루마리 보이기
 			{ parts = HEAD, pivot = "Head", axis = "X", offset = 0, amp = 5, period = 2 },
 		} },

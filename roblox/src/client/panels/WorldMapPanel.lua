@@ -19,8 +19,9 @@ local MapPins = require(script.Parent.Parent.MapPins)
 local MapImageData = require(ReplicatedStorage.Shared.data.MapImageData)
 local Toggle = require(script.Parent.Parent.ui.kit.Toggle)
 local SettingSave = require(script.Parent.Parent.ui.SettingSave)
-local HubServiceData = require(ReplicatedStorage.Shared.data.HubServiceData)
+local HubPlaces = require(script.Parent.Parent.HubPlaces)
 local TweenService = game:GetService("TweenService")
+local TextService = game:GetService("TextService")
 
 local WorldMapPanel = {}
 WorldMapPanel.id = "worldMap"
@@ -56,13 +57,12 @@ local function places()
 	}
 	for _, name in ipairs(WorldMapLayout.facilityOrder) do
 		local f = D.hub.facilities[name]
-		table.insert(list, { kind = "facility", icon = name == "forge" and "pin_forge" or "pin_hub", name = Text.name(f.displayName), position = WorldMapLayout.facility(name) })
+		table.insert(list, { kind = "facility", icon = name == "forge" and "pin_forge" or "pin_hub", name = Text.name(f.displayName), position = WorldMapLayout.facility(name), named = true, priority = 0 })
 	end
-	for _, s in ipairs(HubServiceData.services) do -- QUEUE-ALL7B 2: 마을 기능 지점(명예의 전당 · 게시판 · 도전 기사 · 재봉사)
-		local pos = WorldMapLayout.spot(s.spot)
-		if pos then
-			table.insert(list, { kind = "service", icon = s.icon, name = Text.get(s.nameKey), position = pos, small = true })
-		end
+	-- QUEUE-ALL7B 2 · 4: 마을 기능 · 이름 있는 건물 · NPC(이름 층 · 누르면 핀 + 길 안내 - 건물은 아이콘 없이 이름만)
+	for _, e in ipairs(HubPlaces.list()) do
+		e.small, e.named = true, true
+		table.insert(list, e)
 	end
 	local unlocked = player:GetAttribute("ZonesUnlocked") or D.progress.startUnlocked
 	for index, zone in ipairs(D.zones) do
@@ -88,6 +88,9 @@ local function places()
 end
 
 local function marker(parent, place, size)
+	if not place.icon then
+		return nil
+	end
 	local b = Instance.new("ImageButton")
 	b.Name = "Marker_" .. place.kind
 	b.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -107,8 +110,77 @@ local function marker(parent, place, size)
 	b.Parent = parent
 	b.Activated:Connect(function()
 		WorldMapPanel.select(place)
+		if place.named then
+			WorldMapPanel.pinAndGuide(place)
+		end
 	end)
 	return b
+end
+
+-- QUEUE-ALL7B 4 이름 층(UI - 아이콘 위): 허브 시설 · 건물 · 기능 · NPC 이름. 자리 = 아이콘 아래 → 겹치면 위 · 더 아래 · 더 위 → 그래도 겹치면 숨김(확대하면 간격이 벌어져 보인다).
+local LABEL_SIZE = 12
+local HUB_PIN_NEAR = 6 -- 같은 자리 핀 판정(stud - 허브 기능 간격 약 30이라 지도 클릭용 pinPickStuds 120은 너무 넓다)
+local LABEL_TRIES = { { 0, 1 }, { 0, -1 }, { 1, 0 }, { -1, 0 }, { 1, 1 }, { -1, 1 }, { 1, -1 }, { -1, -1 }, { 0, 2.1 }, { 0, -2.1 }, { 2.1, 0 }, { -2.1, 0 } } -- 아래 · 위 · 오른쪽 · 왼쪽 · 대각 · 한 칸 더(x × (아이콘 반 + 글 폭 반 + 3) · y × (아이콘 반 + 글 높이 반 + 2))
+local function nameLabel(parent, place)
+	local text = place.name or ""
+	local ts = TextService:GetTextSize(text, LABEL_SIZE, Theme.font, Vector2.new(400, 40))
+	local b = Instance.new("TextButton")
+	b.Name = "Name_" .. place.kind
+	b.AnchorPoint = Vector2.new(0.5, 0.5)
+	b.Size = UDim2.fromOffset(ts.X + 10, ts.Y + 4)
+	b.BackgroundColor3 = Color3.fromRGB(20, 24, 36)
+	b.BackgroundTransparency = 0.35
+	b.AutoButtonColor = false
+	b.Font = Theme.font
+	b.TextSize = LABEL_SIZE
+	b.TextColor3 = place.kind == "facility" and Theme.color("gold") or Color3.new(1, 1, 1)
+	b.Text = text
+	b.ZIndex = 7
+	b.Parent = parent
+	Theme.corner(b, 6)
+	b.Activated:Connect(function()
+		WorldMapPanel.select(place)
+		WorldMapPanel.pinAndGuide(place)
+	end)
+	return b
+end
+
+local function layoutLabels()
+	if not built or not built.labels then
+		return
+	end
+	local side = built.canvas.AbsoluteSize.X
+	local taken = {}
+	local function free(c, s)
+		for _, r in ipairs(taken) do
+			if math.abs(c.X - r.c.X) * 2 < s.X + r.s.X and math.abs(c.Y - r.c.Y) * 2 < s.Y + r.s.Y then
+				return false
+			end
+		end
+		return true
+	end
+	for _, b in ipairs(built.markers:GetChildren()) do -- 모든 아이콘 자리를 먼저 막는다(이름이 아이콘을 덮지 않게 - 허브 · 캠프 · 핀 포함)
+		if b:IsA("ImageButton") then
+			table.insert(taken, { c = Vector2.new(b.Position.X.Scale * side, b.Position.Y.Scale * side), s = b.AbsoluteSize })
+		end
+	end
+	for _, L in ipairs(built.labels) do
+		local a = toMap(L.place.position) * side
+		local s = L.inst.AbsoluteSize
+		local iconHalf = L.place.icon and L.icon / 2 or 0
+		local step = Vector2.new(iconHalf + s.X / 2 + 3, iconHalf + s.Y / 2 + 2)
+		local placed = false
+		for _, k in ipairs(L.place.icon and LABEL_TRIES or { { 0, 0 }, { 0, 1 }, { 0, -1 }, { 0, 2 }, { 0, -2 }, { 0.6, 0 }, { -0.6, 0 } }) do -- 아이콘 없는 건물 이름 = 그 자리 가운데부터
+			local c = a + Vector2.new(k[1] * step.X, k[2] * step.Y)
+			if free(c, s) then
+				table.insert(taken, { c = c, s = s })
+				L.inst.Position = UDim2.new(0, c.X, 0, c.Y)
+				placed = true
+				break
+			end
+		end
+		L.inst.Visible = placed
+	end
 end
 
 local function drawVectorMap(canvas)
@@ -236,19 +308,43 @@ local function applyView()
 	built.canvas.Size = UDim2.fromOffset(side, side)
 	built.canvas.Position = UDim2.fromOffset(base.X / 2 - side / 2 + offset.X, base.Y / 2 - side / 2 + offset.Y)
 	refreshDim()
+	task.defer(layoutLabels)
 end
 
 local function renderMarkers()
 	for _, child in ipairs(built.markers:GetChildren()) do
 		child:Destroy()
 	end
+	built.labels = {}
 	for _, place in ipairs(places()) do
-		marker(built.markers, place, place.small and 14 or 22)
+		local size = place.small and 14 or 22
+		marker(built.markers, place, size)
+		if place.named then
+			table.insert(built.labels, { place = place, icon = size, inst = nameLabel(built.markers, place) })
+		end
 	end
+	table.sort(built.labels, function(a, b)
+		return a.place.priority < b.place.priority
+	end)
+	task.defer(layoutLabels) -- 글 크기(AbsoluteSize)가 잡힌 뒤
 	for _, pin in ipairs(MapPins.list()) do
 		marker(built.markers, { kind = "pin", icon = "pin_user", name = pin.label, position = pin.position, pin = pin }, 24)
 	end
 	refreshDim()
+end
+
+-- QUEUE-ALL7B 4: 이름 · 아이콘을 누르면 그 자리에 핀(이미 있으면 그대로) + 길 안내(창은 열린 채 - 자동 이동은 옆 버튼)
+function WorldMapPanel.pinAndGuide(place)
+	local near = false
+	for _, pin in ipairs(MapPins.list()) do
+		if ((pin.position - place.position) * Vector3.new(1, 0, 1)).Magnitude <= HUB_PIN_NEAR then
+			near = true
+		end
+	end
+	if not near then
+		MapPins.toggleAt(place.position, HUB_PIN_NEAR)
+	end
+	MapPins.go(place.position, place.name, false)
 end
 
 function WorldMapPanel.select(place)

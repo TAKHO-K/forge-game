@@ -19,7 +19,7 @@ local ScreenMap = require(script.Parent.Parent.ui.ScreenMap)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
 local ArtImage = require(script.Parent.Parent.ui.ArtImage)
 local SettingSave = require(script.Parent.Parent.ui.SettingSave)
-local HubServiceData = require(ReplicatedStorage.Shared.data.HubServiceData)
+local HubPlaces = require(script.Parent.Parent.HubPlaces)
 local UIManager = require(script.Parent.Parent.UIManager)
 local MapPins = require(script.Parent.Parent.MapPins)
 local Wayfinder = require(script.Parent.Parent.Wayfinder)
@@ -92,31 +92,30 @@ end
 local places = {}
 local function rebuildPlaces()
 	places = {}
-	local function put(iconName, position, color)
-		table.insert(places, { icon = iconName, position = position, color = color })
+	local function put(iconName, position, color, name)
+		table.insert(places, { icon = iconName, position = position, color = color, name = name })
 	end
-	put("pin_hub", Vector3.new(0, D.floorTopY, 0), Theme.color("gold"))
-	put("pin_forge", WorldMapLayout.facility("forge"), Theme.color("gold"))
-	for _, s in ipairs(HubServiceData.services) do -- QUEUE-ALL7B 2: 마을 기능 지점
-		local pos = WorldMapLayout.spot(s.spot)
-		if pos then
-			put(s.icon, pos, Theme.color("gold"))
+	put("pin_hub", Vector3.new(0, D.floorTopY, 0), Theme.color("gold"), Text.get("map.hub"))
+	put("pin_forge", WorldMapLayout.facility("forge"), Theme.color("gold"), Text.name(D.hub.facilities.forge.displayName))
+	for _, e in ipairs(HubPlaces.list()) do -- QUEUE-ALL7B 2 · 4: 마을 기능 · NPC(아이콘만 - 이름 = 말풍선)
+		if e.icon then
+			put(e.icon, e.position, Theme.color("gold"), e.name)
 		end
 	end
 	for _, zone in ipairs(D.zones) do
-		put("pin_gate", WorldMapLayout.gate(zone), Color3.fromRGB(230, 90, 90)) -- 리뷰: 지도 창과 같게 관문은 늘(길 잃지 않게)
+		put("pin_gate", WorldMapLayout.gate(zone), Color3.fromRGB(230, 90, 90), Text.get("map.gate", { zone = zone.theme })) -- 리뷰: 지도 창과 같게 관문은 늘(길 잃지 않게)
 	end
 	local found = player:GetAttribute("CheckpointsFound")
 	if D.checkpoints and type(found) == "string" and found ~= "" then
 		for _, cp in ipairs(D.checkpoints.list) do
 			if string.find("," .. found .. ",", "," .. cp.id .. ",", 1, true) then
 				local pos = cp.hub and WorldMapLayout.spawnPoint() or WorldMapLayout.camp(WorldMapLayout.zoneByKey(cp.zone))
-				put("pin_checkpoint", pos, Theme.color("success"))
+				put("pin_checkpoint", pos, Theme.color("success"), Text.get("map.checkpoint", { name = cp.name }))
 			end
 		end
 	end
 	for _, pin in ipairs(MapPins.list()) do
-		put("pin_user", pin.position, Color3.fromRGB(176, 120, 255))
+		put("pin_user", pin.position, Color3.fromRGB(176, 120, 255), pin.label)
 	end
 	if refs then
 		for _, inst in ipairs(refs.icons) do
@@ -204,7 +203,77 @@ local function build()
 	open.Size = UDim2.fromScale(1, 1)
 	open.ZIndex = 10
 	open.Parent = root
+	-- QUEUE-ALL7B 4: 아이콘 = 이름 없이 · 올리거나(PC) 누르면(폰 · PC 클릭) 이름 말풍선 - 아이콘 위를 누른 것은 지도 창을 열지 않는다
+	local bubble = Instance.new("TextLabel")
+	bubble.Name = "NameBubble"
+	bubble.AnchorPoint = Vector2.new(0.5, 1)
+	bubble.AutomaticSize = Enum.AutomaticSize.X
+	bubble.Size = UDim2.fromOffset(0, 20)
+	bubble.BackgroundColor3 = Color3.fromRGB(20, 24, 36)
+	bubble.BackgroundTransparency = 0.1
+	bubble.Font = Theme.font
+	bubble.TextSize = 12
+	bubble.TextColor3 = Color3.new(1, 1, 1)
+	bubble.ZIndex = 12
+	bubble.Visible = false
+	bubble.Parent = root
+	Theme.corner(bubble, 6)
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft, pad.PaddingRight = UDim.new(0, 6), UDim.new(0, 6)
+	pad.Parent = bubble
+	local bubbleToken, suppressOpenUntil = 0, 0
+	local function iconAt(screen)
+		local best, bestD = nil, math.huge
+		for _, inst in ipairs(refs.icons) do
+			if inst.Visible and inst:GetAttribute("PlaceName") then
+				local c = inst.AbsolutePosition + inst.AbsoluteSize / 2
+				local d = (Vector2.new(screen.X, screen.Y) - c).Magnitude
+				if d <= inst.AbsoluteSize.X / 2 + 6 and d < bestD then
+					best, bestD = inst, d
+				end
+			end
+		end
+		return best
+	end
+	local function showBubble(inst, seconds)
+		bubbleToken += 1
+		if not inst then
+			bubble.Visible = false
+			return
+		end
+		bubble.Text = inst:GetAttribute("PlaceName")
+		bubble.Position = UDim2.fromOffset(inst.AbsolutePosition.X - root.AbsolutePosition.X + inst.AbsoluteSize.X / 2, inst.AbsolutePosition.Y - root.AbsolutePosition.Y - 2)
+		bubble.Visible = true
+		if seconds then
+			local mine = bubbleToken
+			task.delay(seconds, function()
+				if bubbleToken == mine then
+					bubble.Visible = false
+				end
+			end)
+		end
+	end
+	open.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement then
+			showBubble(iconAt(input.Position))
+		end
+	end)
+	open.MouseLeave:Connect(function()
+		showBubble(nil)
+	end)
+	open.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+			local inst = iconAt(input.Position)
+			if inst then
+				suppressOpenUntil = os.clock() + 0.6
+				showBubble(inst, 2.5)
+			end
+		end
+	end)
 	open.Activated:Connect(function()
+		if os.clock() < suppressOpenUntil then
+			return
+		end
 		UIManager.openLazy("worldMap")
 	end)
 
@@ -268,7 +337,7 @@ local function build()
 		SettingSave("minimapRotate", not rotating())
 		renderMenu()
 	end)
-	refs = { root = root, mapImage = mapImage, overlay = overlay, quest = quest, me = me, gear = gear, menu = menu, icons = {}, dots = {} }
+	refs = { root = root, mapImage = mapImage, overlay = overlay, quest = quest, me = me, gear = gear, menu = menu, icons = {}, dots = {}, bubble = bubble }
 end
 
 -- ═══ 자리 ═══
@@ -452,6 +521,7 @@ local function updateDynamic(root)
 				refs.icons[i] = inst
 			end
 			inst.Visible = inside
+			inst:SetAttribute("PlaceName", item.pl.name)
 			inst.Position = UDim2.fromOffset(size / 2 + offset.X, size / 2 + offset.Y)
 		elseif inst then
 			inst.Visible = false
