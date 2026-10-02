@@ -1,0 +1,145 @@
+{
+ "parts": {
+  "Legs": {
+   "tris": 110,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    0.947,
+    -0.12
+   ],
+   "neon": false,
+   "color": "#463850"
+  },
+  "Torso": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    2.85,
+    0.0
+   ],
+   "neon": false,
+   "color": "#965AA0"
+  },
+  "Head": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    4.8,
+    0.0
+   ],
+   "neon": false,
+   "color": "#F0C4A0"
+  },
+  "Face": {
+   "tris": 24,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    4.9,
+    -0.82
+   ],
+   "neon": false,
+   "color": "#282234"
+  },
+  "ArmL": {
+   "tris": 56,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    -1.32,
+    2.6,
+    0.0
+   ],
+   "neon": false,
+   "color": "#965AA0"
+  },
+  "ArmR": {
+   "tris": 56,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    1.32,
+    2.6,
+    0.0
+   ],
+   "neon": false,
+   "color": "#965AA0"
+  },
+  "Hat": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    5.7,
+    0.0
+   ],
+   "neon": false,
+   "color": "#ECD678"
+  },
+  "Tape": {
+   "tris": 12,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    3.45,
+    0.0
+   ],
+   "neon": false,
+   "color": "#ECD678"
+  },
+  "ToolR": {
+   "tris": 24,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    1.32,
+    1.25,
+    -0.3
+   ],
+   "neon": false,
+   "color": "#C8CEDA"
+  }
+ },
+ "partCount": 9,
+ "totalTris": 366,
+ "triBudget": 1500,
+ "budgetUse": 0.244,
+ "version": "QUEUE-ALL7B",
+ "item": "npc_tailor"
+}

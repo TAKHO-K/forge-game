@@ -1,0 +1,130 @@
+{
+ "parts": {
+  "Base": {
+   "tris": 92,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    0.7,
+    0.0
+   ],
+   "neon": false,
+   "color": "#A8A096"
+  },
+  "Wall": {
+   "tris": 56,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    9.841,
+    0.0
+   ],
+   "neon": false,
+   "color": "#ECDEC4"
+  },
+  "Timber": {
+   "tris": 120,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    6.4,
+    -0.01
+   ],
+   "neon": false,
+   "color": "#70482C"
+  },
+  "Roof": {
+   "tris": 22,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    14.738,
+    0.0
+   ],
+   "neon": false,
+   "color": "#56965C"
+  },
+  "Ridge": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    19.35,
+    0.0
+   ],
+   "neon": false,
+   "color": "#3E6C42"
+  },
+  "Door": {
+   "tris": 52,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    6.494,
+    -8.15
+   ],
+   "neon": false,
+   "color": "#5C3A24"
+  },
+  "DoorFrame": {
+   "tris": 24,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    5.4,
+    -8.2
+   ],
+   "neon": false,
+   "color": "#70482C"
+  },
+  "Window": {
+   "tris": 24,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    5.0,
+    -8.15
+   ],
+   "neon": true,
+   "color": "#FFD678"
+  }
+ },
+ "partCount": 8,
+ "totalTris": 418,
+ "triBudget": 2500,
+ "budgetUse": 0.167,
+ "version": "QUEUE-ALL7B",
+ "item": "hub_house_a"
+}

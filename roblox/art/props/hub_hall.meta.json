@@ -1,0 +1,130 @@
+{
+ "parts": {
+  "Steps": {
+   "tris": 276,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    1.5,
+    0.0
+   ],
+   "neon": false,
+   "color": "#D6D2CA"
+  },
+  "Body": {
+   "tris": 44,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    10.5,
+    1.5
+   ],
+   "neon": false,
+   "color": "#F0EEE8"
+  },
+  "Columns": {
+   "tris": 696,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    10.5,
+    -9.2
+   ],
+   "neon": false,
+   "color": "#F0EEE8"
+  },
+  "Entablature": {
+   "tris": 92,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    18.8,
+    0.0
+   ],
+   "neon": false,
+   "color": "#D6D2CA"
+  },
+  "Roof": {
+   "tris": 8,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    22.85,
+    0.0
+   ],
+   "neon": false,
+   "color": "#F0EEE8"
+  },
+  "Pediment": {
+   "tris": 8,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    22.55,
+    -11.55
+   ],
+   "neon": false,
+   "color": "#D6D2CA"
+  },
+  "Gold": {
+   "tris": 96,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    23.016,
+    -11.75
+   ],
+   "neon": false,
+   "color": "#D6B03E"
+  },
+  "Door": {
+   "tris": 12,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    8.0,
+    -6.7
+   ],
+   "neon": false,
+   "color": "#785C34"
+  }
+ },
+ "partCount": 8,
+ "totalTris": 1232,
+ "triBudget": 3500,
+ "budgetUse": 0.352,
+ "version": "QUEUE-ALL7B",
+ "item": "hub_hall"
+}

@@ -3,6 +3,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
 local Text = require(ReplicatedStorage.Shared.Text)
+local HubArtMeta = require(ReplicatedStorage.Shared.data.HubArtMeta)
 
 local Layout = {}
 
@@ -128,6 +129,44 @@ function Layout.facility(name)
 	return Layout.hubPoint(f.angleDeg, f.r)
 end
 Layout.facilityOrder = { "portal", "forge", "market", "community" } -- 짓는 순서(고정 - pairs 순서에 기대지 않는다)
+-- QUEUE-ALL7B 3: 시설 뒤 건물 줄 = row.buildings(HubArtMeta 키 - 가운데 = 핵심 건물) · 앞 끝을 거리 끝 + 6에 맞추고 가운데 건물 양옆으로 gap만큼 띄운다.
+--   반환 = { kind, cf(바닥 가운데 · 로컬 −Z = 거리 쪽), w, d, h, mid } 목록(빌더 · 겉모습 · 검증이 같은 식) · buildings 없는 옛 row = 같은 크기 상자
+function Layout.rowBuildings(name)
+	local f = D.hub.facilities[name]
+	local R = f and f.row
+	if not R then
+		return {}
+	end
+	local p = Layout.facility(name)
+	local base = Vector3.new(p.X, FLOOR, p.Z)
+	local cf = CFrame.lookAt(base, base - dirOf(f.angleDeg))
+	local front = (f.plaza or f.street.d / 2) + 6
+	local out = {}
+	if R.buildings then
+		local sizes = {}
+		for i, kind in ipairs(R.buildings) do
+			local m = HubArtMeta[kind]
+			sizes[i] = { kind = kind, w = m.w, d = m.d, h = m.height }
+		end
+		local midIndex = math.ceil(#sizes / 2)
+		local x = { [midIndex] = 0 }
+		for i = midIndex - 1, 1, -1 do
+			x[i] = x[i + 1] - sizes[i + 1].w / 2 - R.gap - sizes[i].w / 2
+		end
+		for i = midIndex + 1, #sizes do
+			x[i] = x[i - 1] + sizes[i - 1].w / 2 + R.gap + sizes[i].w / 2
+		end
+		for i, s in ipairs(sizes) do
+			table.insert(out, { kind = s.kind, cf = cf * CFrame.new(x[i], 0, front + s.d / 2), w = s.w, d = s.d, h = s.h, mid = i == midIndex })
+		end
+	else
+		for i = 1, R.count do
+			local mid = i == math.ceil(R.count / 2)
+			table.insert(out, { cf = cf * CFrame.new((i - (R.count + 1) / 2) * (R.w + R.gap), 0, front + R.d / 2), w = R.w, d = R.d, h = R.h + (mid and 4 or 0), mid = mid })
+		end
+	end
+	return out
+end
 -- QUEUE-ALL7B 2: 시설 거리 자리 표시(spots) 한 칸의 월드 자리(buildHub의 Spot_<id> 기둥 바닥과 같은 식) · 없으면 nil
 function Layout.spot(spotId)
 	for _, name in ipairs(Layout.facilityOrder) do
@@ -1295,13 +1334,9 @@ function Layout.buildHub(list)
 			else
 				prim(list, "Hub", "DistrictFloor", Vector3.new(f.street.w, 0.2, f.street.d), cf * CFrame.new(0, 0.25, 4), D.colors.road, { material = "SmoothPlastic", attrs = { District = name } })
 			end
-			local R = f.row
-			local back = (f.plaza or f.street.d / 2) + 6 + R.d / 2
-			for i = 1, R.count do
-				local x = (i - (R.count + 1) / 2) * (R.w + R.gap)
-				local mid = i == math.ceil(R.count / 2)
-				column(list, "Hub", "Facility_" .. name, cf * CFrame.new(x, 0, back), R.w, R.d, R.h + (mid and 4 or 0), D.colors.blockLight,
-					{ attrs = { Facility = name, Label = mid and f.displayName or nil } })
+			for _, b in ipairs(Layout.rowBuildings(name)) do -- QUEUE-ALL7B 3: 건물 크기 = 메시 표(HubArtMeta) · 충돌 = 이 상자 하나(메시는 겉모습만 - server/HubArt)
+				column(list, "Hub", "Facility_" .. name, b.cf, b.w, b.d, b.h, D.colors.blockLight,
+					{ attrs = { Facility = name, Label = b.mid and f.displayName or nil, HubBuilding = b.kind } })
 			end
 			for _, sp in ipairs(f.spots) do
 				column(list, "Hub", "Spot_" .. sp.id, cf * CFrame.new(sp.along, 0, sp.side), 6, 2, 5, D.colors.block, { attrs = { Spot = sp.id, Label = sp.label, District = name } })

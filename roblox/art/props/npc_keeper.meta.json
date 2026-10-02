@@ -1,0 +1,130 @@
+{
+ "parts": {
+  "Legs": {
+   "tris": 110,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    0.947,
+    -0.12
+   ],
+   "neon": false,
+   "color": "#5A4A3C"
+  },
+  "Torso": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    2.85,
+    0.0
+   ],
+   "neon": false,
+   "color": "#5C8C60"
+  },
+  "Head": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    4.8,
+    0.0
+   ],
+   "neon": false,
+   "color": "#F0C4A0"
+  },
+  "Face": {
+   "tris": 24,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    4.9,
+    -0.82
+   ],
+   "neon": false,
+   "color": "#282234"
+  },
+  "ArmL": {
+   "tris": 56,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    -1.32,
+    2.6,
+    0.0
+   ],
+   "neon": false,
+   "color": "#5C8C60"
+  },
+  "ArmR": {
+   "tris": 56,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    1.32,
+    2.6,
+    0.0
+   ],
+   "neon": false,
+   "color": "#5C8C60"
+  },
+  "Hat": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    5.67,
+    -0.15
+   ],
+   "neon": false,
+   "color": "#466448"
+  },
+  "ToolR": {
+   "tris": 32,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    1.32,
+    1.4,
+    -0.35
+   ],
+   "neon": false,
+   "color": "#FAF0D2"
+  }
+ },
+ "partCount": 8,
+ "totalTris": 362,
+ "triBudget": 1500,
+ "budgetUse": 0.241,
+ "version": "QUEUE-ALL7B",
+ "item": "npc_keeper"
+}

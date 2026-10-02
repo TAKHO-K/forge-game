@@ -1,0 +1,235 @@
+{
+ "parts": {
+  "Base": {
+   "tris": 92,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    0.7,
+    0.0
+   ],
+   "neon": false,
+   "color": "#A8A096"
+  },
+  "Wall": {
+   "tris": 56,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    12.34,
+    0.0
+   ],
+   "neon": false,
+   "color": "#ECDEC4"
+  },
+  "Timber": {
+   "tris": 120,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    7.9,
+    -0.01
+   ],
+   "neon": false,
+   "color": "#70482C"
+  },
+  "Roof": {
+   "tris": 22,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    18.72,
+    0.0
+   ],
+   "neon": false,
+   "color": "#C44834"
+  },
+  "Ridge": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    24.35,
+    0.0
+   ],
+   "neon": false,
+   "color": "#8D3425"
+  },
+  "Tiles": {
+   "tris": 72,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    19.17,
+    0.0
+   ],
+   "neon": false,
+   "color": "#9D3A2A"
+  },
+  "Door": {
+   "tris": 52,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    7.327,
+    -10.15
+   ],
+   "neon": false,
+   "color": "#5C3A24"
+  },
+  "DoorFrame": {
+   "tris": 24,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    5.9,
+    -10.2
+   ],
+   "neon": false,
+   "color": "#70482C"
+  },
+  "Window": {
+   "tris": 24,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    5.9,
+    -10.15
+   ],
+   "neon": true,
+   "color": "#FFD678"
+  },
+  "Chimney": {
+   "tris": 56,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    7.84,
+    20.7,
+    3.6
+   ],
+   "neon": false,
+   "color": "#7A746E"
+  },
+  "Ember": {
+   "tris": 12,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    8.4,
+    2.8,
+    -10.2
+   ],
+   "neon": true,
+   "color": "#FF8C32"
+  },
+  "Anvil": {
+   "tris": 68,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    -8.04,
+    1.5,
+    -13.2
+   ],
+   "neon": false,
+   "color": "#4E5264"
+  },
+  "SignArm": {
+   "tris": 12,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    -8.96,
+    12.3,
+    -11.2
+   ],
+   "neon": false,
+   "color": "#70482C"
+  },
+  "SignBoard": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    -8.96,
+    10.6,
+    -12.2
+   ],
+   "neon": false,
+   "color": "#603E28"
+  },
+  "Emblem": {
+   "tris": 24,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    -8.716,
+    10.824,
+    -12.45
+   ],
+   "neon": false,
+   "color": "#D6B03E"
+  }
+ },
+ "partCount": 15,
+ "totalTris": 690,
+ "triBudget": 3000,
+ "budgetUse": 0.23,
+ "version": "QUEUE-ALL7B",
+ "item": "hub_forge"
+}

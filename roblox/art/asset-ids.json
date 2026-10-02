@@ -3819,6 +3819,48 @@
   "assetId": 128827342742246,
   "status": "Approved"
  },
+ "props/hub_board.fbx": {
+  "sha256": "5f726b81b8fefc2270e479eee9180b6e38cc2190ebfe729371c36f4e22376665",
+  "assetType": "Model",
+  "assetId": 121263932772111,
+  "status": "Approved"
+ },
+ "props/hub_forge.fbx": {
+  "sha256": "d526a95d8f71dc1c54c0d92df70594e4931a04163019cd3ad7021b9629232945",
+  "assetType": "Model",
+  "assetId": 136869948699752,
+  "status": "Approved"
+ },
+ "props/hub_hall.fbx": {
+  "sha256": "59b35997acfb35d1694fc055363e4b569e9fa853926515eebe53bc504ded9525",
+  "assetType": "Model",
+  "assetId": 105079319058400,
+  "status": "Approved"
+ },
+ "props/hub_house_a.fbx": {
+  "sha256": "a3ae7daa092293c703e8c8172914c18347453b1e86ece1d63f7c23ab6393d08c",
+  "assetType": "Model",
+  "assetId": 124732016755040,
+  "status": "Approved"
+ },
+ "props/hub_house_b.fbx": {
+  "sha256": "4cb4a8b04af9572f6703823271409ab62ebfc7202696e316afb6b3c0915bd9e0",
+  "assetType": "Model",
+  "assetId": 110594300379630,
+  "status": "Approved"
+ },
+ "props/hub_shop.fbx": {
+  "sha256": "184c571a3b3c3a45764269b6e719f1a9b545b9d88c8f7464796006379d1e4964",
+  "assetType": "Model",
+  "assetId": 130767308060171,
+  "status": "Approved"
+ },
+ "props/hub_tailor.fbx": {
+  "sha256": "1a462c8a38fca671fa380b7931fd3b99bb531f3e1ff799df6645ed23fddcdcbf",
+  "assetType": "Model",
+  "assetId": 116207192131559,
+  "status": "Approved"
+ },
  "props/kit/T1_BalancedRock.fbx": {
   "sha256": "6f5075af52393b3ea410a01e9b29186449bf1e46f8de919825392936478f16ee",
   "assetType": "Model",
@@ -4195,6 +4237,36 @@
   "sha256": "d617e8a7039dfed9f4e27a1ac4c69582a574f47dc37412b2997872115a9b8bb8",
   "assetType": "Model",
   "assetId": 129734300223942,
+  "status": "Approved"
+ },
+ "props/npc_keeper.fbx": {
+  "sha256": "e0f4430f3e55a2cce2dfe1ae4e458c10d21a37e09c1260ab25c0389a78b4ece8",
+  "assetType": "Model",
+  "assetId": 102531555123333,
+  "status": "Approved"
+ },
+ "props/npc_knight.fbx": {
+  "sha256": "4b2aafb94b3d63135e4cb1ac80351585bb12548b1c77080a0f671bfa9b2539d7",
+  "assetType": "Model",
+  "assetId": 117682724867000,
+  "status": "Approved"
+ },
+ "props/npc_merchant.fbx": {
+  "sha256": "a2839c3f076c265162e111f1d66c90ae58ce8dbf7dd4161d4e41a2c1f6d8c2d4",
+  "assetType": "Model",
+  "assetId": 93459910157741,
+  "status": "Approved"
+ },
+ "props/npc_smith.fbx": {
+  "sha256": "fd9d12e161f11bc2bd87a2ac3f194139fcd701e6e83259cd159da41254adc7dc",
+  "assetType": "Model",
+  "assetId": 77589389780407,
+  "status": "Approved"
+ },
+ "props/npc_tailor.fbx": {
+  "sha256": "620477eeac56928e847bbd125ef84d485667e91698feb8a8b7e783878635fdf9",
+  "assetType": "Model",
+  "assetId": 131458973819955,
   "status": "Approved"
  },
  "props/rebirth_altar.fbx": {

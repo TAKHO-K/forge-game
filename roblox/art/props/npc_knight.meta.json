@@ -1,0 +1,160 @@
+{
+ "parts": {
+  "Legs": {
+   "tris": 110,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    0.947,
+    -0.12
+   ],
+   "neon": false,
+   "color": "#969EAE"
+  },
+  "Torso": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    2.85,
+    0.0
+   ],
+   "neon": false,
+   "color": "#CED4E0"
+  },
+  "Head": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    4.8,
+    0.0
+   ],
+   "neon": false,
+   "color": "#F0C4A0"
+  },
+  "ArmL": {
+   "tris": 56,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    -1.32,
+    2.6,
+    0.0
+   ],
+   "neon": false,
+   "color": "#CED4E0"
+  },
+  "ArmR": {
+   "tris": 56,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    1.32,
+    2.6,
+    0.0
+   ],
+   "neon": false,
+   "color": "#CED4E0"
+  },
+  "Hat": {
+   "tris": 40,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    5.137,
+    0.0
+   ],
+   "neon": false,
+   "color": "#CED4E0"
+  },
+  "Face": {
+   "tris": 12,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    4.9,
+    -0.92
+   ],
+   "neon": false,
+   "color": "#282234"
+  },
+  "Plume": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    6.5,
+    0.1
+   ],
+   "neon": false,
+   "color": "#D23C46"
+  },
+  "ToolL": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    -1.62,
+    2.55,
+    -0.45
+   ],
+   "neon": false,
+   "color": "#D23C46"
+  },
+  "ToolR": {
+   "tris": 36,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    1.32,
+    1.128,
+    -0.55
+   ],
+   "neon": false,
+   "color": "#E8ECF4"
+  }
+ },
+ "partCount": 10,
+ "totalTris": 422,
+ "triBudget": 1500,
+ "budgetUse": 0.281,
+ "version": "QUEUE-ALL7B",
+ "item": "npc_knight"
+}

@@ -1,0 +1,145 @@
+{
+ "parts": {
+  "Legs": {
+   "tris": 110,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    0.947,
+    -0.12
+   ],
+   "neon": false,
+   "color": "#463C38"
+  },
+  "Torso": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    2.85,
+    0.0
+   ],
+   "neon": false,
+   "color": "#96603E"
+  },
+  "Head": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    4.8,
+    0.0
+   ],
+   "neon": false,
+   "color": "#F0C4A0"
+  },
+  "Face": {
+   "tris": 24,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    4.9,
+    -0.82
+   ],
+   "neon": false,
+   "color": "#282234"
+  },
+  "ArmL": {
+   "tris": 56,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    -1.32,
+    2.6,
+    0.0
+   ],
+   "neon": false,
+   "color": "#96603E"
+  },
+  "ArmR": {
+   "tris": 56,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    1.32,
+    2.6,
+    0.0
+   ],
+   "neon": false,
+   "color": "#96603E"
+  },
+  "Hat": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    5.7,
+    0.0
+   ],
+   "neon": false,
+   "color": "#3C322E"
+  },
+  "Apron": {
+   "tris": 12,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    2.4,
+    -0.62
+   ],
+   "neon": false,
+   "color": "#603E28"
+  },
+  "ToolR": {
+   "tris": 40,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    1.32,
+    1.15,
+    -0.2
+   ],
+   "neon": false,
+   "color": "#5A5C68"
+  }
+ },
+ "partCount": 9,
+ "totalTris": 382,
+ "triBudget": 1500,
+ "budgetUse": 0.255,
+ "version": "QUEUE-ALL7B",
+ "item": "npc_smith"
+}

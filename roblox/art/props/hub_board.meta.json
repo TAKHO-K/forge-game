@@ -1,0 +1,70 @@
+{
+ "parts": {
+  "Posts": {
+   "tris": 56,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    3.6,
+    0.0
+   ],
+   "neon": false,
+   "color": "#70482C"
+  },
+  "Board": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    3.9,
+    0.0
+   ],
+   "neon": false,
+   "color": "#B08456"
+  },
+  "Papers": {
+   "tris": 36,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.075,
+    4.075,
+    -0.25
+   ],
+   "neon": false,
+   "color": "#FAF6E8"
+  },
+  "Roof": {
+   "tris": 22,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    7.094,
+    0.0
+   ],
+   "neon": false,
+   "color": "#8C603A"
+  }
+ },
+ "partCount": 4,
+ "totalTris": 142,
+ "triBudget": 800,
+ "budgetUse": 0.177,
+ "version": "QUEUE-ALL7B",
+ "item": "hub_board"
+}

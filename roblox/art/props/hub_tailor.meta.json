@@ -1,0 +1,175 @@
+{
+ "parts": {
+  "Base": {
+   "tris": 92,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    0.7,
+    0.0
+   ],
+   "neon": false,
+   "color": "#A8A096"
+  },
+  "Wall": {
+   "tris": 56,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    10.338,
+    0.0
+   ],
+   "neon": false,
+   "color": "#ECDEC4"
+  },
+  "Timber": {
+   "tris": 120,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    6.65,
+    -0.01
+   ],
+   "neon": false,
+   "color": "#70482C"
+  },
+  "Roof": {
+   "tris": 22,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    15.444,
+    0.0
+   ],
+   "neon": false,
+   "color": "#965AA0"
+  },
+  "Ridge": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    20.35,
+    0.0
+   ],
+   "neon": false,
+   "color": "#6C4173"
+  },
+  "Door": {
+   "tris": 52,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    6.494,
+    -8.15
+   ],
+   "neon": false,
+   "color": "#5C3A24"
+  },
+  "DoorFrame": {
+   "tris": 24,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    5.4,
+    -8.2
+   ],
+   "neon": false,
+   "color": "#70482C"
+  },
+  "Window": {
+   "tris": 24,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    5.15,
+    -8.15
+   ],
+   "neon": true,
+   "color": "#FFD678"
+  },
+  "SignArm": {
+   "tris": 12,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    6.4,
+    11.2,
+    -9.2
+   ],
+   "neon": false,
+   "color": "#70482C"
+  },
+  "SignBoard": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    6.4,
+    9.6,
+    -10.2
+   ],
+   "neon": false,
+   "color": "#78468C"
+  },
+  "Emblem": {
+   "tris": 120,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    6.4,
+    9.6,
+    -10.45
+   ],
+   "neon": false,
+   "color": "#D6B03E"
+  }
+ },
+ "partCount": 11,
+ "totalTris": 578,
+ "triBudget": 2500,
+ "budgetUse": 0.231,
+ "version": "QUEUE-ALL7B",
+ "item": "hub_tailor"
+}

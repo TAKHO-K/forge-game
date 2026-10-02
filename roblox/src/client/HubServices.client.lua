@@ -6,6 +6,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local D = require(ReplicatedStorage.Shared.data.HubServiceData)
+local HubArtData = require(ReplicatedStorage.Shared.data.HubArtData)
+local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
 local Text = require(ReplicatedStorage.Shared.Text)
 local ArtImage = require(script.Parent.ui.ArtImage)
 local Toast = require(script.Parent.ui.kit.Toast)
@@ -50,9 +52,14 @@ local function attach(part, s)
 	local icon = Instance.new("BillboardGui")
 	icon.Name = "HubServiceIcon"
 	icon.Size = UDim2.fromOffset(34, 34)
-	icon.StudsOffsetWorldSpace = Vector3.new(0, D.iconOffsetY, 0)
 	icon.MaxDistance = 160
 	icon.Parent = part
+	local function lift() -- QUEUE-ALL7B 3: 메시(NPC · 게시판)가 서면 그 꼭대기 위(server/HubArt TagTop)
+		local top = part:GetAttribute("TagTop")
+		icon.StudsOffsetWorldSpace = Vector3.new(0, top and (WorldMapData.floorTopY + top + HubArtData.iconGap - part.Position.Y) or D.iconOffsetY, 0)
+	end
+	lift()
+	part:GetAttributeChangedSignal("TagTop"):Connect(lift)
 	local img = ArtImage.label(icon, s.icon, UDim2.fromScale(1, 1), "!")
 	img.BackgroundTransparency = 1
 end

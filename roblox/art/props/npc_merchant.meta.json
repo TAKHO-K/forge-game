@@ -1,0 +1,130 @@
+{
+ "parts": {
+  "Legs": {
+   "tris": 110,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    0.947,
+    -0.12
+   ],
+   "neon": false,
+   "color": "#50463C"
+  },
+  "Torso": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    2.85,
+    0.0
+   ],
+   "neon": false,
+   "color": "#4074CE"
+  },
+  "Head": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    4.8,
+    0.0
+   ],
+   "neon": false,
+   "color": "#F0C4A0"
+  },
+  "Face": {
+   "tris": 24,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    4.9,
+    -0.82
+   ],
+   "neon": false,
+   "color": "#282234"
+  },
+  "ArmL": {
+   "tris": 56,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    -1.32,
+    2.6,
+    0.0
+   ],
+   "neon": false,
+   "color": "#4074CE"
+  },
+  "ArmR": {
+   "tris": 56,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    1.32,
+    2.6,
+    0.0
+   ],
+   "neon": false,
+   "color": "#4074CE"
+  },
+  "Hat": {
+   "tris": 96,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    6.025,
+    0.0
+   ],
+   "neon": false,
+   "color": "#DCC478"
+  },
+  "Bag": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    -1.25,
+    2.3,
+    -0.3
+   ],
+   "neon": false,
+   "color": "#B07C48"
+  }
+ },
+ "partCount": 8,
+ "totalTris": 426,
+ "triBudget": 1500,
+ "budgetUse": 0.284,
+ "version": "QUEUE-ALL7B",
+ "item": "npc_merchant"
+}

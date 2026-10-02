@@ -103,6 +103,13 @@ local function loadAll()
 		else
 			warn("[ArtAssetLoader] 관문 메시 실패(지금 모습 그대로): " .. tostring(frames))
 		end
+		-- QUEUE-ALL7B 3: 허브 건물 · NPC · 게시판 메시(server/HubArt)
+		local okHub, buildings, npcs = pcall(require(script.Parent.HubArt).apply)
+		if okHub then
+			print(("[ArtAssetLoader] 허브 건물 메시 %d · NPC %d"):format(buildings, npcs))
+		else
+			warn("[ArtAssetLoader] 허브 메시 실패(지금 모습 그대로): " .. tostring(buildings))
+		end
 	end)
 	print(("[ArtAssetLoader] 메시 캐시 %d/%d(소품 %d 먼저) · %.1f초"):format(ok, #first + #rest, #first, os.clock() - t0))
 	if #failed > 0 then
