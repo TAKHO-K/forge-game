@@ -1,0 +1,40 @@
+{
+ "parts": {
+  "Posts": {
+   "tris": 68,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    1.2,
+    0.0
+   ],
+   "neon": false,
+   "color": "#966840"
+  },
+  "Rails": {
+   "tris": 24,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    1.35,
+    0.0
+   ],
+   "neon": false,
+   "color": "#B28050"
+  }
+ },
+ "partCount": 2,
+ "totalTris": 92,
+ "triBudget": 300,
+ "budgetUse": 0.307,
+ "version": "QUEUE-ALL7B",
+ "item": "prop_fence"
+}

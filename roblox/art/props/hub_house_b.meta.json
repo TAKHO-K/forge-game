@@ -120,6 +120,21 @@
    "neon": false,
    "color": "#70482C"
   },
+  "Porch": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    0.35,
+    -9.4
+   ],
+   "neon": false,
+   "color": "#A8784C"
+  },
   "Window": {
    "tris": 24,
    "origin": [
@@ -136,10 +151,10 @@
    "color": "#FFD678"
   }
  },
- "partCount": 9,
- "totalTris": 490,
+ "partCount": 10,
+ "totalTris": 518,
  "triBudget": 2500,
- "budgetUse": 0.196,
+ "budgetUse": 0.207,
  "version": "QUEUE-ALL7B",
  "item": "hub_house_b"
 }

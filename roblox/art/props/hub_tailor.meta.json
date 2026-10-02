@@ -105,6 +105,21 @@
    "neon": false,
    "color": "#70482C"
   },
+  "Porch": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    0.35,
+    -9.4
+   ],
+   "neon": false,
+   "color": "#A8784C"
+  },
   "Window": {
    "tris": 24,
    "origin": [
@@ -166,10 +181,10 @@
    "color": "#D6B03E"
   }
  },
- "partCount": 11,
- "totalTris": 578,
+ "partCount": 12,
+ "totalTris": 606,
  "triBudget": 2500,
- "budgetUse": 0.231,
+ "budgetUse": 0.242,
  "version": "QUEUE-ALL7B",
  "item": "hub_tailor"
 }

@@ -83,6 +83,22 @@ function HubPathVerify.run(opts)
 	opts = opts or {}
 	local out = {}
 	local boxes = buildingBoxes()
+	-- ⓪ 자리 기둥 수 = 데이터(비활성 제외) - QUEUE-ALL8: 줄 가운데 주석이 자리를 지운 결함을 다시 잡는다
+	local want, have = 0, 0
+	for _, name in ipairs(WorldMapLayout.facilityOrder) do
+		for _, sp in ipairs(H.facilities[name].spots or {}) do
+			if not sp.disabled then
+				want += 1
+			end
+		end
+	end
+	local hubModel = Workspace:FindFirstChild("Ground") and Workspace.Ground:FindFirstChild("Hub")
+	for _, d in ipairs(hubModel and hubModel:GetDescendants() or {}) do
+		if d:IsA("BasePart") and d.Name:match("^Spot_") and d:GetAttribute("District") then
+			have += 1
+		end
+	end
+	table.insert(out, ("⓪ 시설 자리 기둥 %d / 데이터 %d %s"):format(have, want, have == want and "O" or "X"))
 	-- ① 길 막힘
 	local blocked = 0
 	for _, path in ipairs(RoadNet.all()) do
@@ -168,6 +184,168 @@ function HubPathVerify.run(opts)
 	end
 	table.insert(out, ("③ 체크포인트 → 가장 먼 곳 %s 경로 %.1f초 · 직선 최대 %.1f초(옛 안 C 9.4초) · %s"):format(worstName, worst, worstLine, table.concat(rows, " · ")))
 	return table.concat(out, "\n")
+end
+
+-- QUEUE-ALL8 B3 소품 배치 검사: 놓인 소품마다 비워 둘 거리(HubPropLayout.clearViolations - 구역 길 · 걷는 길 · 기능 자리 · 건물 · 뿌리)를 다시 잰다.
+--   경계 랜턴(boundary) = 옛 기둥 자리 그대로라 따로 센다. 반환 = 출처별 개수 · 어긴 수 · 예
+function HubPathVerify.props()
+	local HubPropLayout = require(ReplicatedStorage.Shared.HubPropLayout)
+	local HubArt = require(script.Parent.HubArt)
+	local folder = Workspace:FindFirstChild("HubArt") and Workspace.HubArt:FindFirstChild("Props")
+	if not folder then
+		return "소품 없음(아트 끔?)"
+	end
+	local bySource, bad, ex = {}, {}, {}
+	for _, m in ipairs(folder:GetChildren()) do
+		local src = m:GetAttribute("Source") or "?"
+		bySource[src] = (bySource[src] or 0) + 1
+		local v = HubPropLayout.clearViolations(m.WorldPivot.Position, HubArt.propSizeOf(m.Name) * 0.6, m.Name)
+		if #v > 0 then
+			bad[src] = (bad[src] or 0) + 1
+			if #ex < 8 and src ~= "boundary" then
+				table.insert(ex, ("%s@(%d, %d) %s"):format(m.Name:gsub("^prop_", ""), m.WorldPivot.X, m.WorldPivot.Z, table.concat(v, "·")))
+			end
+		end
+	end
+	local rows = {}
+	for src, n in pairs(bySource) do
+		table.insert(rows, ("%s %d(어김 %d)"):format(src, n, bad[src] or 0))
+	end
+	table.sort(rows)
+	local nonBoundary = 0
+	for src, n in pairs(bad) do
+		if src ~= "boundary" then
+			nonBoundary += n
+		end
+	end
+	return ("소품 %s · 길 위(경계 랜턴 빼고) %d %s%s"):format(table.concat(rows, " · "), nonBoundary, nonBoundary == 0 and "O" or "X", #ex > 0 and (" · 예: " .. table.concat(ex, " / ")) or "")
+end
+
+-- QUEUE-ALL8 B1 밀도: 허브 활동 영역(반경 rMin ~ rMax · 건물 상자 밖) 4 stud 격자마다 15 stud 안에 "볼거리"가 있나.
+--   볼거리 = 바닥 위 0.8 stud 넘게 솟은 파트(건물 · 소품 · 나무 · 꽃 · 노점 · NPC · 기둥) - 바닥판 · 지형 · 캐릭터 · 투명 = 아님.
+--   반환 = 빈 칸 비율 · 빈 칸 면적(stud²) · 가장 큰 빈 덩어리 쪽(각도 구간별 빈 비율) 요약
+function HubPathVerify.density(opts)
+	opts = opts or {}
+	local rMin, rMax, step, reach = opts.rMin or 60, opts.rMax or 330, opts.step or 4, opts.reach or 15
+	local boxes = buildingBoxes()
+	local interest = {}
+	local players = {}
+	for _, pl in ipairs(game:GetService("Players"):GetPlayers()) do
+		if pl.Character then
+			players[pl.Character] = true
+		end
+	end
+	local function isInterest(p)
+		if not p:IsA("BasePart") or p:IsA("Terrain") then
+			return false
+		end
+		if p.Transparency >= 0.95 and not p:GetAttribute("HubBuilding") then
+			return false
+		end
+		local m = p:FindFirstAncestorOfClass("Model")
+		while m do
+			if players[m] then
+				return false
+			end
+			m = m.Parent and m.Parent:FindFirstAncestorOfClass("Model")
+		end
+		local top = p.Position.Y + p.Size.Y / 2
+		local horiz = math.max(p.Size.X, p.Size.Z)
+		if top < FLOOR + 0.8 or p.Position.Y > FLOOR + 60 then
+			return false -- 바닥판 · 높은 잎 덮개
+		end
+		return horiz < 400 -- 허브 바닥 원판 같은 큰 판 제외
+	end
+	for _, d in ipairs(Workspace:GetDescendants()) do
+		if d:IsA("BasePart") and Vector2.new(d.Position.X, d.Position.Z).Magnitude < rMax + reach + 40 and isInterest(d) then
+			table.insert(interest, d)
+		end
+	end
+	-- 볼거리 점(파트 경계 상자를 4 stud 간격 점으로 - 큰 건물도 가장자리에서 거리 계산)
+	local pts = {}
+	for _, p in ipairs(interest) do
+		local hx, hz = p.Size.X / 2, p.Size.Z / 2
+		for x = -hx, hx, math.max(4, hx) do
+			for z = -hz, hz, math.max(4, hz) do
+				local w = p.CFrame:PointToWorldSpace(Vector3.new(x, 0, z))
+				table.insert(pts, Vector2.new(w.X, w.Z))
+			end
+		end
+	end
+	local grid = {} -- 버킷(20 stud) 가속
+	local B = 20
+	for _, v in ipairs(pts) do
+		local k = math.floor(v.X / B) .. ":" .. math.floor(v.Y / B)
+		grid[k] = grid[k] or {}
+		table.insert(grid[k], v)
+	end
+	-- 활동 영역 = 시설 · 기능 자리 · 체크포인트 · 스폰에서 activityRadius 안(허브 뒤쪽 빈 들판은 "마을 밖")
+	local anchors = {}
+	for _, t in ipairs(targets()) do
+		if not t.name:match("^출구") then
+			table.insert(anchors, Vector2.new(t.pos.X, t.pos.Z))
+		end
+	end
+	local cp = WorldMapLayout.hubPoint(-65, 180)
+	local sp = WorldMapLayout.spawnPoint()
+	table.insert(anchors, Vector2.new(cp.X, cp.Z))
+	table.insert(anchors, Vector2.new(sp.X, sp.Z))
+	local activityR = opts.activityRadius or 70
+	local function inActivity(x, z)
+		if opts.whole then
+			return true
+		end
+		for _, a in ipairs(anchors) do
+			if (a - Vector2.new(x, z)).Magnitude <= activityR then
+				return true
+			end
+		end
+		return false
+	end
+	local total, empty = 0, 0
+	local sectors = {}
+	for i = 1, 12 do
+		sectors[i] = { n = 0, e = 0 }
+	end
+	for x = -rMax, rMax, step do
+		for z = -rMax, rMax, step do
+			local r = math.sqrt(x * x + z * z)
+			if r >= rMin and r <= rMax and inActivity(x, z) then
+				local c = Vector3.new(x, FLOOR, z)
+				local inBox = false
+				for _, b in ipairs(boxes) do
+					if inside(b, c, 0) then
+						inBox = true
+					end
+				end
+				if not inBox then
+					total += 1
+					local found = false
+					local bx, bz = math.floor(x / B), math.floor(z / B)
+					for i = -1, 1 do
+						for j = -1, 1 do
+							for _, v in ipairs(grid[(bx + i) .. ":" .. (bz + j)] or {}) do
+								if not found and (v - Vector2.new(x, z)).Magnitude <= reach then
+									found = true
+								end
+							end
+						end
+					end
+					local sIdx = math.floor(((math.deg(math.atan2(z, x)) + 360) % 360) / 30) + 1
+					sectors[sIdx].n += 1
+					if not found then
+						empty += 1
+						sectors[sIdx].e += 1
+					end
+				end
+			end
+		end
+	end
+	local srow = {}
+	for i, s in ipairs(sectors) do
+		table.insert(srow, ("%d°~%d° %d%%"):format((i - 1) * 30, i * 30, s.n > 0 and math.floor(s.e / s.n * 100 + 0.5) or 0))
+	end
+	return ((opts.whole and "밀도(허브 전체 고리)" or ("밀도(활동 영역 = 시설 · 기능 · 체크포인트 · 스폰 %d 안)"):format(activityR)) .. (": 반경 %d ~ %d · 격자 %d · 칸 %d · 15 stud 안 볼거리 없는 칸 %d(%.1f%% · 약 %d stud²) · 볼거리 파트 %d · 30°마다 빈 비율: %s")):format(rMin, rMax, step, total, empty, total > 0 and empty / total * 100 or 0, empty * step * step, #interest, table.concat(srow, " · "))
 end
 
 return HubPathVerify

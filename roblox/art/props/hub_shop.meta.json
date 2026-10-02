@@ -105,6 +105,21 @@
    "neon": false,
    "color": "#70482C"
   },
+  "Porch": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    0.35,
+    -10.4
+   ],
+   "neon": false,
+   "color": "#A8784C"
+  },
   "Window": {
    "tris": 24,
    "origin": [
@@ -211,10 +226,10 @@
    "color": "#D6B03E"
   }
  },
- "partCount": 14,
- "totalTris": 662,
+ "partCount": 15,
+ "totalTris": 690,
  "triBudget": 3000,
- "budgetUse": 0.221,
+ "budgetUse": 0.23,
  "version": "QUEUE-ALL7B",
  "item": "hub_shop"
 }

@@ -68,15 +68,17 @@ return {
 			-- QUEUE-ALL3 Q5 허브 NPC 안 C(추천 · 적용 - Claude outputs/QUEUE-ALL3/hub_layout): 체크포인트(−65° r180) 둘레 걸어서 10초(160 stud) 안에 대장간 · 시장 · 커뮤니티(제단 · 부화장 · 게시판 · 명예의 전당) · 포탈
 			--   옛 = 대장간 −25° r255 · 시장 90° r255 · 커뮤니티 210° r255(나무 둘레 120° 간격 - 어디서나 가장 먼 곳 약 32초)
 			forge = { angleDeg = -20, r = 170, displayName = "대장간 거리", street = { w = 104, d = 34 }, row = { count = 3, w = 26, d = 18, h = 16, gap = 10, buildings = { "hub_house_b", "hub_forge", "hub_house_a" } }, -- 가운데 = 강화대 · ALL7B 3: 건물 = HubArtMeta 키(가운데 = 핵심)
-				spots = { { id = "refine", label = "재련대", along = -38, side = 0 }, { id = "gemcraft", label = "보석 가공대", along = 38, side = 0 }, -- QUEUE-ALL8 A: 정식 이름만(설명 = 프롬프트를 누르면 한 줄)
+				-- QUEUE-ALL8 A: 정식 이름만(설명 = 프롬프트를 누르면 한 줄) · B7: 재련대 · 보석 가공대 = 체크포인트 쪽(+along) 끝으로(옛 재련대 −38 = 10.9초 > 9.4)
+				spots = { { id = "refine", label = "재련대", along = 24, side = -2 }, { id = "gemcraft", label = "보석 가공대", along = 40, side = -2 },
 					{ id = "smith", label = "대장장이", along = 8, side = -2 } } }, -- QUEUE-ALL7B 3: 강화대 옆 NPC 자리(HubArtData)
 			market = { angleDeg = -115, r = 175, displayName = "시장", street = { w = 104, d = 34 }, row = { count = 3, w = 26, d = 16, h = 12, gap = 10, buildings = { "hub_tailor", "hub_shop", "hub_house_a" } }, -- 가운데 = 보석상인(보석 공방) · 재봉집 = 체크포인트 쪽 끝(안 C 동선 - 반대 끝은 11.6초)
 				spots = { { id = "shop", label = "상점", along = -38, side = 0 }, { id = "sell", label = "판매", along = 38, side = 0, disabled = true }, -- QUEUE-ALL8 G2: 판매 = 가방(G)에서 · 자리 숨김(id는 그대로)
 					{ id = "tailor", label = "재봉사", along = -27, side = 12 } } }, -- QUEUE-ALL7B 2: 꾸미기(HubServiceData) · 3: 재봉집 문 앞(체크포인트 쪽)
 			community = { angleDeg = -60, r = 250, displayName = "커뮤니티 광장", plaza = 50, row = { count = 3, w = 24, d = 18, h = 18, gap = 12, buildings = { "hub_house_a", "hub_hall", "hub_house_b" } }, -- 가운데 = 환생 제단 · 건물 가운데 = 명예의 전당
-				spots = { { id = "hatchery", label = "부화장", along = -34, side = -8, soon = true }, -- QUEUE-ALL8 A: 아직 안 여는 기능 = 자물쇠 + "곧 열려요" { id = "partyBoard", label = "파티 게시판", along = 34, side = -8 }, { id = "rankBoard", label = "순위판", along = 0, side = -30 },
-					{ id = "hallOfFame", label = "명예의 전당", along = -30, side = -30 },
-					{ id = "noticeBoard", label = "마을 게시판", along = 30, side = -30 }, { id = "challengeKnight", label = "도전 기사", along = 0, side = 30 } } }, -- QUEUE-ALL7B 2: 코드 · 소식 · 주간 도전(HubServiceData) -- D1 ④: 태초 석판(server/HallOfFame이 이 자리 옆에 세운다)
+				-- QUEUE-ALL8 A: 부화장 = 아직 안 여는 기능(자물쇠 + "곧 열려요") · C5: 광장 자리를 서로 떨어뜨림(이웃 간격 ≥ 30 - 이름표 겹침을 배치로도 줄인다)
+				spots = { { id = "hatchery", label = "부화장", along = -42, side = 14, soon = true }, { id = "partyBoard", label = "파티 게시판", along = 42, side = 14 }, { id = "rankBoard", label = "순위판", along = 0, side = -40 },
+					{ id = "hallOfFame", label = "명예의 전당", along = -36, side = -24 },
+					{ id = "noticeBoard", label = "마을 게시판", along = 36, side = -24 }, { id = "challengeKnight", label = "도전 기사", along = 0, side = 34 } } }, -- QUEUE-ALL7B 2: 코드 · 소식 · 주간 도전(HubServiceData) -- D1 ④: 태초 석판(server/HallOfFame이 이 자리 옆에 세운다)
 			portal = { angleDeg = -90, r = 250, displayName = "포탈 광장", radius = 46 },
 		},
 		portalRingRadius = 38, -- 포탈 광장 안 구역별 포탈 6개(이름표가 안 겹치게 - 이웃 간격 38)

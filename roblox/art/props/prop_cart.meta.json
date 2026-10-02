@@ -1,0 +1,55 @@
+{
+ "parts": {
+  "Bed": {
+   "tris": 88,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    -1.187,
+    2.425,
+    0.0
+   ],
+   "neon": false,
+   "color": "#96643A"
+  },
+  "Wheels": {
+   "tris": 80,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.6,
+    1.25,
+    0.0
+   ],
+   "neon": false,
+   "color": "#604028"
+  },
+  "Load": {
+   "tris": 76,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    -0.15,
+    3.0,
+    0.1
+   ],
+   "neon": false,
+   "color": "#E6AA46"
+  }
+ },
+ "partCount": 3,
+ "totalTris": 244,
+ "triBudget": 300,
+ "budgetUse": 0.813,
+ "version": "QUEUE-ALL7B",
+ "item": "prop_cart"
+}

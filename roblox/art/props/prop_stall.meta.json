@@ -1,0 +1,70 @@
+{
+ "parts": {
+  "Posts": {
+   "tris": 76,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    2.8,
+    -0.162
+   ],
+   "neon": false,
+   "color": "#96643A"
+  },
+  "Awning": {
+   "tris": 36,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    -0.6,
+    6.125,
+    -0.3
+   ],
+   "neon": false,
+   "color": "#D24646"
+  },
+  "AwningStripe": {
+   "tris": 36,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.6,
+    6.125,
+    -0.3
+   ],
+   "neon": false,
+   "color": "#F6F0E2"
+  },
+  "Goods": {
+   "tris": 124,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    -0.25,
+    3.35,
+    -1.4
+   ],
+   "neon": false,
+   "color": "#F0BE46"
+  }
+ },
+ "partCount": 4,
+ "totalTris": 272,
+ "triBudget": 300,
+ "budgetUse": 0.907,
+ "version": "QUEUE-ALL7B",
+ "item": "prop_stall"
+}

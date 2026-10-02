@@ -34,6 +34,8 @@ return {
 	},
 	props = {
 		{ id = "board", model = "props/hub_board", spot = "noticeBoard" }, -- 마을 게시판(소식 빌보드 · 코드 프롬프트 자리)
+		{ id = "refine", model = "props/prop_refine_furnace", spot = "refine" }, -- QUEUE-ALL8 B4: 재련대 = 화로 + 도가니(허리 ~ 가슴 높이)
+		{ id = "gemcraft", model = "props/prop_gem_bench", spot = "gemcraft" }, -- 보석 가공대 = 작업대 + 보석 · 돋보기
 	},
 	-- 대장간 굴뚝 연기(HubArtMeta chimney 자리 · 연출 세기 꺼짐이면 끈다 - 클라 FxLevel은 남의 효과만이라 여기선 서버 한 번)
 	smoke = { rate = 4, lifetime = { 2.5, 4 }, speed = { 2, 3.5 }, size = { 1.6, 4.2 }, rgb = { 196, 194, 200 }, transparency = { 0.35, 1 } },

@@ -34,7 +34,8 @@ MARBLE_SHADE = (214, 210, 202)
 GOLD = A.GOLD
 EMBER = (255, 140, 50)
 SKIN = (240, 196, 160)
-NEON_PARTS = {"Window", "Ember"}
+NEON_PARTS = {"Window", "Ember", "Lamp", "Glow"}
+WOOD_DECK = (168, 120, 76)
 BEVEL = 0.18
 
 
@@ -109,6 +110,8 @@ def house(w, d, wall_h, roof_h, roof_rgb, door_w=4.6, door_h=8.0, chimney=False,
     frame = A.merge(A.box(0.6, door_h + 0.4, 0.7, center=(-door_w / 2 - 0.3, base_h + door_h / 2, -d / 2 - 0.2)),
                     A.box(0.6, door_h + 0.4, 0.7, center=(door_w / 2 + 0.3, base_h + door_h / 2, -d / 2 - 0.2)))
     parts.append(("DoorFrame", frame, TIMBER))
+    # QUEUE-ALL8 B2: 문 앞 나무 계단 한 칸(돌 받침 1.4 → 0.7 → 바닥)
+    parts.append(("Porch", A.box(door_w + 2.6, 0.7, 1.6, b=0.1, center=(0, 0.35, -d / 2 - 0.6 - 0.8)), WOOD_DECK))
     win = []
     for sx in (-1, 1):
         win.append(A.box(2.6, 2.8, 0.3, center=(sx * w * 0.3, base_h + wall_h * 0.3 + 0.6, -d / 2 - 0.15)))
@@ -311,6 +314,148 @@ def npc_keeper():
 
 NPC_PIVOTS = {"Head": [0, NECK_Y, 0], "ArmL": [-1.32, SHOULDER_Y, 0], "ArmR": [1.32, SHOULDER_Y, 0]}
 
+
+
+# ── QUEUE-ALL8 B3 소품(삼각형 ≤ 300 · 원점 = 바닥 가운데 · −Z 앞) ──
+BARK = (120, 80, 50)
+LEAF = (98, 170, 84)
+LEAF_DARK = (70, 138, 66)
+
+
+def p_barrel():
+    body = A.lathe([(0.0, 0.0), (1.05, 0.0), (1.3, 1.5), (1.05, 3.0), (0.0, 3.0)], 12)
+    bands = A.merge(A.xform(A.lathe([(1.12, 0.5), (1.24, 0.5), (1.27, 0.75), (1.15, 0.75)], 12)), A.xform(A.lathe([(1.15, 2.25), (1.27, 2.25), (1.24, 2.5), (1.12, 2.5)], 12)))
+    return [("Body", body, (150, 100, 58)), ("Bands", bands, (90, 92, 104))], 300
+
+
+def p_crates():
+    g = A.merge(A.box(2.4, 2.4, 2.4, b=0.15, center=(0, 1.2, 0)), A.xform(A.box(2.0, 2.0, 2.0, b=0.15), m=A.rot(ry=18), t=(2.4, 1.0, 0.3)), A.xform(A.box(1.7, 1.7, 1.7, b=0.15), m=A.rot(ry=-12), t=(0.6, 3.25, 0.1)))
+    slats = A.merge(A.box(2.5, 0.25, 0.3, center=(0, 1.2, -1.25)), A.box(0.3, 2.5, 0.3, center=(0, 1.2, -1.25)))
+    return [("Crates", g, (186, 136, 82)), ("Slats", slats, (130, 90, 54))], 300
+
+
+def p_cart():
+    bed = A.box(4.6, 1.2, 2.8, b=0.15, center=(0, 2.0, 0))
+    sides = A.merge(A.box(4.6, 0.9, 0.25, center=(0, 3.0, -1.3)), A.box(4.6, 0.9, 0.25, center=(0, 3.0, 1.3)), A.box(0.25, 0.9, 2.8, center=(2.2, 3.0, 0)))
+    handles = A.merge(A.box(2.6, 0.25, 0.25, center=(-3.4, 2.1, -1.0)), A.box(2.6, 0.25, 0.25, center=(-3.4, 2.1, 1.0)))
+    wheels = A.merge(A.xform(A.lathe([(0.0, -0.18), (1.25, -0.18), (1.25, 0.18), (0.0, 0.18)], 10, axis="Z"), t=(0.6, 1.25, -1.6)), A.xform(A.lathe([(0.0, -0.18), (1.25, -0.18), (1.25, 0.18), (0.0, 0.18)], 10, axis="Z"), t=(0.6, 1.25, 1.6)))
+    load = A.merge(A.box(1.4, 1.0, 1.2, b=0.1, center=(0.6, 3.1, -0.4)), A.ellipsoid((0.7, 0.6, 0.7), n=8, rings=4, center=(-0.9, 3.0, 0.5)))
+    return [("Bed", A.merge(bed, sides, handles), (150, 100, 58)), ("Wheels", wheels, (96, 64, 40)), ("Load", load, (230, 170, 70))], 300
+
+
+def p_stall():
+    posts = A.merge(*[A.box(0.35, 5.6, 0.35, center=(x, 2.8, z)) for x in (-3.2, 3.2) for z in (-1.6, 1.6)])
+    counter = A.box(6.8, 1.2, 1.4, b=0.12, center=(0, 2.4, -1.4))
+    aw = []
+    for i in range(6):
+        x0 = -3.6 + i * 1.2
+        aw.append(slab_raw([(x0, 5.8, -2.4), (x0 + 1.2, 5.8, -2.4), (x0 + 1.2, 6.6, 1.8), (x0, 6.6, 1.8)], 0.15))
+    goods = A.merge(A.ellipsoid((0.45, 0.4, 0.45), n=8, rings=4, center=(-2.0, 3.35, -1.4)), A.ellipsoid((0.45, 0.4, 0.45), n=8, rings=4, center=(-1.0, 3.35, -1.4)), A.box(0.9, 0.7, 0.7, b=0.1, center=(1.5, 3.35, -1.4)))
+    return [("Posts", A.merge(posts, counter), (150, 100, 58)), ("Awning", A.merge(*aw[0::2]), (210, 70, 70)), ("AwningStripe", A.merge(*aw[1::2]), (246, 240, 226)), ("Goods", goods, (240, 190, 70))], 300
+
+
+def p_lantern():
+    post = A.merge(A.box(0.45, 6.4, 0.45, center=(0, 3.2, 0)), A.box(1.2, 0.5, 1.2, b=0.1, center=(0, 0.25, 0)), A.box(1.6, 0.3, 0.3, center=(0.6, 6.2, 0)))
+    cage = A.merge(A.box(1.0, 0.2, 1.0, center=(1.2, 6.0, 0)), A.box(0.9, 0.25, 0.9, center=(1.2, 4.75, 0)))
+    lamp = A.box(0.7, 1.0, 0.7, center=(1.2, 5.4, 0))
+    return [("Post", post, (60, 52, 50)), ("Cage", cage, (60, 52, 50)), ("Lamp", lamp, (255, 214, 120))], 300
+
+
+def p_fence():
+    posts = A.merge(A.box(0.5, 2.4, 0.5, b=0.08, center=(-3.75, 1.2, 0)), A.box(0.5, 2.4, 0.5, b=0.08, center=(3.75, 1.2, 0)), A.box(0.45, 2.1, 0.45, center=(0, 1.05, 0)))
+    rails = A.merge(A.box(8.0, 0.35, 0.25, center=(0, 0.9, 0)), A.box(8.0, 0.35, 0.25, center=(0, 1.8, 0)))
+    return [("Posts", posts, (150, 104, 64)), ("Rails", rails, (178, 128, 80))], 300
+
+
+def p_flowerpot():
+    pot = A.lathe([(0.0, 0.0), (0.6, 0.0), (0.85, 0.9), (0.95, 1.0), (0.0, 1.0)], 10)
+    bloom = A.merge(A.ellipsoid((0.45, 0.35, 0.45), n=6, rings=3, center=(-0.25, 1.35, 0.1)), A.ellipsoid((0.4, 0.3, 0.4), n=6, rings=3, center=(0.3, 1.45, -0.15)), A.ellipsoid((0.35, 0.3, 0.35), n=6, rings=3, center=(0.0, 1.6, 0.3)))
+    leaves = A.ellipsoid((0.8, 0.35, 0.8), n=8, rings=3, center=(0, 1.1, 0))
+    return [("Pot", pot, (196, 108, 72)), ("Leaves", leaves, LEAF), ("Bloom", bloom, (250, 120, 160))], 300
+
+
+def p_bench():
+    seat = A.box(5.0, 0.35, 1.4, b=0.08, center=(0, 1.5, 0))
+    back = A.box(5.0, 1.2, 0.3, b=0.06, center=(0, 2.4, 0.6))
+    legs = A.merge(*[A.box(0.35, 1.5, 1.2, center=(x, 0.75, 0)) for x in (-2.1, 2.1)])
+    return [("Seat", A.merge(seat, back), (176, 124, 76)), ("Legs", legs, (70, 62, 60))], 300
+
+
+def p_well():
+    ring = A.lathe([(1.8, 0.0), (2.5, 0.0), (2.5, 2.0), (1.9, 2.0), (1.9, 0.3), (1.8, 0.3)], 12)
+    water = A.lathe([(0.0, 1.2), (1.85, 1.2), (1.85, 1.3), (0.0, 1.3)], 12)
+    posts = A.merge(A.box(0.35, 4.4, 0.35, center=(-2.1, 3.2, 0)), A.box(0.35, 4.4, 0.35, center=(2.1, 3.2, 0)), A.box(4.6, 0.3, 0.3, center=(0, 5.0, 0)))
+    roof = A.merge(slab_raw([(-2.8, 5.0, -1.8), (2.8, 5.0, -1.8), (2.8, 6.4, 0), (-2.8, 6.4, 0)], 0.25), slab_raw([(2.8, 5.0, 1.8), (-2.8, 5.0, 1.8), (-2.8, 6.4, 0), (2.8, 6.4, 0)], 0.25))
+    bucket = A.lathe([(0.0, 3.2), (0.35, 3.2), (0.42, 3.8), (0.0, 3.8)], 8)
+    return [("Ring", ring, (168, 160, 150)), ("Water", water, (90, 170, 220)), ("Posts", A.merge(posts, bucket), (130, 90, 54)), ("Roof", roof, (196, 72, 52))], 300
+
+
+def p_flag():
+    pole = A.merge(A.lathe([(0.0, 0.0), (0.18, 0.0), (0.14, 9.0), (0.0, 9.0)], 8), A.ellipsoid((0.3, 0.3, 0.3), n=6, rings=3, center=(0, 9.2, 0)), A.box(1.2, 0.4, 1.2, b=0.1, center=(0, 0.2, 0)))
+    cloth = A.merge(slab_raw([(0.15, 8.6, 0.0), (3.2, 8.4, -0.15), (3.2, 6.6, -0.15), (0.15, 6.8, 0.0)], 0.1))
+    return [("Pole", pole, (220, 214, 200)), ("Cloth", cloth, (210, 60, 70))], 300
+
+
+def p_sign():
+    post = A.box(0.4, 4.0, 0.4, center=(0, 2.0, 0))
+    boards = A.merge(A.xform(A.box(2.8, 0.7, 0.2, b=0.06), m=A.rot(ry=12), t=(0.9, 3.4, -0.3)), A.xform(A.box(2.6, 0.7, 0.2, b=0.06), m=A.rot(ry=-160), t=(-0.8, 2.6, -0.3)))
+    return [("Post", post, (130, 90, 54)), ("Boards", boards, (196, 150, 98))], 300
+
+
+def p_bush():
+    g = A.merge(A.ellipsoid((1.5, 1.2, 1.3), n=8, rings=4, center=(0, 1.1, 0)), A.ellipsoid((1.0, 0.9, 1.0), n=8, rings=4, center=(1.1, 0.9, 0.4)), A.ellipsoid((0.9, 0.8, 0.9), n=8, rings=4, center=(-1.1, 0.8, -0.3)))
+    return [("Leaves", g, LEAF_DARK)], 300
+
+
+def p_flowers():
+    bed = A.box(6.0, 0.5, 3.6, b=0.2, center=(0, 0.25, 0))
+    leaves = A.merge(*[A.ellipsoid((0.7, 0.45, 0.7), n=6, rings=3, center=(x, 0.75, z)) for x, z in ((-2.0, -0.8), (-0.6, 0.7), (0.9, -0.6), (2.1, 0.8))])
+    bloomA = A.merge(*[A.ellipsoid((0.35, 0.3, 0.35), n=6, rings=3, center=(x, 1.25, z)) for x, z in ((-2.2, -0.6), (0.8, -0.9), (2.3, 0.6))])
+    bloomB = A.merge(*[A.ellipsoid((0.35, 0.3, 0.35), n=6, rings=3, center=(x, 1.2, z)) for x, z in ((-0.7, 0.9), (1.5, 0.1), (-1.5, 0.4))])
+    return [("Bed", bed, (120, 84, 56)), ("Leaves", leaves, LEAF), ("BloomA", bloomA, (255, 214, 90)), ("BloomB", bloomB, (240, 110, 150))], 300
+
+
+def p_tree_small():
+    trunk = A.lathe([(0.0, 0.0), (0.7, 0.0), (0.45, 4.2), (0.0, 4.2)], 8)
+    crown = A.merge(A.ellipsoid((2.6, 2.3, 2.6), n=8, rings=4, center=(0, 6.0, 0)), A.ellipsoid((1.6, 1.4, 1.6), n=8, rings=4, center=(1.0, 7.6, 0.4)))
+    return [("Trunk", trunk, BARK), ("Crown", crown, LEAF)], 300
+
+
+def p_gem_bench():
+    top = A.box(4.0, 0.4, 2.2, b=0.1, center=(0, 3.0, 0))
+    legs = A.merge(*[A.box(0.35, 2.8, 0.35, center=(x, 1.4, z)) for x in (-1.7, 1.7) for z in (-0.9, 0.9)])
+    gems = A.merge(A.crystal(0.8, 0.3, sides=5, center=(-1.0, 3.2, -0.3)), A.crystal(0.6, 0.25, sides=5, center=(-0.4, 3.2, 0.3)), A.crystal(0.7, 0.28, sides=5, center=(0.2, 3.2, -0.5)))
+    lens = A.merge(A.xform(A.lathe([(0.35, -0.05), (0.5, -0.05), (0.5, 0.05), (0.35, 0.05)], 10, axis="Z"), t=(1.2, 3.9, 0)), A.box(0.12, 0.8, 0.12, center=(1.2, 3.4, 0)))
+    return [("Bench", A.merge(top, legs), (150, 100, 58)), ("Gems", gems, (110, 200, 240)), ("Lens", lens, (214, 176, 62))], 300
+
+
+def p_refine_furnace():
+    body = A.box(3.0, 3.2, 2.6, b=0.25, center=(0, 1.6, 0.2))
+    mouth = A.box(1.4, 1.0, 0.2, center=(0, 1.3, -1.15))
+    chimney = A.box(1.0, 2.0, 1.0, b=0.1, center=(0.6, 4.2, 0.6))
+    crucible = A.lathe([(0.0, 3.2), (0.65, 3.2), (0.8, 3.9), (0.0, 3.9)], 10)
+    glow = A.lathe([(0.0, 3.85), (0.7, 3.85), (0.7, 3.95), (0.0, 3.95)], 10)
+    return [("Body", A.merge(body, chimney), (150, 96, 70)), ("Mouth", mouth, (255, 140, 50)), ("Crucible", crucible, (78, 82, 100)), ("Glow", glow, (255, 170, 60))], 300
+
+
+def p_anvil_statue():
+    plinth = A.merge(A.box(3.6, 1.2, 3.6, b=0.2, center=(0, 0.6, 0)), A.box(2.8, 0.8, 2.8, b=0.15, center=(0, 1.6, 0)))
+    anvil = A.merge(A.box(1.4, 0.8, 1.0, center=(0, 2.4, 0)), A.box(0.8, 0.8, 0.7, center=(0, 3.2, 0)), A.box(3.0, 0.9, 1.3, b=0.12, center=(0.2, 4.05, 0)), A.box(1.2, 0.5, 0.9, center=(-1.8, 4.2, 0)))
+    hammer = A.merge(A.xform(A.box(0.25, 2.2, 0.25), m=A.rot(rz=-30), t=(1.1, 5.2, 0)), A.xform(A.box(1.0, 0.55, 0.55), m=A.rot(rz=-30), t=(1.65, 6.15, 0)))
+    return [("Plinth", plinth, (168, 160, 150)), ("Anvil", anvil, (110, 116, 132)), ("Hammer", hammer, A.GOLD)], 300
+
+
+def slab_raw(c, t):
+    v = [tuple(q) for q in c] + [(q[0], q[1] - t, q[2]) for q in c]
+    f = [(0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1), (1, 5, 6, 2), (2, 6, 7, 3), (3, 7, 4, 0)]
+    return v, f
+
+
+PROP_FNS = {"prop_barrel": p_barrel, "prop_crates": p_crates, "prop_cart": p_cart, "prop_stall": p_stall, "prop_lantern": p_lantern, "prop_fence": p_fence,
+            "prop_flowerpot": p_flowerpot, "prop_bench": p_bench, "prop_well": p_well, "prop_flag": p_flag, "prop_sign": p_sign, "prop_bush": p_bush,
+            "prop_flowers": p_flowers, "prop_tree_small": p_tree_small, "prop_gem_bench": p_gem_bench, "prop_refine_furnace": p_refine_furnace,
+            "prop_anvil_statue": p_anvil_statue}
+
 ITEMS = {
     "hub_forge": ("building", b_forge), "hub_shop": ("building", b_shop), "hub_hall": ("building", b_hall),
     "hub_house_a": ("building", b_house_a), "hub_house_b": ("building", b_house_b), "hub_tailor": ("building", b_tailor),
@@ -318,6 +463,8 @@ ITEMS = {
     "npc_smith": ("npc", npc_smith), "npc_merchant": ("npc", npc_merchant), "npc_tailor": ("npc", npc_tailor),
     "npc_knight": ("npc", npc_knight), "npc_keeper": ("npc", npc_keeper),
 }
+for _k, _fn in PROP_FNS.items():
+    ITEMS[_k] = ("prop", _fn)
 
 
 def build(item):
@@ -325,6 +472,9 @@ def build(item):
     col = A.new_collection(item)
     if kind == "npc":
         parts, info, cfg = fn(), {}, dict(budget=1500)
+    elif kind == "prop":
+        parts, budget = fn()
+        info, cfg = {}, dict(budget=budget)
     else:
         parts, info, cfg = fn()
     objs = []
@@ -351,7 +501,7 @@ def lua_val(v):
 def write_lua(rows):
     lines = ["-- 생성 파일(roblox/tools/blender/make_hub.py) - 손으로 고치지 않는다. QUEUE-ALL7B 3 허브 건물 · NPC 메시 표.",
              "--   키 = props/<이름>(ArtAssetIds) · size = 발밑 가운데 기준 경계(가로 w · 깊이 d · 높이 h - 충돌 상자 = 이 w × d × wallTop) · parts = 메시 조각 색(RGB) · 네온",
-             "--   NPC pivots = 관절(어깨 · 목 - 대기 동작이 이 점을 축으로 돈다) · chimney = 굴뚝 끝(연기 자리) · tris = 삼각형(상한 budget).",
+             "--   kind = building | npc | prop(QUEUE-ALL8 B3 소품 - 삼각형 ≤ 300) · NPC pivots = 관절(어깨 · 목 - 대기 동작이 이 점을 축으로 돈다) · chimney = 굴뚝 끝(연기 자리) · tris = 삼각형(상한 budget).",
              "return {"]
     for item in sorted(rows):
         lines.append("\t%s = %s," % (item, lua_val(rows[item])))
@@ -394,8 +544,10 @@ def main():
             row.update({"w": cfg["w"], "d": cfg["d"], "wallTop": round(info["wallTop"], 2), "height": round(info["height"], 2), "doorH": info["doorH"], "doorW": info["doorW"]})
             if "chimney" in info:
                 row["chimney"] = [round(x, 2) for x in info["chimney"]]
-        else:
+        elif kind == "npc":
             row["pivots"] = NPC_PIVOTS
+            row["height"] = round(size[1], 2)
+        else:
             row["height"] = round(size[1], 2)
         rows[item] = row
         if opt["export"]:

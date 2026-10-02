@@ -1,0 +1,70 @@
+{
+ "parts": {
+  "Bed": {
+   "tris": 28,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    0.25,
+    0.0
+   ],
+   "neon": false,
+   "color": "#785438"
+  },
+  "Leaves": {
+   "tris": 96,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.05,
+    0.75,
+    0.0
+   ],
+   "neon": false,
+   "color": "#62AA54"
+  },
+  "BloomA": {
+   "tris": 72,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.05,
+    1.25,
+    -0.15
+   ],
+   "neon": false,
+   "color": "#FFD65A"
+  },
+  "BloomB": {
+   "tris": 72,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    1.2,
+    0.5
+   ],
+   "neon": false,
+   "color": "#F06E96"
+  }
+ },
+ "partCount": 4,
+ "totalTris": 268,
+ "triBudget": 300,
+ "budgetUse": 0.893,
+ "version": "QUEUE-ALL7B",
+ "item": "prop_flowers"
+}

@@ -1,0 +1,40 @@
+{
+ "parts": {
+  "Seat": {
+   "tris": 56,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    2.162,
+    0.025
+   ],
+   "neon": false,
+   "color": "#B07C4C"
+  },
+  "Legs": {
+   "tris": 24,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    0.75,
+    0.0
+   ],
+   "neon": false,
+   "color": "#463E3C"
+  }
+ },
+ "partCount": 2,
+ "totalTris": 80,
+ "triBudget": 300,
+ "budgetUse": 0.267,
+ "version": "QUEUE-ALL7B",
+ "item": "prop_bench"
+}

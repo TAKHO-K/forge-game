@@ -1,0 +1,25 @@
+{
+ "parts": {
+  "Leaves": {
+   "tris": 144,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.05,
+    1.1,
+    0.05
+   ],
+   "neon": false,
+   "color": "#468A42"
+  }
+ },
+ "partCount": 1,
+ "totalTris": 144,
+ "triBudget": 300,
+ "budgetUse": 0.48,
+ "version": "QUEUE-ALL7B",
+ "item": "prop_bush"
+}

@@ -8,6 +8,9 @@ local Workspace = game:GetService("Workspace")
 local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit)
 local HubArtMeta = require(ReplicatedStorage.Shared.data.HubArtMeta)
 local HubArtData = require(ReplicatedStorage.Shared.data.HubArtData)
+local HubPropsData = require(ReplicatedStorage.Shared.data.HubPropsData)
+local HubPropLayout = require(ReplicatedStorage.Shared.HubPropLayout)
+local ArtAssetIds = require(ReplicatedStorage.Shared.data.ArtAssetIds)
 local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
 
 local HubArt = {}
@@ -31,7 +34,7 @@ local function restoreScale(key, src, meta)
 end
 
 -- 메시 조각을 frame(바닥 가운데) 위에 복제 · 색칠. 반환 = 만든 수
-local function place(key, frame, parent)
+local function place(key, frame, parent, rgbOverride)
 	local src = ArtMeshKit.get("props/" .. key)
 	local meta = HubArtMeta[key]
 	if not src or not meta then
@@ -47,7 +50,7 @@ local function place(key, frame, parent)
 			m.Anchored, m.CanCollide, m.CanTouch, m.CanQuery = true, false, false, false
 			local pm = meta.parts[p.Name]
 			if pm then
-				m.Color = rgb(pm.rgb)
+				m.Color = rgb((rgbOverride and rgbOverride[p.Name]) or pm.rgb)
 				m.Material = pm.neon and Enum.Material.Neon or Enum.Material.SmoothPlastic
 			end
 			m.Parent = parent
@@ -101,6 +104,121 @@ local function smoke(model, frame, at)
 	e.LightEmission = 0
 	e.Parent = holder
 	holder.Parent = model
+end
+
+-- QUEUE-ALL8 B2 바닥: 거리 · 광장 = 카툰 자갈(재질 · 색) + 테두리 연석(겉모습만 - 충돌 · 조준 없음)
+local function curb(parent, cf, size)
+	local c = Instance.new("Part")
+	c.Name = "HubCurb"
+	c.Anchored, c.CanCollide, c.CanTouch, c.CanQuery = true, false, false, false
+	c.Size = size
+	c.CFrame = cf
+	c.Color = rgb(HubPropsData.floor.curbRgb)
+	c.Material = Enum.Material.SmoothPlastic
+	c.TopSurface, c.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
+	c.Parent = parent
+end
+local function dressFloors(hub, folder)
+	local F = HubPropsData.floor
+	local model = Instance.new("Model")
+	model.Name = "HubFloors"
+	local n = 0
+	for _, d in ipairs(hub:GetDescendants()) do
+		if d:IsA("BasePart") and (d.Name == "DistrictFloor" or d.Name == "PortalPlaza") then
+			d.Material = Enum.Material[F.material]
+			d.Color = rgb(F.rgb)
+			n += 1
+			local img = ArtAssetIds[F.texture] -- 카툰 자갈 무늬(평면 재질 위에 Texture - 윗면만)
+			if img and img.image then
+				local tex = Instance.new("Texture")
+				tex.Name = "HubCobble"
+				tex.Texture = "rbxassetid://" .. tostring(img.image)
+				tex.StudsPerTileU, tex.StudsPerTileV = F.studsPerTile, F.studsPerTile
+				tex.Face = d.Shape == Enum.PartType.Cylinder and Enum.NormalId.Right or Enum.NormalId.Top -- 눕힌 원판 = 로컬 +X 면이 위
+				tex.Parent = d
+			end
+			local top = d.Position.Y + 0.1
+			if d.Shape == Enum.PartType.Cylinder then
+				local r = d.Size.Y / 2 -- 원판(옆으로 눕힌 원기둥 - 지름 = Y · Z)
+				local seg = F.ringSegments
+				local len = 2 * math.pi * r / seg + 0.3
+				for i = 1, seg do
+					local a = (i - 0.5) / seg * 2 * math.pi
+					local p = Vector3.new(d.Position.X + math.cos(a) * r, top + F.curbH / 2, d.Position.Z + math.sin(a) * r)
+					curb(model, CFrame.lookAt(p, p + Vector3.new(-math.sin(a), 0, math.cos(a))), Vector3.new(F.curbW, F.curbH, len))
+				end
+			else
+				local hx, hz = d.Size.X / 2, d.Size.Z / 2
+				for _, e in ipairs({ { 0, -hz, d.Size.X, F.curbW }, { 0, hz, d.Size.X, F.curbW }, { -hx, 0, F.curbW, d.Size.Z }, { hx, 0, F.curbW, d.Size.Z } }) do
+					curb(model, d.CFrame * CFrame.new(e[1], d.Size.Y / 2 + F.curbH / 2, e[2]), Vector3.new(e[3], F.curbH, e[4]))
+				end
+			end
+		end
+	end
+	model.Parent = folder
+	return n
+end
+
+-- QUEUE-ALL8 B3 소품(HubPropsData → HubPropLayout.list) · 울타리 · 우물 = 단순 충돌 상자(투명) · 경계 랜턴 기둥 = 카툰 랜턴으로
+local function sizeOf(kind)
+	local m = HubArtMeta[kind]
+	return m and math.max(m.bounds[1], m.bounds[3]) / 2 or 2
+end
+HubArt.propSizeOf = sizeOf
+local function placeProps(hub, folder)
+	local props = Instance.new("Folder")
+	props.Name = HubPropsData.folder
+	props.Parent = folder
+	local count, byKind = 0, {}
+	local function put(kind, cf, rgbOverride, source)
+		local model = Instance.new("Model")
+		model.Name = kind
+		if place(kind, cf, model, rgbOverride) == 0 then
+			model:Destroy()
+			return
+		end
+		model.WorldPivot = cf
+		model:SetAttribute("HubProp", kind)
+		model:SetAttribute("Source", source)
+		local col = HubPropsData.colliders[kind]
+		if col then
+			local c = Instance.new("Part")
+			c.Name = "HubPropCollider"
+			c.Size = Vector3.new(col[1], col[2], col[3])
+			c.CFrame = cf * CFrame.new(0, col[2] / 2, 0)
+			c.Transparency = 1
+			c.Anchored, c.CanCollide, c.CanTouch, c.CanQuery = true, true, false, true
+			c.Parent = model
+		end
+		model.Parent = props
+		count += 1
+		byKind[kind] = (byKind[kind] or 0) + 1
+	end
+	local list, dropped = HubPropLayout.list(sizeOf)
+	for _, e in ipairs(list) do
+		put(e.kind, e.cf, e.rgb, e.source)
+	end
+	if #dropped > 0 then -- 길 위라 안 놓은 것(손 배치는 자리를 고친다 - 보고용 한 줄)
+		local ex = {}
+		for i, e in ipairs(dropped) do
+			if i <= 12 then
+				table.insert(ex, ("%s:%s@(%d, %d)"):format(e.source, e.kind:gsub("^prop_", ""), e.cf.X, e.cf.Z))
+			end
+		end
+		print(("[HubArt] 길 위라 안 놓음 %d: %s"):format(#dropped, table.concat(ex, " ")))
+	end
+	if HubPropsData.boundaryLanterns then
+		for _, d in ipairs(hub:GetChildren()) do
+			if d:IsA("BasePart") and (d.Name == "LanternPost" or d.Name == "Lantern") then
+				d.Transparency = 1
+				if d.Name == "LanternPost" then
+					local base = Vector3.new(d.Position.X, FLOOR, d.Position.Z)
+					put("prop_lantern", CFrame.lookAt(base, Vector3.new(0, FLOOR, 0)), nil, "boundary")
+				end
+			end
+		end
+	end
+	return count, byKind
 end
 
 function HubArt.scaleOf(key) -- 검증 · 보고용(가져올 때 줄어든 비율의 역수)
@@ -173,6 +291,15 @@ function HubArt.apply()
 			npcs += 1
 		end
 	end
+	-- QUEUE-ALL8 B2 · B3 · B4
+	local floors = dressFloors(hub, folder)
+	local propCount, byKind = placeProps(hub, folder)
+	local kinds = {}
+	for k, v in pairs(byKind) do
+		table.insert(kinds, ("%s %d"):format(k:gsub("^prop_", ""), v))
+	end
+	table.sort(kinds)
+	print(("[HubArt] 바닥 %d · 소품 %d(%s)"):format(floors, propCount, table.concat(kinds, " · ")))
 	return buildings, npcs
 end
 

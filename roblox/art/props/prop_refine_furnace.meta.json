@@ -1,0 +1,70 @@
+{
+ "parts": {
+  "Body": {
+   "tris": 56,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    2.6,
+    0.2
+   ],
+   "neon": false,
+   "color": "#966046"
+  },
+  "Mouth": {
+   "tris": 12,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    1.3,
+    -1.15
+   ],
+   "neon": false,
+   "color": "#FF8C32"
+  },
+  "Crucible": {
+   "tris": 40,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    3.55,
+    0.0
+   ],
+   "neon": false,
+   "color": "#4E5264"
+  },
+  "Glow": {
+   "tris": 40,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    3.9,
+    0.0
+   ],
+   "neon": true,
+   "color": "#FFAA3C"
+  }
+ },
+ "partCount": 4,
+ "totalTris": 148,
+ "triBudget": 300,
+ "budgetUse": 0.493,
+ "version": "QUEUE-ALL7B",
+ "item": "prop_refine_furnace"
+}

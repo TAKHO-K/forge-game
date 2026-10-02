@@ -1,0 +1,55 @@
+{
+ "parts": {
+  "Post": {
+   "tris": 52,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.4,
+    3.2,
+    0.0
+   ],
+   "neon": false,
+   "color": "#3C3432"
+  },
+  "Cage": {
+   "tris": 24,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    1.2,
+    5.363,
+    0.0
+   ],
+   "neon": false,
+   "color": "#3C3432"
+  },
+  "Lamp": {
+   "tris": 12,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    1.2,
+    5.4,
+    0.0
+   ],
+   "neon": true,
+   "color": "#FFD678"
+  }
+ },
+ "partCount": 3,
+ "totalTris": 88,
+ "triBudget": 300,
+ "budgetUse": 0.293,
+ "version": "QUEUE-ALL7B",
+ "item": "prop_lantern"
+}

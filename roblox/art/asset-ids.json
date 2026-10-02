@@ -3820,43 +3820,43 @@
   "status": "Approved"
  },
  "props/hub_board.fbx": {
-  "sha256": "5f726b81b8fefc2270e479eee9180b6e38cc2190ebfe729371c36f4e22376665",
+  "sha256": "14ec9774d9831b4751b08c8cc9e94c0df7abdb9068501fe7cc5c015645d87929",
   "assetType": "Model",
   "assetId": 121263932772111,
   "status": "Approved"
  },
  "props/hub_forge.fbx": {
-  "sha256": "d526a95d8f71dc1c54c0d92df70594e4931a04163019cd3ad7021b9629232945",
+  "sha256": "11318875ea06db5989c236fb2f128eeff1c253e062e935ce15b4615589134b9c",
   "assetType": "Model",
   "assetId": 136869948699752,
   "status": "Approved"
  },
  "props/hub_hall.fbx": {
-  "sha256": "59b35997acfb35d1694fc055363e4b569e9fa853926515eebe53bc504ded9525",
+  "sha256": "bc0a615e82cc393eb4f074d611675e1d863a7de6765c7784208ea9266199d339",
   "assetType": "Model",
   "assetId": 105079319058400,
   "status": "Approved"
  },
  "props/hub_house_a.fbx": {
-  "sha256": "a3ae7daa092293c703e8c8172914c18347453b1e86ece1d63f7c23ab6393d08c",
+  "sha256": "0e6438b532d3d666bffcf3257c30bb8bb93d714693b92c08ae3cc740a4ca4ebc",
   "assetType": "Model",
   "assetId": 124732016755040,
   "status": "Approved"
  },
  "props/hub_house_b.fbx": {
-  "sha256": "4cb4a8b04af9572f6703823271409ab62ebfc7202696e316afb6b3c0915bd9e0",
+  "sha256": "a71cd06e183fcf8446b0c7b445d0b6d34845f9a78ab47246de596ea7685f9b57",
   "assetType": "Model",
   "assetId": 110594300379630,
   "status": "Approved"
  },
  "props/hub_shop.fbx": {
-  "sha256": "184c571a3b3c3a45764269b6e719f1a9b545b9d88c8f7464796006379d1e4964",
+  "sha256": "9ff9747429439bade49d3268082bb9444f304799b52a7e088fbb7b2c92a6bf88",
   "assetType": "Model",
   "assetId": 130767308060171,
   "status": "Approved"
  },
  "props/hub_tailor.fbx": {
-  "sha256": "1a462c8a38fca671fa380b7931fd3b99bb531f3e1ff799df6645ed23fddcdcbf",
+  "sha256": "db2d5e3567ca13697fc5202a292213d5611919a34c3d62a56258712d8322f271",
   "assetType": "Model",
   "assetId": 116207192131559,
   "status": "Approved"
@@ -4240,33 +4240,135 @@
   "status": "Approved"
  },
  "props/npc_keeper.fbx": {
-  "sha256": "e0f4430f3e55a2cce2dfe1ae4e458c10d21a37e09c1260ab25c0389a78b4ece8",
+  "sha256": "88f6e3b5382e5303ad42eb63a65cd7b462cff98c54aa148a7a12e10e0475244c",
   "assetType": "Model",
   "assetId": 102531555123333,
   "status": "Approved"
  },
  "props/npc_knight.fbx": {
-  "sha256": "4b2aafb94b3d63135e4cb1ac80351585bb12548b1c77080a0f671bfa9b2539d7",
+  "sha256": "a2812e8e33555c15c3ee095cc0f2d3f303189d604359b550358373c8e9d7cb6f",
   "assetType": "Model",
   "assetId": 117682724867000,
   "status": "Approved"
  },
  "props/npc_merchant.fbx": {
-  "sha256": "a2839c3f076c265162e111f1d66c90ae58ce8dbf7dd4161d4e41a2c1f6d8c2d4",
+  "sha256": "2ce9f90ca96db62da1e17059f2187e0ec588165f66e889e2881cfc3e0be1287c",
   "assetType": "Model",
   "assetId": 93459910157741,
   "status": "Approved"
  },
  "props/npc_smith.fbx": {
-  "sha256": "fd9d12e161f11bc2bd87a2ac3f194139fcd701e6e83259cd159da41254adc7dc",
+  "sha256": "bcadf105c6642e5a13f24d7fdc0098e57c3b37e64b48f3ba20df9b9bf9751b99",
   "assetType": "Model",
   "assetId": 77589389780407,
   "status": "Approved"
  },
  "props/npc_tailor.fbx": {
-  "sha256": "620477eeac56928e847bbd125ef84d485667e91698feb8a8b7e783878635fdf9",
+  "sha256": "e5abfddfd6c773e235d936ff4f860a1ce80e70f3c8b6043dff76ea4647967321",
   "assetType": "Model",
   "assetId": 131458973819955,
+  "status": "Approved"
+ },
+ "props/prop_anvil_statue.fbx": {
+  "sha256": "0f50035ef6be157771146ea1e3a473d4ee8b53cc696a497b02f77d295be627ab",
+  "assetType": "Model",
+  "assetId": 122825208922716,
+  "status": "Approved"
+ },
+ "props/prop_barrel.fbx": {
+  "sha256": "214d0f76822abfd6dad130f3fa110fb8e685104e0c9584737c5bfc16f2063f18",
+  "assetType": "Model",
+  "assetId": 112548316653124,
+  "status": "Approved"
+ },
+ "props/prop_bench.fbx": {
+  "sha256": "febb7588e23ba61fecbcabc58372cc7839da416936a100c9e149b17a395b6150",
+  "assetType": "Model",
+  "assetId": 116173157477346,
+  "status": "Approved"
+ },
+ "props/prop_bush.fbx": {
+  "sha256": "a34c16e91fc727925b17316a46d3ed719054fbad39d7378a2da8880cb9bf908d",
+  "assetType": "Model",
+  "assetId": 129387207293045,
+  "status": "Approved"
+ },
+ "props/prop_cart.fbx": {
+  "sha256": "d5969594f7a4b24ac911126194bd8250341c1acce307271c9812674ff199786a",
+  "assetType": "Model",
+  "assetId": 81847269928833,
+  "status": "Approved"
+ },
+ "props/prop_crates.fbx": {
+  "sha256": "db34ae93368ba7fbad963d91e0c0b3ddf2e69ae713b5523bd2cf55f9ad8190b3",
+  "assetType": "Model",
+  "assetId": 118826858029548,
+  "status": "Approved"
+ },
+ "props/prop_fence.fbx": {
+  "sha256": "898cbc1ec76ec92df269e948a7fee358131ccf875418718037b95ebaf227c0b1",
+  "assetType": "Model",
+  "assetId": 87915316068066,
+  "status": "Approved"
+ },
+ "props/prop_flag.fbx": {
+  "sha256": "bb6402e278ffcccc039fb60de2d9169feddd390c5d83dd7a40d7666dc2447826",
+  "assetType": "Model",
+  "assetId": 130459497541349,
+  "status": "Approved"
+ },
+ "props/prop_flowerpot.fbx": {
+  "sha256": "546681bca7e58732419193bebd78eeb625dd25c639a0127f7c51efe14a0ac9a0",
+  "assetType": "Model",
+  "assetId": 92396176758120,
+  "status": "Approved"
+ },
+ "props/prop_flowers.fbx": {
+  "sha256": "e2dfaf70be4a911c61186023d8e59ddb1b2cc4d5362b6a870838e7d36f33482c",
+  "assetType": "Model",
+  "assetId": 107172183069367,
+  "status": "Approved"
+ },
+ "props/prop_gem_bench.fbx": {
+  "sha256": "a1c249d5b8648a8cf1420e842bee96d43fddd04696c1f42508de1d66604c7ccd",
+  "assetType": "Model",
+  "assetId": 133865459122187,
+  "status": "Approved"
+ },
+ "props/prop_lantern.fbx": {
+  "sha256": "4b7762360c231c85fc1aa35d1b08cdef2cc3acae57664a3bfef36b75b9c0312c",
+  "assetType": "Model",
+  "assetId": 131987819406115,
+  "status": "Approved"
+ },
+ "props/prop_refine_furnace.fbx": {
+  "sha256": "b08c7566f1d8e48474d30e783880e9785179116fe887d897dca455af86cac1e4",
+  "assetType": "Model",
+  "assetId": 94998132235759,
+  "status": "Approved"
+ },
+ "props/prop_sign.fbx": {
+  "sha256": "84b53ec87afe1bc718988105a707fdadc634a9d33816f83510f9ca12d00b4384",
+  "assetType": "Model",
+  "assetId": 139311835114791,
+  "status": "Approved"
+ },
+ "props/prop_stall.fbx": {
+  "sha256": "665300bc9b7bccbc3c4ef175bd23e3377e84b4fc2625e1a69c9d81abacc0d8a3",
+  "assetType": "Model",
+  "assetId": 116482961544355,
+  "status": "Approved"
+ },
+ "props/prop_tree_small.fbx": {
+  "sha256": "2f93e91af018868361e9fd97867151a84109472b1f36d9ffb4bd5044d581cb14",
+  "assetType": "Model",
+  "assetId": 89661363500377,
+  "status": "Approved"
+ },
+ "props/prop_well.fbx": {
+  "sha256": "00526e4ff3bfdee26ea0b46f5a9604acb678dd52634dc581ed3f9d23fd7e1335",
+  "assetType": "Model",
+  "assetId": 80166481760896,
   "status": "Approved"
  },
  "props/rebirth_altar.fbx": {
@@ -4342,6 +4444,13 @@
   "assetId": 138632611508765,
   "status": "Approved",
   "imageId": 102054407406703
+ },
+ "terrain/hub_cobble.png": {
+  "sha256": "edd05ec634b459ff305ab394fb9ed197d3cfe5227e57a1deff8725b4b06340e0",
+  "assetType": "Decal",
+  "assetId": 82773734116988,
+  "status": "Approved",
+  "imageId": 130606383702352
  },
  "weapons/bow_ancient.fbx": {
   "sha256": "742f05a890664cd259cc7dd622d39ba8216ae168234344937ed13b13b41f6853",
