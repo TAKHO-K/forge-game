@@ -50,11 +50,28 @@ local function rowsFor(season)
 	return out
 end
 
+-- QUEUE-ALL9A 1-3: 칸 보상(1 ~ 40 = 그 시즌 표 · 41 이상 = 반복 보너스 칸)
+local BONUS = { free = { sparkleShard = 2 }, paid = { sparkleShard = 4 } }
+local function rewardAt(season, rowName, tier)
+	if tier > TIERS then
+		return BONUS[rowName]
+	end
+	return rowsFor(season)[rowName][tier]
+end
+
 return {
 	seasonLimited = seasonLimited,
 	rowsFor = rowsFor,
+	rewardAt = rewardAt,
 	enabled = true,
 	tiers = TIERS,
-	expPerTier = 250, -- 하루 약 120(일간 3 × 20 + 접속 10 + 상자 50) + 주 500(주간) → 8주 약 10,700 ≈ 40칸 × 250(모두 매일 하면 끝까지)
+	-- QUEUE-ALL9A 1-1: 40칸 = 6,800. 근거 = 평일만 주4일(8주 32일 × 하루 120(일간 3 × 20 + 접속 10 + 상자 50)) 3,840 + 주간 6회(5 × 100 = 500 × 6) 3,000 = 6,840 ≥ 6,800
+	--   (주말 2배 없이도 평일만 주4일 + 주간 6주면 완주 - 하네스 season_pass_test가 접속 패턴 6종 × 8주로 확인)
+	expPerTier = 170,
+	-- QUEUE-ALL9A 1-3: 40칸 뒤 반복 보너스 칸 - expPerTier마다 한 번(상한 없음) · 받음 기록 = 같은 claimedFree/claimedPaid의 "41" · "42" …(저장 구조 그대로)
+	bonus = BONUS,
+	-- QUEUE-ALL9A 1-2: 주말 2배 = 서버 UTC 금 15:00 ~ 월 07:00(한국 토 00:00 ~ 월 16:00 · 64시간). startSec = 일요일 00:00 UTC부터 초.
+	--   2배 출처 = 접속(login) · 일일 미션(daily) · 일일 상자(chest)만 - 주간 미션(weekly)은 아님. 지급 입구 = QuestService.grant 한 곳.
+	weekend = { startSec = 5 * 86400 + 15 * 3600, lengthSec = 64 * 3600, mult = 2, sources = { login = true, daily = true, chest = true } },
 	rows = rows,
 }

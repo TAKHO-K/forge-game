@@ -11,9 +11,12 @@ end
 -- 가짜 서비스: Players(UserId → 가짜 Player) · Marketplace(프롬프트 기록) · Policy · DataStore(선물 대기열) · HttpService(GUID)
 local PLAYERS, prompts, policyAnswer, DS, guid = {}, {}, nil, {}, 0
 local dsFailUpdate = false -- QUEUE-ALL5 A1: 대기열 지우기(UpdateAsync) 실패 주입
+local releaseMode = false -- QUEUE-ALL9A 1-2: 출시 서버 흉내(RunService:IsStudio() = false)
 local baseGetService = game.GetService
 game.GetService = function(self, name)
-	if name == "Players" then
+	if name == "RunService" and releaseMode then
+		return { IsStudio = function() return false end, IsServer = function() return true end, IsRunning = function() return true end }
+	elseif name == "Players" then
 		return setmetatable({ GetPlayerByUserId = function(_, id) return PLAYERS[id] end, GetPlayers = function() return {} end },
 			{ __index = function() return { Connect = function() end } end })
 	elseif name == "MarketplaceService" then
@@ -201,6 +204,37 @@ local ok, err = pcall(function()
 	s.seasonPass.season = season0 - 1 -- 지난 시즌 기록
 	SP.ensure(player)
 	check("시즌 넘김: 경험치 0 · 받음 · 유료 초기화", s.seasonPass.season == season0 and qs.currencies.passExp == 0 and not s.seasonPass.premium and next(s.seasonPass.claimedFree) == nil)
+
+	-- ⑥-2 QUEUE-ALL9A: 주말 2배(지급 입구 QuestService.grant 한 곳 · 주간 = 1배) · 개발 덮어쓰기 = Studio만 · 보너스 칸(41칸부터 · 같은 받음 표)
+	check("weekend on(Studio) 받아들임", SP.setWeekendOverride("on") and SP.weekend() == true)
+	local e0 = qs.currencies.passExp
+	QuestService.grant(player, { passExp = 20 }, "daily")
+	QuestService.grant(player, { passExp = 10 }, "login")
+	QuestService.grant(player, { passExp = 50 }, "chest")
+	QuestService.grant(player, { passExp = 100 }, "weekly")
+	check("주말: 일간 20 → 40 · 접속 10 → 20 · 상자 50 → 100 · 주간 100 → 100", qs.currencies.passExp - e0 == 40 + 20 + 100 + 100, tostring(qs.currencies.passExp - e0))
+	SP.setWeekendOverride("off")
+	local e1 = qs.currencies.passExp
+	QuestService.grant(player, { passExp = 20 }, "daily")
+	QuestService.grant(player, { passExp = 20 })
+	check("weekend off: 일간 20 그대로 · 출처 없는 지급 = 1배", qs.currencies.passExp - e1 == 40)
+	SP.setWeekendOverride("on")
+	releaseMode = true
+	local rejected = not SP.setWeekendOverride("on")
+	local wedNoon = 1790000000 - (1790000000 - 4 * 86400) % (7 * 86400) + 2 * 86400 + 12 * 3600 -- 수요일 12:00 UTC
+	check("출시 설정(IsStudio false): /gg weekend 거절 · 남은 덮어쓰기도 안 읽음(수요일 = 1배)", rejected and SP.weekend(wedNoon) == false and SP.passExpMultiplier("daily", wedNoon) == 1)
+	releaseMode = false
+	SP.setWeekendOverride("auto")
+	qs.currencies.passExp = Season.tiers * Season.expPerTier + Season.expPerTier * 2 + 5
+	local shard0 = qs.currencies.sparkleShard
+	local b1 = SP.claim(player, "free", 41)
+	local b2 = SP.claim(player, "free", 42)
+	local b3, why3b = SP.claim(player, "free", 43)
+	local b4, why4b = SP.claim(player, "free", 41)
+	check("보너스 칸: 41 · 42 O(조각 +2씩) · 43 not_reached · 41 다시 claimed · 받음 키 문자열", b1 and b2 and not b3 and why3b == "not_reached" and not b4 and why4b == "claimed"
+		and qs.currencies.sparkleShard == shard0 + 4 and s.seasonPass.claimedFree["41"] == true, ("%s · %s"):format(tostring(why3b), tostring(why4b)))
+	local v = SP.view(player)
+	check("view: reach 42 · bonus 표 · weekend 표", v.reach == 42 and v.bonus.paid.sparkleShard == 4 and type(v.weekend.active) == "boolean" and v.tier == Season.tiers)
 
 	-- ⑦ 선물함: 온라인 바로 · 오프라인 대기열 → 접속 때 옮김 · 치장만 · 받기
 	local GS = MODS.GiftService

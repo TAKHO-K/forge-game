@@ -46,6 +46,11 @@ function SettingsService.sanitize(key, value)
 			return math.floor(value * 100 + 0.5) / 100
 		end
 		return nil
+	elseif def.kind == "stamp" then -- QUEUE-ALL9A 1-2: 시각 도장(유닉스 초 정수 - 주말 배너 본 창)
+		if type(value) == "number" and value == math.floor(value) and value >= 0 and value < 2 ^ 40 then
+			return value
+		end
+		return nil
 	end
 	return nil
 end

@@ -43,6 +43,12 @@ local function build()
 			requestRemote:FireServer("claim", "login")
 		end })
 	login.root.Name = "LoginClaim"
+	-- QUEUE-ALL9A 1-4: 빠진 날이 있어도 다음 접속에 이어서 센다(센 날 = 접속한 날 - 연속 아님)는 것을 한 줄로
+	local note = Theme.label(panel.content, Text.get("attendance.missedNote"), "caption", "textSecondary")
+	note.Name = "MissedNote"
+	note.TextXAlignment = Enum.TextXAlignment.Center
+	note.Position = UDim2.fromOffset(12, 194)
+	note.Size = UDim2.new(1, -24, 0, 18)
 	built = { panel = panel, grid = grid, login = login }
 end
 

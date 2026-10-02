@@ -102,6 +102,26 @@ end
 local PAID_ROW_KINDS = { sparkleShard = true, cosmeticTheme = true, gliderSkin = true, cosmeticItem = true }
 Monetization.PAID_ROW_KINDS = PAID_ROW_KINDS -- 리뷰 중요 2: 서버가 유료 줄을 지급할 때도 같은 표로 막는다
 local FREE_ROW_KINDS = { sparkleShard = true, cosmeticTheme = true, gliderSkin = true, cosmeticItem = true, egg = true }
+-- 한 칸 보상의 줄 규칙(QUEUE-ALL9A 1-3: 40칸 표 · 보너스 칸이 같은 검사)
+local function checkRowReward(reasons, data, cosmetics, rowName, reward, label)
+	for _, grant in ipairs(Monetization.rewardToGrants(reward)) do
+		if rowName == "paid" then
+			if grant.kind == "egg" then
+				table.insert(reasons, label .. ": 유료 줄에 알(랜덤)")
+			else
+				local ok, why = Monetization.checkGrant(data, grant, PAID_ROW_KINDS)
+				if not ok then
+					table.insert(reasons, label .. ": " .. why)
+				end
+			end
+		elseif not FREE_ROW_KINDS[grant.kind] then
+			table.insert(reasons, ("%s: 무료 줄 모르는 종류 %s"):format(label, grant.kind))
+		end
+		if (grant.kind == "cosmeticTheme" or grant.kind == "gliderSkin") and not Monetization.findCosmetic(cosmetics, grant.kind, grant.id) then
+			table.insert(reasons, ("%s: 없는 치장 %s"):format(label, tostring(grant.id)))
+		end
+	end
+end
 function Monetization.checkSeasonPass(data, season, cosmetics)
 	local reasons = {}
 	for tier = 1, season.tiers do
@@ -120,23 +140,15 @@ function Monetization.checkSeasonPass(data, season, cosmetics)
 				table.insert(reasons, ("%s %d칸: 보상 없음"):format(rowName, tier))
 				continue
 			end
-			for _, grant in ipairs(Monetization.rewardToGrants(reward)) do
-				local label = ("%s %d칸"):format(rowName, tier)
-				if rowName == "paid" then
-					if grant.kind == "egg" then
-						table.insert(reasons, label .. ": 유료 줄에 알(랜덤)")
-					else
-						local ok, why = Monetization.checkGrant(data, grant, PAID_ROW_KINDS)
-						if not ok then
-							table.insert(reasons, label .. ": " .. why)
-						end
-					end
-				elseif not FREE_ROW_KINDS[grant.kind] then
-					table.insert(reasons, ("%s: 무료 줄 모르는 종류 %s"):format(label, grant.kind))
-				end
-				if (grant.kind == "cosmeticTheme" or grant.kind == "gliderSkin") and not Monetization.findCosmetic(cosmetics, grant.kind, grant.id) then
-					table.insert(reasons, ("%s: 없는 치장 %s"):format(label, tostring(grant.id)))
-				end
+			checkRowReward(reasons, data, cosmetics, rowName, reward, ("%s %d칸"):format(rowName, tier))
+		end
+	end
+	for _, rowName in ipairs({ "free", "paid" }) do -- QUEUE-ALL9A 1-3: 40칸 뒤 반복 보너스 칸도 같은 줄 규칙
+		if season.bonus then
+			if type(season.bonus[rowName]) ~= "table" then
+				table.insert(reasons, rowName .. " 보너스 칸: 보상 없음")
+			else
+				checkRowReward(reasons, data, cosmetics, rowName, season.bonus[rowName], rowName .. " 보너스 칸")
 			end
 		end
 	end
@@ -254,9 +266,14 @@ function Monetization.seasonTier(exp, expPerTier, tiers)
 	exp = type(exp) == "number" and exp == exp and exp or 0
 	return math.clamp(math.floor(math.max(exp, 0) / expPerTier), 0, tiers)
 end
--- 받을 수 있나: 도달 · 안 받음 · 유료 줄은 이번 시즌 유료
-function Monetization.canClaim(pass, rowName, tier, reachedTier, tiers)
-	if type(tier) ~= "number" or tier ~= math.floor(tier) or tier < 1 or tier > tiers then
+-- QUEUE-ALL9A 1-3: 상한 없는 도달 칸(41 이상 = 반복 보너스 칸) · 보너스 횟수 = max(0, 도달 - tiers)
+function Monetization.seasonReach(exp, expPerTier)
+	exp = type(exp) == "number" and exp == exp and exp or 0
+	return math.floor(math.max(exp, 0) / expPerTier)
+end
+-- 받을 수 있나: 도달 · 안 받음 · 유료 줄은 이번 시즌 유료. bonus = true면 tiers 뒤 칸(보너스)도 받는다(reachedTier = seasonReach - 상한 없음)
+function Monetization.canClaim(pass, rowName, tier, reachedTier, tiers, bonus)
+	if type(tier) ~= "number" or tier ~= math.floor(tier) or tier < 1 or (tier > tiers and not bonus) then
 		return false, "bad_tier"
 	end
 	if rowName ~= "free" and rowName ~= "paid" then
@@ -273,6 +290,26 @@ function Monetization.canClaim(pass, rowName, tier, reachedTier, tiers)
 		return false, "claimed"
 	end
 	return true
+end
+
+-- QUEUE-ALL9A 1-2 주말 2배 창(서버 UTC 시각만 - 클라 시계 · 시간대 안 씀). w = SeasonPassData.weekend.
+--   반환: 지금 창 안인가, 그 창(또는 다음 창)의 시작 · 끝(유닉스 초). 1970-01-04 = 일요일 → (now - 3일) % 주 = 일요일 00:00 UTC부터 초.
+local WEEK = 7 * 86400
+function Monetization.weekendWindow(now, w)
+	local sunday = now - (now - 3 * 86400) % WEEK
+	local startAt = sunday + w.startSec
+	if now >= startAt then
+		return true, startAt, startAt + w.lengthSec
+	end
+	local prev = startAt - WEEK -- 지난주 창이 월요일까지 이어진다
+	if now < prev + w.lengthSec then
+		return true, prev, prev + w.lengthSec
+	end
+	return false, startAt, startAt + w.lengthSec
+end
+-- 패스 경험치 배율(source = 퀘스트 받기 종류 login | daily | chest | weekly …): 창 안 + 2배 출처만 w.mult
+function Monetization.passExpMultiplier(source, active, w)
+	return (active and w.sources[source]) and w.mult or 1
 end
 
 return Monetization

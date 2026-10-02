@@ -138,8 +138,8 @@ function QuestService.syncWallet(player)
 	end
 end
 
--- 보상 지급(한 곳). 반환 = 지급 요약 문자열(로그)
-function QuestService.grant(player, reward)
+-- 보상 지급(한 곳). 반환 = 지급 요약 문자열(로그). source = 퀘스트 받기 종류(login · daily · chest · weekly …) - 주말 패스 경험치 2배 판정(QUEUE-ALL9A 1-2 · 여기 한 곳)
+function QuestService.grant(player, reward, source)
 	local parts = {}
 	if not reward then
 		return ""
@@ -185,8 +185,9 @@ function QuestService.grant(player, reward)
 		table.insert(parts, Text.getFor(player, "srv.reward.protectDrop", { n = ("%d"):format(reward.protectDrop) }))
 	end
 	if state and reward.passExp then
-		state.currencies.passExp = (state.currencies.passExp or 0) + reward.passExp
-		table.insert(parts, Text.getFor(player, "srv.reward.passExp", { n = ("%d"):format(reward.passExp) }))
+		local passExp = reward.passExp * require(script.Parent.SeasonPassService).passExpMultiplier(source)
+		state.currencies.passExp = (state.currencies.passExp or 0) + passExp
+		table.insert(parts, Text.getFor(player, "srv.reward.passExp", { n = ("%d"):format(passExp) }))
 	end
 	QuestService.syncWallet(player)
 	return table.concat(parts, " · ")
@@ -262,7 +263,7 @@ function QuestService.claim(player, kind, id)
 	if not reward then
 		return false, why
 	end
-	local summary = QuestService.grant(player, reward)
+	local summary = QuestService.grant(player, reward, kind)
 	print(("[Q6] 퀘스트 보상: %s %s %s → %s"):format(player.Name, tostring(kind), tostring(id), summary))
 	require(script.Parent.ImmediateSave).request(player)
 	push(player)

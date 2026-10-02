@@ -112,6 +112,44 @@ local function tierRow(ctx, env, season, tier)
 	end
 end
 
+-- QUEUE-ALL9A 1-3: 40칸 뒤 반복 보너스 칸 - 도달 횟수 · 줄마다 다음 안 받은 칸(41 · 42 …) 하나씩 받기(서버가 다시 잰다)
+function SeasonTab.bonusState(season, rowName)
+	local reached = math.max(0, (season.reach or 0) - season.tiers)
+	local claimed = rowName == "free" and season.claimedFree or season.claimedPaid
+	local nextTier, pending = nil, 0
+	for tier = season.tiers + 1, season.tiers + reached do
+		if not (claimed and claimed[tostring(tier)]) then
+			nextTier = nextTier or tier
+			pending += 1
+		end
+	end
+	return reached, nextTier, pending
+end
+
+local function bonusRow(ctx, env, season)
+	if not season.bonus then
+		return
+	end
+	local reached = SeasonTab.bonusState(season, "free")
+	local buttons = {}
+	for _, rowName in ipairs({ "free", "paid" }) do
+		local _, nextTier, pending = SeasonTab.bonusState(season, rowName)
+		local locked = rowName == "paid" and not season.premium
+		table.insert(buttons, {
+			name = rowName == "free" and "BonusFree" or "BonusPaid",
+			text = locked and Text.get("season.locked") or Text.get("season.bonusClaim", { n = tostring(pending) }),
+			kind = (pending > 0 and not locked) and "primary" or "secondary",
+			enabled = pending > 0 and not locked and not env.busy(),
+			onActivated = function()
+				env.send("seasonClaim", rowName, nextTier)
+			end,
+		})
+	end
+	ctx.row({ name = "Bonus", title = Text.get("season.bonusTitle", { n = tostring(reached) }),
+		subtitle = Text.get("season.bonusSub", { per = tostring(season.expPerTier), free = tostring(season.bonus.free.sparkleShard or 0), paid = tostring(season.bonus.paid.sparkleShard or 0) }),
+		highlight = reached > 0, buttons = buttons })
+end
+
 -- QUEUE-ALL2 P2: 받을 수 있는 칸 수(왼쪽 메뉴 상점 빨간 점) - cellState와 같은 판정(표시용 · 서버가 다시 잰다)
 function SeasonTab.claimableCount(season)
 	local n = 0
@@ -120,6 +158,12 @@ function SeasonTab.claimableCount(season)
 			if SeasonTab.cellState(season, rowName, tier) == "ready" then
 				n += 1
 			end
+		end
+	end
+	if season.bonus then -- QUEUE-ALL9A 1-3 보너스 칸(유료 줄은 premium만)
+		n += select(3, SeasonTab.bonusState(season, "free"))
+		if season.premium then
+			n += select(3, SeasonTab.bonusState(season, "paid"))
 		end
 	end
 	return n
@@ -138,6 +182,11 @@ function SeasonTab.render(ctx, env)
 	local inTier = maxed and season.expPerTier or ((season.exp or 0) % season.expPerTier)
 	ctx.gauge("SeasonExp", inTier / season.expPerTier, Text.get("season.exp", { tier = tostring(season.tier or 0), tiers = tostring(season.tiers),
 		n = tostring(inTier), per = tostring(season.expPerTier) }), "xp")
+	if season.weekend and season.weekend.active then -- QUEUE-ALL9A 1-2: 남은 시간 = 서버 시각(GetServerTimeNow) 기준 - 클라 시계 · 시간대 안 씀
+		local left = math.max(0, (season.weekend.endsAt or 0) - workspace:GetServerTimeNow())
+		local time = Text.get("season.weekendTime", { h = tostring(math.floor(left / 3600)), m = tostring(math.floor(left % 3600 / 60)) })
+		ctx.line(Text.get("season.weekendOn", { time = time }), "gold", 1, "WeekendBoost")
+	end
 	if season.premium then
 		ctx.line(Text.get("season.premiumOn"), "success", 1, "PremiumOn")
 	else
@@ -164,6 +213,7 @@ function SeasonTab.render(ctx, env)
 	for tier = 1, season.tiers do
 		tierRow(ctx, env, season, tier)
 	end
+	bonusRow(ctx, env, season)
 end
 
 return SeasonTab

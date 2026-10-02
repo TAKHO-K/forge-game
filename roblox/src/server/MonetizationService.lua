@@ -361,6 +361,7 @@ end
 
 function MonetizationService.onLoaded(player)
 	SeasonPassService.ensure(player)
+	SeasonPassService.weekendBanner(player) -- QUEUE-ALL9A 1-2 주말 창 첫 접속 배너 1회
 	CosmeticService.onLoaded(player)
 	applyPassAttributes(player) -- 캐시값으로 먼저(조회는 느리다)
 	task.spawn(function()
