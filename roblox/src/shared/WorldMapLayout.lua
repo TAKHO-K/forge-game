@@ -1020,7 +1020,7 @@ function Layout.buildTree(list)
 		prim(list, "TreeCourse", "StationSign", Vector3.new(3, 0.4, 3), CFrame.new(sign), D.colors.marker, { collide = false, neon = true, attrs = { Label = label, LabelKey = s.deck and "desc.world.deck" or "desc.world.stationSign", LabelArg_name = (not s.deck) and s.name or nil, LabelArg_level = (not s.deck) and ("%d"):format(s.unlockLevel) or nil } })
 		if s.deck then
 			prim(list, "TreeCourse", "DailyEggSpot", Vector3.new(3, 0.4, 3), CFrame.new(sign + Vector3.new(0, 0, 10)), D.colors.marker,
-				{ collide = false, neon = true, attrs = { Spot = "dailyEgg", Label = C.dailyEgg.label } })
+				{ collide = false, neon = true, attrs = { Spot = "dailyEgg", Label = C.dailyEgg.label, Soon = C.dailyEgg.soon or nil } })
 		else
 			local b = math.rad(St.startAngleDeg + 12)
 			prim(list, "TreeCourse", "StationDown", Vector3.new(0.3, 4, 4), CFrame.new(math.cos(b) * mid, FLOOR + s.y + 0.15, math.sin(b) * mid) * CFrame.Angles(0, 0, math.rad(90)), D.colors.barrier,
@@ -1339,7 +1339,7 @@ function Layout.buildHub(list)
 					{ attrs = { Facility = name, Label = b.mid and f.displayName or nil, HubBuilding = b.kind } })
 			end
 			for _, sp in ipairs(f.spots) do
-				column(list, "Hub", "Spot_" .. sp.id, cf * CFrame.new(sp.along, 0, sp.side), 6, 2, 5, D.colors.block, { attrs = { Spot = sp.id, Label = sp.label, District = name } })
+				column(list, "Hub", "Spot_" .. sp.id, cf * CFrame.new(sp.along, 0, sp.side), 6, 2, 5, D.colors.block, { attrs = { Spot = sp.id, Label = sp.label, District = name, Soon = sp.soon or nil } })
 			end
 		end
 	end

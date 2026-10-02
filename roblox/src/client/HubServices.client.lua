@@ -12,6 +12,7 @@ local Text = require(ReplicatedStorage.Shared.Text)
 local ArtImage = require(script.Parent.ui.ArtImage)
 local Toast = require(script.Parent.ui.kit.Toast)
 local SettingSave = require(script.Parent.ui.SettingSave)
+local UIManager = require(script.Parent.UIManager)
 
 local player = Players.LocalPlayer
 local PROMPT_NAME = "HubServicePrompt"
@@ -28,6 +29,12 @@ local OPEN = {
 	end,
 	character = function(focus)
 		return require(script.Parent.panels.Character).open(focus)
+	end,
+	inventory = function() -- QUEUE-ALL8 A: 재련대 · 보석 가공대 = 가방(장비 · 보석을 골라서 한다)
+		return UIManager.isOpen("inventory") or UIManager.open("inventory")
+	end,
+	shop = function(focus)
+		return require(script.Parent.panels.Shop).open(focus)
 	end,
 }
 
@@ -103,6 +110,9 @@ ProximityPromptService.PromptTriggered:Connect(function(prompt, who)
 	local open = s and OPEN[s.panel]
 	if open then -- 리뷰: 이미 열린 창이면 각 open이 탭만 바꾼다
 		open(s.focus)
+		if s.hintKey then -- QUEUE-ALL8 A: 설명은 이름표가 아니라 누른 뒤 한 줄
+			Toast.push("TC", { text = Text.get(s.hintKey), grade = "notice", seconds = 3 }) -- notice = 창 위로(열린 창 안 설명 한 줄처럼 보인다)
+		end
 	end
 end)
 
@@ -115,7 +125,7 @@ task.spawn(function()
 			for _, s in ipairs(D.services) do
 				local part = spots[s.id]
 				local attr = "HubIntroSeen_" .. s.id -- 설정 로드 전 = nil(기다림) · 로드 뒤 안 봄 = false
-				if part and part.Parent and player:GetAttribute(attr) == false and (part.Position - root.Position).Magnitude <= D.introRadius then
+				if s.intro and part and part.Parent and player:GetAttribute(attr) == false and (part.Position - root.Position).Magnitude <= D.introRadius then
 					SettingSave(s.intro, true)
 					Toast.push("TC", { text = Text.get(s.introKey), colorName = "textPrimary", seconds = 4 })
 				end

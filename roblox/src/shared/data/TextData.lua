@@ -201,7 +201,7 @@ local TextData = {
 		["codex.v2.useTitle"] = "고르기",
 		["codex.v2.usingTitle"] = "사용 중",
 		["codex.summary"] = "완성 세트 {done} / {total} · 모은 조각 {pieces} / {allPieces}",
-		["codex.reward"] = "구역 세트를 모두 완성하면 칭호 · 치장 보상(준비 중)",
+		["codex.reward"] = "구역 세트를 모두 완성하면 칭호 · 치장 보상 · 곧 열려요",
 
 		-- ? 도움말 2단(HelpTooltip)
 		["help.more"] = "눌러서 자세히 ▼",
@@ -606,7 +606,7 @@ local TextData = {
 		["shop.buy"] = "구매",
 		["shop.open"] = "열기",
 		["shop.owned"] = "보유",
-		["shop.notReady"] = "준비 중",
+		["shop.notReady"] = "곧 열려요",
 		["shop.blocked"] = "구매 불가",
 		["shop.robuxPrice"] = "로벅스 {n}",
 		["shop.shardPrice"] = "조각 {n}",
@@ -632,7 +632,7 @@ local TextData = {
 		["shop.reason.rejected"] = "거절되었습니다({reason})",
 		["shop.reason.shards"] = "반짝 조각이 모자랍니다", -- QUEUE-B1 결정 10: ShopResult 이유
 		["shop.reason.owned"] = "이미 가지고 있습니다",
-		["shop.reason.notReady"] = "아직 준비 중인 상품입니다",
+		["shop.reason.notReady"] = "곧 열려요",
 		["shop.reason.notOwned"] = "먼저 사야 장착할 수 있습니다",
 		["shop.reason.noPass"] = "이름표 색 패스가 있어야 합니다",
 		["shop.reason.notReached"] = "아직 도달하지 않은 칸입니다",

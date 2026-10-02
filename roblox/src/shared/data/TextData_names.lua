@@ -51,11 +51,11 @@ local en = {
 	["석조 평원 입구"] = "Stone Plains Gate", ["수정 동굴 입구"] = "Crystal Cave Gate", ["수몰 사원 입구"] = "Sunken Temple Gate", ["모래 유적 입구"] = "Sand Ruins Gate", ["폭풍 첨탑 입구"] = "Storm Spire Gate", ["빙하 동굴 입구"] = "Glacier Cave Gate",
 	-- 허브
 	["큰 나무 마을"] = "Big Tree Village", ["대장간 거리"] = "Forge Street", ["시장"] = "Market", ["커뮤니티 광장"] = "Community Plaza", ["포탈 광장"] = "Portal Plaza",
-	["재련대(준비 · 가방에서도 된다)"] = "Refine Bench (also in your bag)", ["보석 가공대(준비 · 가방에서도 된다)"] = "Gem Bench (also in your bag)",
-	["상점(준비)"] = "Shop", ["판매"] = "Sell", ["부화장(펫 단계)"] = "Hatchery", ["파티 게시판"] = "Party Board", ["순위판"] = "Rankings", ["명예의 전당"] = "Hall of Fame",
+	["재련대"] = "Refine Bench", ["보석 가공대"] = "Gem Bench", -- QUEUE-ALL8 A: 정식 이름만
+	["판매"] = "Sell", ["부화장"] = "Hatchery", ["파티 게시판"] = "Party Board", ["순위판"] = "Rankings", ["명예의 전당"] = "Hall of Fame",
 	["재봉사"] = "Tailor", ["마을 게시판"] = "Village Board", ["도전 기사"] = "Challenge Knight", ["대장장이"] = "Blacksmith", -- QUEUE-ALL7B 2 · 3
 	["대장간"] = "Forge", ["상점"] = "Shop", ["상인"] = "Merchant", ["게시판지기"] = "Board Keeper", ["재봉집"] = "Tailor's House", -- QUEUE-ALL7B 4 지도 이름
-	["하루 1회 보상(펫 단계 - 무료 알)"] = "Daily Gift (free egg)", ["덩굴 리프트"] = "Vine Lift",
+	["하루 1회 보상"] = "Daily Gift", ["덩굴 리프트"] = "Vine Lift",
 	-- 큰 나무 구간 · 정거장
 	["뿌리 가지"] = "Root Branch", ["덩굴 숲"] = "Vine Woods", ["말랑 열매 골"] = "Squishy Fruit Gully", ["점프대 가지"] = "Bounce Branch", ["높은 가지"] = "High Branch", ["정상 오르기"] = "Climb to the Top",
 	["뿌리 정거장"] = "Root Stop", ["첫 가지 정거장"] = "First Branch Stop", ["구름 아래 정거장"] = "Below-Cloud Stop", ["구름층 정거장"] = "Cloud Stop", ["높은 가지 정거장"] = "High Branch Stop",

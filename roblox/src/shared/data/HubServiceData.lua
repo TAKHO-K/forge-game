@@ -10,6 +10,10 @@ return {
 		{ id = "hallOfFame", spot = "hallOfFame", panel = "leaderboard", icon = "icons/hud/rank", nameKey = "hub.service.hallOfFame", actionKey = "hub.service.hallOfFame.action", introKey = "hub.service.hallOfFame.intro", intro = "hubIntroRank" },
 		{ id = "noticeBoard", spot = "noticeBoard", panel = "settings", focus = "game", icon = "icons/hud/attendance", nameKey = "hub.service.noticeBoard", actionKey = "hub.service.noticeBoard.action", introKey = "hub.service.noticeBoard.intro", intro = "hubIntroBoard" },
 		{ id = "challengeKnight", spot = "challengeKnight", panel = "quests", focus = "challenge", icon = "icons/ui/pin_boss", nameKey = "hub.service.challengeKnight", actionKey = "hub.service.challengeKnight.action", introKey = "hub.service.challengeKnight.intro", intro = "hubIntroChallenge" },
+		-- QUEUE-ALL8 A: 출시 기능 자리(정식 이름 + 프롬프트 · 설명 = hintKey 한 줄 · 첫 소개 없음)
+		{ id = "refine", spot = "refine", panel = "inventory", icon = "icons/hud/forge", nameKey = "hub.service.refine", actionKey = "hub.service.refine.action", hintKey = "hub.service.refine.hint" },
+		{ id = "gemcraft", spot = "gemcraft", panel = "inventory", icon = "icons/hud/codex", nameKey = "hub.service.gemcraft", actionKey = "hub.service.gemcraft.action", hintKey = "hub.service.gemcraft.hint" },
+		{ id = "shop", spot = "shop", panel = "shop", focus = "recommend", icon = "icons/hud/shop", nameKey = "hub.service.shop", actionKey = "hub.service.shop.action" },
 		{ id = "tailor", spot = "tailor", panel = "character", focus = "cosmetics", icon = "icons/codex/tab_equipment", nameKey = "hub.service.tailor", actionKey = "hub.service.tailor.action", introKey = "hub.service.tailor.intro", intro = "hubIntroTailor" },
 	},
 }

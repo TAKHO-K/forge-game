@@ -196,7 +196,7 @@ return {
 	["codex.v2.useTitle"] = "Use",
 	["codex.v2.usingTitle"] = "In Use",
 	["codex.summary"] = "Sets {done} / {total} · Pieces {pieces} / {allPieces}",
-	["codex.reward"] = "All zone sets = titles and looks (soon)",
+	["codex.reward"] = "All zone sets = titles and looks · Coming soon",
 
 	-- ? 도움말 2단(HelpTooltip)
 	["help.more"] = "Tap for more ▼",
@@ -601,7 +601,7 @@ return {
 	["shop.buy"] = "Buy",
 	["shop.open"] = "Open",
 	["shop.owned"] = "Owned",
-	["shop.notReady"] = "Soon",
+	["shop.notReady"] = "Coming soon",
 	["shop.blocked"] = "Can't Buy",
 	["shop.robuxPrice"] = "Robux {n}",
 	["shop.shardPrice"] = "Shards {n}",
@@ -627,7 +627,7 @@ return {
 	["shop.reason.rejected"] = "Rejected ({reason})",
 	["shop.reason.shards"] = "Not enough Sparkle Shards",
 	["shop.reason.owned"] = "You already own this",
-	["shop.reason.notReady"] = "This item is not ready yet",
+	["shop.reason.notReady"] = "Coming soon",
 	["shop.reason.notOwned"] = "Buy it first to equip it",
 	["shop.reason.noPass"] = "Needs the Nameplate Color pass",
 	["shop.reason.notReached"] = "You haven't reached this tier yet",

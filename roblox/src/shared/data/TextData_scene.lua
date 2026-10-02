@@ -101,6 +101,16 @@ return {
 		["scene.map.pin"] = "핀 {n}",
 		["scene.guide.lookout"] = "큰 나무 오르기",
 		["scene.guide.hub"] = "허브",
+		-- QUEUE-ALL8 A 아직 안 여는 자리(자물쇠 + 한 줄) · 출시 기능 자리의 설명 한 줄(프롬프트를 누르면)
+		["hub.soon"] = "곧 열려요",
+		["hub.service.refine"] = "재련대",
+		["hub.service.refine.action"] = "재련",
+		["hub.service.refine.hint"] = "가방에서 장비를 골라 재련해요",
+		["hub.service.gemcraft"] = "보석 가공대",
+		["hub.service.gemcraft.action"] = "보석 가공",
+		["hub.service.gemcraft.hint"] = "가방에서 보석을 골라 가공해요",
+		["hub.service.shop"] = "상점",
+		["hub.service.shop.action"] = "둘러보기",
 		-- QUEUE-ALL7B 2 마을 기능 지점(HubServiceData · client/HubServices)
 		["hub.service.hallOfFame"] = "명예의 전당",
 		["hub.service.hallOfFame.action"] = "순위 보기",
@@ -216,6 +226,16 @@ return {
 		["scene.map.pin"] = "Pin {n}",
 		["scene.guide.lookout"] = "Climb the Big Tree",
 		["scene.guide.hub"] = "Hub",
+		-- QUEUE-ALL8 A
+		["hub.soon"] = "Coming soon",
+		["hub.service.refine"] = "Refine Bench",
+		["hub.service.refine.action"] = "Refine",
+		["hub.service.refine.hint"] = "Pick gear in your bag to refine it",
+		["hub.service.gemcraft"] = "Gem Bench",
+		["hub.service.gemcraft.action"] = "Craft gems",
+		["hub.service.gemcraft.hint"] = "Pick a gem in your bag to craft it",
+		["hub.service.shop"] = "Shop",
+		["hub.service.shop.action"] = "Browse",
 		-- QUEUE-ALL7B 2 hub services
 		["hub.service.hallOfFame"] = "Hall of Fame",
 		["hub.service.hallOfFame.action"] = "View ranks",

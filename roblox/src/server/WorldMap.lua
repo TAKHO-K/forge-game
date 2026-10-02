@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local WorldMapLayout = require(ReplicatedStorage.Shared.WorldMapLayout)
 local Text = require(ReplicatedStorage.Shared.Text)
+local ArtAssetIds = require(ReplicatedStorage.Shared.data.ArtAssetIds)
 local GroundProbe = require(script.Parent.GroundProbe)
 local PropLibrary = require(script.Parent.PropLibrary)
 
@@ -111,6 +112,31 @@ local function makePart(p)
 		text.TextStrokeTransparency = 0.4
 		text.TextScaled = true
 		text.Parent = gui
+		if p.attrs.Soon then -- QUEUE-ALL8 A: 아직 안 여는 자리 = 이름 아래 자물쇠 + "곧 열려요" 한 줄(통일)
+			gui.Size = UDim2.new(gui.Size.X.Scale, gui.Size.X.Offset, 0, gui.Size.Y.Offset + 20)
+			text.Size = UDim2.new(1, 0, 1, -20)
+			local lock = Instance.new("ImageLabel")
+			lock.Name = "SoonLock"
+			lock.BackgroundTransparency = 1
+			lock.Size = UDim2.fromOffset(18, 18)
+			lock.AnchorPoint = Vector2.new(1, 1)
+			lock.Position = UDim2.new(0.5, -34, 1, 0)
+			local img = ArtAssetIds["icons/ui/lock_badge"]
+			lock.Image = img and img.image and ("rbxassetid://" .. tostring(img.image)) or ""
+			lock.Parent = gui
+			local soon = Instance.new("TextLabel")
+			soon.Name = "SoonText"
+			soon.BackgroundTransparency = 1
+			soon.AnchorPoint = Vector2.new(0, 1)
+			soon.Position = UDim2.new(0.5, -32, 1, 0)
+			soon.Size = UDim2.new(0.5, 32, 0, 18)
+			soon.TextXAlignment = Enum.TextXAlignment.Left
+			soon.TextColor3 = Color3.fromRGB(255, 224, 140)
+			soon.TextStrokeTransparency = 0.4
+			soon.TextScaled = true
+			Text.bindLabel(soon, "hub.soon")
+			soon.Parent = gui
+		end
 	end
 	return part
 end

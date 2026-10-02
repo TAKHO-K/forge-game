@@ -2,6 +2,7 @@
 #   실행: python roblox/tools/i18n/check_textdata.py   (저장소 어디서든 - 이 파일 위치 기준으로 roblox/src를 찾는다)
 #   실패(종료 코드 1) = ko에 있는데 en 없는 키 · en에만 있는 키 · 같은 언어에 겹친 키 · {자리} 이름이 ko와 다른 en ·
 #                      Text.get/getFor/format에 글자 그대로 쓴 키가 TextData에 없음 · 키 앞부분("a.b." .. x)에 맞는 키가 하나도 없음.
+#   QUEUE-ALL8 A3 실패 = 화면에 나가는 글(TextData ko · en 값 · TextData_names 원문 · 번역 · 데이터 표의 label · displayName · name)에 개발용 문구(DEV_BANNED).
 #   참고(실패 아님) = en 40자 넘는 문장 수 · 키를 변수로 넘기는 호출 수(검사 못 함).
 import io
 import os
@@ -16,6 +17,35 @@ ENTRY = re.compile(r'\["([^"]+)"\]\s*=\s*"((?:[^"\\]|\\.)*)"\s*,')
 KEYLINE = re.compile(r'\["([^"]+)"\]\s*=')
 SECTION = re.compile(r'^\t(ko|en) = \{')
 PLACE = re.compile(r'\{([A-Za-z0-9_]+)\}')
+# QUEUE-ALL8 A3: 개발용 문구(출시 차단) - 아직 안 여는 기능 = "곧 열려요" / "Coming soon" 하나로
+DEV_BANNED = re.compile(r'\(준비|준비\)|준비 중|된다\)|가방에서도 된다|TODO|임시|테스트|모의|\(dev|placeholder|\(soon\)|also in your bag|\(mock|\(test|\(wip|\(펫 단계', re.I)
+DATA_LABEL = re.compile(r'\b(?:label|displayName|name)\s*=\s*"((?:[^"\\]|\\.)*)"')
+DATA_LABEL_FILES = ('WorldMapData.lua', 'WorldConfig.lua', 'HubArtData.lua', 'HubServiceData.lua', 'PetData.lua', 'ShopData.lua', 'MonetizationData.lua', 'SeasonPassData.lua')
+
+
+def dev_text(tables):
+    rows = []
+    for lang in ('ko', 'en'):
+        for k, (v, where) in tables[lang].items():
+            if DEV_BANNED.search(v):
+                rows.append('%s %s: %s (%s)' % (lang, k, v, where))
+    names = os.path.join(DATA, 'TextData_names.lua')
+    for no, line in enumerate(io.open(names, encoding='utf-8'), 1):
+        code = line.split('--')[0] if line.lstrip().startswith('--') else line
+        for a, b in ENTRY.findall(code):
+            for t in (a, b):
+                if DEV_BANNED.search(t):
+                    rows.append('names: %s (TextData_names.lua:%d)' % (t, no))
+    for name in DATA_LABEL_FILES:
+        path = os.path.join(DATA, name)
+        if not os.path.exists(path):
+            continue
+        for no, line in enumerate(io.open(path, encoding='utf-8'), 1):
+            code = re.sub(r'--.*$', '', line)
+            for t in DATA_LABEL.findall(code):
+                if DEV_BANNED.search(t):
+                    rows.append('data: %s (%s:%d)' % (t, name, no))
+    return rows
 
 
 def load_tables():
@@ -174,8 +204,10 @@ def main():
     show('{자리} 이름이 다른 키', place)
     show('Text.get에 쓰였는데 TextData에 없는 키', missing)
     show('키 앞부분에 맞는 키 없음', prefix_missing)
+    dev = dev_text(tables)
+    show('개발용 문구(ALL8 A3)', dev)
     print('참고: en 40자 넘는 문장(자리 제외) %d · 키를 변수로 넘기는 호출 %d(검사 못 함) · 코드에서 글자 그대로 찾은 키 %d' % (len(long_en), dynamic, len(used)))
-    failed = errors or no_en or no_ko or place or missing or prefix_missing
+    failed = errors or no_en or no_ko or place or missing or prefix_missing or dev
     print('결과: %s' % ('실패' if failed else '통과'))
     return 1 if failed else 0
 
