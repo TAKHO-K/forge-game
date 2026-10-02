@@ -6,6 +6,7 @@ local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local Text = require(ReplicatedStorage.Shared.Text)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
+local Toast = require(script.Parent.Parent.Parent.ui.kit.Toast)
 
 -- 일괄판매(S20b: InventoryUI 분할) - 확인 팝업 · 기준 등급 드롭다운. 헤더 버튼(R.bulkSellButton · R.cutoffButton)이 여는 창 안 overlay다.
 local BulkSell = {}
@@ -170,7 +171,7 @@ confirmYes.Activated:Connect(function()
 	pendingKey, pendingCount = nil, 0
 end)
 
-bulkSellButton.Activated:Connect(function()
+local function openConfirm()
 	local count, total, highestSoldGradeId = S.bulkSellEstimate()
 	if count == 0 then
 		return
@@ -188,6 +189,15 @@ bulkSellButton.Activated:Connect(function()
 		and Text.get("gear.bulk.highest", { grade = ArmorData.grades[highestSoldGradeId].displayName })
 		or ""
 	confirmOverlay.Visible = true
+end
+bulkSellButton.Activated:Connect(openConfirm)
+
+-- QUEUE-ALL9A 2-2: 서버가 개수가 달라 거부하면(확인 창이 떠 있는 동안 가방이 바뀜) 안내 + 새 개수로 확인 창 다시
+sellRequest.OnClientEvent:Connect(function(action, ok, why)
+	if action == "sellGrades" and not ok and why == "count_mismatch" then
+		Toast.push("TC", { text = Text.get("gear.bulk.changed"), grade = "notice", seconds = 4 })
+		openConfirm()
+	end
 end)
 
 -- ═══ 일괄판매 기준 등급 드롭다운(20-3) ═══

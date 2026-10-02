@@ -93,9 +93,11 @@ sellRequest.OnServerEvent:Connect(function(player, action, arg, signature)
 			return
 		end
 		local grades = string.split(arg, ",")
-		local soldCount = PlayerProfile.sellItemsByGrades(player, grades, signature)
+		local soldCount, _, why = PlayerProfile.sellItemsByGrades(player, grades, signature)
 		if soldCount > 0 then
 			ImmediateSave.request(player)
+		elseif why == "count_mismatch" then -- QUEUE-ALL9A 2-2: 같은 Remote로 결과를 돌려준다(클라가 안내 + 새 개수로 확인 창 다시)
+			sellRequest:FireClient(player, "sellGrades", false, why)
 		end
 	elseif action == "sellBulk" then -- QUEUE-ALL8 G1: 옛 "기준 등급 이하" 일괄 판매(상한 전설) = 닫음 - 가방 UI가 sellGrades로 바뀌었다(전설 이상 일괄 판매 경로를 남기지 않는다)
 		return
