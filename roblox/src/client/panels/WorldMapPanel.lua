@@ -119,6 +119,7 @@ end
 
 -- QUEUE-ALL7B 4 이름 층(UI - 아이콘 위): 허브 시설 · 건물 · 기능 · NPC 이름. 자리 = 아이콘 아래 → 겹치면 위 · 더 아래 · 더 위 → 그래도 겹치면 숨김(확대하면 간격이 벌어져 보인다).
 local LABEL_SIZE = 12
+local namePinAt -- 이름을 눌러 찍은 핀 자리(하나만)
 local HUB_PIN_NEAR = 6 -- 같은 자리 핀 판정(stud - 허브 기능 간격 약 30이라 지도 클릭용 pinPickStuds 120은 너무 넓다)
 local LABEL_TRIES = { { 0, 1 }, { 0, -1 }, { 1, 0 }, { -1, 0 }, { 1, 1 }, { -1, 1 }, { 1, -1 }, { -1, -1 }, { 0, 2.1 }, { 0, -2.1 }, { 2.1, 0 }, { -2.1, 0 } } -- 아래 · 위 · 오른쪽 · 왼쪽 · 대각 · 한 칸 더(x × (아이콘 반 + 글 폭 반 + 3) · y × (아이콘 반 + 글 높이 반 + 2))
 local function nameLabel(parent, place)
@@ -335,14 +336,24 @@ end
 
 -- QUEUE-ALL7B 4: 이름 · 아이콘을 누르면 그 자리에 핀(이미 있으면 그대로) + 길 안내(창은 열린 채 - 자동 이동은 옆 버튼)
 function WorldMapPanel.pinAndGuide(place)
-	local near = false
-	for _, pin in ipairs(MapPins.list()) do
-		if ((pin.position - place.position) * Vector3.new(1, 0, 1)).Magnitude <= HUB_PIN_NEAR then
-			near = true
+	-- 리뷰: 이름 누르기 핀은 하나만(지난 이름 핀을 옮긴다) · 칸이 차 있으면 핀 없이 안내만 - 사용자가 찍은 핀은 지우지 않는다
+	local function pinNear(pos)
+		for _, pin in ipairs(MapPins.list()) do
+			if ((pin.position - pos) * Vector3.new(1, 0, 1)).Magnitude <= HUB_PIN_NEAR then
+				return pin
+			end
 		end
+		return nil
 	end
-	if not near then
-		MapPins.toggleAt(place.position, HUB_PIN_NEAR)
+	if not pinNear(place.position) then
+		if namePinAt and pinNear(namePinAt) then
+			MapPins.toggleAt(namePinAt, HUB_PIN_NEAR) -- 지난 이름 핀 지움
+		end
+		namePinAt = nil
+		if #MapPins.list() < MAP.maxPins then
+			MapPins.toggleAt(place.position, HUB_PIN_NEAR)
+			namePinAt = place.position
+		end
 	end
 	MapPins.go(place.position, place.name, false)
 end

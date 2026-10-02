@@ -575,9 +575,10 @@ end
 build()
 rebuildPlaces()
 MapPins.changed:Connect(rebuildPlaces)
-for _, name in ipairs({ "ZonesUnlocked", "CheckpointsFound" }) do
+for _, name in ipairs({ "ZonesUnlocked", "CheckpointsFound", Text.languageAttribute }) do -- 리뷰: 언어가 바뀌면 말풍선 이름도
 	player:GetAttributeChangedSignal(name):Connect(rebuildPlaces)
 end
+workspace:GetAttributeChangedSignal(Text.devLanguageAttribute):Connect(rebuildPlaces)
 player:GetAttributeChangedSignal("MinimapOn"):Connect(function()
 	if not enabled() then
 		refs.menu.Visible = false

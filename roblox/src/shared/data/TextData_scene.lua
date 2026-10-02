@@ -104,7 +104,7 @@ return {
 		-- QUEUE-ALL7B 2 마을 기능 지점(HubServiceData · client/HubServices)
 		["hub.service.hallOfFame"] = "명예의 전당",
 		["hub.service.hallOfFame.action"] = "순위 보기",
-		["hub.service.hallOfFame.intro"] = "명예의 전당: 보스 돌파 순위를 여기서 봐요(어디서나 L 키)",
+		["hub.service.hallOfFame.intro"] = "명예의 전당: 보스 돌파 순위를 여기서 봐요",
 		["hub.service.noticeBoard"] = "마을 게시판",
 		["hub.service.noticeBoard.action"] = "코드 입력",
 		["hub.service.noticeBoard.intro"] = "마을 게시판: 업데이트 소식과 코드 - 눌러서 코드를 입력해요",
@@ -219,7 +219,7 @@ return {
 		-- QUEUE-ALL7B 2 hub services
 		["hub.service.hallOfFame"] = "Hall of Fame",
 		["hub.service.hallOfFame.action"] = "View ranks",
-		["hub.service.hallOfFame.intro"] = "Hall of Fame: see the boss ranks here (L key anywhere)",
+		["hub.service.hallOfFame.intro"] = "Hall of Fame: see the boss ranks here",
 		["hub.service.noticeBoard"] = "Village Board",
 		["hub.service.noticeBoard.action"] = "Enter code",
 		["hub.service.noticeBoard.intro"] = "Village Board: news and codes - tap to enter a code",

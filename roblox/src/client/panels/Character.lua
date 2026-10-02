@@ -247,11 +247,11 @@ end
 
 -- QUEUE-ALL7B 2: 재봉사(HubServices)가 꾸미기 보기로 연다
 function CharacterPanel.open(focus)
-	if focus == "cosmetics" and not showCos then
+	local ok = UIManager.isOpen(CharacterPanel.id) or UIManager.open(CharacterPanel.id)
+	if ok and focus == "cosmetics" and not showCos then -- 리뷰: 창이 열렸을 때만 꾸미기 보기로(안 열리면 다음 C 키가 꾸미기로 열리지 않게)
 		showCos = true
 		ReplicatedStorage:WaitForChild("ShopRequest"):FireServer("view")
 	end
-	local ok = UIManager.isOpen(CharacterPanel.id) or UIManager.open(CharacterPanel.id)
 	CharacterPanel.render()
 	return ok
 end

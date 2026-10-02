@@ -146,7 +146,7 @@ function Layout.rowBuildings(name)
 		local sizes = {}
 		for i, kind in ipairs(R.buildings) do
 			local m = HubArtMeta[kind]
-			sizes[i] = { kind = kind, w = m.w, d = m.d, h = m.height }
+			sizes[i] = { kind = kind, w = m.w, d = m.d, h = m.wallTop } -- 리뷰: 충돌 상자 = 벽 높이(지붕 꼭대기까지면 처마 위에 투명 바닥이 생긴다 - 지붕 · 굴뚝은 메시만)
 		end
 		local midIndex = math.ceil(#sizes / 2)
 		local x = { [midIndex] = 0 }

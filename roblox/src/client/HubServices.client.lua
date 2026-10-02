@@ -12,7 +12,6 @@ local Text = require(ReplicatedStorage.Shared.Text)
 local ArtImage = require(script.Parent.ui.ArtImage)
 local Toast = require(script.Parent.ui.kit.Toast)
 local SettingSave = require(script.Parent.ui.SettingSave)
-local UIManager = require(script.Parent.UIManager)
 
 local player = Players.LocalPlayer
 local PROMPT_NAME = "HubServicePrompt"
@@ -102,7 +101,7 @@ ProximityPromptService.PromptTriggered:Connect(function(prompt, who)
 	end
 	local s = byId[prompt:GetAttribute("HubService")]
 	local open = s and OPEN[s.panel]
-	if open and not UIManager.isOpen(s.panel) then
+	if open then -- 리뷰: 이미 열린 창이면 각 open이 탭만 바꾼다
 		open(s.focus)
 	end
 end)
