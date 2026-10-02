@@ -13,3 +13,6 @@ docs/art/ref/
 __pycache__/
 # Blender 자동 백업(저장 때마다 생김)
 *.blend1
+
+# Claude 작업 캡처 · 결과물(세션 산출물 - 저장소에 넣지 않는다 · QUEUE-ALL8)
+Claude outputs/
