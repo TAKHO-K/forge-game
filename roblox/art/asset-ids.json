@@ -713,6 +713,13 @@
   "assetId": 115551353990807,
   "status": "Approved"
  },
+ "fx/jelly_bubble.png": {
+  "sha256": "0f7df63bba24d67769661b68c9320087f5f4107e7a796aa779df5c62a85aefe0",
+  "assetType": "Decal",
+  "assetId": 99754566334551,
+  "status": "Approved",
+  "imageId": 113003755273709
+ },
  "fx/soft_glow.png": {
   "sha256": "481cf7c7dad64d02b0c1cf97e2a8f0c053d633a94a78342b1e25614663c3fc94",
   "assetType": "Decal",
@@ -3604,40 +3611,47 @@
   "status": "Approved",
   "imageId": 110503464485228
  },
- "map/world_0_0.png": {
-  "sha256": "10a6d48c5f21e5c274e925a5c13f09510c4d49921c89ff2ca8f77efe6356d30e",
+ "map/hub.png": {
+  "sha256": "076040729cba78a8442474c453560b65961153b41c20871c3a701555e4cb076b",
   "assetType": "Decal",
-  "assetId": 138024365506000,
+  "assetId": 121729695241395,
   "status": "Approved",
-  "imageId": 124222889646468
+  "imageId": 97670621091884
+ },
+ "map/world_0_0.png": {
+  "sha256": "588affd8cd5738944b3340d0693d1b54b1e41d2f530435e494f75e67582b3939",
+  "assetType": "Decal",
+  "assetId": 137873061751821,
+  "status": "Approved",
+  "imageId": 114113652744269
  },
  "map/world_0_1.png": {
-  "sha256": "e01b1cbfb97f73fedaa6bb57a24e13aad2a9868d025e33785e8c70a63aadfb30",
+  "sha256": "6357dc722ffeab71cbd05247eb9a91685af3f098d3c5fafe1a1b21a566adda18",
   "assetType": "Decal",
-  "assetId": 118408433321488,
+  "assetId": 85511685291150,
   "status": "Approved",
-  "imageId": 97460442342635
+  "imageId": 72012606915852
  },
  "map/world_1_0.png": {
-  "sha256": "48c4cd5586a2de3d5901ff5868ba4be229fc126a29da8ceb0610fc0d81e2ee97",
+  "sha256": "b08413043a9207d97d6b34f51d03bbac83be69cc2c0c757c4771520a3b5b62f0",
   "assetType": "Decal",
-  "assetId": 132249796196513,
+  "assetId": 89235555545572,
   "status": "Approved",
-  "imageId": 78105062411174
+  "imageId": 103937073674120
  },
  "map/world_1_1.png": {
-  "sha256": "db4a86e165b779fb18aaed395edc1e210aa875b9880b66740066bd59cd70e4e5",
+  "sha256": "cc64900d9842d3a0a438a8f22fd8a1310660bde2951a4d0eeb0405ad28bfeb33",
   "assetType": "Decal",
-  "assetId": 74022300037982,
+  "assetId": 89575068218552,
   "status": "Approved",
-  "imageId": 139214670917259
+  "imageId": 91210566035024
  },
  "map/world_mini.png": {
-  "sha256": "6594f0ef57d273ca03e13f34bf813de32581e3f3a2a449c0b5cdd13703837f19",
+  "sha256": "657afafb5f4d6512ae9d306621fc551718f857978a77fc1815fd48361b39acd5",
   "assetType": "Decal",
-  "assetId": 120475272437192,
+  "assetId": 105516207142433,
   "status": "Approved",
-  "imageId": 140539985221988
+  "imageId": 88443154866456
  },
  "monsters/amethyst_bat.fbx": {
   "sha256": "98430076d61b2274e3641c2b7188f3dfde8c6c0c92ba8cc7ca178c2c4dce3e96",

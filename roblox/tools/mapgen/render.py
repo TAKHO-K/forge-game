@@ -69,32 +69,79 @@ def parse_row(s):
     return out
 
 
-def load_grid(log):
+def load_grid(log, tag="MAPGEN", n=None):
+    n = n or N
+    mark = f"[{tag}] "
     rows = {}
     with open(log, encoding="utf-8", errors="replace") as f:
         for line in f:
-            k = line.find("[MAPGEN] ")
+            k = line.find(mark)
             if k < 0:
                 continue
-            body = line[k + 9 :].rstrip("\n")
+            body = line[k + len(mark) :].rstrip("\n")
             key, _, data = body.partition(":")
             z, _, seg = key.partition(".")
             rows.setdefault(int(z), {})[int(seg or 0)] = data  # 같은 조각이 여러 번이면 마지막(가장 최근 굽기)
-    rows = {z: "".join(segs[i] for i in sorted(segs)) for z, segs in rows.items() if len(segs) == N // 256}
-    missing = [z for z in range(N) if z not in rows]
+    rows = {z: "".join(segs[i] for i in sorted(segs)) for z, segs in rows.items() if len(segs) == n // 256}
+    missing = [z for z in range(n) if z not in rows]
     if missing:
-        sys.exit(f"[MAPGEN] 줄 빠짐 {len(missing)}개(예: {missing[:5]}) - 표본을 다시 뽑는다")
+        sys.exit(f"[{tag}] 줄 빠짐 {len(missing)}개(예: {missing[:5]}) - 표본을 다시 뽑는다")
     grid = []
-    for z in range(N):
+    for z in range(n):
         r = parse_row(rows[z])
-        if len(r) != N:
-            sys.exit(f"줄 {z} 길이 {len(r)} ≠ {N}")
+        if len(r) != n:
+            sys.exit(f"줄 {z} 길이 {len(r)} ≠ {n}")
         grid.append(r)
     return grid
 
 
+# 그리는 판(세계 = N셀 · EDGE · 2048px / 허브 = 512셀 · HUB_HALF · 1024px) - render()가 이 값으로 셀 → 픽셀
+VIEW = {"n": N, "edge": EDGE, "px": PX}
+HUB_N, HUB_HALF, HUB_PX = 512, 820.0, 2  # = shared/data/MapImageData.hub(sample · half · pixels / sample)
+HUB_GROUND = None  # 허브 풀밭 원판 색(load_vectors의 ground - main이 채운다)
+HUB_PASTE_R = 430.0  # 세계 지도에 허브 그림을 붙이는 반경(stud - 허브 바닥 원판 400 + 테두리)
+
+
 def w2p(x, z):
-    return ((x + EDGE) / (2 * EDGE) * S, (z + EDGE) / (2 * EDGE) * S)
+    e, s = VIEW["edge"], VIEW["n"] * VIEW["px"]
+    return ((x + e) / (2 * e) * s, (z + e) / (2 * e) * s)
+
+
+def load_vectors(log):
+    """[HUBVEC] disc|poly 종류 r,g,b … (server/MapGenSample.vectors) - 마지막 굽기 묶음만."""
+    out = []
+    with open(log, encoding="utf-8", errors="replace") as f:
+        for line in f:
+            k = line.find("[HUBVEC] ")
+            if k < 0:
+                continue
+            parts = line[k + 9 :].strip().split(" ")
+            if parts[0] == "끝":
+                continue
+            if parts[0] == "disc" and len(parts) >= 5:
+                if parts[1] == "ground" and out and any(v[1] == "ground" for v in out):
+                    out = []  # 새 묶음 시작(같은 로그에 여러 번 찍었으면 마지막)
+                cx, cz = map(float, parts[3].split(","))
+                out.append(("disc", parts[1], tuple(map(int, parts[2].split(","))), (cx, cz, float(parts[4]))))
+            elif parts[0] == "poly" and len(parts) >= 4:
+                pts = [tuple(map(float, p.split(","))) for p in parts[3].split(";") if p]
+                out.append(("poly", parts[1], tuple(map(int, parts[2].split(","))), pts))
+    return out
+
+
+def draw_vectors(img, vectors):
+    """D1 · D3: 거리 · 광장 = 지도 큰 길 색 + 진한 테두리(연석) · 건물 = 지붕 색 사각형 + 윤곽 · 줄기 = 원(소품은 안 그린다)."""
+    d = ImageDraw.Draw(img)
+    ppu = VIEW["n"] * VIEW["px"] / (2 * VIEW["edge"])
+    order = {"floor": 0, "building": 1, "trunk": 2}
+    for shape, kind, rgb, geo in sorted((v for v in vectors if v[1] in order), key=lambda v: order[v[1]]):
+        fill, edge, w = (ROAD_FILL, ROAD_EDGE, 3) if kind == "floor" else (rgb, BLD_EDGE, 2) if kind == "building" else (rgb, TREE_EDGE, 3)
+        if shape == "disc":
+            cx, cy = w2p(geo[0], geo[1])
+            r = geo[2] * ppu
+            d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=fill, outline=edge, width=w)
+        else:
+            d.polygon([w2p(x, z) for x, z in geo], fill=fill, outline=edge, width=w)
 
 
 def load_roads(path):
@@ -113,6 +160,9 @@ def load_roads(path):
 
 
 def render(grid, roads):
+    N, PX, EDGE = VIEW["n"], VIEW["px"], VIEW["edge"]  # 세계 · 허브 판 공통(셀 → 픽셀)
+    S = N * PX
+    cell = 2 * EDGE / N  # stud / 셀
     img = Image.new("RGB", (S, S), PAL["X"][0])
     px = img.load()
     hy = [[Y0 + h * YSTEP for (_, h) in row] for row in grid]
@@ -131,7 +181,11 @@ def render(grid, roads):
             elif c in ("T",):
                 col = PAL["G"][min(band(y), 3)]
             elif c in ("B", "R"):
-                col = PAL["H"][0] if math.hypot(x - N / 2, z - N / 2) < 80 else PAL["D"][1]
+                col = PAL["H"][0] if math.hypot(x - N / 2, z - N / 2) * cell < 462 else PAL["D"][1]
+            elif c == "H" and HUB_GROUND:
+                # QUEUE-ALL8 D1: 허브 낮은 판 = 실제 바닥(풀밭 원판 HubFloor 108,146,70 ≈ 지형 Grass 104,142,68 - 게임에서 둘이 같은 풀밭) → 지도도 둘레 풀과 같은 칠
+                #   옛 = 밝은 돌색(H)이라 실제 땅과 달랐다 · 거리 · 광장 = 도형(draw_vectors)이 큰 길 색으로 덮는다
+                col = PAL["G"][band(y)]
             else:
                 col = PAL.get(c, PAL["G"])[band(y)]
                 # 언덕 그늘(북서쪽 빛): 북서 이웃이 더 높으면 어둡게 · 낮으면 밝게(±8%)
@@ -206,15 +260,48 @@ def main():
     log = a.log or newest_log()
     grid = load_grid(log)
     roads, points = load_roads(a.roads)
+    os.makedirs(a.out, exist_ok=True)
+    changed = []
+
+    def save(img, name):  # D6: 바뀐 그림만 업로드 - 옛 파일과 픽셀이 같으면 안 쓴다
+        path = os.path.join(a.out, name)
+        if os.path.exists(path):
+            old = Image.open(path).convert("RGB")
+            if old.size == img.size and old.tobytes() == img.convert("RGB").tobytes():
+                return
+        img.save(path)
+        changed.append(name)
+
+    # QUEUE-ALL8 D2 허브 고해상도(표본 [HUBGEN] 512² + 도형 [HUBVEC]) - 있으면 먼저 굽고 세계 지도 허브 자리에 붙인다(D1 같은 색)
+    global HUB_GROUND
+    hub_img = None
+    vectors = load_vectors(log)
+    ground = [v for v in vectors if v[1] == "ground"]
+    if vectors and ground:
+        HUB_GROUND = ground[0][2]
+        hub_grid = load_grid(log, "HUBGEN", HUB_N)
+        VIEW.update(n=HUB_N, edge=HUB_HALF, px=HUB_PX)
+        hub_img = render(hub_grid, roads).filter(ImageFilter.SMOOTH)
+        draw_vectors(hub_img, vectors)
+        VIEW.update(n=N, edge=EDGE, px=PX)
+        save(hub_img, "hub.png")
     img = render(grid, roads)
     img = img.filter(ImageFilter.SMOOTH)
-    os.makedirs(a.out, exist_ok=True)
-    img.save(os.path.join(a.out, "world_full.png"))
-    img.resize((1024, 1024), Image.LANCZOS).save(os.path.join(a.out, "world_mini.png"))  # 미니맵 한 장(ImageRect로 잘라 쓴다 - 원형 · 회전)
+    if hub_img is not None:
+        side = int(round(2 * HUB_HALF / (2 * EDGE) * S))
+        small = hub_img.resize((side, side), Image.LANCZOS)
+        mask = Image.new("L", (side, side), 0)
+        rr = HUB_PASTE_R / (2 * HUB_HALF) * side
+        ImageDraw.Draw(mask).ellipse([side / 2 - rr, side / 2 - rr, side / 2 + rr, side / 2 + rr], fill=255)
+        mask = mask.filter(ImageFilter.GaussianBlur(2))
+        img.paste(small, (S // 2 - side // 2, S // 2 - side // 2), mask)
+    save(img, "world_full.png")
+    save(img.resize((1024, 1024), Image.LANCZOS), "world_mini.png")  # 미니맵 한 장(ImageRect로 잘라 쓴다 - 원형 · 회전)
     half = S // 2
     for r in range(2):
         for c in range(2):
-            img.crop((c * half, r * half, (c + 1) * half, (r + 1) * half)).save(os.path.join(a.out, f"world_{r}_{c}.png"))
+            save(img.crop((c * half, r * half, (c + 1) * half, (r + 1) * half)), f"world_{r}_{c}.png")
+    print("바뀐 그림:", ", ".join(changed) if changed else "없음")
     counts = {}
     for row in grid:
         for c, _ in row:

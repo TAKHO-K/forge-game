@@ -4,12 +4,16 @@
 --   빼는 것: 둥지(Nest_* - 지도 표시 금지) · 캐릭터 · 먼 산(DistantMountains) · 투명/안 막는 파트(다시 쏜다).
 -- QUEUE-ALL7 D2 지도 굽기 표본(Studio 전용 - 라이브에서는 아무것도 안 한다). 서버 execute_luau: require(game.ServerScriptService.MapGenSample)(row0, rows)
 --   → 줄마다 "[MAPGEN] z.조각:압축"(x 256칸씩 4조각) 을 출력(로그 파일) · roblox/tools/mapgen/render.py가 로그에서 읽어 PNG를 굽는다. 형식 설명 = 아래.
-return function(ROW0, ROWS)
+-- QUEUE-ALL8 D2: 허브 고해상도 = require(...).hub(row0, rows)(512² · 반폭 MapImageData.hub.half · "[HUBGEN]") + .vectors()(바닥 · 건물 · 줄기 도형 "[HUBVEC]") · D5 .refs()(실제 인스턴스 자리 "[REF]").
+--   소품 · NPC · 기능 자리 메시 · 큰 나무 겉모습(HubArt Props · HubNpc_* · HubProp_* · TreeArt)은 지도에 안 그린다(D3) → 표본에서 뺀다.
+local function sample(ROW0, ROWS, opts)
 	if not game:GetService("RunService"):IsStudio() then
 		return "studio only"
 	end
-	local N = 1024 -- 한 변 셀 수(세계 2 × edge.radius = 5,920 stud → 약 5.78 stud/셀)
-	local EDGE = require(game:GetService("ReplicatedStorage").Shared.data.WorldMapData).edge.radius
+	opts = opts or {}
+	local TAG = opts.tag or "MAPGEN"
+	local N = opts.n or 1024 -- 한 변 셀 수(세계 2 × edge.radius = 5,920 stud → 약 5.78 stud/셀)
+	local EDGE = opts.half or require(game:GetService("ReplicatedStorage").Shared.data.WorldMapData).edge.radius
 	local Y0, YSTEP = -40, 10 -- 높이 단계 = (y − Y0) / YSTEP(0 ~ 85)
 
 	local params = RaycastParams.new()
@@ -33,6 +37,12 @@ return function(ROW0, ROWS)
 	end
 	for _, c in ipairs(workspace:GetChildren()) do
 		if c:IsA("Model") and c:FindFirstChildOfClass("Humanoid") then
+			table.insert(exclude, c)
+		end
+	end
+	local art = workspace:FindFirstChild("HubArt")
+	for _, c in ipairs(art and art:GetChildren() or {}) do
+		if c.Name == "Props" or c.Name == "TreeArt" or c.Name:match("^HubNpc_") or c.Name:match("^HubProp_") then
 			table.insert(exclude, c)
 		end
 	end
@@ -93,13 +103,13 @@ return function(ROW0, ROWS)
 		for x = 0, N - 1 do
 			if x > 0 and x % SEG == 0 then
 				flush()
-				print(("[MAPGEN] %d.%d:%s"):format(z, x // SEG - 1, table.concat(out)))
+				print(("[%s] %d.%d:%s"):format(TAG, z, x // SEG - 1, table.concat(out)))
 				out, last, run = {}, nil, 0
 			end
 			local wx = -EDGE + (x + 0.5) * (2 * EDGE / N)
 			local origin = Vector3.new(wx, 1600, wz)
 			local cell = "X" .. string.char(40)
-			for _ = 1, 4 do
+			for _ = 1, opts.tries or 4 do
 				local hit = workspace:Raycast(origin, Vector3.new(0, -3200, 0), params)
 				if not hit then
 					break
@@ -125,8 +135,120 @@ return function(ROW0, ROWS)
 			end
 		end
 		flush()
-		print(("[MAPGEN] %d.%d:%s"):format(z, (N - 1) // SEG, table.concat(out)))
+		print(("[%s] %d.%d:%s"):format(TAG, z, (N - 1) // SEG, table.concat(out)))
 		rows[#rows + 1] = z
 	end
 	return ("rows %d"):format(#rows)
 end
+
+-- 허브 고해상도 바탕 표본(512² · MapImageData.hub.half)
+local function hub(ROW0, ROWS)
+	local H = require(game:GetService("ReplicatedStorage").Shared.data.MapImageData).hub
+	return sample(ROW0, ROWS, { n = H.sample, half = H.half, tag = "HUBGEN", tries = 16 }) -- 큰 나무 둘레 = 투명 도형(옛 코드 모양 · 충돌 칸)이 겹겹 → 4번으로는 땅에 못 닿았다(빈 칸 X 고리)
+end
+
+-- 허브 도형(실제 인스턴스 - 위에서 본 다각형 · 원): ground = 허브 풀밭 원판 · floor = 거리 · 광장(지도 큰 길 색으로 그린다) · building = 건물 충돌 상자(지붕 색 = HubArtMeta Roof) · trunk = 큰 나무 줄기
+local function vectors()
+	local HubArtMeta = require(game:GetService("ReplicatedStorage").Shared.data.HubArtMeta)
+	local n = 0
+	local function rgb(c)
+		return ("%d,%d,%d"):format(math.floor(c.R * 255 + 0.5), math.floor(c.G * 255 + 0.5), math.floor(c.B * 255 + 0.5))
+	end
+	local function emit(kind, p, color)
+		n += 1
+		if p:IsA("Part") and p.Shape == Enum.PartType.Cylinder then -- 눕힌 원통(X = 축): 위에서 보면 원(바닥 판) · 세운 줄기도 같은 식(지름 = Y)
+			print(("[HUBVEC] disc %s %s %.1f,%.1f %.1f"):format(kind, color, p.Position.X, p.Position.Z, p.Size.Y / 2))
+			return
+		end
+		local pts = {}
+		for _, s in ipairs({ { -1, -1 }, { 1, -1 }, { 1, 1 }, { -1, 1 } }) do
+			local w = p.CFrame:PointToWorldSpace(Vector3.new(s[1] * p.Size.X / 2, 0, s[2] * p.Size.Z / 2))
+			table.insert(pts, ("%.1f,%.1f"):format(w.X, w.Z))
+		end
+		print(("[HUBVEC] poly %s %s %s"):format(kind, color, table.concat(pts, ";")))
+	end
+	local hubModel = workspace.Ground:FindFirstChild("Hub")
+	for _, p in ipairs(hubModel and hubModel:GetChildren() or {}) do
+		if p:IsA("BasePart") then
+			if p.Name == "HubFloor" then
+				emit("ground", p, rgb(p.Color))
+			elseif p.Name == "DistrictFloor" or p.Name == "PortalPlaza" then
+				emit("floor", p, rgb(p.Color))
+			end
+		end
+	end
+	for _, p in ipairs(hubModel and hubModel:GetDescendants() or {}) do
+		local kind = p:IsA("BasePart") and p:GetAttribute("HubBuilding")
+		if kind then
+			local roof = HubArtMeta[kind] and HubArtMeta[kind].parts and HubArtMeta[kind].parts.Roof
+			emit("building", p, roof and table.concat(roof.rgb, ",") or rgb(p.Color))
+		end
+	end
+	local tree = workspace.Ground:FindFirstChild("BigTree")
+	local trunk, best = nil, -1
+	for _, p in ipairs(tree and tree:GetChildren() or {}) do
+		if p:IsA("BasePart") and p.Name == "Trunk" and p.Size.Y > best then
+			trunk, best = p, p.Size.Y
+		end
+	end
+	if trunk then
+		emit("trunk", trunk, "110,68,46")
+	end
+	print(("[HUBVEC] 끝 %d"):format(n))
+	return n
+end
+
+-- D5 실제 자리(인스턴스 경계 상자 가운데 · 위에서 본 x, z) - accuracy.py가 지도 아이콘 자리(데이터 → 지도 식)와 잰다
+local function refs()
+	local out = 0
+	local function put(kind, name, pos)
+		out += 1
+		print(("[REF] %s %s %.1f,%.1f"):format(kind, name, pos.X, pos.Z))
+	end
+	local G = workspace.Ground
+	put("hub", "허브", G.BigTree:GetBoundingBox().Position)
+	-- 시설 = 그 거리 · 광장 바닥(이름표 건물이 아니라 거리 가운데 - 지도 아이콘 자리와 같은 뜻) · 포탈 = 포탈 광장 판
+	local floors = {}
+	for _, p in ipairs(G.Hub:GetChildren()) do
+		if p:IsA("BasePart") and p.Name == "DistrictFloor" then
+			table.insert(floors, p)
+		end
+	end
+	for _, p in ipairs(G.Hub:GetChildren()) do
+		local f = p:IsA("BasePart") and p.Name:match("^Facility_(.+)$")
+		if p.Name == "PortalPlaza" then
+			put("facility", "portal", p.Position)
+		elseif f then
+			local near, d = nil, math.huge
+			for _, q in ipairs(floors) do
+				local dd = (q.Position - p.Position).Magnitude
+				if dd < d then
+					near, d = q, dd
+				end
+			end
+			put("facility", f, (near or p).Position)
+		end
+	end
+	for _, z in ipairs(G:GetChildren()) do
+		local key = z.Name:match("^Zone_(.+)$")
+		local camp = key and z:FindFirstChild("Camp")
+		if camp then
+			put("camp", key, camp.Position)
+		end
+		local lk = z.Name:match("^Landmark_(.+)$")
+		if lk then
+			put("landmark", lk, z:GetBoundingBox().Position)
+		end
+		if z.Name:match("^BossGate_") then
+			put("gate", z.Name, z:GetBoundingBox().Position)
+		end
+	end
+	print(("[REF] 끝 %d"):format(out))
+	return out
+end
+
+return setmetatable({ hub = hub, vectors = vectors, refs = refs }, {
+	__call = function(_, ROW0, ROWS)
+		return sample(ROW0, ROWS)
+	end,
+})

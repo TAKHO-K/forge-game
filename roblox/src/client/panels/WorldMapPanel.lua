@@ -121,7 +121,8 @@ end
 local LABEL_SIZE = 12
 local namePinAt -- 이름을 눌러 찍은 핀 자리(하나만)
 local HUB_PIN_NEAR = 6 -- 같은 자리 핀 판정(stud - 허브 기능 간격 약 30이라 지도 클릭용 pinPickStuds 120은 너무 넓다)
-local LABEL_TRIES = { { 0, 1 }, { 0, -1 }, { 1, 0 }, { -1, 0 }, { 1, 1 }, { -1, 1 }, { 1, -1 }, { -1, -1 }, { 0, 2.1 }, { 0, -2.1 }, { 2.1, 0 }, { -2.1, 0 } } -- 아래 · 위 · 오른쪽 · 왼쪽 · 대각 · 한 칸 더(x × (아이콘 반 + 글 폭 반 + 3) · y × (아이콘 반 + 글 높이 반 + 2))
+local LABEL_TRIES = { { 0, 1 }, { 0, -1 }, { 1, 0 }, { -1, 0 }, { 1, 1 }, { -1, 1 }, { 1, -1 }, { -1, -1 }, { 0, 2.1 }, { 0, -2.1 }, { 2.1, 0 }, { -2.1, 0 },
+	{ 2.1, 1 }, { -2.1, 1 }, { 2.1, -1 }, { -2.1, -1 }, { 0, 3.2 }, { 0, -3.2 }, { 1, 2.1 }, { -1, 2.1 }, { 1, -2.1 }, { -1, -2.1 } } -- QUEUE-ALL8 D4: 한 칸 더 먼 자리(최대 배율에서 붐비는 시장 · 광장의 이름도 다 보이게) -- 아래 · 위 · 오른쪽 · 왼쪽 · 대각 · 한 칸 더(x × (아이콘 반 + 글 폭 반 + 3) · y × (아이콘 반 + 글 높이 반 + 2))
 local function nameLabel(parent, place)
 	local text = place.name or ""
 	local ts = TextService:GetTextSize(text, LABEL_SIZE, Theme.font, Vector2.new(400, 40))
@@ -171,7 +172,7 @@ local function layoutLabels()
 		local iconHalf = L.place.icon and L.icon / 2 or 0
 		local step = Vector2.new(iconHalf + s.X / 2 + 3, iconHalf + s.Y / 2 + 2)
 		local placed = false
-		for _, k in ipairs(L.place.icon and LABEL_TRIES or { { 0, 0 }, { 0, 1 }, { 0, -1 }, { 0, 2 }, { 0, -2 }, { 0.6, 0 }, { -0.6, 0 } }) do -- 아이콘 없는 건물 이름 = 그 자리 가운데부터
+		for _, k in ipairs(L.place.icon and LABEL_TRIES or { { 0, 0 }, { 0, 1 }, { 0, -1 }, { 0, 2 }, { 0, -2 }, { 0.6, 0 }, { -0.6, 0 }, { 0.6, 1 }, { -0.6, 1 }, { 0.6, -1 }, { -0.6, -1 }, { 0, 3 }, { 0, -3 }, { 1.2, 0 }, { -1.2, 0 } }) do -- 아이콘 없는 건물 이름 = 그 자리 가운데부터 · ALL8 D4: 붐비면 조금 더 먼 자리
 			local c = a + Vector2.new(k[1] * step.X, k[2] * step.Y)
 			if free(c, s) then
 				table.insert(taken, { c = c, s = s })
@@ -237,6 +238,21 @@ local function drawImageMap(canvas)
 			tile.ZIndex = 1
 			tile.Parent = canvas
 		end
+	end
+	-- QUEUE-ALL8 D2: 허브 고해상도 한 장(확대 MapImageData.hub.zoomFrom 이상 - applyView가 보이기를 바꾼다)
+	local H = MapImageData.hub
+	local hubImg = ArtImage.get(H.key)
+	if hubImg then
+		local a, b = MapImageData.toUV(-H.half, -H.half), MapImageData.toUV(H.half, H.half)
+		local detail = Instance.new("ImageLabel")
+		detail.Name = "HubDetail"
+		detail.BackgroundTransparency = 1
+		detail.Image = hubImg
+		detail.Position = UDim2.fromScale(a.X, a.Y)
+		detail.Size = UDim2.fromScale(b.X - a.X, b.Y - a.Y)
+		detail.ZIndex = 2
+		detail.Visible = false
+		detail.Parent = canvas
 	end
 	for index, zone in ipairs(D.zones) do
 		local c = toMap(WorldMapLayout.regionCenter(zone))
@@ -308,6 +324,10 @@ local function applyView()
 	local side = math.min(base.X, base.Y) * zoom
 	built.canvas.Size = UDim2.fromOffset(side, side)
 	built.canvas.Position = UDim2.fromOffset(base.X / 2 - side / 2 + offset.X, base.Y / 2 - side / 2 + offset.Y)
+	local detail = built.canvas:FindFirstChild("HubDetail")
+	if detail then
+		detail.Visible = zoom >= MapImageData.hub.zoomFrom
+	end
 	refreshDim()
 	task.defer(layoutLabels)
 end

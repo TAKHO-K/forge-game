@@ -24,7 +24,7 @@ for _, zone in ipairs(D.zones) do
 			print(("[POINT] ground %s_%d %.1f,%.1f"):format(zone.key, i, p.X, p.Z))
 		end
 	end
-	local lw = Layout.toWorld(zone, zone.landmark.r, 0)
+	local lw = Layout.toWorld(zone, zone.landmark.r + 90, 0) -- QUEUE-ALL8 D5: 실제 놓는 자리(PropScatter · WorldCheck와 같은 식 - 옛 = r만이라 90 stud 어긋난 기준점)
 	print(("[POINT] landmark %s %.1f,%.1f"):format(zone.key, lw.X, lw.Z))
 	local gate = Layout.gate(zone)
 	local gp = gate.position or gate.center or gate

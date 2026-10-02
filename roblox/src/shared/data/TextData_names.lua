@@ -54,7 +54,7 @@ local en = {
 	["재련대"] = "Refine Bench", ["보석 가공대"] = "Gem Bench", -- QUEUE-ALL8 A: 정식 이름만
 	["판매"] = "Sell", ["부화장"] = "Hatchery", ["파티 게시판"] = "Party Board", ["순위판"] = "Rankings", ["명예의 전당"] = "Hall of Fame",
 	["재봉사"] = "Tailor", ["마을 게시판"] = "Village Board", ["도전 기사"] = "Challenge Knight", ["대장장이"] = "Blacksmith", -- QUEUE-ALL7B 2 · 3
-	["대장간"] = "Forge", ["상점"] = "Shop", ["상인"] = "Merchant", ["게시판지기"] = "Board Keeper", ["재봉집"] = "Tailor's House", -- QUEUE-ALL7B 4 지도 이름
+	["대장간"] = "Forge", ["상점"] = "Shop", ["상인"] = "Merchant", ["게시판지기"] = "Board Keeper", ["재봉집"] = "Tailor", -- QUEUE-ALL7B 4 지도 이름 · ALL8 D4: "Tailor's House" → 짧게(×10에서 자리가 없어 숨었다)
 	["하루 1회 보상"] = "Daily Gift", ["덩굴 리프트"] = "Vine Lift",
 	-- 큰 나무 구간 · 정거장
 	["뿌리 가지"] = "Root Branch", ["덩굴 숲"] = "Vine Woods", ["말랑 열매 골"] = "Squishy Fruit Gully", ["점프대 가지"] = "Bounce Branch", ["높은 가지"] = "High Branch", ["정상 오르기"] = "Climb to the Top",

@@ -13,10 +13,17 @@ M.tiles = {
 M.pixels = 2048 -- 전체 한 변(px)
 M.mini = "map/world_mini" -- 미니맵 한 장(1024² - ImageRect로 보이는 칸만 잘라 UICorner 원형 · Rotation 회전 · ClipsDescendants 없이)
 M.miniPixels = 1024
-M.bakedAt = "2026-10-02" -- 굽은 날(맵을 고치면 다시 굽고 바꾼다)
+-- QUEUE-ALL8 D2 허브 고해상도 한 장(1024² · 가운데 = 허브 원점 · 반폭 half stud): 지도 창 확대 zoomFrom 이상 = 세계 타일 위에 겹침 · 미니맵 = 허브 안이고 보이는 칸이 이 그림 안일 때.
+--   바탕 = 표본 sample² (server/MapGenSample.hub) + 도형(바닥 · 건물 지붕 · 줄기 - .vectors) · 굽기 = render.py --hub
+M.hub = { key = "map/hub", half = 820, pixels = 1024, sample = 512, zoomFrom = 4 }
+M.bakedAt = "2026-10-02" -- 굽은 날(맵을 고치면 다시 굽고 바꾼다) · ALL8 D6 = 허브 고해상도 · 허브 자리 실제 바닥 색 · 소품 뺌
 
 function M.toUV(x, z)
 	return Vector2.new((x + M.half) / (2 * M.half), (z + M.half) / (2 * M.half))
+end
+
+function M.toHubUV(x, z) -- 허브 그림 안 비율(0 ~ 1)
+	return Vector2.new((x + M.hub.half) / (2 * M.hub.half), (z + M.hub.half) / (2 * M.hub.half))
 end
 
 function M.toWorld(u, v, y)
