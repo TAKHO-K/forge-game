@@ -8,7 +8,7 @@ return {
 	iconOffsetY = 9, -- 자리 기둥 위 이름표 위로(stud)
 	services = {
 		{ id = "hallOfFame", spot = "hallOfFame", panel = "leaderboard", icon = "icons/hud/rank", nameKey = "hub.service.hallOfFame", actionKey = "hub.service.hallOfFame.action", introKey = "hub.service.hallOfFame.intro", intro = "hubIntroRank" },
-		{ id = "noticeBoard", spot = "noticeBoard", panel = "settings", focus = "game", icon = "icons/hud/attendance", nameKey = "hub.service.noticeBoard", actionKey = "hub.service.noticeBoard.action", introKey = "hub.service.noticeBoard.intro", intro = "hubIntroBoard" },
+		{ id = "noticeBoard", spot = "noticeBoard", panel = "board", icon = "icons/hud/attendance", nameKey = "hub.service.noticeBoard", actionKey = "hub.service.noticeBoard.action", introKey = "hub.service.noticeBoard.intro", intro = "hubIntroBoard" },
 		{ id = "challengeKnight", spot = "challengeKnight", panel = "quests", focus = "challenge", icon = "icons/ui/pin_boss", nameKey = "hub.service.challengeKnight", actionKey = "hub.service.challengeKnight.action", introKey = "hub.service.challengeKnight.intro", intro = "hubIntroChallenge" },
 		-- QUEUE-ALL8 A: 출시 기능 자리(정식 이름 + 프롬프트 · 설명 = hintKey 한 줄 · 첫 소개 없음)
 		{ id = "refine", spot = "refine", panel = "inventory", icon = "icons/hud/forge", nameKey = "hub.service.refine", actionKey = "hub.service.refine.action", hintKey = "hub.service.refine.hint" },

@@ -1,5 +1,5 @@
 -- QUEUE-ALL1 P4 §2 허브 업데이트 게시판(새 소식 + 지금 쓸 수 있는 코드 - 만료 지난 코드는 안 보인다) · §3 주간 도전 버튼 · 순위 창 · P4 알림 토스트.
---   게시판 = 마을 게시판 자리 위 빌보드(허브에 가면 보인다 - ALL7B 2) · 주간 도전 = 합동 목표 알약 오른쪽 버튼 → 창(이번 주 보스 · 변형 · [도전] · 순위 top). 수치 · 문구 = SocialRewardData · WeeklyChallengeData.
+--   게시판 = 마을 게시판 메시 판면(ALL8 C4 - 아트 끔이면 자리 위 빌보드) · 누르면 전체 창 · 주간 도전 = 합동 목표 알약 오른쪽 버튼 → 창(이번 주 보스 · 변형 · [도전] · 순위 top). 수치 · 문구 = SocialRewardData · WeeklyChallengeData.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -84,9 +84,141 @@ local function buildBoard(adornee)
 		y += 16
 	end
 end
+-- QUEUE-ALL8 C4: 아트 켬 = 마을 게시판 메시(HubArt HubProp_board.Board) 판면에 SurfaceGui(maxLines줄 · 넘으면 "더 보기") → 위 빌보드는 지운다.
+--   판면 방향 = 종이(Papers) 쪽 면(가져온 메시 축을 가정하지 않는다) · 종이 조각은 소식이 대신하므로 이 화면에서만 숨긴다. 누르면 전체 창(아래).
+local LB = require(ReplicatedStorage.Shared.data.HubLabelData).board
+local function boardRows()
+	local rows = {}
+	for _, n in ipairs(SD.news) do
+		table.insert(rows, { text = Text.get("update.board.newsLine", { date = n.date, text = Text.get(n.textKey) }) })
+	end
+	for _, s in ipairs(validCodes()) do
+		table.insert(rows, { text = s, color = Color3.fromRGB(220, 230, 255) })
+	end
+	return rows
+end
+local function buildFace(board)
+	local papers = board.Parent:FindFirstChild("Papers")
+	local face, best = Enum.NormalId.Front, -2
+	if papers then
+		local dir = (papers.Position - board.Position).Unit
+		for _, id in ipairs(Enum.NormalId:GetEnumItems()) do
+			local d = board.CFrame:VectorToWorldSpace(Vector3.FromNormalId(id)):Dot(dir)
+			if d > best then
+				face, best = id, d
+			end
+		end
+		papers.LocalTransparencyModifier = 1
+	end
+	local old = gui:FindFirstChild("UpdateBoard")
+	if old then
+		old:Destroy()
+	end
+	local sg = gui:FindFirstChild("UpdateBoardFace") or Instance.new("SurfaceGui")
+	sg.Name = "UpdateBoardFace"
+	sg:ClearAllChildren()
+	sg.Adornee = board
+	sg.Face = face
+	sg.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	sg.PixelsPerStud = LB.pixelsPerStud
+	sg.LightInfluence = 0
+	sg.MaxDistance = 80
+	sg.Parent = gui
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft, pad.PaddingRight, pad.PaddingTop = UDim.new(0, 14), UDim.new(0, 14), UDim.new(0, 10)
+	pad.Parent = sg
+	local list = Instance.new("UIListLayout")
+	list.SortOrder = Enum.SortOrder.LayoutOrder
+	list.Padding = UDim.new(0, 4)
+	list.Parent = sg
+	local function row(text, size, color, font, order)
+		local l = label(sg, text, size, color or INK, font)
+		l.TextStrokeTransparency = 1
+		l.Size = UDim2.new(1, 0, 0, 0)
+		l.AutomaticSize = Enum.AutomaticSize.Y
+		l.LayoutOrder = order
+		return l
+	end
+	row(Text.get("update.board.title"), LB.titleSize, Color3.fromRGB(120, 60, 20), Theme.font, 0)
+	local rows = boardRows()
+	local n = #rows > LB.maxLines and LB.maxLines - 1 or #rows
+	for i = 1, n do
+		row(rows[i].text, LB.lineSize, Color3.fromRGB(40, 30, 24), nil, i)
+	end
+	if #rows > LB.maxLines then
+		row(Text.get("update.board.more"), LB.lineSize, Color3.fromRGB(150, 70, 20), Theme.font, LB.maxLines)
+	end
+end
+
+-- 누르면(마을 게시판 프롬프트 - HubServiceData panel "board") 전체 소식 · 코드 창 + [코드 입력](설정 창 게임 탭 코드 칸)
+local full
+local function openFull()
+	if full then
+		full.Visible = true
+		return
+	end
+	full = Instance.new("Frame")
+	full.Name = "UpdateBoardFull"
+	full.AnchorPoint = Vector2.new(0.5, 0.5)
+	full.Position = UDim2.fromScale(0.5, 0.5)
+	full.Size = UDim2.fromOffset(360, 0)
+	full.AutomaticSize = Enum.AutomaticSize.Y
+	full.BackgroundColor3 = INK
+	full.BackgroundTransparency = 0.08
+	full.Parent = gui
+	Instance.new("UICorner", full).CornerRadius = UDim.new(0, 10)
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft, pad.PaddingRight, pad.PaddingTop, pad.PaddingBottom = UDim.new(0, 12), UDim.new(0, 12), UDim.new(0, 10), UDim.new(0, 12)
+	pad.Parent = full
+	local list = Instance.new("UIListLayout")
+	list.SortOrder = Enum.SortOrder.LayoutOrder
+	list.Padding = UDim.new(0, 6)
+	list.Parent = full
+	local order = 0
+	local function row(text, size, color, font)
+		order += 1
+		local l = label(full, text, size, color, font)
+		l.Size = UDim2.new(1, 0, 0, 0)
+		l.AutomaticSize = Enum.AutomaticSize.Y
+		l.LayoutOrder = order
+	end
+	row(Text.get("update.board.title"), 18, GOLD, Theme.font)
+	for _, n in ipairs(SD.news) do
+		row(Text.get("update.board.newsLine", { date = n.date, text = Text.get(n.textKey) }), 14)
+	end
+	row(Text.get("update.board.codes"), 15, GOLD, Theme.font)
+	for _, s in ipairs(validCodes()) do
+		row(s, 14, Color3.fromRGB(220, 230, 255))
+	end
+	local bar = Instance.new("Frame")
+	bar.BackgroundTransparency = 1
+	bar.Size = UDim2.new(1, 0, 0, 36)
+	bar.LayoutOrder = order + 1
+	bar.Parent = full
+	local Button = require(script.Parent.ui.kit.Button)
+	Button.build({ parent = bar, name = "UpdateBoardCode", kind = "primary", width = 120, position = UDim2.fromOffset(0, 2), text = Text.get("update.board.enterCode"),
+		onActivated = function()
+			full.Visible = false
+			require(script.Parent.panels.Settings).open("game")
+		end })
+	Button.build({ parent = bar, name = "UpdateBoardClose", kind = "secondary", width = 90, anchorPoint = Vector2.new(1, 0), position = UDim2.new(1, 0, 0, 2), text = Text.get("update.board.close"),
+		onActivated = function()
+			full.Visible = false
+		end })
+end
+game:GetService("ProximityPromptService").PromptTriggered:Connect(function(prompt, who)
+	if who == player and prompt:GetAttribute("HubService") == "noticeBoard" then
+		openFull()
+	end
+end)
+
 local function considerSpot(d)
 	if d:IsA("BasePart") and d:GetAttribute("Spot") == "noticeBoard" then
-		buildBoard(d)
+		if not gui:FindFirstChild("UpdateBoardFace") then -- 아트 끔(메시 없음) = 옛 빌보드
+			buildBoard(d)
+		end
+	elseif d:IsA("BasePart") and d.Name == "Board" and d.Parent and d.Parent.Name == "HubProp_board" then
+		task.defer(buildFace, d) -- 종이 조각이 같이 들어온 뒤
 	end
 end
 for _, d in ipairs(Workspace:GetDescendants()) do

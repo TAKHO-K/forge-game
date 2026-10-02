@@ -8,6 +8,8 @@ local Workspace = game:GetService("Workspace")
 local PrimordialData = require(ReplicatedStorage.Shared.data.PrimordialData)
 local PrimordialStamp = require(ReplicatedStorage.Shared.PrimordialStamp)
 local Text = require(ReplicatedStorage.Shared.Text)
+local HubArtData = require(ReplicatedStorage.Shared.data.HubArtData)
+local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
 local PrimordialRegistry = require(script.Parent.PrimordialRegistry)
 
 local HallOfFame = {}
@@ -107,6 +109,13 @@ local function build()
 	end
 	model.PrimaryPart = slab
 	model.Parent = Workspace
+	-- QUEUE-ALL8 C: 자리 이름표 · 기능 아이콘을 석판 위로(server/HubArt raiseTag와 같은 식 - 아이콘 = 클라가 TagTop을 읽는다) - 옛 = 석판 뒤에 가렸다
+	local top = slab.Position.Y + SLAB_SIZE.Y / 2 - WorldMapData.floorTopY
+	spot:SetAttribute("TagTop", top)
+	local tag = spot:FindFirstChild("LabelGui")
+	if tag then
+		tag.StudsOffsetWorldSpace = Vector3.new(0, WorldMapData.floorTopY + top + HubArtData.tagGap - spot.Position.Y, 0)
+	end
 	return true
 end
 
