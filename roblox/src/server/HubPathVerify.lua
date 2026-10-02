@@ -125,6 +125,14 @@ function HubPathVerify.run(opts)
 		table.insert(ex, Workspace.HubArt)
 	end
 	local rp = GuidePath.rayParams(ex) -- 길 안내와 같은 기준(충돌하는 표면만 - 잎 · 지붕 메시 · 장식 제외)
+	local op = OverlapParams.new() -- 가슴 높이 판정(정확한 도형 - GetPartBoundsInRadius는 경계 상자라 큰 줄기 원통 둘레를 속으로 셌다)
+	op.RespectCanCollide = true
+	op.FilterType = Enum.RaycastFilterType.Exclude
+	op.FilterDescendantsInstances = ex
+	local probe = Instance.new("Part")
+	probe.Shape = Enum.PartType.Ball
+	probe.Size = Vector3.one * 0.1 -- 점(가슴 점이 도형 속인가 - 0.8 공은 모서리를 0.4 안 스치는 것까지 셌다)
+	probe.Anchored, probe.CanCollide, probe.CanTouch, probe.CanQuery = true, false, false, false
 	local rng = Random.new(opts.seed or 20261002)
 	local T = targets()
 	local starts, arrived, under, tries = opts.starts or 60, 0, 0, 0
@@ -150,9 +158,15 @@ function HubPathVerify.run(opts)
 				arrived += 1
 				for _, w in ipairs(wps) do
 					local atGoal = ((w.Position - t.pos) * Vector3.new(1, 0, 1)).Magnitude < 4 -- 목적지 = 자리 기둥 속(검사 자리 - 길이 아니다)
-					if not atGoal and GuidePath.buried(w.Position + Vector3.new(0, 0.5, 0), rp) then -- 웨이포인트 = 발밑(지면 높이) → 0.5 위가 묻혔나
+					-- QUEUE-ALL8 H6: 점프 지점(장애물 윗면 바로 아래 발 - 뛰어오르는 자리)은 "위에 표면"이 당연 → 뺀다. 가슴 높이가 단단한 도형 속이면 점프여도 센다
+					probe.CFrame = CFrame.new(w.Position + Vector3.new(0, 2.5, 0))
+					local inSolid = #Workspace:GetPartsInPart(probe, op) > 0
+					local jump = w.Action == Enum.PathWaypointAction.Jump
+					-- 보이지 않는 충돌 상자(가지 채움 BranchFill) 윗면이 발 1 stud 안 위 = 길찾기 높이 양자화(그 위에 선다 · 선도 안 가린다) → 묻힘 아님
+					local hit = Workspace:Raycast(w.Position + Vector3.new(0, 0.5 + 3, 0), Vector3.new(0, -2.95, 0), rp)
+					local step = hit and hit.Instance.Transparency >= 1 and hit.Position.Y - w.Position.Y <= 1
+					if not atGoal and (inSolid or (not jump and not step and GuidePath.buried(w.Position + Vector3.new(0, 0.5, 0), rp))) then -- 웨이포인트 = 발밑(지면 높이) → 0.5 위가 묻혔나
 						under += 1
-						local hit = Workspace:Raycast(w.Position + Vector3.new(0, 0.5 + 3, 0), Vector3.new(0, -2.95, 0), rp)
 						if #underAt < 8 then
 							table.insert(underAt, ("(%d, %.1f, %d %s)"):format(w.Position.X, w.Position.Y, w.Position.Z, hit and hit.Instance.Name or "?"))
 						end
@@ -163,6 +177,7 @@ function HubPathVerify.run(opts)
 			end
 		end
 	end
+	probe:Destroy()
 	local rate = n > 0 and arrived / n or 0
 	table.insert(out, ("② 시작점 %d · 도착 %d(%.1f%%) · 땅속 웨이포인트 %d %s%s"):format(n, arrived, rate * 100, under, (rate >= 0.95 and under == 0) and "O" or "X",
 		#fails > 0 and (" · 실패: " .. table.concat(fails, " / ")) or "") .. (#underAt > 0 and (" · 묻힘: " .. table.concat(underAt, " ")) or ""))

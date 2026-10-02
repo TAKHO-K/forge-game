@@ -34,6 +34,9 @@ return {
 		{ kind = "prop_well", angleDeg = -40, r = 215 },
 		{ kind = "prop_bench", angleDeg = -78, r = 196, yaw = 10 },
 		{ kind = "prop_sign", angleDeg = -100, r = 196, yaw = -20 },
+		-- QUEUE-ALL8 H2: 큰 나무 뿌리 사이(아늑하게) - 꽃밭 · 랜턴(뿌리 각 ±14° 밖)
+		{ kind = "prop_flowers", angleDeg = 97, r = 128 }, { kind = "prop_flowers", angleDeg = 133, r = 130 }, { kind = "prop_flowers", angleDeg = 192, r = 126 }, { kind = "prop_flowers", angleDeg = 250, r = 130 },
+		{ kind = "prop_lantern", angleDeg = 100, r = 146 }, { kind = "prop_lantern", angleDeg = 190, r = 146 }, { kind = "prop_lantern", angleDeg = 255, r = 146 },
 	},
 	-- 거리 · 광장 랜턴(카툰 가로등) - 거리 앞 모서리 · 광장 둘레
 	lanterns = {

@@ -870,7 +870,9 @@ function Layout.buildTree(list)
 	-- 뿌리(M1-2 - 밟을 수 있다 · 끝이 땅속으로) · 코스 뿌리(끊긴 끝 + 좁은 혹) · 줄기 결(장식 - 충돌 없음)
 	for _, a in ipairs(tree.roots.angles) do
 		for _, seg in ipairs(Layout.rootSegments(a, 0)) do
-			prim(list, "BigTree", "Root", seg.size, seg.cf, barkDark, { material = tree.barkMaterial })
+			-- QUEUE-ALL8 H6: 끝쪽 낮은 칸(끝 높이 < 2)은 충돌 없음 - 기운 상자 끝 밑으로 길찾기 점이 묻혔다 · 낮은 끝은 걸어서 지나간다(높은 쪽은 그대로 막는다)
+			local _, hEnd = Layout.rootAt(seg.t1)
+			prim(list, "BigTree", "Root", seg.size, seg.cf, barkDark, { material = tree.barkMaterial, collide = hEnd >= 2 })
 		end
 	end
 	local CR = tree.courseRoot
@@ -1039,6 +1041,14 @@ function Layout.buildTree(list)
 		if spec.k == "branch" then
 			prim(list, model, "Branch", Vector3.new(spec.len, spec.dia, spec.dia), CFrame.lookAt(c - Vector3.new(0, spec.dia / 2, 0), c - Vector3.new(0, spec.dia / 2, 0) + tan) * CFrame.Angles(0, math.rad(90), 0), bark,
 				{ shape = "Cylinder", material = tree.barkMaterial, attrs = attrs })
+			-- QUEUE-ALL8 H6: 땅에 닿은 낮은 가지(바닥이 땅 아래) = 눕힌 원통의 굽은 옆 · 윗면에 길찾기 점이 걸려 "묻힘"이 났다 → 땅부터 윗면 높이까지 평평한 보이지 않는 상자(윗면 높이 그대로 = 점프 높이 같음)
+			local centerY = c.Y - spec.dia / 2
+			if centerY - spec.dia / 2 <= FLOOR + 0.5 then
+				local top = c.Y
+				prim(list, model, "BranchFill", Vector3.new(spec.len * 0.9, top - FLOOR + 1, spec.dia * 0.85),
+					CFrame.lookAt(Vector3.new(c.X, (top + FLOOR - 1) / 2, c.Z), Vector3.new(c.X, (top + FLOOR - 1) / 2, c.Z) + tan) * CFrame.Angles(0, math.rad(90), 0), bark,
+					{ transparency = 1, material = tree.barkMaterial })
+			end
 			-- 줄기에서 뻗어 나온 가지(장식 - 충돌 없음)
 			local radial = Vector3.new(c.X, 0, c.Z).Unit
 			local from = radial * R + Vector3.new(0, c.Y - spec.dia / 2 - 3, 0)
@@ -1386,11 +1396,14 @@ function Layout.buildHub(list)
 	local ep = Layout.hubPoint(ea, EB.r)
 	local eo = Vector3.new(ep.X, 0, ep.Z).Unit
 	local boardCf = CFrame.lookAt(Vector3.new(ep.X, FLOOR + EB.bottom + EB.h / 2, ep.Z), Vector3.new(ep.X, FLOOR + EB.bottom + EB.h / 2, ep.Z) + eo)
-	prim(list, "Hub", "StationBoard", Vector3.new(EB.w, EB.h, 0.6), boardCf, tree.barkDark, { material = "SmoothPlastic", attrs = { StationBoard = true } })
+	prim(list, "Hub", "StationBoard", Vector3.new(EB.w, EB.h, 0.6), boardCf, tree.barkDark, { material = "SmoothPlastic", collide = false, attrs = { StationBoard = true } })
 	for _, sx in ipairs({ -1, 1 }) do
 		local foot = boardCf * CFrame.new(sx * (EB.w / 2 - 0.6), -EB.h / 2, 0.5)
-		prim(list, "Hub", "StationBoardPost", Vector3.new(0.6, EB.bottom + EB.h, 0.6), CFrame.new(foot.Position.X, FLOOR + (EB.bottom + EB.h) / 2, foot.Position.Z), tree.bark, { material = "SmoothPlastic" })
+		prim(list, "Hub", "StationBoardPost", Vector3.new(0.6, EB.bottom + EB.h, 0.6), CFrame.new(foot.Position.X, FLOOR + (EB.bottom + EB.h) / 2, foot.Position.Z), tree.bark, { material = "SmoothPlastic", collide = false })
 	end
+	-- QUEUE-ALL8 H6: 판 · 기둥(두께 0.6)은 길찾기 격자(4)보다 얇아 경로가 모서리 · 기둥 속을 스쳤다 → 땅부터 판 위까지 두께 2 보이지 않는 막이(충돌은 이것만)
+	prim(list, "Hub", "StationBoardBlock", Vector3.new(EB.w + 0.6, EB.bottom + EB.h, 2), boardCf * CFrame.new(0, -EB.bottom / 2, 0.25), tree.barkDark,
+		{ material = "SmoothPlastic", transparency = 1 })
 	local cloud = tree.cloudLayer
 	prim(list, "BigTree", "CloudLayer", Vector3.new(cloud.thickness, cloud.radius * 2, cloud.radius * 2), CFrame.new(0, FLOOR + cloud.y, 0) * CFrame.Angles(0, 0, math.rad(90)), { 245, 245, 250 },
 		{ shape = "Cylinder", material = "SmoothPlastic", collide = false, transparency = cloud.transparency })

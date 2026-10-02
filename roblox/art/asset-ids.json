@@ -4377,6 +4377,42 @@
   "assetId": 109571419023957,
   "status": "Approved"
  },
+ "props/tree_branch.fbx": {
+  "sha256": "b857fa3a47b70987c16c58388168703c4ab6b3d60b8aec090a16a0296e852cda",
+  "assetType": "Model",
+  "assetId": 96900694496579,
+  "status": "Approved"
+ },
+ "props/tree_deck.fbx": {
+  "sha256": "09fa8274204819a0d77e3c6b0cfbe4f9e4393298a6792b33f576425aaf1d9e53",
+  "assetType": "Model",
+  "assetId": 139404356594114,
+  "status": "Approved"
+ },
+ "props/tree_root.fbx": {
+  "sha256": "4748496516d31263c1d5857ed3a9370c915e744863f3a7361b43f53813d4b439",
+  "assetType": "Model",
+  "assetId": 120314374153851,
+  "status": "Approved"
+ },
+ "props/tree_stem.fbx": {
+  "sha256": "2bd0bb025d0be6e83aeb7de7fbda0bf598d5a6637e4480246819a0a70eb0300b",
+  "assetType": "Model",
+  "assetId": 139789704734767,
+  "status": "Approved"
+ },
+ "props/tree_trunk_base.fbx": {
+  "sha256": "2264064f7a12aaae867e1450074428d253bc31cdd6006e314405a9a04121ddc6",
+  "assetType": "Model",
+  "assetId": 72942609183410,
+  "status": "Approved"
+ },
+ "props/tree_trunk_section.fbx": {
+  "sha256": "396d2ab0f096c597492dbab8fe15ced77f00867ad57a8a720061f435db3e590a",
+  "assetType": "Model",
+  "assetId": 85207473970896,
+  "status": "Approved"
+ },
  "props/trees/clump_a.fbx": {
   "sha256": "de9627f61789e5313f701b31a4fcbae60eb86e4286d96dcfc7925732e20cfc7f",
   "assetType": "Model",

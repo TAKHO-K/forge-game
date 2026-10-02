@@ -8,6 +8,7 @@ local Workspace = game:GetService("Workspace")
 local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit)
 local HubArtMeta = require(ReplicatedStorage.Shared.data.HubArtMeta)
 local HubArtData = require(ReplicatedStorage.Shared.data.HubArtData)
+local TreeArtMeta = require(ReplicatedStorage.Shared.data.TreeArtMeta)
 local HubPropsData = require(ReplicatedStorage.Shared.data.HubPropsData)
 local HubPropLayout = require(ReplicatedStorage.Shared.HubPropLayout)
 local ArtAssetIds = require(ReplicatedStorage.Shared.data.ArtAssetIds)
@@ -221,6 +222,86 @@ local function placeProps(hub, folder)
 	return count, byKind
 end
 
+-- QUEUE-ALL8 H 큰 나무 겉모습(TreeArtMeta 메시 · 충돌 · 기능 = 코드 도형 그대로 - 투명으로 남긴다)
+--   s = 축마다 배율(단위 메시를 코드 도형 크기로) · 조각 색 = 표
+local function placeScaled(key, frame, s, parent)
+	local src = ArtMeshKit.get("props/" .. key)
+	local meta = TreeArtMeta[key]
+	if not src or not meta then
+		return 0
+	end
+	local k = restoreScale(key, src, meta)
+	local n = 0
+	for _, p in ipairs(src:GetChildren()) do
+		if p:IsA("BasePart") then
+			local m = p:Clone()
+			m.Size = p.Size * k * s
+			m.CFrame = frame * (CFrame.new(p.Position * k * s) * p.CFrame.Rotation)
+			m.Anchored, m.CanCollide, m.CanTouch, m.CanQuery = true, false, false, false
+			local pm = meta.parts[p.Name]
+			if pm then
+				m.Color = rgb(pm.rgb)
+				m.Material = Enum.Material.SmoothPlastic
+			end
+			m.CastShadow = true
+			m.Parent = parent
+			n += 1
+		end
+	end
+	return n
+end
+
+local function dressTree(folder)
+	local ground = Workspace:FindFirstChild("Ground")
+	local tree = ground and ground:FindFirstChild("BigTree")
+	local course = ground and ground:FindFirstChild("TreeCourse")
+	if not tree or not course then
+		return 0
+	end
+	local model = Instance.new("Model")
+	model.Name = "TreeArt"
+	local count = 0
+	local T = WorldMapData.hub.tree
+	-- 밑동(실제 크기) · 줄기 칸(단위 원통 → 코드 Trunk 칸 크기 · 칸마다 조금 더 비틀어 이어 붙인다)
+	count += placeScaled("tree_trunk_base", CFrame.new(0, FLOOR, 0), Vector3.one, model)
+	local twist = 0
+	for _, p in ipairs(tree:GetChildren()) do
+		if p:IsA("BasePart") then
+			if p.Name == "Trunk" then
+				local L, Dm = p.Size.X, p.Size.Y -- 눕힌 원통(X = 길이)
+				count += placeScaled("tree_trunk_section", CFrame.new(p.Position) * CFrame.Angles(0, math.rad(twist), 0), Vector3.new(Dm / 2, L, Dm / 2), model)
+				twist += 20
+				p.Transparency = 1
+			elseif p.Name == "Ridge" or p.Name == "TrunkFlare" or p.Name == "BarkBump" then
+				p.Transparency = 1 -- 옛 세로 판자 결 · 겹친 원통 · 혹(장식 - 충돌 없음)
+			elseif p.Name == "Root" then
+				p.Transparency = 1 -- 충돌 그대로(두꺼운 쪽만 - WorldMapLayout) · 겉모습 = tree_root
+			end
+		end
+	end
+	for _, a in ipairs(T.roots.angles) do
+		count += placeScaled("tree_root", CFrame.new(0, FLOOR, 0) * CFrame.Angles(0, -math.rad(a), 0), Vector3.one, model)
+	end
+	-- 점프맵 가지 발판 · 줄기에서 나온 가지 · 링 발판(난간)
+	local bB, bS, bD = TreeArtMeta.tree_branch.bounds, TreeArtMeta.tree_stem.bounds, TreeArtMeta.tree_deck.bounds
+	for _, p in ipairs(course:GetDescendants()) do
+		if p:IsA("BasePart") then
+			if p.Name == "Branch" then
+				count += placeScaled("tree_branch", p.CFrame, Vector3.new(p.Size.X / bB[1], p.Size.Y / bB[2], p.Size.Z / bB[3]), model)
+				p.Transparency = 1
+			elseif p.Name == "BranchStem" then
+				count += placeScaled("tree_stem", p.CFrame, Vector3.new(p.Size.X / bS[1], p.Size.Y / bS[2], p.Size.Z / bS[3]), model)
+				p.Transparency = 1
+			elseif p.Name == "Station" or p.Name == "Deck" then
+				count += placeScaled("tree_deck", p.CFrame, Vector3.new(p.Size.X / bD[1], 1, p.Size.Z / bD[3]), model)
+				p.Transparency = 1
+			end
+		end
+	end
+	model.Parent = folder
+	return count
+end
+
 function HubArt.scaleOf(key) -- 검증 · 보고용(가져올 때 줄어든 비율의 역수)
 	return scaleOf[key]
 end
@@ -291,7 +372,9 @@ function HubArt.apply()
 			npcs += 1
 		end
 	end
-	-- QUEUE-ALL8 B2 · B3 · B4
+	-- QUEUE-ALL8 B2 · B3 · B4 · H
+	local treePieces = dressTree(folder)
+	print(("[HubArt] 큰 나무 메시 조각 %d"):format(treePieces))
 	local floors = dressFloors(hub, folder)
 	local propCount, byKind = placeProps(hub, folder)
 	local kinds = {}
