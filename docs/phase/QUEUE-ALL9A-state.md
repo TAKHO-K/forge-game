@@ -7,8 +7,8 @@
 | 1 시즌 패스 수치 | 완료(Play: 주말 배너 · 접속 10 → 20 · 패스 창 주말 줄 · 보너스 줄 · 출석 한 줄) | 67606b2f | expPerTier 170 · 주말 2배(QuestService.grant 한 곳) · 보너스 칸 = claimedFree/Paid "41"+ · 출석 한 줄 · /gg weekend |
 | 2 판매 창 | 완료(Play: 새 말투 · 2개 확인 → 가방 바뀜 → 안내 + 4개로 다시) | f94cd354 | 말투 · 분해하기(N개) · count_mismatch = 같은 SellRequest로 결과 → 안내 + 확인 창 다시 · check_textdata 문어체 검사(기존 1건 환생한다 → 환생하기) |
 | 3 지도 이름 · 게시판 · 폰 | 완료 | 4485e8f8 | 지도 ×10 ko · en 16 → 15(재봉사 → 재봉집 하나) · 상점 50 · 명예의 전당 98 stud라 25 규칙 밖(결정 필요) · 게시판 = Panel.create(UIManager) · 폰 TC 줄 181 ~ 558(미니맵 567) · 회색 상자 = 기능 자리 기둥 4(숨기지 않음) |
-| 4 나무 껍질 | 완료 | (이 커밋) | Decal 2(tree_bark · tree_plank · Approved) · Texture 780(껍질 조각 171 × 4면 + 발코니 96 × 윗면) · 껍질 타일 24 → 48(24는 결이 가늘고 어지러움) · 아트 끔 O(ArtStyleV1Force 끝나고 nil) |
-| 5 검증 · 보고 | 대기 | | |
+| 4 나무 껍질 | 완료 | 9822cb28 | Decal 2(tree_bark · tree_plank · Approved) · Texture 780(껍질 조각 171 × 4면 + 발코니 96 × 윗면) · 껍질 타일 24 → 48(24는 결이 가늘고 어지러움) · 아트 끔 O(ArtStyleV1Force 끝나고 nil) |
+| 5 검증 · 보고 | 완료 | 46f8323d · 보고서 커밋 | run_all 전부 통과 · check_textdata 통과 · 로그 우리 코드 오류 0 · 리뷰 high/medium 0 · low 1 고침 |
 
 ## 결정 로그
 
