@@ -52,7 +52,9 @@ function SeasonPassService.weekendBanner(player)
 	if not active or not settings or settings.weekendBannerAt == startAt then
 		return false
 	end
-	require(script.Parent.SettingsService).set(player, "weekendBannerAt", startAt)
+	if weekendOverride == nil then -- 리뷰: 개발 덮어쓰기(/gg weekend on)로 띄운 배너는 도장을 안 남긴다(창 밖이면 startAt = 다음 창 - 실제 다음 주말 배너가 안 뜸)
+		require(script.Parent.SettingsService).set(player, "weekendBannerAt", startAt)
+	end
 	local hours = math.max(1, math.ceil((endAt - os.time()) / 3600))
 	task.spawn(function()
 		local notice = ReplicatedStorage:WaitForChild("SystemNotice", 10)
