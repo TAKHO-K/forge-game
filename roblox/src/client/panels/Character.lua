@@ -2,9 +2,11 @@
 --   왼쪽 = 직업 그림(icons/codex/class_<직업>) + 직업 이름 · 오른쪽 = 능력치 줄(서버 Player Attribute 그대로 - 클라는 계산하지 않는다) · 아래 = [직업 변경](옛 왼쪽 아래 "직업 변경" 버튼 자리 - 중복 삭제) · [수련 U] 바로 가기.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local CosmeticSlotData = require(ReplicatedStorage.Shared.data.CosmeticSlotData)
+local StatSheetData = require(ReplicatedStorage.Shared.data.StatSheetData) -- QUEUE-ALL9C 1-2 상세 능력치 줄 목록(이 표대로만 그린다)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local Text = require(ReplicatedStorage.Shared.Text)
 local Panel = require(script.Parent.Parent.ui.kit.Panel)
@@ -27,7 +29,6 @@ local ROWS = {
 	{ "character.weapon", "WeaponLevel", "plus" },
 	{ "character.rebirth", "RebirthCount", "int" },
 	{ "character.best", "InfiniteStageBest", "int" },
-	{ "character.speed", "SpeedPercentBonus", "pct" },
 	{ "character.milestone", "MilestoneMultiplier", "mult" },
 }
 
@@ -59,6 +60,140 @@ local function format(kind, v)
 	return tostring(math.floor(v))
 end
 
+-- ══ QUEUE-ALL9C 1-2(C1) 상세 능력치: 값 = 서버 StatSheetFetch(PlayerProfile.getStatSheet - 전투와 같은 함수) · 줄 = StatSheetData.rows · 출처 = StatSheetData.sources 순서 ══
+--   PC = 줄에 마우스를 올리면 출처가 펼쳐지고 · 폰 = 누를 때마다 펼침/접힘. 줄이 늘어도 이 코드는 그대로(데이터 한 줄 + 서버 계산 하나).
+local function totalText(format, v)
+	v = v or 0
+	if format == "big" then
+		return NumberFormat.currency(v, Text.languageFor())
+	elseif format == "pct" then
+		return ("%+.1f%%"):format(v * 100)
+	elseif format == "rate" then
+		return ("%.1f%%"):format(v * 100)
+	elseif format == "mult" then
+		return ("×%.2f"):format(v)
+	end
+	return tostring(v)
+end
+local function partText(part)
+	if part.kind == "mult" then
+		return ("×%.2f"):format(part.value)
+	elseif part.kind == "add" then
+		return ("%+.1f%%"):format(part.value * 100)
+	end
+	local v = part.value
+	return (math.abs(v) < 100 and v ~= math.floor(v)) and ("%.1f"):format(v) or NumberFormat.currency(v, Text.languageFor())
+end
+function CharacterPanel.partsText(parts)
+	local lines = {}
+	for _, source in ipairs(StatSheetData.sources) do
+		local bits = {}
+		for _, part in ipairs(parts or {}) do
+			if part.source == source then
+				table.insert(bits, partText(part))
+			end
+		end
+		if #bits > 0 then
+			table.insert(lines, ("%s  %s"):format(Text.get("stat.src." .. source), table.concat(bits, " · ")))
+		end
+	end
+	return table.concat(lines, "\n")
+end
+
+function CharacterPanel.buildDetail(list, order)
+	local header = Theme.label(list, Text.get("character.detail"), "header", "textPrimary")
+	header.Name = "DetailHeader"
+	header.LayoutOrder = order + 1
+	header.Size = UDim2.new(1, 0, 0, ROW_H)
+	local hint = Theme.label(list, Text.get("character.detailHint"), "caption", "textSecondary")
+	hint.Name = "DetailHint"
+	hint.LayoutOrder = order + 2
+	hint.TextWrapped = true
+	hint.Size = UDim2.new(1, -8, 0, 0)
+	hint.AutomaticSize = Enum.AutomaticSize.Y
+	local rows = {}
+	for i, row in ipairs(StatSheetData.rows) do
+		local f = Instance.new("TextButton")
+		f.Name = "Detail_" .. row.id
+		f.Text = ""
+		f.AutoButtonColor = false
+		f.LayoutOrder = order + 2 + i
+		f.BackgroundColor3 = Theme.color("slot")
+		f.BackgroundTransparency = 0.6
+		f.Size = UDim2.new(1, -8, 0, 0)
+		f.AutomaticSize = Enum.AutomaticSize.Y
+		f.Parent = list
+		Theme.corner(f, 6)
+		local pad = Instance.new("UIPadding")
+		pad.PaddingLeft, pad.PaddingRight, pad.PaddingTop, pad.PaddingBottom = UDim.new(0, 6), UDim.new(0, 6), UDim.new(0, 4), UDim.new(0, 4)
+		pad.Parent = f
+		local layout = Instance.new("UIListLayout")
+		layout.SortOrder = Enum.SortOrder.LayoutOrder
+		layout.Parent = f
+		local top = Instance.new("Frame")
+		top.Name = "Top"
+		top.BackgroundTransparency = 1
+		top.Size = UDim2.new(1, 0, 0, 24)
+		top.Parent = f
+		local name = Theme.label(top, Text.get("stat." .. row.id), "body", "textSecondary")
+		name.Size = UDim2.new(0.55, 0, 1, 0)
+		local value = Theme.label(top, "—", "body", "textPrimary")
+		value.Name = "Value"
+		value.Position = UDim2.new(0.55, 0, 0, 0)
+		value.Size = UDim2.new(0.45, 0, 1, 0)
+		value.TextXAlignment = Enum.TextXAlignment.Right
+		local parts = Theme.label(f, "", "caption", "textSecondary")
+		parts.Name = "Parts"
+		parts.LayoutOrder = 2
+		parts.TextWrapped = true
+		parts.Size = UDim2.new(1, 0, 0, 0)
+		parts.AutomaticSize = Enum.AutomaticSize.Y
+		parts.Visible = false
+		local entry = { value = value, parts = parts, format = row.format, pinned = false }
+		f.MouseEnter:Connect(function()
+			if UserInputService:GetLastInputType() == Enum.UserInputType.MouseMovement then
+				parts.Visible = parts.Text ~= ""
+			end
+		end)
+		f.MouseLeave:Connect(function()
+			if not entry.pinned then
+				parts.Visible = false
+			end
+		end)
+		f.Activated:Connect(function() -- 폰 = 누를 때마다 · PC 클릭 = 고정
+			entry.pinned = not entry.pinned
+			parts.Visible = entry.pinned and parts.Text ~= ""
+		end)
+		rows[row.id] = entry
+	end
+	return { rows = rows, fetching = false }
+end
+
+function CharacterPanel.renderDetail()
+	local detail = built and built.detail
+	if not detail or detail.fetching then
+		return
+	end
+	detail.fetching = true
+	task.spawn(function()
+		local fetch = ReplicatedStorage:WaitForChild("StatSheetFetch", 10)
+		local ok, sheet = pcall(function()
+			return fetch and fetch:InvokeServer()
+		end)
+		detail.fetching = false
+		if not ok or type(sheet) ~= "table" or type(sheet.rows) ~= "table" then
+			return
+		end
+		for _, row in ipairs(sheet.rows) do
+			local entry = detail.rows[row.id]
+			if entry then
+				entry.value.Text = totalText(entry.format, row.total)
+				entry.parts.Text = CharacterPanel.partsText(row.parts)
+			end
+		end
+	end)
+end
+
 local function build()
 	local panel = Panel.create({ id = CharacterPanel.id, kind = "window", title = Text.get("character.title"), size = PANEL_SIZE,
 		onOpen = function()
@@ -80,9 +215,14 @@ local function build()
 	className.Size = UDim2.new(1, -12, 0, 22)
 	className.TextXAlignment = Enum.TextXAlignment.Center
 
-	local list = Instance.new("Frame")
+	local list = Instance.new("ScrollingFrame") -- QUEUE-ALL9C 1-2: 기본 줄 아래 상세 능력치가 이어져 스크롤
 	list.Name = "Stats"
 	list.BackgroundTransparency = 1
+	list.BorderSizePixel = 0
+	list.ScrollBarThickness = 6
+	list.VerticalScrollBarInset = Enum.ScrollBarInset.Always -- 숫자가 스크롤 막대에 가리지 않게(막대 자리를 따로 비움)
+	list.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	list.CanvasSize = UDim2.new()
 	list.Position = UDim2.fromOffset(214, 12)
 	list.Size = UDim2.new(1, -226, 1, -84)
 	list.Parent = content
@@ -96,7 +236,7 @@ local function build()
 		f.Name = "Row_" .. row[2]
 		f.LayoutOrder = i
 		f.BackgroundTransparency = 1
-		f.Size = UDim2.new(1, 0, 0, ROW_H)
+		f.Size = UDim2.new(1, -8, 0, ROW_H)
 		f.Parent = list
 		local name = Theme.label(f, Text.get(row[1]), "body", "textSecondary")
 		name.Size = UDim2.new(0.55, 0, 1, 0)
@@ -107,6 +247,7 @@ local function build()
 		value.TextXAlignment = Enum.TextXAlignment.Right
 		values[row[2]] = { label = value, kind = row[3] }
 	end
+	local detail = CharacterPanel.buildDetail(list, #ROWS)
 
 	local change = Button.build({ parent = content, kind = "secondary", text = Text.get("character.changeClass"), width = 150,
 		position = UDim2.new(0, 12, 1, -12), anchorPoint = Vector2.new(0, 1), onActivated = function()
@@ -149,7 +290,7 @@ local function build()
 			end
 		end })
 	toggle.root.Name = "CosmeticsToggle"
-	built = { panel = panel, left = left, className = className, values = values, list = list, cos = cos, toggle = toggle }
+	built = { panel = panel, left = left, className = className, values = values, list = list, cos = cos, toggle = toggle, detail = detail }
 end
 
 local function renderCos()
@@ -242,6 +383,9 @@ function CharacterPanel.render()
 	end
 	for attr, entry in pairs(built.values) do
 		entry.label.Text = format(entry.kind, player:GetAttribute(attr))
+	end
+	if not showCos and UIManager.isOpen(CharacterPanel.id) then
+		CharacterPanel.renderDetail()
 	end
 end
 

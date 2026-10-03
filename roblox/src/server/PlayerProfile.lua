@@ -44,6 +44,7 @@ local Awaken = require(ReplicatedStorage.Shared.Awaken) -- D1 태초 각성
 local GemCraft = require(ReplicatedStorage.Shared.GemCraft)
 -- P2.5b D: 환생 후 레벨 마일스톤(영구 능력치 · 해금).
 local Milestone = require(ReplicatedStorage.Shared.Milestone)
+local StatSheetData = require(ReplicatedStorage.Shared.data.StatSheetData) -- QUEUE-ALL9C 1-2 상세 스탯 줄 목록
 local MilestoneData = require(ReplicatedStorage.Shared.data.MilestoneData)
 local MilestoneNotice = require(script.Parent.MilestoneNotice)
 
@@ -1969,6 +1970,179 @@ function PlayerProfile.getStatSummary(player)
 		critRate = critRate,
 		critDmg = critDmg,
 	}
+end
+
+-- QUEUE-ALL9C 1-2(C1) 상세 스탯 · 출처 분해(캐릭터 창 - StatSheetFetch). 합계는 전투가 쓰는 같은 함수(getStatSummary · getAttackParts · getExpGainMultiplier 식)이고,
+-- 옵션 축은 장비 → 보석 → 세트 → 수련 순으로 더해 본 차이를 출처 몫으로 나눈다(상한이 있으면 몫 합 = 상한 안 합계 - 순서대로 먼저 온 출처가 먼저 찬다).
+-- 줄 목록 = StatSheetData.rows · 줄마다 BUILDERS[id] 하나. 출처 값 kind = mult(×) · add(+%) · flat(+n).
+local function optionParts(profile, classState, axisId)
+	local cid = profile.classId
+	local all = buildOptionSources(classState)
+	local gearOnly = {}
+	for _, part in ipairs({ "armor", "gloves", "shoes" }) do
+		if classState.equipment[part] then
+			table.insert(gearOnly, classState.equipment[part])
+		end
+	end
+	local g = Option.sumAxisBonus(gearOnly, axisId, cid, nil)
+	local gg = Option.sumAxisBonus(all, axisId, cid, nil)
+	local set = SetBonus.extraValues(classState.equipment, axisId)
+	local ggs = set and Option.sumAxisBonus(all, axisId, cid, set) or gg
+	local extra = set and table.clone(set) or nil
+	local trained = Training.axisValues(profile.training, classState.abilities, cid, axisId)
+	if trained then
+		extra = extra or {}
+		for _, v in ipairs(trained) do
+			table.insert(extra, v)
+		end
+	end
+	local total = Option.sumAxisBonus(all, axisId, cid, extra)
+	return { gear = g + (ggs - gg), gem = gg - g, training = total - ggs, total = total }
+end
+
+local STAT_BUILDERS = {}
+function STAT_BUILDERS.attack(player, profile, classState, level)
+	local cid = profile.classId
+	local over = PlayerProfile.getOverCritAttackPercent(player)
+	local gloves = Loot.getGlovesAttackPercent(classState.equipment.gloves)
+	local opt = optionParts(profile, classState, "attackPercent")
+	local capped = PlayerCombat.capAttackPercentOption(opt.total, over)
+	local scale = (opt.total + over) > 0 and capped / (opt.total + over) or 0
+	local parts = PlayerCombat.getAttackParts(classState.weapon, cid, level, gloves + capped, PlayerProfile.getOptionBonus(player, "finalDamage"), PlayerProfile.getMilestoneMultiplier(player), PlayerProfile.getDealItemLevels(player))
+	local v, total = {}, 1
+	for _, p in ipairs(parts) do
+		v[p.id] = p.value
+		total *= p.value
+	end
+	local milestone = Milestone.attackMultiplier(classState.milestoneLevel or 0)
+	return Sanitize.number(total, 0), {
+		{ source = "base", kind = "flat", value = v.weaponBase * v.grade * v.class * v.level },
+		{ source = "base", kind = "add", value = over * scale },
+		{ source = "base", kind = "add", value = milestone - 1 },
+		{ source = "gear", kind = "mult", value = v.dealGear },
+		{ source = "gear", kind = "add", value = gloves + opt.gear * scale },
+		{ source = "enhance", kind = "mult", value = v.enhance * v.finalDamage },
+		{ source = "training", kind = "add", value = v.permanent - milestone + opt.training * scale },
+		{ source = "gem", kind = "add", value = opt.gem * scale },
+	}
+end
+function STAT_BUILDERS.attackSpeed(player, profile, classState)
+	local shoes = Loot.getShoesSpeedPercent(classState.equipment.shoes)
+	local opt = optionParts(profile, classState, "speedPercent")
+	return PlayerCombat.getSpeedMultiplier(shoes + opt.total), {
+		{ source = "gear", kind = "add", value = shoes + opt.gear },
+		{ source = "gem", kind = "add", value = opt.gem },
+		{ source = "training", kind = "add", value = opt.training },
+	}
+end
+function STAT_BUILDERS.moveSpeed(player, profile, classState)
+	local _, parts = STAT_BUILDERS.attackSpeed(player, profile, classState)
+	return JumpMath.moveSpeedMultiplier(PlayerProfile.getSpeedPercentBonus(player)), parts
+end
+local function critSplit(profile, classState, level)
+	local cid = profile.classId
+	local gearOnly = {}
+	for _, part in ipairs({ "armor", "gloves", "shoes" }) do
+		if classState.equipment[part] then
+			table.insert(gearOnly, classState.equipment[part])
+		end
+	end
+	local all = buildOptionSources(classState)
+	local set = SetBonus.extraValues(classState.equipment, "crit")
+	local gRate, gDmg = Option.critBonus(gearOnly, cid, nil)
+	local aRate, aDmg = Option.critBonus(all, cid, nil)
+	local sRate, sDmg = Option.critBonus(all, cid, set)
+	return { gearRate = gRate + (sRate - aRate), gemRate = aRate - gRate, rate = sRate, gearDmg = gDmg + (sDmg - aDmg), gemDmg = aDmg - gDmg, dmg = sDmg }
+end
+function STAT_BUILDERS.critRate(player, profile, classState, level)
+	local class = ClassData.classes[profile.classId]
+	local critRate = PlayerProfile.getCritBonus(player)
+	local base = class.critRate + PlayerCombat.getLevelCritBonus(level) + PlayerCombat.getRebirthCritBonus(classState.rebirthCount)
+	local c = critSplit(profile, classState, level)
+	local optShown = math.max(0, class.critRate + critRate - base) -- 100%에서 자른 뒤 남은 옵션 몫
+	local scale = c.rate > 0 and optShown / c.rate or 0
+	return class.critRate + critRate, {
+		{ source = "base", kind = "add", value = math.min(base, class.critRate + critRate) },
+		{ source = "gear", kind = "add", value = c.gearRate * scale },
+		{ source = "gem", kind = "add", value = c.gemRate * scale },
+	}
+end
+function STAT_BUILDERS.critDmg(player, profile, classState, level)
+	local class = ClassData.classes[profile.classId]
+	local _, critDmg = PlayerProfile.getCritBonus(player)
+	local c = critSplit(profile, classState, level)
+	local glovesBonus = Loot.getGlovesCritDmgBonus(classState.equipment.gloves)
+	local raw = c.dmg + glovesBonus
+	local scale = raw > 0 and critDmg / raw or 0
+	return class.critDmg + critDmg, {
+		{ source = "base", kind = "add", value = class.critDmg },
+		{ source = "gear", kind = "add", value = (c.gearDmg + glovesBonus) * scale },
+		{ source = "gem", kind = "add", value = c.gemDmg * scale },
+	}
+end
+function STAT_BUILDERS.maxHp(player, profile, classState)
+	local armor = Loot.getMaxHpBonus(classState.equipment.armor)
+	local opt = optionParts(profile, classState, "maxHpPercent")
+	local milestone = Milestone.maxHpMultiplier(classState.milestoneLevel or 0)
+	return computeMaxHp(player), {
+		{ source = "base", kind = "flat", value = CombatConfig.playerMaxHp },
+		{ source = "base", kind = "add", value = milestone - 1 },
+		{ source = "gear", kind = "flat", value = armor },
+		{ source = "gear", kind = "add", value = opt.gear },
+		{ source = "training", kind = "add", value = PlayerProfile.getMilestoneMaxHpMultiplier(player) - milestone + opt.training },
+		{ source = "gem", kind = "add", value = opt.gem },
+	}
+end
+function STAT_BUILDERS.defense(player, profile, classState)
+	local class = ClassData.classes[profile.classId]
+	local armorDef = Loot.getArmorDefense(classState.equipment.armor)
+	local opt = optionParts(profile, classState, "defensePercent")
+	return PlayerCombat.getDefense(profile.classId, armorDef, PlayerProfile.getDefensePercentBonus(player)), {
+		{ source = "base", kind = "flat", value = CombatConfig.playerDefense * class.def },
+		{ source = "gear", kind = "flat", value = armorDef * class.def },
+		{ source = "gear", kind = "add", value = opt.gear },
+		{ source = "training", kind = "add", value = opt.training },
+		{ source = "gem", kind = "add", value = opt.gem },
+	}
+end
+function STAT_BUILDERS.expGain(player, profile, classState)
+	local opt = optionParts(profile, classState, "expGain")
+	local party = PartyState.getExpBonusFor(player)
+	local comeback = PlayerProfile.getComebackMultiplier(player)
+	return PlayerProfile.combineExpMultiplier(opt.total, party) * comeback, {
+		{ source = "gear", kind = "add", value = opt.gear },
+		{ source = "gem", kind = "add", value = opt.gem },
+		{ source = "training", kind = "add", value = opt.training },
+		{ source = "buff", kind = "add", value = party },
+		{ source = "buff", kind = "mult", value = comeback },
+	}
+end
+PlayerProfile.STAT_BUILDERS = STAT_BUILDERS
+
+-- 반환 { rows = { { id, total, parts = { { source, kind, value } } } } } - 0인 몫은 뺀다(× 1 · + 0).
+function PlayerProfile.getStatSheet(player)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return nil
+	end
+	local level = CharacterLevel.getLevelFromExp(classState.characterExp)
+	local rows = {}
+	for _, row in ipairs(StatSheetData.rows) do
+		local builder = STAT_BUILDERS[row.id]
+		if builder then
+			local total, parts = builder(player, profile, classState, level)
+			local kept = {}
+			for _, p in ipairs(parts) do
+				local value = Sanitize.number(p.value, 0)
+				if (p.kind == "mult" and math.abs(value - 1) > 1e-9) or (p.kind ~= "mult" and math.abs(value) > 1e-9) then
+					table.insert(kept, { source = p.source, kind = p.kind, value = value })
+				end
+			end
+			table.insert(rows, { id = row.id, total = Sanitize.number(total, 0), parts = kept })
+		end
+	end
+	return { rows = rows }
 end
 
 -- 계승 비용(골드) - 서버 차감과 미리보기가 같은 값. 기준 = 계정 최고 스테이지(변환권과 같은 규칙) · 마일스톤 해금 "계승 비용 할인"(P2.5b D).

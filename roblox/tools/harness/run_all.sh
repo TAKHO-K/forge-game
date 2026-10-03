@@ -29,6 +29,7 @@ run season_pass res_season.txt "" season_pass_test.luau # QUEUE-ALL9A 1-5 패스
 run economy_all9b res_all9b.txt SecretNestData economy_all9b_test.luau # QUEUE-ALL9B 판매가 · 수련 · 토큰 · 패스 가치 · 출석판
 run enhance_g res_g.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem,EnhanceService,EnhancePolicy,ImmediateSave)" enhance_g_test.luau # QUEUE-ALL9B G 강화 최상위 · 초기화 바닥 · 방지 옵션 · 방지권 환산
 run bignum res_big.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem)" bignum_test.luau # QUEUE-ALL9B 큰 숫자 · ALL9C 0-2: 2^53 정밀도 4건 = "알려진 문제"(이름 고정 - 통과 수에서 빠짐)
+run stat_sheet res_sheet.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem)" stat_sheet_test.luau # QUEUE-ALL9C 1-2 상세 능력치 합계 = 전투 값 · 줄/출처 = StatSheetData
 run community_goal res_goal.txt "" community_goal_test.luau # QUEUE-ALL7 B5 합동 목표 00 · ±25% · 문턱 순서
 run boss_motion res_motion.txt "" boss_motion_test.luau motion_prelude.luau
 printf "%-22s %s\n" regrow_timing "$(python regrow_timing_test.py 2>&1 | grep -a -E '끝 [0-9]+/[0-9]+' | tail -1)"

@@ -32,6 +32,16 @@ classSummaryFetch.OnServerInvoke = function(player)
 	end)
 end
 
+-- QUEUE-ALL9C 1-2(C1): 캐릭터 창 상세 스탯 · 출처 분해(PlayerProfile.getStatSheet - 전투와 같은 함수로 서버가 계산 · 클라는 그리기만)
+local statSheetFetch = Instance.new("RemoteFunction")
+statSheetFetch.Name = "StatSheetFetch"
+statSheetFetch.Parent = ReplicatedStorage
+statSheetFetch.OnServerInvoke = function(player)
+	return RequestGate.invoke(player, "StatSheetFetch", "", function()
+		return PlayerProfile.getStatSheet(player)
+	end)
+end
+
 classSelectRequest.OnServerEvent:Connect(function(player, classId)
 	if not RequestGate.allow(player, "ClassSelectRequest") then
 		return -- QUEUE-6h-b 후속: 공통 요청 제한(RequestLimitConfig)
