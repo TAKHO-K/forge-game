@@ -739,6 +739,7 @@ local TextData = {
 		["board.done"] = "오늘은 다 받았어요",
 		["board.next"] = "내일 보상까지 {h}시간 {m}분",
 		["board.dayShort"] = "{day}일차",
+		["claimFx.tomorrow"] = "내일 보상 · {h}시간 {m}분",
 		["board.open"] = "열기",
 		["board.entrySub"] = "하루 첫 접속마다 한 칸 · 32칸 = 별빛 왕관",
 		["board.tomorrow"] = "내일 보상",

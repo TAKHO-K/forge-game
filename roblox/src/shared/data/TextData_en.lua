@@ -736,6 +736,7 @@ return {
 	["board.done"] = "All claimed for today",
 	["board.next"] = "Next reward in {h}h {m}m",
 	["board.dayShort"] = "Day {day}",
+	["claimFx.tomorrow"] = "Tomorrow · {h}h {m}m",
 	["board.open"] = "Open",
 	["board.entrySub"] = "One tile per daily login · Tile 32 = Starlight Crown",
 	["board.tomorrow"] = "Tomorrow",

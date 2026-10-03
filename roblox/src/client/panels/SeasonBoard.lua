@@ -11,6 +11,7 @@ local Button = require(script.Parent.Parent.ui.kit.Button)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
 local RewardIcons = require(script.Parent.Parent.ui.RewardIcons)
 local UIManager = require(script.Parent.Parent.UIManager)
+local ClaimFx = require(script.Parent.Parent.ui.AttendanceClaimFx) -- QUEUE-ALL9B A 받기 연출(공통)
 
 local SeasonBoard = {}
 SeasonBoard.id = "seasonBoard"
@@ -159,11 +160,33 @@ function SeasonBoard.openIfReady()
 	return false
 end
 
+-- QUEUE-ALL9B A: 서버 확정 지급 → 연출(칸 도장 · 보상 떠오름 · 재화 칸으로 날아감 · 내일 칸) · 32칸 뒤 보너스 = 받기 버튼 자리에서 같은 연출
+local function nextCellFor(b)
+	local n = (b and b.count or 0) + 1
+	return n <= #SeasonBoardData.cells and built.cells[n] or nil
+end
+local function onClaimResult(kind, id, granted)
+	if not built or not UIManager.isOpen(SeasonBoard.id) or (kind ~= "board" and kind ~= "boardBonus") then
+		return
+	end
+	local b = view and view.board
+	local cell = kind == "board" and built.cells[tonumber(id)] or built.claim.root
+	ClaimFx.play({ cell = cell, nextCell = nextCellFor(b), scroll = built.grid, granted = granted, resetIn = b and b.resetIn, onDone = function()
+		SeasonBoard.render()
+		local nb = view and view.board
+		ClaimFx.markNext(nextCellFor(nb), nb and nb.resetIn, built.grid)
+	end })
+end
+
 function SeasonBoard.init(attendanceWillShow)
 	build()
+	ReplicatedStorage:WaitForChild("QuestClaimResult").OnClientEvent:Connect(onClaimResult)
 	updateRemote.OnClientEvent:Connect(function(v)
+		if v and v.board and v.board.todayKind and view and view.board and view.board.todayKind == nil then
+			autoShown = false -- 접속 중 날짜가 바뀌면 다시 자동으로
+		end
 		view = v
-		if UIManager.isOpen(SeasonBoard.id) then
+		if UIManager.isOpen(SeasonBoard.id) and not ClaimFx.isPlaying() then
 			SeasonBoard.render()
 		end
 		if not autoShown and v and v.board and v.board.todayKind and player:GetAttribute("TutorialCompleted") == true and not attendanceWillShow(v) then

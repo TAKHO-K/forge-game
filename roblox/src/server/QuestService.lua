@@ -27,6 +27,7 @@ local function nowSeason()
 end
 
 local updateRemote
+local claimResultRemote -- QUEUE-ALL9B A5 QuestClaimResult(kind, id, 지급 표)
 local lastRequest = {}
 
 local function questNames(player, list, progress)
@@ -66,6 +67,7 @@ function QuestService.view(player)
 		daily = questNames(player, Quest.dailyFor(state.day), state.daily), -- QUEUE-ALL6 A4: 이름 = 그 플레이어 언어(틀을 바꾼 뒤 {n} 채움)
 		weekly = questNames(player, QuestData.weekly, state.weekly),
 		loginReady = state.loginDay ~= state.day,
+		resetIn = 86400 - now % 86400, -- QUEUE-ALL9B A ④ 다음 초기화(서버 UTC 자정)까지 초
 		chestReady = chestReady and state.chestDay ~= state.day,
 		chestClaimed = state.chestDay == state.day, -- Play C: 받은 뒤 버튼 글 = 받음
 		main = step and (function()
@@ -155,15 +157,17 @@ function QuestService.syncWallet(player)
 	end
 end
 
--- 보상 지급(한 곳). 반환 = 지급 요약 문자열(로그). source = 퀘스트 받기 종류(login · daily · chest · weekly …) - 주말 패스 경험치 2배 판정(QUEUE-ALL9A 1-2 · 여기 한 곳)
+-- 보상 지급(한 곳). 반환 = 지급 요약 문자열(로그), 실제 지급 표(QUEUE-ALL9B A5 - 받기 연출이 그리는 값 · 골드 = 실제 골드). source = 퀘스트 받기 종류(login · daily · chest · weekly …) - 주말 패스 경험치 2배 판정(QUEUE-ALL9A 1-2 · 여기 한 곳)
 function QuestService.grant(player, reward, source)
 	local parts = {}
 	if not reward then
-		return ""
+		return "", {}
 	end
+	local granted = table.clone(reward)
 	local state = PlayerProfile.getQuestState(player)
 	if reward.gold then
 		local gold = GoldCost.rewardGold(MonsterData.tier1.goldDrop, reward.gold, PlayerProfile.getAccountBestStage(player)) -- QUEUE-ALL6 D: 보기 좋은 숫자(지급 = 표시)
+		granted.gold = gold
 		PlayerProfile.addGold(player, gold)
 		table.insert(parts, Text.getFor(player, "srv.reward.gold", { n = ("%d"):format(gold) }))
 	end
@@ -222,7 +226,7 @@ function QuestService.grant(player, reward, source)
 		table.insert(parts, Text.getFor(player, "srv.reward.passExp", { n = ("%d"):format(passExp) }))
 	end
 	QuestService.syncWallet(player)
-	return table.concat(parts, " · ")
+	return table.concat(parts, " · "), granted
 end
 
 -- 서버 이벤트 → 진행
@@ -296,8 +300,11 @@ function QuestService.claim(player, kind, id)
 	if not reward then
 		return false, why
 	end
-	local summary = QuestService.grant(player, reward, kind)
+	local summary, granted = QuestService.grant(player, reward, kind)
 	print(("[Q6] 퀘스트 보상: %s %s %s → %s"):format(player.Name, tostring(kind), tostring(id), summary))
+	if claimResultRemote and (kind == "login" or kind == "attendance" or kind == "board" or kind == "boardBonus") and typeof(player) == "Instance" and player.Parent then
+		claimResultRemote:FireClient(player, kind, id, granted) -- QUEUE-ALL9B A5: 서버가 확정한 지급 → 클라 받기 연출(AttendanceClaimFx)
+	end
 	if kind == "board" or kind == "boardBonus" then
 		require(script.Parent.AuditTrail).note(player, "board", ("%s %s"):format(kind, tostring(id))) -- QUEUE-ALL9B 6-2 감사
 	end
@@ -368,6 +375,9 @@ function QuestService.start()
 	updateRemote = ReplicatedStorage:FindFirstChild("QuestUpdate") or Instance.new("RemoteEvent")
 	updateRemote.Name = "QuestUpdate"
 	updateRemote.Parent = ReplicatedStorage
+	claimResultRemote = ReplicatedStorage:FindFirstChild("QuestClaimResult") or Instance.new("RemoteEvent")
+	claimResultRemote.Name = "QuestClaimResult"
+	claimResultRemote.Parent = ReplicatedStorage
 	local QUEST_ACTIONS = { view = true, claim = true, train = true }
 	remote.OnServerEvent:Connect(function(player, action, a, b)
 		if type(action) ~= "string" or not QUEST_ACTIONS[action] then -- QUEUE-6h-b R3 F5(보안): 허용 동작만 제한 표에(임의 문자열로 표가 커지지 않게)

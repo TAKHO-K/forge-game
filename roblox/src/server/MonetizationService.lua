@@ -75,12 +75,12 @@ function MonetizationService.applyReward(player, reward, source)
 			end
 			table.insert(parts, "시즌 유료 줄")
 		elseif grant.kind == "sparkleShard" or grant.kind == "egg" then
-			table.insert(parts, require(script.Parent.QuestService).grant(player, { [grant.kind] = grant.amount }))
+			table.insert(parts, (require(script.Parent.QuestService).grant(player, { [grant.kind] = grant.amount }))) -- 괄호 = 요약 문자열 하나(grant는 지급 표도 돌려준다)
 		elseif grant.kind == "gold" and type(grant.amount) == "number" and grant.amount > 0 then -- QUEUE-ALL9B 보완 2-2 시즌 무료 줄 고정 골드(스테이지 배율 아님 · 상품 · 유료 줄은 위 검사가 막는다)
 			PlayerProfile.addGold(player, grant.amount)
 			table.insert(parts, require(ReplicatedStorage.Shared.Text).getFor(player, "srv.reward.gold", { n = ("%d"):format(grant.amount) }))
 		elseif grant.kind == "enhanceStone" or grant.kind == "highEnhanceStone" or grant.kind == "gemDust" or grant.kind == "protectDrop" then -- 보완 2-3 · 2-4 무료 줄 성장 소모품(기존 재화)
-			table.insert(parts, require(script.Parent.QuestService).grant(player, { [grant.kind] = grant.amount }))
+			table.insert(parts, (require(script.Parent.QuestService).grant(player, { [grant.kind] = grant.amount }))) -- 괄호 = 요약 문자열 하나(grant는 지급 표도 돌려준다)
 		elseif grant.kind == "passTierSkip" then -- QUEUE-ALL9B 4-8 칸 건너뛰기(방 = 영수증 처리 전에 확인)
 			local got, why = SeasonPassService.applySkip(player, grant.amount)
 			if not got then

@@ -10,6 +10,7 @@ local Button = require(script.Parent.Parent.ui.kit.Button)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
 local RewardIcons = require(script.Parent.Parent.ui.RewardIcons)
 local UIManager = require(script.Parent.Parent.UIManager)
+local ClaimFx = require(script.Parent.Parent.ui.AttendanceClaimFx) -- QUEUE-ALL9B A 받기 연출(공통)
 
 local Attendance = {}
 Attendance.id = "attendance"
@@ -141,11 +142,38 @@ function Attendance.open()
 	UIManager.switchTo(Attendance.id)
 end
 
+-- QUEUE-ALL9B A: 서버 확정 지급(QuestClaimResult) → 연출 · A6 접속 보상 연출이 끝나고 받을 칸이 없으면 창을 닫는다(닫히면 시즌 출석판 - onClose)
+local function afterFx()
+	Attendance.render()
+	local att = view and view.attendance
+	local nextDay = att and built and built.grid:FindFirstChild("Day" .. tostring((att.count or 0) + 1))
+	if nextDay then
+		ClaimFx.markNext(nextDay, view and view.resetIn)
+	end
+	if not hasClaimable(view) and UIManager.isOpen(Attendance.id) then
+		task.delay(0.4, function()
+			UIManager.close(Attendance.id)
+		end)
+	end
+end
+local function onClaimResult(kind, id, granted)
+	if not built or not UIManager.isOpen(Attendance.id) or (kind ~= "login" and kind ~= "attendance") then
+		return
+	end
+	local cell = kind == "login" and built.login.root or built.grid:FindFirstChild("Day" .. tostring(id))
+	local nextCell = kind == "attendance" and built.grid:FindFirstChild("Day" .. tostring((tonumber(id) or 0) + 1)) or nil
+	ClaimFx.play({ cell = cell, nextCell = nextCell, granted = granted, resetIn = view and view.resetIn, onDone = afterFx })
+end
+
 function Attendance.init()
 	build()
+	ReplicatedStorage:WaitForChild("QuestClaimResult").OnClientEvent:Connect(onClaimResult)
 	updateRemote.OnClientEvent:Connect(function(v)
+		if v and v.loginReady and view and view.loginReady == false then
+			autoShown = false -- QUEUE-ALL9B A: 접속 중 날짜가 바뀌면(서버 UTC 자정 · Studio /gg day) 다시 자동으로
+		end
 		view = v
-		if UIManager.isOpen(Attendance.id) then
+		if UIManager.isOpen(Attendance.id) and not ClaimFx.isPlaying() then -- 연출 중엔 칸을 다시 그리지 않는다(끝난 뒤 그림)
 			Attendance.render()
 		end
 		-- 하루 첫 접속 자동 1회: 견습을 마쳤고 · 받을 칸이 있고 · 다른 창이 안 열렸을 때
