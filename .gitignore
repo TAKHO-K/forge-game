@@ -7,7 +7,11 @@ roblox/*.rbxl
 roblox/*.rbxlx
 
 # 아트 참고 이미지 - 타 게임 스크린샷이라 저장소에 넣지 않는다 (D0)
-docs/art/ref/
+docs/art/ref/*
+# QUEUE-ALL9C 2-1: 사용자 GPT 원본 시안(우리 콘셉트 - 타 게임 아님)은 이름 그대로 커밋(ART-REF v2 0절) · 목록 · 비교 캡처
+!docs/art/ref/ChatGPT Image 2026년 10월 3일 *.png
+!docs/art/ref/gpt-gear-index.md
+!docs/art/ref/compare/
 
 # Python 캐시(Blender 스크립트 실행 산출물)
 __pycache__/
