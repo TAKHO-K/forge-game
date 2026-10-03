@@ -29,7 +29,7 @@ function GoldTab.render(ctx, env)
 	local gold = player:GetAttribute("Gold") or 0
 	local dustOwned = player:GetAttribute("GemDust") or 0
 	local price = GoldTab.rerollTicketPrice()
-	ctx.section(Text.get("shop.gold.rerollSection", { dust = NumberFormat.format(dustOwned) }), "RerollSection")
+	ctx.section(Text.get("shop.gold.rerollSection", { dust = NumberFormat.currency(dustOwned, Text.languageFor()) }), "RerollSection")
 	for _, gradeId in ipairs(REROLL_GRADES) do
 		local grade = ArmorData.grades[gradeId]
 		local dustPrice = GemCraft.ticketDust(gradeId)
@@ -37,7 +37,7 @@ function GoldTab.render(ctx, env)
 		ctx.row({
 			name = "Reroll_" .. gradeId,
 			title = Text.get("shop.gold.rerollRow", { grade = grade and grade.displayName or gradeId, count = tostring(env.state.rerollTickets[gradeId] or 0) }),
-			subtitle = Text.get(affordable and "shop.gold.rerollPrice" or "shop.gold.rerollPriceShort", { gold = NumberFormat.format(price), dust = tostring(dustPrice) }),
+			subtitle = Text.get(affordable and "shop.gold.rerollPrice" or "shop.gold.rerollPriceShort", { gold = NumberFormat.currency(price, Text.languageFor()), dust = tostring(dustPrice) }),
 			buttons = { { name = "Buy_reroll_" .. gradeId, text = Text.get("shop.buy"), kind = "primary", enabled = affordable and not env.busy(), onActivated = function()
 				env.buyReroll(gradeId)
 			end } },

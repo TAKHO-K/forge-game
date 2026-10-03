@@ -46,14 +46,14 @@ function CostView.update(refs, state)
 		refs.goldValue.Text = "-"
 		refs.goldValue.TextColor3 = colors.textTertiary
 	else
-		refs.goldValue.Text = Text.get("forge.enhance.cost.have", { value = NumberFormat.format(state.cost), have = NumberFormat.format(state.gold) })
+		refs.goldValue.Text = Text.get("forge.enhance.cost.have", { value = NumberFormat.currency(state.cost, Text.languageFor()), have = NumberFormat.currency(state.gold, Text.languageFor()) })
 		refs.goldValue.TextColor3 = state.gold < state.cost and colors.danger or colors.textPrimary
 	end
 
 	local material = state.material
 	if material then
 		refs.materialName.Text = material.name
-		refs.materialValue.Text = Text.get("forge.enhance.cost.have", { value = NumberFormat.format(material.need), have = NumberFormat.format(material.have) })
+		refs.materialValue.Text = Text.get("forge.enhance.cost.have", { value = NumberFormat.currency(material.need, Text.languageFor()), have = NumberFormat.currency(material.have, Text.languageFor()) })
 		refs.materialValue.TextColor3 = material.have < material.need and colors.danger or colors.textPrimary
 	else
 		refs.materialName.Text = Text.get("forge.enhance.cost.material")

@@ -33,7 +33,7 @@ function SeasonTab.rewardText(reward)
 	local parts = {}
 	for _, key in ipairs(PARTS) do
 		if reward[key] then
-			table.insert(parts, Text.get("season.reward.part." .. key, { n = NumberFormat.format(reward[key]) }))
+			table.insert(parts, Text.get("season.reward.part." .. key, { n = NumberFormat.currency(reward[key], Text.languageFor()) }))
 		end
 	end
 	return table.concat(parts, " · ")

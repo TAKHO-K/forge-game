@@ -113,7 +113,7 @@ function ItemConfirm.create(content, player)
 		local key = verb == "판매" and "gear.confirm.sell" or "gear.confirm.dismantle"
 		if isGem and verb == "판매" then -- P3c E4
 			key = "gear.confirm.sellGem"
-			args.gold = NumberFormat.format(GemCraft.sellPrice(item, player:GetAttribute("AccountBestStage") or 1))
+			args.gold = NumberFormat.currency(GemCraft.sellPrice(item, player:GetAttribute("AccountBestStage") or 1), Text.languageFor())
 		elseif isGem then
 			key = "gear.confirm.dismantleGem"
 			args.dust = ("%d"):format(GemCraft.dustYield(item))

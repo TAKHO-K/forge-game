@@ -1,6 +1,6 @@
 -- QUEUE-ALL9B R 재화 칸(공용 - HUD 오른쪽 위 재화 칸 · 가방 위쪽 재화 줄이 같은 모듈). 재화 목록 = ItemInfoData.currencyBar(기존 재화만).
 --   값 = 서버가 내리는 Player Attribute(ItemInfoData.items[id].owned.attr)만 읽는다 - 클라가 계산한 값을 믿지 않는다.
---   표기 = NumberFormat.currency(1만 미만 쉼표 · ko 만/억 · en K/M/B) · 정확한 값 = PC 마우스 올리기 / 폰 길게 누르기(그동안 숫자 자리에 쉼표 값).
+--   표기 = NumberFormat.currency(ALL9C 0-8: 소수 한 자리 · ko 만 ~ 간 · en K ~ Dc → aa) · 정확한 값 = PC 마우스 올리기 / 폰 길게 누르기(그동안 숫자 자리에 쉼표 값).
 --   늘어나면 숫자 옆 "+n"이 gainSeconds 동안 떠올랐다 사라진다: batchSeconds 안의 여러 변화는 하나로 묶고 · 한 칸에서 초당 2.5번 넘게 새로 뜨지 않으며(깜빡임 < 3/s) ·
 --   보유량의 10% 이상 = 금색 굵게(큰 변화만 강조) · 줄어듦은 숫자만 바뀐다.
 --   ALL9C 창 이동 · 저장 규칙에 넣을 수 있게 칸 루트에 Attribute HudSlot = "currency"(HUD) / "currencyBag"(가방)를 붙인다(이름 · 위치는 호출부가 정한다).

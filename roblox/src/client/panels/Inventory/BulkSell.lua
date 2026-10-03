@@ -177,7 +177,7 @@ local function openConfirm()
 		return
 	end
 	pendingKey, pendingCount = S.sellCheckedKey(), count
-	confirmText.Text = Text.get("gear.bulk.confirm", { count = ("%d"):format(count), gold = NumberFormat.format(total) })
+	confirmText.Text = Text.get("gear.bulk.confirm", { count = ("%d"):format(count), gold = NumberFormat.currency(total, Text.languageFor()) })
 	local nd = dismantleCount()
 	confirmDismantle.Text = Text.get("gear.bulk.dismantle", { count = ("%d"):format(nd) }) -- Q13: 영웅 이상만 보석으로(태초 · 초월 제외)
 	confirmDismantle.AutoButtonColor = nd > 0

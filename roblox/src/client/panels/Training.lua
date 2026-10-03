@@ -121,7 +121,7 @@ local function row(t, order)
 	change.Size = UDim2.new(0.5, 0, 0, 22)
 	local ok = affordable(t)
 	local b = Button.build({ parent = f, kind = ok and "primary" or "secondary", width = 150, height = 44,
-		text = atCap and Text.get("quests.trainCap") or Text.get("training.button", { cost = NumberFormat.format(t.cost) }),
+		text = atCap and Text.get("quests.trainCap") or Text.get("training.button", { cost = NumberFormat.currency(t.cost, Text.languageFor()) }),
 		position = UDim2.new(1, -8, 0.5, 0), anchorPoint = Vector2.new(1, 0.5), onActivated = function()
 			requestRemote:FireServer("train", t.kind, t.id)
 		end })

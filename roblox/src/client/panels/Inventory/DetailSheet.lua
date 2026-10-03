@@ -203,7 +203,7 @@ local function refreshBag(item)
 	for _, line in ipairs(Compare.optionLines(item, equippedSame, classId, false)) do
 		table.insert(lines, line)
 	end
-	table.insert(lines, { text = sellable and Text.get("gear.detail.sellPrice", { price = NumberFormat.format(Loot.getSellPrice(item)), quality = rollText(item) }) or Text.get("gear.detail.noSell", { quality = rollText(item) }), color = UIColors.textSecondary })
+	table.insert(lines, { text = sellable and Text.get("gear.detail.sellPrice", { price = NumberFormat.currency(Loot.getSellPrice(item), Text.languageFor()), quality = rollText(item) }) or Text.get("gear.detail.noSell", { quality = rollText(item) }), color = UIColors.textSecondary })
 	card.set({
 		title = Text.get("inv.detail.inBag", { name = described.title }), -- P3b C1: 장착 여부(착용 칸은 "(착용 중)")
 		gradeId = item.grade, part = item.part or "armor", iconKey = iconKey(item),
@@ -289,7 +289,7 @@ local function refreshDetailBody()
 		-- P3c E4: 판매가도 같이(판매 = 골드 · 분해 = 가루 - 판매가는 분해 가루 가치의 절반).
 		card.set({
 			title = ItemDescribe.gem(gem).title, gradeId = gem.grade, part = "weapon",
-			lines = { { text = Text.get("gear.detail.gemBagLine", { price = NumberFormat.format(GemCraft.sellPrice(gem, player:GetAttribute("AccountBestStage") or 1)), dust = ("%d"):format(GemCraft.dustYield(gem)), quality = rollText(gem) }), color = UIColors.textPrimary } },
+			lines = { { text = Text.get("gear.detail.gemBagLine", { price = NumberFormat.currency(GemCraft.sellPrice(gem, player:GetAttribute("AccountBestStage") or 1), Text.languageFor()), dust = ("%d"):format(GemCraft.dustYield(gem)), quality = rollText(gem) }), color = UIColors.textPrimary } },
 			option = gem, notes = ItemDescribe.gem(gem).note, gems = true,
 		})
 		-- S20c: [장착] = 자동 장착(GemActions - PC 더블클릭 · 우클릭 · 폰 탭 선택과 같은 통로). 요청 중이면 회색.

@@ -342,7 +342,7 @@ local function rebuildGrid()
 	countLabel.Text = ("%d / %d"):format(#S.inventory, totalSlots)
 	refs.slotCount.Text = Text.get("inv.bag.count", { used = tostring(#S.inventory), total = tostring(totalSlots) })
 	local _, sellTotal = S.bulkSellEstimate()
-	refs.bulkEstimatePillLabel.Text = Text.get("gear.bag.bulkEstimate", { gold = NumberFormat.format(sellTotal) })
+	refs.bulkEstimatePillLabel.Text = Text.get("gear.bag.bulkEstimate", { gold = NumberFormat.currency(sellTotal, Text.languageFor()) })
 	local names = {} -- QUEUE-ALL8 G1: 체크한 판매 등급(등급 순)
 	for _, id in ipairs(ArmorData.bulkSellGrades) do
 		if S.bulkSellChecked[id] then
@@ -350,7 +350,7 @@ local function rebuildGrid()
 		end
 	end
 	cutoffButton.Text = Text.get("gear.bag.sellGrades", { grades = table.concat(names, " · ") })
-	refs.goldPillLabel.Text = Text.get("gear.bag.gold", { gold = NumberFormat.format(player:GetAttribute("Gold") or 0) })
+	refs.goldPillLabel.Text = Text.get("gear.bag.gold", { gold = NumberFormat.currency(player:GetAttribute("Gold") or 0, Text.languageFor()) })
 
 	if S.selectedKind == "bag" and not S.inventory[S.selectedValue] then
 		S.selectedKind, S.selectedValue = nil, nil

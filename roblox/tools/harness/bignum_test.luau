@@ -44,9 +44,9 @@ local ok, err = pcall(function()
 		return type(s) == "string" and not s:find("inf") and not s:find("nan") and not s:find("e[+-]") and not s:find("∞") and s ~= "—" and not s:find("E")
 	end
 	local VALUES = { 1e12, 1e15, 9e15, P53, 1e16, 1e18, TOP_6M }
-	local expectFormat = { [1e12] = "1T", [1e15] = "1aa", [9e15] = "9aa", [1e16] = "10aa", [1e18] = "1ab" }
-	local expectKo = { [1e12] = "1조", [1e15] = "1,000조", [9e15] = "9,000조", [P53] = "9,007조", [1e16] = "1경", [1e18] = "100경", [TOP_6M] = "109경" }
-	local expectEn = { [1e12] = "1T" }
+	local expectFormat = { [1e12] = "1T", [1e15] = "1Qa", [9e15] = "9Qa", [1e16] = "10Qa", [1e18] = "1Qi" } -- QUEUE-ALL9C 0-8
+	local expectKo = { [1e12] = "1.0조", [1e15] = "1,000.0조", [9e15] = "9,000.0조", [P53] = "9,007.1조", [1e16] = "1.0경", [1e18] = "100.0경", [TOP_6M] = "109.2경" }
+	local expectEn = { [1e12] = "1.0T", [1e15] = "1.0Qa", [1e18] = "1.0Qi", [TOP_6M] = "1.0Qi" }
 	for _, v in ipairs(VALUES) do
 		local f = NumberFormat.format(v)
 		check(("format(%.6g)"):format(v), sane(f) and (expectFormat[v] == nil or f == expectFormat[v]), ("= %q%s"):format(f, expectFormat[v] and (" (기대 " .. expectFormat[v] .. ")") or ""))
@@ -63,6 +63,16 @@ local ok, err = pcall(function()
 	end
 	-- 경계 inf · nan은 기존 가드 그대로
 	check("format(inf · nan) 가드", NumberFormat.format(math.huge) == "∞" and NumberFormat.format(0 / 0) == "—", "")
+	-- QUEUE-ALL9C 0-8 큰 수 표기 경계값(currency = HUD · 가방 · 상점 · 강화 창 공통)
+	local BOUND = {
+		{ 999, "999", "999" }, { 1000, "1.0K", "1,000" }, { 999999, "999.9K", "99.9만" }, { 1e6, "1.0M", "100.0만" }, { 9999, "9.9K", "9,999" }, { 1e4, "10.0K", "1.0만" },
+		{ 1e15, "1.0Qa", "1,000.0조" }, { 1e21, "1.0Sx", "10.0해" }, { 1e24, "1.0Sp", "1.0자" }, { 1e33, "1.0Dc", "10.0구" }, { 1e36, "1.0aa", "1.0간" }, { 1e39, "1.0ab", "1,000.0간" },
+		{ 0, "0", "0" }, { -5, "-5", "-5" }, { -12345, "-12.3K", "-1.2만" }, { 0 / 0, "—", "—" }, { math.huge, "∞", "∞" },
+	}
+	for _, b in ipairs(BOUND) do
+		local en, ko = NumberFormat.currency(b[1], "en"), NumberFormat.currency(b[1], "ko")
+		check(("0-8 표기 경계 %.6g"):format(b[1]), en == b[2] and ko == b[3], ("en %q(기대 %q) · ko %q(기대 %q)"):format(en, b[2], ko, b[3]))
+	end
 
 	-- ═══ 2. 저장 왕복(가짜 DataStore = 숫자를 %.17g 문자열로 직렬화 → 다시 숫자 · migrate · repairProfile · isValidProfile · sanitizeForSave) ═══
 	local function roundTrip(node)

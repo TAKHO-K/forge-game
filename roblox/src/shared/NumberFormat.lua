@@ -6,7 +6,7 @@ local NumberFormat = {}
 local MIN_VALUE = 10000 -- 이 밑은 원래 숫자 그대로(천단위 콤마)
 local STEP = 1000
 local DECIMALS = 1
-local UNITS = { "K", "M", "B", "T" }
+local UNITS = { "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc" } -- QUEUE-ALL9C 0-8: T 뒤 Qa(1e15) ~ Dc(1e33) → 그 뒤 aa(1e36) · ab …
 
 -- 두 글자 코드(aa~dz): 첫 글자는 a~d만 쓴다(이중 정밀도 상한이 d그룹 안에서 끝나므로
 -- e~z는 쓸 일이 없다). 둘째 글자는 a~z 전체. idx 0=aa, 103=dz.
@@ -112,7 +112,7 @@ function NumberFormat.format(value)
 	local scaled = n
 	local stepIndex = -1
 	local truncateSlack = 1 -- 버림 직전 배율(K · M · B · T 구간은 1 = P2 전 그대로)
-	if n < STEP ^ (#UNITS + 1) then
+	if n < STEP ^ 5 then
 		-- K · M · B · T 구간(1e15 미만) - P2 전 코드 그대로(표시가 한 글자도 안 바뀐다).
 		while scaled >= STEP do
 			scaled = scaled / STEP
@@ -121,7 +121,7 @@ function NumberFormat.format(value)
 	else
 		-- P2 C3: 알파벳 단위 구간(1e15 이상)은 1000으로 수십 번 나누면 오차가 쌓여 1e45가 "999.9aj"(정답 "1ak"), 1e308이 "99.9dt"(정답 "100dt")로 찍혔다.
 		-- 단위 칸을 먼저 정하고 한 번만 나눈다(STEP^k는 반올림 한 번뿐 - 10의 거듭제곱이 정확히 1 · 10 · 100으로 떨어진다).
-		stepIndex = #UNITS - 1
+		stepIndex = 3 -- T 칸에서 시작(1e15 이상 = Qa부터)
 		while n >= STEP ^ (stepIndex + 2) do
 			stepIndex += 1
 		end
@@ -150,50 +150,54 @@ function NumberFormat.format(value)
 	return text .. unitLabel(stepIndex)
 end
 
--- QUEUE-ALL9B R5 재화 칸 표기(HUD 재화 칸 · 가방 재화 줄 한 곳): 1만 미만 = 쉼표(9,850) · 1만 이상 = ko 만 · 억 · 조 · 경(앞 숫자 10 미만 = 소수 한 자리 1.2만 · 10 이상 = 정수 쉼표 345만 · 9,999억) /
---   en K · M · B · T(유효 숫자 셋 - 12.3K · 3.45M · 1.2B · 345K). 더 큰 값 = format(알파벳 단위)로 넘긴다. 버림(가진 것보다 크게 안 보이게). 정확한 값 = commas.
-local KO_UNITS = { { 1e16, "경" }, { 1e12, "조" }, { 1e8, "억" }, { 1e4, "만" } }
-local EN_UNITS = { { 1e12, "T" }, { 1e9, "B" }, { 1e6, "M" }, { 1e3, "K" } }
-local function trimZeros(text)
-	if text:find("%.") then
-		text = text:gsub("0+$", ""):gsub("%.$", "")
+-- QUEUE-ALL9B R5 재화 칸 표기 → QUEUE-ALL9C 0-8 큰 수 표기 한 곳(HUD 재화 칸 · 가방 · 상점 · 강화 창 · 일괄 판매 확인이 같은 함수):
+--   en = 1,000 미만 그대로 · K · M · B · T · Qa(1e15) · Qi(1e18) · Sx(1e21) · Sp(1e24) · Oc(1e27) · No(1e30) · Dc(1e33) → 그 뒤 aa(1e36) · ab …(format과 같은 단위 이름)
+--   ko = 1만 미만 쉼표(9,850) · 만 · 억 · 조 · 경 · 해 · 자 · 양 · 구 · 간(1e36) → 그 뒤 en 알파벳 단위
+--   소수 한 자리(1.0K · 12.3M · 345.0만 · 9,999.9억) · 버림(가진 것보다 크게 안 보이게 - 999,999 = 999.9K · 1,000,000 = 1.0M) · 음수 = "-" + 같은 규칙 · NaN = "—" · inf = "∞". 정확한 값 = commas.
+local KO_UNITS = { { 1e36, "간" }, { 1e32, "구" }, { 1e28, "양" }, { 1e24, "자" }, { 1e20, "해" }, { 1e16, "경" }, { 1e12, "조" }, { 1e8, "억" }, { 1e4, "만" } }
+local function oneDecimal(scaled)
+	local t = math.floor(scaled * 10 * (1 + 1e-12)) -- 거듭제곱 나눗셈 반올림(769.99999…)이 한 칸 내려 찍히지 않게 아주 작게 올려서 버린다
+	return withCommas(math.floor(t / 10)) .. "." .. tostring(t % 10)
+end
+-- 1,000 이상 n의 영어 단위 칸(0 = K · 10 = Dc · 11 = aa …)과 나눈 값. 10의 거듭제곱 경계는 한 번 나누기 + 보정(1e33 → 1.0Dc · 1e36 → 1.0aa).
+local function enStep(n)
+	local k = math.floor(math.log10(n) / 3)
+	if STEP ^ k > n then
+		k -= 1
+	elseif STEP ^ (k + 1) <= n then
+		k += 1
 	end
-	return text
+	local scaled = n / STEP ^ k
+	if scaled >= STEP then
+		scaled, k = scaled / STEP, k + 1
+	end
+	return k - 1, scaled
 end
 function NumberFormat.currency(value, lang)
 	if value ~= value or value == math.huge or value == -math.huge then
 		return NumberFormat.format(value)
 	end
 	local n = math.floor(value)
-	if n < 10000 then
-		return withCommas(math.max(n, 0))
+	if n < 0 then
+		return "-" .. NumberFormat.currency(-n, lang)
 	end
 	if lang == "ko" then
-		if n >= 1e20 then
-			return NumberFormat.format(n)
+		if n < 1e4 then
+			return withCommas(n)
 		end
-		for _, u in ipairs(KO_UNITS) do
-			if n >= u[1] then
-				local scaled = n / u[1]
-				if scaled < 10 then
-					return trimZeros(("%.1f"):format(math.floor(scaled * 10) / 10)) .. u[2]
+		if n < 1e40 then
+			for _, u in ipairs(KO_UNITS) do
+				if n >= u[1] then
+					return oneDecimal(n / u[1]) .. u[2]
 				end
-				return withCommas(math.floor(scaled)) .. u[2]
 			end
 		end
 	end
-	if n >= 1e15 then
-		return NumberFormat.format(n)
+	if n < STEP then
+		return withCommas(n)
 	end
-	for _, u in ipairs(EN_UNITS) do
-		if n >= u[1] then
-			local scaled = n / u[1]
-			local decimals = scaled < 10 and 2 or scaled < 100 and 1 or 0
-			local f = 10 ^ decimals
-			return trimZeros(("%." .. decimals .. "f"):format(math.floor(scaled * f) / f)) .. u[2]
-		end
-	end
-	return withCommas(n)
+	local idx, scaled = enStep(n)
+	return oneDecimal(scaled) .. unitLabel(idx)
 end
 
 return NumberFormat

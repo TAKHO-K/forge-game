@@ -15,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
+local Text = require(ReplicatedStorage.Shared.Text)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local HudChip = require(script.Parent.HudChip)
 
@@ -174,7 +175,7 @@ local function showGoldPopup(amount)
 	label.BackgroundTransparency = 1
 	label.Size = UDim2.new(0, 110, 1, 0)
 	label.TextXAlignment = Enum.TextXAlignment.Left
-	label.Text = "+" .. NumberFormat.format(amount)
+	label.Text = "+" .. NumberFormat.currency(amount, Text.languageFor())
 	label.Font = Enum.Font.GothamBold
 	label.TextColor3 = GOLD_COLOR
 	label.TextScaled = true
