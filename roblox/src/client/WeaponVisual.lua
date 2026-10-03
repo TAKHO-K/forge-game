@@ -1503,6 +1503,11 @@ function WeaponVisual.isGettingUp(key)
 end
 
 
+-- QUEUE-ALL9C 2-4: 직업 변신 연출(client/ClassTransform)이 내 무기를 잠깐 숨기고 사본을 떨어뜨린다 - 지금 내 무기 폴더(없으면 nil)
+function WeaponVisual.getLocalWeaponFolder()
+	return current and current.folder
+end
+
 -- 무기 이펙트 자리(강화 빛과 같은 자리) - ComboGlow가 쓴다.
 function WeaponVisual.getEffectAttach()
 	if not current then

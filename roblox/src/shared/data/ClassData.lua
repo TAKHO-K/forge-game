@@ -28,6 +28,17 @@ return {
 	order = { "greatsword", "dualblade", "bow", "healer" },
 	-- QUEUE-10h Q7-8: 직업 선택칸의 준비 중 직업(고를 수 없음 - 2D 실루엣 + Coming Soon). 실제 직업이 되면 classes · order로 옮긴다.
 	comingSoon = { { id = "paladin", displayName = "성기사", weaponName = "뿅망치" } },
+	-- QUEUE-ALL9C 2-4 직업 카드(선택 창 client/ClassSelectUI): role = 역할 태그(melee 근접 · ranged 원거리 · support 지원) · difficulty = 난이도 별(1 ~ 3 - 화면 표시만)
+	--   · transform = 변신 연출의 한 박자(client/ClassTransform - heavy 휘청 · juggle 저글링 · apple 사과에 화살 · flowers 지팡이 꽃).
+	--   대표 스킬 = SkillData Q · E + UltimateData 궁극기 이름(카드가 읽는다) · 성향 막대 = 아래 classes의 atk · def · atkSpeed · rangeMultiplier를 직업 중 최댓값으로 나눈 비율(새 수치 없음).
+	--   준비 중 직업 = 검은 실루엣 + 무기 윤곽 + "곧 공개"(날짜 약속 없음) · 누르면 소개 한 줄(TextData class.soon.<id>)만.
+	cards = {
+		greatsword = { role = "melee", difficulty = 1, transform = "heavy" },
+		dualblade = { role = "melee", difficulty = 3, transform = "juggle" },
+		bow = { role = "ranged", difficulty = 2, transform = "apple" },
+		healer = { role = "support", difficulty = 2, transform = "flowers" },
+	},
+	cardStats = { "atk", "def", "atkSpeed", "rangeMultiplier" }, -- 성향 막대 순서(TextData class.stat.<키>)
 
 	-- rangeMultiplier(19-2) - CombatConfig.attackRangeStuds(=10, 대검 기준 웹 원본값)에
 	-- 곱하는 클래스별 사거리 배율. 쌍검은 그대로 1.0(지시 - "가장 짧은 사거리가 쌍검의

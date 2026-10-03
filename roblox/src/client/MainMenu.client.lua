@@ -187,7 +187,6 @@ task.spawn(function()
 			TweenService:Create(top, TweenInfo.new(fade, Enum.EasingStyle.Sine), { ImageTransparency = 0 }):Play()
 			if shown == nil then
 				firstBackgroundAt = os.clock()
-				print(("[MENU] 배경 첫 장 %.2f초(접속 기준)"):format(os.clock() - (gui:GetAttribute("BootClock") or 0)))
 			end
 			task.delay(fade, function()
 				if bottom.Parent then
@@ -772,7 +771,6 @@ enter = function(mode, skipped)
 			table.insert(left, step.id)
 		end
 	end
-	print(("[MENU] 입장 %s · 메뉴→플레이 %.2f초 · 상한 %s · 남은 단계 %s"):format(mode, playClock - pressClock, tostring(capHit), #left > 0 and table.concat(left, ",") or "없음"))
 	local timing = ReplicatedStorage:FindFirstChild("MenuTiming")
 	if timing then
 		timing:FireServer({ showMs = math.floor((menuShownClock - bootClock) * 1000), playMs = math.floor((playClock - pressClock) * 1000), capHit = capHit, skipped = skipped == true })
@@ -844,4 +842,3 @@ showPage("MainPage")
 root.Visible = true
 waitLabel.Visible = false
 menuShownClock = os.clock()
-print(("[MENU] 메뉴 표시 %.2f초(접속 기준) · 미리 불러오기 %d%%"):format(menuShownClock - bootClock, math.floor(progress() * 100)))

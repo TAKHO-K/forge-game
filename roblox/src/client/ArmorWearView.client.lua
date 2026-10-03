@@ -7,8 +7,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit)
 local Data = require(ReplicatedStorage.Shared.data.ArtImportData)
-local GradeColor = require(ReplicatedStorage.Shared.GradeColor)
-local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local Wear = require(ReplicatedStorage.Shared.MeshMeta.armor_wear)
 
 local PARTS = { "armor", "gloves", "shoes" }
@@ -18,64 +16,9 @@ folder.Parent = workspace
 
 local worn = {} -- [owner(Player | Model)] = { key = 문자열, pieces = { MeshPart } }
 
-local function rgb(t)
-	return Color3.fromRGB(t[1], t[2], t[3])
-end
-
-local function rank(grade)
-	return table.find(ArmorData.gradeOrder, grade) or 1
-end
-
-local function colorOf(pieceName, zone, grade)
-	local Z = Data.armorZoneColors[zone] or Data.armorZoneColors.tier1
-	local gc = GradeColor.of(grade)
-	local base, trim, gradeC, glow = rgb(Z.base), rgb(Z.accent), gc, rgb(Data.armorGlow)
-	if rank(grade) >= rank("epic") then
-		trim = gc
-	end
-	if grade == "primordial" then
-		base = rgb(Data.armorPrimordialBase)
-		glow = gc
-	elseif grade == "transcendent" then
-		local T = Data.armorTranscendent
-		base, trim, gradeC, glow = rgb(T.base), rgb(Z.accent), rgb(T.grade), rgb(T.glow)
-	end
-	if pieceName:match("_Glow$") then
-		return glow, true
-	elseif pieceName:match("_Grade$") then
-		return gradeC, false
-	elseif pieceName:match("_Trim$") then
-		return trim, false
-	end
-	return base, false
-end
-
--- QUEUE-ALL1 P2 v3: 직업 메시(<부위>_<직업>_<외형>)의 색 = 세트 3색(ArtImportData.armorSetColors)
-local function colorOfV3(pieceName, zone, grade)
-	local Z = Data.armorSetColors[zone] or Data.armorSetColors.tier1
-	local main, sub, accent, glow = rgb(Z.main), rgb(Z.sub), rgb(Z.accent), rgb(Data.armorGlow)
-	if grade == "transcendent" then
-		local T = Data.armorTranscendent
-		main, sub, accent, glow = rgb(T.base), rgb(Z.main), rgb(T.grade), rgb(T.glow)
-	elseif grade == "primordial" then
-		main, accent, glow = rgb(Data.armorPrimordialBase), GradeColor.of(grade), GradeColor.of(grade)
-	elseif rank(grade) >= rank("legendary") then
-		glow = GradeColor.of(grade) -- 보석 = 등급 색
-	end
-	local N = Data.armorNeutral[grade] or Data.armorNeutral
-	if pieceName:match("_Glow$") then
-		return glow, true
-	elseif pieceName:match("_Grade$") then
-		return accent, false
-	elseif pieceName:match("_Trim$") then
-		return sub, false
-	elseif pieceName:match("_Steel$") then
-		return rgb(N.steel), false
-	elseif pieceName:match("_Leather$") then
-		return rgb(N.leather), false
-	end
-	return main, false
-end
+-- 조각 색 = client/ArmorColors(QUEUE-ALL9C 2-4: 직업 선택 무대 캐릭터(client/ClassStage)와 같은 함수 - 옮기기만 · 값 그대로)
+local ArmorColors = require(script.Parent.ArmorColors)
+local colorOf, colorOfV3 = ArmorColors.colorOf, ArmorColors.colorOfV3
 
 local function lookOf(owner)
 	local parts = { tostring(owner:GetAttribute(Data.armorClassAttribute)) }

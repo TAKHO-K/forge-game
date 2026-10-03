@@ -92,7 +92,6 @@ end
 gui.Parent = player:WaitForChild("PlayerGui")
 ReplicatedFirst:RemoveDefaultLoadingScreen()
 gui:SetAttribute("CoverClock", os.clock())
-print(("[MENU] 가림막 표시 %.2f초"):format(os.clock() - bootClock))
 
 -- 키 아트 = 미리 불러오기 1번(다른 무엇보다 먼저) → 모든 장이 오면 함께 서서히(반쪽만 보이는 순간 없음)
 if #artParts > 0 then
@@ -107,5 +106,4 @@ if #artParts > 0 then
 		TweenService:Create(img, TweenInfo.new(Data.fadeSeconds, Enum.EasingStyle.Sine), { ImageTransparency = 0 }):Play()
 	end
 	gui:SetAttribute("KeyArtClock", os.clock())
-	print(("[MENU] 배경 키 아트 %d장 표시 %.2f초"):format(#artParts, os.clock() - bootClock))
 end

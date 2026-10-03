@@ -182,7 +182,6 @@ function Telemetry.onMenuTiming(player, info)
 	Telemetry.custom(player, "MenuToPlayMs", playMs)
 	Telemetry.custom(player, "MenuLoadCapHit", capHit and 1 or 0)
 	Telemetry.custom(player, "MenuSkipped", skipped and 1 or 0)
-	print(("[MENU] 측정 접속→메뉴 %dms · 메뉴→플레이 %dms · 상한 %s · 건너뜀 %s"):format(showMs, playMs, tostring(capHit), tostring(skipped)))
 end
 
 function Telemetry.start()
