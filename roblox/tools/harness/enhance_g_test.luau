@@ -68,9 +68,18 @@ local ok, err = pcall(function()
 	local g3 = Enhance.tryEnhance(23, 0, { true, false }, 0.12 + 0.81 + 0.01)
 	check("G3 방지 켬 → 초기화 · 하락 대신 유지(+26 초기화 · +23 초기화 · +23 하락)", g1.result == "maintain" and g1.blockedBy == "reset" and g1.level == 26 and g2.result == "maintain" and g2.blockedBy == "reset"
 		and g3.result == "maintain" and g3.blockedBy == "drop", ("%s/%s · %s/%s · %s/%s"):format(g1.result, tostring(g1.blockedBy), g2.result, tostring(g2.blockedBy), g3.result, tostring(g3.blockedBy)))
-	check("G3 보스 첫 처치 골드(옛 방지권) = 방지 1회 추가 비용 · 끝자리 0 · 지급 없는 스테이지 0", Enhance.getBossGrantGold(360) == GoldCost.niceReward(Enhance.getGuardExtraCost(19, 360))
-		and Enhance.getBossGrantGold(720) == GoldCost.niceReward(Enhance.getGuardExtraCost(22, 720)) and Enhance.getBossGrantGold(365) == 0 and Enhance.getBossGrantGold(720) % 10 == 0,
-		("360 %d · 720 %d"):format(Enhance.getBossGrantGold(360), Enhance.getBossGrantGold(720)))
+	-- QUEUE-ALL9C 0-5(결정 3): 보스별 표 = 옛 방지권 장수 × 옛 상점가(niceReward) · 표 칸 = 지급 일정(getBossGrant)과 정확히 같음
+	local tableOk, tableN, bad = true, 0, nil
+	for stage in pairs(MODS.BossFirstClearGoldData) do
+		local d, r = Enhance.getBossGrant(stage)
+		local want = GoldCost.niceReward(d * Enhance.getProtectionPrice("drop", stage) + r * Enhance.getProtectionPrice("reset", stage))
+		tableN += 1
+		if d == 0 or Enhance.getBossGrantGold(stage) ~= want or want % 100 ~= 0 then tableOk, bad = false, stage end
+	end
+	local schedN, s0 = 0, Cfg.protection.bossGrant.firstStage
+	while s0 <= MODS.InfiniteStageConfig.hardMaxStage do schedN += 1; s0 += Cfg.protection.bossGrant.stepStages end
+	check("G3 보스 첫 처치 골드 = 보스별 표(옛 방지권 장수 × 옛 상점가 · 끝자리 00) · 표 칸 = 지급 일정 · 지급 없는 스테이지 0", tableOk and tableN == schedN and Enhance.getBossGrantGold(365) == 0
+		and Enhance.getBossGrantGold(360) == 2000 and Enhance.getBossGrantGold(720) == 12000, ("표 %d칸 · 일정 %d칸 · 360 %d · 720 %d · 어긋난 칸 %s"):format(tableN, schedN, Enhance.getBossGrantGold(360), Enhance.getBossGrantGold(720), tostring(bad)))
 
 	-- ══ 서버 처리(EnhanceService) ══
 	local station = WorldConfig.huntingGround.center + WorldConfig.enhance.stationOffset

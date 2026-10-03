@@ -5,6 +5,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
+local BossFirstClearGoldData = require(ReplicatedStorage.Shared.data.BossFirstClearGoldData)
 -- 28-1 S05: 방지권 상점가(getProtectionPrice)가 변환권과 같은 모양(잡몹 1마리당 골드 × 배수)이라 같은 모듈을 읽는다.
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 -- P2 C1: 골드 비용은 전부 GoldCost 한 곳을 거친다(강화 · 방지권 · 변환권).
@@ -282,14 +283,10 @@ function Enhance.getBossGrant(stage)
 	return 1, stage >= grant.resetFromStage and 1 or 0
 end
 
--- QUEUE-ALL9B G: 보스 계정 첫 처치 지급(옛 방지권 → 골드). 지급 일정은 getBossGrant 그대로 - 하락만 주던 스테이지 = +19 방지 1회 추가 비용 · 하락 + 초기화 = +22 방지 1회
--- 추가 비용(그 스테이지 = 계정 최고 스테이지 기준 · GoldCost.niceReward). 지급이 없는 스테이지는 0.
+-- QUEUE-ALL9B G: 보스 계정 첫 처치 지급(옛 방지권 → 골드). 지급 일정은 getBossGrant 그대로. 지급이 없는 스테이지는 0.
+-- QUEUE-ALL9C 0-5(결정 3): 값 = 보스별 표(BossFirstClearGoldData - 옛 방지권 장수 × 옛 상점가). 옛 공식(방지 1회 추가 비용)은 약 7 ~ 10배라 +25 이하가 빨라졌다.
 function Enhance.getBossGrantGold(stage)
-	local drop, reset = Enhance.getBossGrant(stage)
-	if drop == 0 and reset == 0 then
-		return 0
-	end
-	return GoldCost.niceReward(Enhance.getGuardExtraCost(reset > 0 and 22 or 19, stage))
+	return BossFirstClearGoldData[stage] or 0
 end
 
 -- 강화 판정 1회(순수 함수 - 저장 · 골드 · 재료 · 방지권 차감은 호출부 몫). flags = { useDropTicket, useResetTicket }(호출부가 resolveProtectionFlags로

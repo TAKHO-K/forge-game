@@ -75,7 +75,7 @@ function ProtectionTickets.grantForBoss(player, stage)
 		return 0, 0
 	end
 	PlayerProfile.markProtectionStageClaimed(player, stage)
-	-- QUEUE-ALL9B G(사용자 10-03): 방지권 폐지 → 같은 일정에 골드(Enhance.getBossGrantGold - 그 스테이지에서 방지를 1회 켤 때 더 드는 비용).
+	-- QUEUE-ALL9B G(사용자 10-03): 방지권 폐지 → 같은 일정에 골드(Enhance.getBossGrantGold - ALL9C 0-5: 보스별 표 BossFirstClearGoldData).
 	local gold = Enhance.getBossGrantGold(stage)
 	PlayerProfile.addGold(player, gold)
 	print(("[forge-game] 보스 첫 처치 골드: %s - 스테이지 %d(계정) - %d골드(옛 방지권 하락 %d · 초기화 %d)"):format(player.Name, stage, gold, dropCount, resetCount))
