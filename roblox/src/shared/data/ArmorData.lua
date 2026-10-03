@@ -192,4 +192,8 @@ return {
 	--   "legacyTier" = D1 전 표(DropTableData.fairnessGradeByTier - 티어마다 다름 · 옛 칸이 없으면 가장 가까운 티어) - M2 평평한 표와 섞이면 T6 일반이 T6 전설보다 비싸다(등급 역전).
 	sellPriceMode = "current",
 	sellCapKills = { ancient = 300, primordial = 1000 }, -- 리뷰: 등급 수로 나눈 뒤 유물(T1 약 48마리분) 위로 순서만 지키는 상한
+	-- QUEUE-ALL9B 1-2: 판매가 계수(위 식 결과 × 이 값). 근거 = EconSim 구간 표(docs/phase/QUEUE-ALL9B-report.md 2절) - 일반 · 희귀 판매 골드 = 같은 시간 사냥 골드의 약 15 ~ 25%.
+	sellGoldScale = 3.5, -- ×4는 상위 1% 25,300 = 2,157h(하한 2,200 밖) · ×3.5 = 2,227h · 캐주얼 1000 27.8h
+	-- QUEUE-ALL9B 1-3: 분해 가능 등급(영웅 이상) 판매가 바닥 = 같은 등급 · 레벨 보석의 판매가(GemCraft.sellPrice) - 바로 팔기 = 분해 → 보석 판매와 같은 골드(편의) · 분해 = 가루가 필요할 때
+	sellFloorGemSell = true,
 }

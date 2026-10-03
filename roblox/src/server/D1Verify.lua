@@ -227,7 +227,8 @@ function V.runPure()
 			for _, c in ipairs({ { 6, 500 }, { 4, 100 }, { 5, 1000 } }) do
 				local gold = InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, c[2])
 				okSell = okSell and price("legendary", c[1], c[2]) < price("relic", c[1], c[2]) and price("relic", c[1], c[2]) <= price("ancient", c[1], c[2])
-					and price("ancient", c[1], c[2]) <= price("primordial", c[1], c[2]) and price("primordial", c[1], c[2]) <= math.floor(ArmorData.sellCapKills.primordial * gold + 1e-6)
+					and price("ancient", c[1], c[2]) <= price("primordial", c[1], c[2]) and price("primordial", c[1], c[2]) <= math.max(math.floor(ArmorData.sellCapKills.primordial * gold * (ArmorData.sellGoldScale or 1) + 1e-6), -- QUEUE-ALL9B 1 계수 · 보석 판매가 바닥
+						require(ReplicatedStorage.Shared.GemCraft).sellPrice({ grade = "primordial", itemLevel = c[2] }, c[2]))
 					and price("transcendent", c[1], c[2]) == 0
 			end
 			r.check("판매가 = 현행 표 역산(Q4 current) · 전설 < 유물 ≤ 고대 ≤ 태초 ≤ 처치 골드 × 상한 · 초월 판매 불가(표본 3)", okSell)

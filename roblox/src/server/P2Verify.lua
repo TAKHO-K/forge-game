@@ -297,7 +297,11 @@ function P2Verify.runPure()
 			if cap then
 				kills = math.min(kills, cap / ArmorData.sellRecoveryRate)
 			end
-			return math.floor(kills * gold * ArmorData.sellRecoveryRate)
+			local price = math.floor(kills * gold * ArmorData.sellRecoveryRate * (ArmorData.sellGoldScale or 1)) -- QUEUE-ALL9B 1-2 판매가 계수
+			if ArmorData.sellFloorGemSell and table.find(ArmorData.gradeOrder, gradeId) >= ArmorData.dismantleMinGradeIndex then -- QUEUE-ALL9B 1-3 보석 판매가 바닥
+				price = math.max(price, require(ReplicatedStorage.Shared.GemCraft).sellPrice({ grade = gradeId, itemLevel = stage }, stage))
+			end
+			return price
 		end
 		if current then
 			expectedRelic = expectedPrice("relic", 6, 80)

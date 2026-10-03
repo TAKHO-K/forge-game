@@ -235,6 +235,12 @@ function EconSim.withOverrides(whatIf, fn, ...)
 	if whatIf.sparkleGoldKills then -- 반짝이 골드 보너스 마릿수분
 		set(RareMonsterConfig, "goldBonusKillEquivalent", whatIf.sparkleGoldKills)
 	end
+	if whatIf.sellGrades then -- QUEUE-ALL9B 1: 판매 골드 모형 등급(빈 표 = 옛 모형 - 판매 안 셈)
+		set(EconSimConfig, "sellGrades", whatIf.sellGrades)
+	end
+	if whatIf.sellGoldScale then -- QUEUE-ALL9B 1: 판매가 계수(ArmorData.sellGoldScale)
+		set(ArmorData, "sellGoldScale", whatIf.sellGoldScale)
+	end
 	if whatIf.enhanceCostScale then
 		local scaled = {}
 		for index, cost in ipairs(EnhanceConfig.goldCost) do
@@ -455,6 +461,20 @@ local function expectedCandidates(tierIndex, drops, minGradeIndex, primordialRat
 		end
 	end
 	return list
+end
+
+-- QUEUE-ALL9B 1: 처치 1마리당 판매 골드 기대값 = 기대 드랍 개수 × Σ(판매 등급 확률 × 실제 판매가). 등급 = EconSimConfig.sellGrades([가정] 일반 · 희귀).
+function EconSim.sellGoldPerKill(tierIndex, stage, killSeconds)
+	local grades = EconSimConfig.sellGrades
+	if not grades or next(grades) == nil then
+		return 0
+	end
+	local row = DropTable.gradeRow(tierIndex)
+	local sum = 0
+	for gradeId in pairs(grades) do
+		sum += (row[gradeId] or 0) * Loot.getSellPrice({ grade = gradeId, tierIndex = tierIndex, dropStage = stage })
+	end
+	return Loot.expectedArmorDropCount(tierIndex, 1, killSeconds) * sum
 end
 
 -- 이 사냥 자리(tier · 스테이지)의 태초 확률 - 최고 스테이지 = state.reach(설 수 있는 가장 높은 스테이지 = 게임의 infiniteBest).
@@ -1039,7 +1059,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 	DropTable.gainOnly = state.rebirth == 0 -- QUEUE-ALL1 R1: 첫 환생 전 = 균열 이득만(게임 CombatResolution과 같은 규칙)
 	local bossSecondsBefore, bossGoldBefore = state.bossSeconds, state.bossGold
 	local bossExpBefore = state.bossExp
-	local loadout, hunt, tier, expPerKill, perKillSeconds, goldPerKill, killUnits, primordialPerKill
+	local loadout, hunt, tier, expPerKill, perKillSeconds, goldPerKill, killUnits, primordialPerKill, sellPerKill
 	local need = nil
 	local function refresh()
 		loadout = loadoutFor(state)
@@ -1058,6 +1078,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 			* CharacterLevel.getReclaimMultiplier(state.rebirth, state.level, state.reclaimLevel) * CharacterLevel.getExpScale(state.level) -- C5-2 되찾기 · P2.5c: 환생 경험치 배율(재료에는 안 곱한다) · P3c C4
 		perKillSeconds = hunt.killSeconds + profile.moveOverheadSeconds
 		goldPerKill = InfiniteStage.getGoldReward(tier.goldDrop, hunt.stage) * sparkleGoldFactor() * riftGoldFactor() * codexGoldFactor() -- D1-2: 반짝이 골드(모형이 켜져 있을 때) · QUEUE-ALL1 P3 균열 비중
+		sellPerKill = EconSim.sellGoldPerKill(hunt.tier, hunt.stage, hunt.killSeconds) -- QUEUE-ALL9B 1
 		-- 재료 마릿수분 = tier 보상 배율^p(MonsterState.getKillUnits와 같은 값 - 접두사 평균 1)
 		killUnits = tier.killUnits -- C3-3
 		-- P2 E5: 처치 1마리당 태초 장비 기대 개수(서버 굴림과 같은 effectiveRate - 레벨 감쇠 포함)
@@ -1069,7 +1090,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 	end
 	need = CharacterLevel.getExpToNextLevel(state.level) - state.exp
 	local checkSeconds = profile.gearCheckMinutes * 60
-	local seconds, kills, gold, exp, replaced, primordial = 0, 0, 0, 0, 0, 0
+	local seconds, kills, gold, exp, replaced, primordial, sold = 0, 0, 0, 0, 0, 0, 0
 	local firstStage = hunt.stage
 	while need > 0 do
 		local killsToLevel = math.max(1, math.ceil(need / expPerKill - 1e-9))
@@ -1091,7 +1112,8 @@ local function stepLevel(state, profile, run, rng, whatIf)
 		primordial += batch * primordialPerKill
 		sparkleArrivals(state, batch, hunt.stage) -- D1-2
 		need -= batch * expPerKill
-		state.gold += batch * goldPerKill
+		state.gold += batch * (goldPerKill + sellPerKill)
+		sold += batch * sellPerKill
 		state.seconds += batchSeconds
 		state.huntSeconds += batchSeconds
 		for id, def in pairs(EnhanceMaterialData.materials) do
@@ -1159,9 +1181,10 @@ local function stepLevel(state, profile, run, rng, whatIf)
 		bossSeconds = state.bossSeconds - bossSecondsBefore, bossGold = state.bossGold - bossGoldBefore, bossExp = state.bossExp - bossExpBefore,
 		reach = state.reach, stage = hunt.stage, firstStage = firstStage, tier = hunt.tier, limiter = hunt.limiter, level = levelBefore, rebirth = state.rebirth,
 		seconds = seconds, kills = kills, killSeconds = hunt.killSeconds,
-		gold = gold, exp = exp, gearReplaced = replaced, weaponLevel = state.weaponLevel,
+		gold = gold, sellGold = sold, exp = exp, gearReplaced = replaced, weaponLevel = state.weaponLevel, -- QUEUE-ALL9B 1: sellGold = 판매 골드(gold = 사냥 골드만)
 		primordial = primordial, -- P2 E5: 이 청크 사냥의 태초 장비 기대 개수
 		goldBalance = state.gold, goldPerKill = goldPerKill, -- P2 C2: 보유 골드 대비 처치 1회 골드(상대 정밀도)
+		spend = table.clone(state.spend), training = table.clone(state.training), -- QUEUE-ALL9B: 청크 끝 누적 골드 사용처 · 수련 단계(구간 표)
 		gemShare = 1 - BalanceSim.buildLoadout({ classId = state.classId, level = state.level, weaponLevel = state.weaponLevel, weaponGrade = state.weaponGrade, gear = state.gear, gems = {}, permanentMultiplier = Milestone.attackMultiplier(state.milestoneLevel), permanentHpMultiplier = Milestone.maxHpMultiplier(state.milestoneLevel) }).atk / loadoutFor(state).atk, -- P2 D1: 보석이 공격력에서 차지하는 비중
 		milestoneLevel = state.milestoneLevel, -- P2.5c B2: 청크 끝의 받은 마지막 능력치 마일스톤 레벨(버킷 = Milestone.bonusFor)
 		armorGrade = state.gear.armor and state.gear.armor.grade or "-", armorLevel = state.gear.armor and state.gear.armor.itemLevel or 0,

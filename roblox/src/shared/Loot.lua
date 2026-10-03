@@ -362,6 +362,10 @@ end
 -- 답한다. 등급이 오르면 기대 처치 수가 커지고, 드랍 스테이지가 오르면 처치당 골드가
 -- 커진다 - 회수율 하나만 상수로 고정해 두면 두 축 모두 판매가에 자동으로 반영된다
 -- (ArmorData.sellRecoveryRate 주석에 회수율 값 근거).
+local function gradeIndexOf(gradeId)
+	return table.find(ArmorData.gradeOrder, gradeId)
+end
+
 function Loot.getSellPrice(item)
 	if not item then
 		return 0
@@ -394,7 +398,14 @@ function Loot.getSellPrice(item)
 		expectedKills = math.min(expectedKills, cap / ArmorData.sellRecoveryRate) -- 고대 · 태초 = 처치 골드 cap마리분이 상한
 	end
 	local goldPerKill = InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, item.dropStage)
-	return math.floor(expectedKills * goldPerKill * ArmorData.sellRecoveryRate)
+	local price = math.floor(expectedKills * goldPerKill * ArmorData.sellRecoveryRate * (ArmorData.sellGoldScale or 1)) -- QUEUE-ALL9B 1-2 판매가 계수
+	-- QUEUE-ALL9B 1-3: 분해 가능 등급(영웅 이상)은 "분해 → 그 보석 판매"(GemCraft.sellPrice)보다 싸지 않게 - 바로 팔기가 늘 손해이던 역전을 없앤다
+	--   (같은 골드 = 한 번에 파는 편의 · 분해는 가루 · 장착이 필요할 때). 고대 · 태초 상한(sellCapKills)은 이 바닥보다 높으면 그대로.
+	if ArmorData.sellFloorGemSell and gradeIndexOf(item.grade) and gradeIndexOf(item.grade) >= ArmorData.dismantleMinGradeIndex then
+		local GemCraft = require(ReplicatedStorage.Shared.GemCraft)
+		price = math.max(price, GemCraft.sellPrice({ grade = item.grade, itemLevel = item.itemLevel or item.dropStage or 1 }, item.dropStage or 1))
+	end
+	return price
 end
 
 -- QUEUE-10h Q13 등급 선택 일괄 분해 대상(서버 판정 · 클라 미리보기 같은 함수): 잠금 X · 영웅(분해 최소) ~ 기준 등급(일괄판매 상한 이하) · 초월 · 태초 보호(태초는 기본 잠금이지만 풀어도 일괄에선 빼 준다 - 한 개씩만).

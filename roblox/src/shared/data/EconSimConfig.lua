@@ -25,6 +25,9 @@ return {
 	bossFirstClearDrops = 1,
 	-- D1-2: 반짝이(처치당 RareMonsterConfig.sparkleChance) 확정 장비 · 골드를 모형에 넣는다(누적 기대 도착 - 보스와 같은 방식). D1 전 모형은 반짝이를 안 셌다.
 	modelSparkleDrops = true,
+	-- QUEUE-ALL9B 1: 장비 판매 골드를 모형에 넣는다(처치당 = 기대 드랍 × 이 등급들의 확률 × 실제 판매가 Loot.getSellPrice). [가정] 일반 · 희귀 = 판매(분해 불가) ·
+	--   영웅 이상 = 분해(보석 - 가방 점검이 고른다). 옛 모형(ALL9A까지)은 판매 골드를 안 셌다(what-if sellGrades = {}로 비교).
+	sellGrades = { normal = true, rare = true },
 
 	-- D1-3(사용자 결정 - D1-2 보고 ⑧ 2 · 7): 도달 시간 목표 = 현실 모형(보스 · 반짝이 장비 포함 - modelBossDrops · modelSparkleDrops) 기준.
 	--   캐주얼 스테이지 1,000 = 40 ~ 45h(옛 55 ~ 60h는 보스 · 반짝이 장비가 없던 E1 모형에서 잡은 값).
