@@ -31,7 +31,9 @@ local PAD = 12
 local ROW_H = 64
 local CLAIM_H = 48 -- PC · 폰 = 60(10 문서 "폰 60px 이상")
 local GREEN = Color3.fromRGB(76, 196, 110)
-local TABS = { "main", "daily", "weekly", "community", "challenge" }
+local TABS = { "main", "community", "challenge" } -- QUEUE-ALL9C 1-3(E2): 메인 · 일일 · 주간 = "퀘스트" 한 탭의 세 구역(옛 탭 id daily · weekly로 열면 그 구역으로)
+local GOLD = Color3.fromRGB(255, 196, 64) -- 받을 수 있는 줄 테두리
+local DOTS_MAX = 40 -- 단계 점은 이 수까지만(넘으면 숫자만 · 20칸 넘으면 점을 작게)
 
 local requestRemote = ReplicatedStorage:WaitForChild("QuestRequest")
 local updateRemote = ReplicatedStorage:WaitForChild("QuestUpdate")
@@ -39,6 +41,8 @@ local updateRemote = ReplicatedStorage:WaitForChild("QuestUpdate")
 local built, view
 local selectedTab = "main"
 local order = 0
+local weeklyOpen = nil -- 주간 구역 펼침(nil = 받을 것이 있으면 펼침 · 누르면 그 뒤로 고정)
+local focusSection = nil -- open("daily" | "weekly")이면 그 구역 머리로 스크롤
 
 local function claimHeight()
 	return Theme.isMobile and 60 or CLAIM_H
@@ -54,7 +58,7 @@ local function build()
 		end })
 	local tabList = {}
 	for _, id in ipairs(TABS) do
-		table.insert(tabList, { id = id, text = Text.get("quests.tab." .. id) })
+		table.insert(tabList, { id = id, text = Text.get(id == "main" and "quests.tab.all" or ("quests.tab." .. id)) })
 	end
 	local tabs = Tabs.build({ parent = panel.content, tabs = tabList, selected = selectedTab, width = PANEL_SIZE.X - PAD * 2, position = UDim2.fromOffset(PAD, 4), onSelect = function(id)
 		selectedTab = id
@@ -130,12 +134,21 @@ local function questRow(name, n, target, reward, claimed, onClaim, rowName)
 	f.Size = UDim2.new(1, 0, 0, math.max(ROW_H, claimHeight() + 12))
 	f.Parent = built.scroll
 	Theme.corner(f, 10)
+	if n >= target and not claimed then -- QUEUE-ALL9C 1-3(E1): 받을 수 있음 = 금 테두리 + 밝은 바탕
+		f.BackgroundTransparency = 0.15
+		local stroke = Instance.new("UIStroke")
+		stroke.Name = "ClaimableStroke"
+		stroke.Color = GOLD
+		stroke.Thickness = 2
+		stroke.Parent = f
+	end
+	-- QUEUE-ALL9C 1-3: 보상 칸(130)이 받기 버튼(128 + 여백 8)과 30px 겹쳐 개수(×n)가 가려지던 것 → 버튼 왼쪽에서 끝나게 전부 34px 왼쪽으로
 	local title = label(f, name, "body")
-	title.Position, title.Size = UDim2.fromOffset(10, 4), UDim2.new(1, -300, 0, 24)
-	gauge(f, target > 0 and n / target or 0, UDim2.fromOffset(10, 34), UDim2.new(1, -310, 0, 12))
+	title.Position, title.Size = UDim2.fromOffset(10, 4), UDim2.new(1, -334, 0, 24)
+	gauge(f, target > 0 and n / target or 0, UDim2.fromOffset(10, 34), UDim2.new(1, -344, 0, 12))
 	local count = label(f, ("%d/%d"):format(n, target), "caption", "textSecondary")
-	count.Position, count.Size = UDim2.new(1, -296, 0, 28), UDim2.fromOffset(60, 22)
-	RewardIcons.row(f, reward, 26, { frameSize = UDim2.fromOffset(130, 30), position = UDim2.new(1, -236, 0.5, -15) })
+	count.Position, count.Size = UDim2.new(1, -330, 0, 28), UDim2.fromOffset(60, 22)
+	RewardIcons.row(f, reward, 26, { frameSize = UDim2.fromOffset(130, 30), position = UDim2.new(1, -270, 0.5, -15) })
 	claimButton(f, n >= target and not claimed, claimed, onClaim)
 	return f
 end
@@ -151,6 +164,65 @@ local function clear()
 		end
 	end
 	order = 0
+end
+
+-- QUEUE-ALL9C 1-3(E2) 구역 머리: 이름 + 완료 수. onToggle이 있으면 눌러 접기/펼치기(▼ / ▶).
+local function sectionHeader(id, text, done, total, open, onToggle)
+	local h = Instance.new("TextButton")
+	h.Name = "Section_" .. id
+	h.LayoutOrder = nextOrder()
+	h.AutoButtonColor = onToggle ~= nil
+	h.Active = onToggle ~= nil
+	h.Text = ""
+	h.BackgroundTransparency = 1
+	h.Size = UDim2.new(1, 0, 0, 30)
+	h.Parent = built.scroll
+	local arrow = onToggle and (open and "▼ " or "▶ ") or ""
+	local t = label(h, arrow .. text, "header", "textPrimary")
+	t.Size = UDim2.new(1, -120, 1, 0)
+	if total then
+		local c = label(h, Text.get("quests.sectionDone", { n = ("%d"):format(done), total = ("%d"):format(total) }), "caption", "textSecondary")
+		c.Name = "Count"
+		c.TextXAlignment = Enum.TextXAlignment.Right
+		c.Position, c.Size = UDim2.new(1, -120, 0, 0), UDim2.new(0, 116, 1, 0)
+	end
+	if onToggle then
+		h.Activated:Connect(onToggle)
+	end
+	if focusSection == id then
+		focusSection = nil
+		task.defer(function()
+			if h.Parent then
+				built.scroll.CanvasPosition = Vector2.new(0, math.max(0, h.AbsolutePosition.Y - built.scroll.AbsolutePosition.Y + built.scroll.CanvasPosition.Y - 4))
+			end
+		end)
+	end
+	return h
+end
+
+-- QUEUE-ALL9C 1-3(E1) 단계 점: 지난 단계 = 채운 점 · 지금 = 금 점 · 남은 = 빈 점(total이 DOTS_MAX를 넘으면 안 그린다 - 숫자 "n / 전체"가 이미 있다)
+local function stepDots(parent, index, total, position)
+	if not total or total < 2 or total > DOTS_MAX then
+		return nil
+	end
+	local row = Instance.new("Frame")
+	row.Name = "StepDots"
+	row.BackgroundTransparency = 1
+	row.Position = position
+	local step, size = total > 20 and 11 or 14, total > 20 and 8 or 10
+	row.Size = UDim2.fromOffset(total * step, size)
+	row.Parent = parent
+	for i = 1, total do
+		local d = Instance.new("Frame")
+		d.Name = "Dot" .. i
+		d.Size = UDim2.fromOffset(size, size)
+		d.Position = UDim2.fromOffset((i - 1) * step, 0)
+		d.BackgroundColor3 = i < index and GREEN or (i == index and GOLD or Theme.color("rim"))
+		d.BackgroundTransparency = i > index and 0.4 or 0
+		d.Parent = row
+		Theme.corner(d, size / 2)
+	end
+	return row
 end
 
 -- [메인] 지금 단계 큰 카드
@@ -170,6 +242,15 @@ local function renderMain()
 	Theme.corner(card, 12)
 	local step = label(card, Text.get("quests.journeyStep", { index = tostring(m.index), total = tostring(m.total) }), "caption", "textSecondary")
 	step.Position, step.Size = UDim2.fromOffset(14, 8), UDim2.new(1, -28, 0, 18)
+	step.AutomaticSize = Enum.AutomaticSize.X
+	stepDots(card, m.index, m.total, UDim2.new(1, -(14 + (m.total or 0) * ((m.total or 0) > 20 and 11 or 14)), 0, 12))
+	if m.done then -- 받을 수 있음 = 금 테두리
+		local stroke = Instance.new("UIStroke")
+		stroke.Name = "ClaimableStroke"
+		stroke.Color = GOLD
+		stroke.Thickness = 2
+		stroke.Parent = card
+	end
 	local name = label(card, m.name, "title", "textPrimary")
 	name.Name = "StepName"
 	name.Position, name.Size = UDim2.fromOffset(14, 28), UDim2.new(1, -28, 0, 30)
@@ -205,36 +286,82 @@ local function renderMain()
 	end
 end
 
-local function renderDaily()
-	local login = questRow(Text.get("quests.login"), view.loginReady and 1 or 0, 1, nil, not view.loginReady, function()
-		send("claim", "login")
-	end, "LoginRow")
-	local _ = login
-	for _, q in ipairs(view.daily or {}) do
-		questRow(q.name, q.n, q.target, q.reward, q.claimed, function()
-			send("claim", "daily", q.id)
-		end, "Daily_" .. q.id)
+-- QUEUE-ALL9C 1-3(E1): 줄 목록을 "받을 수 있음 → 진행 중 → 받음" 순으로(같은 묶음 안은 원래 순서)
+local function renderRows(rows)
+	local function rank(r)
+		if r.n >= r.target and not r.claimed then
+			return 0
+		end
+		return r.claimed and 2 or 1
 	end
+	for i, r in ipairs(rows) do
+		r.i = i
+	end
+	table.sort(rows, function(a, b)
+		local ra, rb = rank(a), rank(b)
+		if ra ~= rb then
+			return ra < rb
+		end
+		return a.i < b.i
+	end)
+	for _, r in ipairs(rows) do
+		questRow(r.name, r.n, r.target, r.reward, r.claimed, r.onClaim, r.rowName)
+	end
+end
+
+local function renderDaily()
 	local doneCount = 0
 	for _, q in ipairs(view.daily or {}) do
 		doneCount += (q.n >= q.target) and 1 or 0
 	end
-	questRow(Text.get("quests.chest"), doneCount, math.max(1, #(view.daily or {})), nil, view.chestClaimed, function()
+	local rows = { { name = Text.get("quests.login"), n = view.loginReady and 1 or 0, target = 1, claimed = not view.loginReady, rowName = "LoginRow", onClaim = function()
+		send("claim", "login")
+	end } }
+	for _, q in ipairs(view.daily or {}) do
+		table.insert(rows, { name = q.name, n = q.n, target = q.target, reward = q.reward, claimed = q.claimed, rowName = "Daily_" .. q.id, onClaim = function()
+			send("claim", "daily", q.id)
+		end })
+	end
+	table.insert(rows, { name = Text.get("quests.chest"), n = doneCount, target = math.max(1, #(view.daily or {})), claimed = view.chestClaimed, rowName = "ChestRow", onClaim = function()
 		send("claim", "chest")
-	end, "ChestRow")
+	end })
+	sectionHeader("daily", Text.get("quests.tab.daily"), doneCount, #(view.daily or {}))
+	renderRows(rows)
+end
+
+local function renderWeekly()
+	local rows, done, claimable = {}, 0, false
+	for _, q in ipairs(view.weekly or {}) do
+		done += (q.n >= q.target) and 1 or 0
+		claimable = claimable or (q.n >= q.target and not q.claimed)
+		table.insert(rows, { name = q.name, n = q.n, target = q.target, reward = q.reward, claimed = q.claimed, rowName = "Weekly_" .. q.id, onClaim = function()
+			send("claim", "weekly", q.id)
+		end })
+	end
+	local open = weeklyOpen
+	if open == nil then
+		open = claimable or focusSection == "weekly"
+	end
+	sectionHeader("weekly", Text.get("quests.tab.weekly"), done, #rows, open, function()
+		weeklyOpen = not open
+		QuestsPanel.render()
+	end)
+	if open then
+		renderRows(rows)
+	end
+end
+
+-- QUEUE-ALL9C 1-3(E2): "퀘스트" 탭 = 메인 → 일일 → 주간 구역
+local function renderAll()
+	sectionHeader("main", Text.get("quests.tab.main"))
+	renderMain()
+	renderDaily()
+	renderWeekly()
 	local prob = Button.build({ parent = built.scroll, kind = "secondary", width = 200, text = Text.get("prob.open"), onActivated = function()
 		require(script.Parent.Probability).open()
 	end })
 	prob.root.LayoutOrder = nextOrder()
 	prob.root.Name = "ProbabilityButton"
-end
-
-local function renderWeekly()
-	for _, q in ipairs(view.weekly or {}) do
-		questRow(q.name, q.n, q.target, q.reward, q.claimed, function()
-			send("claim", "weekly", q.id)
-		end, "Weekly_" .. q.id)
-	end
 end
 
 -- [전 서버 협동] 옛 합동 목표 알약 창
@@ -324,7 +451,7 @@ local function renderChallenge()
 	end)
 end
 
-local RENDER = { main = renderMain, daily = renderDaily, weekly = renderWeekly, community = renderCommunity, challenge = renderChallenge }
+local RENDER = { main = renderAll, community = renderCommunity, challenge = renderChallenge }
 
 function QuestsPanel.render()
 	if not built or not UIManager.isOpen(QuestsPanel.id) then
@@ -341,6 +468,10 @@ end
 function QuestsPanel.open(tabId)
 	if not built then
 		build()
+	end
+	if tabId == "daily" or tabId == "weekly" then -- QUEUE-ALL9C 1-3: 옛 탭 id = "퀘스트" 탭의 그 구역
+		focusSection = tabId
+		tabId = "main"
 	end
 	if tabId and RENDER[tabId] then
 		selectedTab = tabId

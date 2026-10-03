@@ -519,6 +519,8 @@ return {
 	-- QUEUE-ALL3 Q3 퀘스트 창 탭 · 오늘의 목표 · 출석
 	["quests.titleV2"] = "Quests",
 	["quests.tab.main"] = "Main",
+	["quests.tab.all"] = "Quests",
+	["quests.sectionDone"] = "Done {n}/{total}",
 	["quests.tab.daily"] = "Daily",
 	["quests.tab.weekly"] = "Weekly",
 	["quests.tab.community"] = "Server Co-op",

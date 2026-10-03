@@ -524,6 +524,8 @@ local TextData = {
 		-- QUEUE-ALL3 Q3 퀘스트 창 탭 · 오늘의 목표 · 출석
 		["quests.titleV2"] = "퀘스트",
 		["quests.tab.main"] = "메인",
+		["quests.tab.all"] = "퀘스트", -- QUEUE-ALL9C 1-3
+		["quests.sectionDone"] = "완료 {n}/{total}", -- QUEUE-ALL9C 1-3
 		["quests.tab.daily"] = "일일",
 		["quests.tab.weekly"] = "주간",
 		["quests.tab.community"] = "전 서버 협동",
