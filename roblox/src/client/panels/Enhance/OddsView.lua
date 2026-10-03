@@ -185,7 +185,7 @@ end
 function OddsView.updateGuardHint(label, state)
 	local info = state.guardInfo
 	label.Text = info and Text.get(info.resetChance > 0 and "forge.enhance.guard.cost" or "forge.enhance.guard.costNoReset",
-		{ off = NumberFormat.format(info.off), on = NumberFormat.format(info.on), chance = OddsView.formatPercent(info.resetChance) }) or ""
+		{ off = NumberFormat.currency(info.off, Text.languageFor()), on = NumberFormat.currency(info.on, Text.languageFor()), k = ("%.1f"):format(info.k), chance = OddsView.formatPercent(info.resetChance) }) or ""
 end
 
 -- QUEUE-ALL9B G1 초기화 바닥 안내 - 초기화가 있는 단계(확률표)에서만 보인다.

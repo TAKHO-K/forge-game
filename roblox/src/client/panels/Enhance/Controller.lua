@@ -117,6 +117,7 @@ function Controller.getState()
 		guardInfo = band and {
 			off = Enhance.getCost(level, stage, false, false), on = Enhance.getCost(level, stage, band.guards.drop, band.guards.reset),
 			resetChance = Enhance.getOutcomeTable(level, false, false, false).reset,
+			k = band.costMultiplier, -- QUEUE-ALL9C 0-9: 같은 줄에 "방지 켬(×k)"
 		} or nil,
 	}
 	for _, kind in ipairs(Controller.ticketKinds) do
