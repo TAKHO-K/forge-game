@@ -12,12 +12,12 @@ return {
 		["gear.bag.fullToast"] = "인벤토리가 가득 찼습니다 - 땅에 있는 아이템을 주울 수 없습니다",
 		["gear.bulk.yes"] = "팔기",
 		["gear.bulk.cancel"] = "취소",
-		["gear.bulk.confirm"] = "잠기지 않은 장비 {count}개를 팔고 {gold}골드를 받아요. 되돌릴 수 없어요.",
+		["gear.bulk.confirm"] = "잠기지 않은 장비 {count}개를 팔고 {gold}골드를 받습니다. 판매는 되돌릴 수 없습니다.",
 		["gear.bulk.dismantle"] = "분해하기({count}개)",
-		["gear.bulk.changed"] = "가방이 바뀌었어요. 다시 확인해 주세요.", -- QUEUE-ALL9A 2-2
+		["gear.bulk.changed"] = "가방이 바뀌었습니다. 다시 확인해 주세요.", -- QUEUE-ALL9A 2-2
 		["gear.bulk.highest"] = "대상에 포함된 최고 등급: {grade}",
 		["gear.bag.sellGrades"] = "판매 등급: {grades}", -- QUEUE-ALL8 G1
-		["gear.bulk.excludeNote"] = "전설 이상 · 잠긴 · 착용 중 장비는 팔리지 않아요",
+		["gear.bulk.excludeNote"] = "전설 이상 · 잠긴 · 착용 중 장비는 팔리지 않습니다",
 		["bag.sellHint.pc"] = "가방(G)에서 한 번에 팔 수 있어요", -- QUEUE-ALL8 G3 · G4(판매 = 가방)
 		["bag.sellHint.phone"] = "가방 아이콘을 눌러 한 번에 팔 수 있어요",
 		-- 상세(DetailSheet)
@@ -78,8 +78,8 @@ return {
 		["gear.awaken.cost"] = "각성 {cost}",
 		-- 확인 창(ItemConfirm · PrimordialActions 잠금 해제)
 		["gear.confirm.primordial"] = "태초",
-		["gear.confirm.unlock1"] = "{name}의 잠금을 풀까요? 풀면 분해 · 판매 · 계승 재료로 쓸 수 있어요.",
-		["gear.confirm.unlock2"] = "정말 풀까요? {name}은(는) 다시 얻기 매우 어려워요.",
+		["gear.confirm.unlock1"] = "{name}의 잠금을 푸시겠습니까? 풀면 분해 · 판매 · 계승 재료로 쓸 수 있습니다.",
+		["gear.confirm.unlock2"] = "정말 푸시겠습니까? {name}은(는) 다시 얻기 매우 어렵습니다.",
 		["gear.confirm.ok"] = "확인",
 		["gear.confirm.cancel"] = "취소",
 		["gear.confirm.sell"] = "{name}({grade})를 판매하시겠습니까? 되돌릴 수 없습니다.",

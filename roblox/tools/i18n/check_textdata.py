@@ -4,6 +4,8 @@
 #                      Text.get/getFor/format에 글자 그대로 쓴 키가 TextData에 없음 · 키 앞부분("a.b." .. x)에 맞는 키가 하나도 없음.
 #   QUEUE-ALL8 A3 실패 = 화면에 나가는 글(TextData ko · en 값 · TextData_names 원문 · 번역 · 데이터 표의 label · displayName · name)에 개발용 문구(DEV_BANNED).
 #   QUEUE-ALL9A 2-3 실패 = 확인 창 · 버튼 키(confirm · yes · no · ok · button · claim)의 ko 값이 문어체(~한다 · ~없다 · ~된다 …) - 다른 창처럼 "~해요 · 팔기".
+#   QUEUE-ALL9C 1-1(A1) 실패 = 시스템 · 확인 창 · 알림 키(SYS_KEY)의 ko 값이 해요체(~해요 · ~어요 · ~까요? · ~죠) - 합쇼체(~니다 · ~니까)로. 요청형 "~하세요 · ~해 주세요"는 허용.
+#     튜토리얼 · NPC · 안내(help · guide · scene · gimmick · hub …)는 해요체 가능. SYS_KEY에 걸리지만 안내 성격인 키 = TONE_EXCEPT 표(이유와 함께).
 #   참고(실패 아님) = en 40자 넘는 문장 수 · 키를 변수로 넘기는 호출 수(검사 못 함).
 import io
 import os
@@ -27,6 +29,20 @@ DATA_LABEL_FILES = ('WorldMapData.lua', 'WorldConfig.lua', 'HubArtData.lua', 'Hu
 # QUEUE-ALL9A 2-3: 확인 창 · 버튼 문구 말투(ko) - 문어체 끝맺음 금지
 TONE_KEY = re.compile(r'confirm|Confirm|\.yes$|\.no$|\.ok$|button|Button|Btn|\.claim$')
 TONE_BANNED = re.compile(r'(?:한다|없다|된다|있다|는다|았다|었다|였다)(?:[.!?]|\s|$)')
+
+
+# QUEUE-ALL9C 1-1(A1 말투): 시스템(서버 응답 srv · 오류 err · 실패 fail · 막힘 blocked · 결과 result · 요청 제한) · 확인 창(confirm · 포기 · 투표) · 알림(toast · notice · alert) = 합쇼체
+SYS_KEY = re.compile(r'^srv\.|\.err\.|\.err$|\.error|\.fail|[cC]onfirm|[tT]oast|\.result\.|^giveup\.|^vote\.|^rebirth\.levelShort$|^ui\.panel\.|[rR]ateLimited|^shop\.reason\.|^shop\.notReady$|^board\.done$|^season\.bonusCapped$|^desc\.awaken\.|^settings\.codeLater$|[nN]otice|[aA]lert|\.blocked|^combat\.stealLockHint$|^gear\.bulk\.')
+HAEYO_END = re.compile(r'(?<![세필])(?:요|죠)(?:[.!?~)]|\s|$)')  # 세요(요청형 허용) · 필요(명사) 제외
+TONE_EXCEPT = {
+    'gimmick.section_guardian.fail': '보스 기믹 실패 안내(짧은 구호 - 튜토리얼 성격)',
+    'gimmick.frost_giant.fail': '보스 기믹 실패 안내(짧은 구호 - 튜토리얼 성격)',
+    'hub.service.noticeBoard.intro': '마을 게시판 NPC 소개(안내)',
+}
+
+
+def a1_text(tables):
+    return ['ko %s: %s (%s)' % (k, v, where) for k, (v, where) in sorted(tables['ko'].items()) if SYS_KEY.search(k) and k not in TONE_EXCEPT and HAEYO_END.search(v)]
 
 
 def tone_text(tables):
@@ -218,8 +234,10 @@ def main():
     show('개발용 문구(ALL8 A3)', dev)
     tone = tone_text(tables)
     show('확인 창 · 버튼 문어체(ALL9A 2-3)', tone)
+    a1 = a1_text(tables)
+    show('시스템 · 확인 창 · 알림 해요체(ALL9C 1-1 A1 - 합쇼체로)', a1)
     print('참고: en 40자 넘는 문장(자리 제외) %d · 키를 변수로 넘기는 호출 %d(검사 못 함) · 코드에서 글자 그대로 찾은 키 %d' % (len(long_en), dynamic, len(used)))
-    failed = errors or no_en or no_ko or place or missing or prefix_missing or dev or tone
+    failed = errors or no_en or no_ko or place or missing or prefix_missing or dev or tone or a1
     print('결과: %s' % ('실패' if failed else '통과'))
     return 1 if failed else 0
 

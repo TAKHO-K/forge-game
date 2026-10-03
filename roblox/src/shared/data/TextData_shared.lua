@@ -134,10 +134,10 @@ return {
 		["desc.stamp.pending"] = "태초(세계 번호 확인 중)",
 		["desc.stamp.noNumber"] = "태초(번호 없음)",
 		-- shared/Awaken: 각성 막힘 이유
-		["desc.awaken.notFound"] = "장비를 찾을 수 없어요",
-		["desc.awaken.notPrimordial"] = "각성은 태초 · 초월 장비만 할 수 있어요",
-		["desc.awaken.alreadyMax"] = "이미 역대 최고 스테이지예요",
-		["desc.awaken.noGold"] = "골드가 부족해요",
+		["desc.awaken.notFound"] = "장비를 찾을 수 없습니다",
+		["desc.awaken.notPrimordial"] = "각성은 태초 · 초월 장비만 할 수 있습니다",
+		["desc.awaken.alreadyMax"] = "이미 역대 최고 스테이지입니다",
+		["desc.awaken.noGold"] = "골드가 부족합니다",
 		-- shared/WorldMapLayout: 나무 코스 · 토벌 관문 명판(서버 WorldMap이 빌보드로 띄운다 - 모두 같은 글)
 		["desc.world.deck"] = "정상 전망대",
 		["desc.world.stationSign"] = "{name}(Lv {level})",

@@ -32,9 +32,9 @@ return {
 		["cos.anvil.clang"] = "깡!",
 		["cos.emote.offer"] = "{name}님의 하이파이브 받기!",
 		["cos.emote.clap"] = "짝!",
-		["cos.emote.fail.not_ready"] = "이모트 칸에 하이파이브를 장착해야 해요",
-		["cos.emote.fail.no_partner"] = "가까이에 파티원이 없어요",
-		["cos.emote.fail.too_far"] = "너무 멀어요 - 가까이 가서 다시",
+		["cos.emote.fail.not_ready"] = "이모트 칸에 하이파이브를 장착해야 합니다",
+		["cos.emote.fail.no_partner"] = "가까이에 파티원이 없습니다",
+		["cos.emote.fail.too_far"] = "너무 멉니다 - 가까이 가서 다시 시도하세요",
 		["cos.emote.use"] = "하이파이브",
 	},
 	en = {
