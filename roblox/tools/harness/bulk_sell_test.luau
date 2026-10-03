@@ -184,6 +184,57 @@ local ok, err = pcall(function()
 		end
 		check("분해 안내(Loot.dismantleReward) = 서버 결과: 한 개(등급 · 레벨 · 옵션) · 일괄(개수 · 등급별)", one and same, ("한 개 %s · 일괄 %d = %d"):format(tostring(one), n, expect))
 	end
+	do -- QUEUE-N1004 A-1 줍는 순간 자동 정리: 태초 · 초월은 어떤 설정(기준 등급 × 방식 × 잠금 × 출처)에서도 처리 안 됨 · 유물 이상 · 잠금 · 보스 세트 제외 · 방식(판매/분해)
+		p.autoProcess = { enabled = true, maxGrade = "epic" }
+		p.settings = p.settings or {}
+		local leaks, cases = 0, 0
+		for _, maxGrade in ipairs({ "normal", "rare", "epic", "legendary", "relic", "ancient", "primordial", "transcendent", "off" }) do
+			for _, mode in ipairs({ "sell", "dismantle" }) do
+				for _, locked in ipairs({ false, true }) do
+					for _, kind in ipairs({ "field", "boss", "sparkle" }) do
+						for _, grade in ipairs({ "primordial", "transcendent" }) do
+							cases += 1
+							p.autoProcess = { enabled = true, maxGrade = maxGrade }
+							p.settings.autoProcessMode = mode
+							local item = { grade = grade, part = "armor", itemLevel = 50, dropStage = 900, tierIndex = 6, locked = locked, source = { kind = kind, zone = "tier1" } }
+							if Loot.isAutoProcessTarget(item, maxGrade) or PlayerProfile.autoProcessDrop(player, item) ~= nil then
+								leaks += 1
+							end
+						end
+					end
+				end
+			end
+		end
+		check("자동 정리: 태초 · 초월 = 어떤 설정에서도 처리 안 됨", leaks == 0, ("%d경우 중 새는 것 %d"):format(cases, leaks))
+		local function drop(grade, extra)
+			local item = { grade = grade, part = "gloves", itemLevel = 30, dropStage = 300, tierIndex = 3, source = { kind = "field", zone = "tier2" }, option = grade ~= "normal" and grade ~= "rare" and { stat = "crit", value = 3 } or nil }
+			for k, v in pairs(extra or {}) do
+				item[k] = v
+			end
+			return item
+		end
+		p.autoProcess = { enabled = true, maxGrade = "epic" }
+		local relicKept = PlayerProfile.autoProcessDrop(player, drop("relic")) == nil and PlayerProfile.autoProcessDrop(player, drop("legendary")) == nil
+		local lockedKept = PlayerProfile.autoProcessDrop(player, drop("normal", { locked = true })) == nil
+		local bossKept = PlayerProfile.autoProcessDrop(player, drop("normal", { source = { kind = "boss", bossId = "x" } })) == nil
+		local variantKept = PlayerProfile.autoProcessDrop(player, drop("rare", { skillVariant = "v1" })) == nil
+		p.settings.autoProcessMode = "dismantle"
+		local d = PlayerProfile.autoProcessDrop(player, drop("epic"))
+		local n = PlayerProfile.autoProcessDrop(player, drop("normal"))
+		p.settings.autoProcessMode = "sell"
+		local sEpic = PlayerProfile.autoProcessDrop(player, drop("epic"))
+		p.settings.autoProcessMode = nil -- 옛 저장(키 없음) = 기본 dismantle = G1-2 옛 동작
+		local old = PlayerProfile.autoProcessDrop(player, drop("epic"))
+		p.autoProcess = { enabled = true, maxGrade = "normal" }
+		local above = PlayerProfile.autoProcessDrop(player, drop("rare")) == nil
+		p.autoProcess = { enabled = false, maxGrade = "epic" }
+		local off = PlayerProfile.autoProcessDrop(player, drop("normal")) == nil
+		check("자동 정리 제외(유물 · 전설 · 잠금 · 보스 세트 · 스킬 변형 · 기준 위 · 끔)", relicKept and lockedKept and bossKept and variantKept and above and off,
+			("%s %s %s %s %s %s"):format(tostring(relicKept), tostring(lockedKept), tostring(bossKept), tostring(variantKept), tostring(above), tostring(off)))
+		check("자동 정리 방식: 분해 = 영웅 보석 · 일반 판매 / 판매 = 영웅도 골드 / 키 없음 = 분해(옛 동작)",
+			d and d.kind == "dismantle" and n and n.kind == "sell" and n.gold > 0 and sEpic and sEpic.kind == "sell" and sEpic.gold == Loot.getSellPrice(drop("epic")) and old and old.kind == "dismantle",
+			("%s %s %s %s"):format(d and d.kind or "nil", n and n.kind or "nil", sEpic and sEpic.kind or "nil", old and old.kind or "nil"))
+	end
 end)
 if not ok then print("[BULK] 에러 " .. tostring(err)) end
 print(("[BULK] 끝 %d/%d"):format(pass, total))

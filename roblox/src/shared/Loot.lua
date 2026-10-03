@@ -419,6 +419,25 @@ function Loot.isBulkSellTarget(item, gradeSet)
 	return type(item) == "table" and type(gradeSet) == "table" and not item.locked and not item.skillVariant and gradeSet[item.grade] == true
 end
 
+-- QUEUE-N1004 A-1 줍는 순간 자동 정리 대상(서버 PlayerProfile.autoProcessDrop · 하네스가 같은 함수): 일괄 판매와 같은 판정(Loot.isBulkSellTarget - 잠금 · 스킬 변형 제외) +
+--   기준 등급 = ArmorData.autoProcessGradeChoices 중 하나(영웅 이하 - 유물 이상은 고를 수 없다) · 보스 · 토벌 출처 세트 장비 제외 · 태초 · 초월은 어떤 설정에서도 아니다. 착용 중 = 줍는 장비라 해당 없음.
+function Loot.isAutoProcessTarget(item, maxGradeId)
+	if type(item) ~= "table" or item.grade == "primordial" or item.grade == TranscendentData.gradeId or not table.find(ArmorData.autoProcessGradeChoices, maxGradeId) then
+		return false
+	end
+	if type(item.source) == "table" and (item.source.kind == "boss" or item.source.kind == "raid") then
+		return false
+	end
+	local gradeSet = {}
+	for _, id in ipairs(ArmorData.gradeOrder) do
+		gradeSet[id] = true
+		if id == maxGradeId then
+			break
+		end
+	end
+	return Loot.isBulkSellTarget(item, gradeSet)
+end
+
 -- QUEUE-10h Q13 등급 선택 일괄 분해 대상(서버 판정 · 클라 미리보기 같은 함수): 잠금 X · 영웅(분해 최소) ~ 기준 등급(일괄판매 상한 이하) · 초월 · 태초 보호(태초는 기본 잠금이지만 풀어도 일괄에선 빼 준다 - 한 개씩만).
 function Loot.isBulkDismantleTarget(item, cutoffGradeId)
 	if type(item) ~= "table" or item.locked or item.grade == TranscendentData.gradeId or item.grade == "primordial" or item.skillVariant then -- 리뷰: 스킬 변형 장비도 일괄에선 빼 준다(한 개씩만)

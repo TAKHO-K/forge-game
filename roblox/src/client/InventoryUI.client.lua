@@ -272,6 +272,20 @@ fullToast.TextColor3 = UIColors.danger
 fullToast.Text = Text.get("gear.bag.fullToast")
 fullToast.Parent = R.screenGui
 
+-- QUEUE-N1004 A-1: 가방이 처음 가득 찼을 때 한 번만 자동 정리 안내(설정 autoProcessHintSeen · 이미 켰으면 띄우지 않음 · 상점 · 가방 패스 문구 없음)
+local Confirm = require(script.Parent.ui.kit.Confirm)
+inventoryFull.OnClientEvent:Connect(function()
+	if player:GetAttribute("AutoProcessHintSeen") ~= false or (player:GetAttribute("AutoProcess") or "off") ~= "off" then
+		return -- 설정 로드 전(nil) · 이미 봄 · 이미 켬
+	end
+	SettingSave("autoProcessHintSeen", true)
+	Confirm.ask({ title = Text.get("autoTidy.hint.title"), body = Text.get("autoTidy.hint.body"), primaryText = Text.get("autoTidy.hint.on"), secondaryText = Text.get("autoTidy.hint.later") }, function(accepted)
+		if accepted then
+			local choices = ArmorData.autoProcessGradeChoices
+			ReplicatedStorage:WaitForChild("AutoProcessRequest"):FireServer(true, choices[#choices]) -- 기본 = 일반 이하
+		end
+	end)
+end)
 inventoryFull.OnClientEvent:Connect(function()
 	TweenService:Create(fullToast, TweenInfo.new(0.15), { TextTransparency = 0 }):Play()
 	task.delay(2, function()

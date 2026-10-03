@@ -1,6 +1,6 @@
 -- 설정 창(M1-0 · Q14 저장 · QUEUE-ALL2 P2 B-4 ⑤ 정리 - 한 창에 분류 탭 4개). 왼쪽 메뉴 더보기 [설정] · 오른쪽 칩 스택 설정 칩이 연다.
 --   [화면] 연출 세기(끔 · 약 · 보통 - 흔들림 · 번쩍임 · 남의 효과를 한 번에) · 번쩍임 줄이기 · 탑다운 시점 · 남의 궤적 흐리게 · 그래픽(보통 · 가벼움)
---   [소리] 음량 4(효과 · UI · 환경 · 음악) / [게임] 자동 스테이지 · 다른 서버 초월 알림 · 코드 입력 / [단축키] 단축키 보기(PanelRegistry.hotkeySheet - 09 문서 B-3 표).
+--   [소리] 음량 4(효과 · UI · 환경 · 음악) / [게임] 자동 스테이지 · 다른 서버 초월 알림 · 자동 정리(QUEUE-N1004 A-1) · 코드 입력 / [단축키] 단축키 보기(PanelRegistry.hotkeySheet - 09 문서 B-3 표).
 --   값 = LocalPlayer Attribute(클라 코드는 이것만 읽는다) · 저장 = SettingsSave(서버가 SettingsData로 검증 · 저장 · Attribute 적용). 직업 변경은 캐릭터 창(C)으로 옮겼다(중복 삭제).
 
 local Players = game:GetService("Players")
@@ -12,6 +12,7 @@ local SettingsData = require(ReplicatedStorage.Shared.data.SettingsData)
 local SoundData = require(ReplicatedStorage.Shared.data.SoundData)
 local UserInputService = game:GetService("UserInputService") -- QUEUE-ALL9C 1-7 음량 슬라이더 끌기
 local TranscendentData = require(ReplicatedStorage.Shared.data.TranscendentData)
+local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData) -- QUEUE-N1004 A-1 자동 정리 기준 등급
 local Panel = require(script.Parent.Parent.ui.kit.Panel)
 local Toggle = require(script.Parent.Parent.ui.kit.Toggle)
 local Tabs = require(script.Parent.Parent.ui.kit.Tabs)
@@ -285,8 +286,40 @@ local function build()
 		autoButton.setText(presetName(player:GetAttribute("AutoStage") or AutoStageData.default))
 	end)
 	cycleRow(g, PAD + ROW, Text.get("settings.transcendNotice"), "transcendNotice", TranscendentData.announce.noticeModeNames, refs)
+	do -- QUEUE-N1004 A-1 자동 정리(가방 드롭다운과 같은 값 · 켜기/기준 = AutoProcessRequest(서버 검사) · 방식 = 설정 autoProcessMode)
+		local y = PAD + ROW * 2
+		local tidyLabel = Theme.label(g, Text.get("autoTidy.settings"), "body", "textPrimary")
+		tidyLabel.Position = UDim2.fromOffset(PAD, y)
+		tidyLabel.Size = UDim2.new(1, -PAD * 2 - 130, 0, 36)
+		local function tidyText()
+			local grade = ArmorData.grades[player:GetAttribute("AutoProcess") or "off"]
+			return grade and Text.get("autoTidy.upTo", { grade = Text.name(grade.displayName) }) or Text.get("autoTidy.off")
+		end
+		local tidyButton = Button.build({ parent = g, name = "AutoTidyButton", kind = "secondary", width = 120, position = UDim2.new(1, -PAD - 120, 0, y), text = tidyText(),
+			onActivated = function()
+				local choices = ArmorData.autoProcessGradeChoices -- 끔 → 일반 이하 → 희귀 이하 → 영웅 이하 → 끔(가방 드롭다운과 같은 순서)
+				local index = table.find(choices, player:GetAttribute("AutoProcess") or "off")
+				local remote = ReplicatedStorage:WaitForChild("AutoProcessRequest")
+				if index == nil then
+					remote:FireServer(true, choices[#choices])
+				elseif index > 1 then
+					remote:FireServer(true, choices[index - 1])
+				else
+					remote:FireServer(false, choices[#choices])
+				end
+			end })
+		player:GetAttributeChangedSignal("AutoProcess"):Connect(function()
+			tidyButton.setText(tidyText())
+		end)
+		cycleRow(g, y + ROW, Text.get("autoTidy.mode"), "autoProcessMode", { sell = Text.get("autoTidy.mode.sell"), dismantle = Text.get("autoTidy.mode.dismantle") }, refs)
+		local tidyNote = Theme.label(g, Text.get("autoTidy.note"), "caption", "textSecondary")
+		tidyNote.Name = "AutoTidyNote"
+		tidyNote.TextWrapped = true
+		tidyNote.Position = UDim2.fromOffset(PAD, y + ROW * 2 - 8)
+		tidyNote.Size = UDim2.new(1, -PAD * 2, 0, 18)
+	end
 	do -- 코드 입력(서버 RedeemCode가 검증 · 대소문자 무시)
-		local y = PAD + ROW * 2 + 8
+		local y = PAD + ROW * 4 + 22
 		local box = Instance.new("TextBox")
 		box.Name = "CodeBox"
 		box.Position = UDim2.fromOffset(PAD, y)

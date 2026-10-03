@@ -4,6 +4,7 @@ local GradeColor = require(game:GetService("ReplicatedStorage").Shared.GradeColo
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
+local SettingsData = require(ReplicatedStorage.Shared.data.SettingsData) -- QUEUE-N1004 A-1 자동 정리 방식 기본값
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local Text = require(ReplicatedStorage.Shared.Text)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
@@ -394,16 +395,42 @@ end
 refreshAutoRow()
 player:GetAttributeChangedSignal("AutoProcess"):Connect(refreshAutoRow)
 autoRow.Activated:Connect(function()
+	-- QUEUE-N1004 A-1: 끔 → 일반 이하(기본) → 희귀 이하 → 영웅 이하 → 끔(목록은 높은 등급부터라 거꾸로 돈다)
 	local choices = ArmorData.autoProcessGradeChoices
 	local current = player:GetAttribute("AutoProcess") or "off"
 	local index = table.find(choices, current)
 	if index == nil then
-		autoProcessRequest:FireServer(true, choices[1])
-	elseif index < #choices then
-		autoProcessRequest:FireServer(true, choices[index + 1])
+		autoProcessRequest:FireServer(true, choices[#choices])
+	elseif index > 1 then
+		autoProcessRequest:FireServer(true, choices[index - 1])
 	else
-		autoProcessRequest:FireServer(false, choices[1])
+		autoProcessRequest:FireServer(false, choices[#choices])
 	end
+end)
+-- QUEUE-N1004 A-1 자동 정리 방식 한 줄(판매 ↔ 분해 · 설정 autoProcessMode - 설정 창 [게임]과 같은 값)
+local modeRow = Instance.new("TextButton")
+modeRow.Name = "AutoProcessModeRow"
+modeRow.LayoutOrder = #ArmorData.bulkSellGrades + 11
+modeRow.BackgroundTransparency = 1
+modeRow.Size = UDim2.new(1, 0, 0, 28)
+modeRow.ZIndex = 25
+modeRow.Font = Enum.Font.Gotham
+modeRow.TextSize = Theme.textSize("caption")
+modeRow.TextColor3 = UIColors.textSecondary
+modeRow.TextWrapped = true
+modeRow.Parent = cutoffDropdown
+table.insert(dropdownRows, modeRow)
+local function autoMode()
+	return player:GetAttribute("AutoProcessMode") or SettingsData.keys.autoProcessMode.default
+end
+local function refreshModeRow()
+	modeRow.Text = Text.get("autoTidy.modeRow." .. autoMode())
+end
+refreshModeRow()
+player:GetAttributeChangedSignal("AutoProcessMode"):Connect(refreshModeRow)
+modeRow.Activated:Connect(function()
+	local nextMode = autoMode() == "sell" and "dismantle" or "sell"
+	SettingSave("autoProcessMode", nextMode)
 end)
 
 cutoffButton.Activated:Connect(function()

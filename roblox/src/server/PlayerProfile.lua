@@ -8,6 +8,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
+local SettingsData = require(ReplicatedStorage.Shared.data.SettingsData) -- QUEUE-N1004 A-1 자동 정리 방식 기본값
 local SetBonus = require(ReplicatedStorage.Shared.SetBonus) -- Q5 BR2 세트
 local Training = require(ReplicatedStorage.Shared.Training) -- Q6 G3 수련 · 직업 능력
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
@@ -1850,14 +1851,12 @@ function PlayerProfile.autoProcessDrop(player, item)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
 	local setting = profile and profile.autoProcess
-	if not classState or not setting or not setting.enabled or item.locked then
+	if not classState or not setting or not setting.enabled or not Loot.isAutoProcessTarget(item, setting.maxGrade) then -- QUEUE-N1004 A-1: 판정 = 공용 함수(잠금 · 스킬 변형 · 보스 세트 · 태초 · 초월 제외)
 		return nil
 	end
-	local index, cutoff = gradeIndex(item.grade), gradeIndex(setting.maxGrade)
-	if not index or not cutoff or index > cutoff then
-		return nil
-	end
-	if index >= DISMANTLE_MIN_GRADE_INDEX then
+	local index = gradeIndex(item.grade)
+	local mode = type(profile.settings) == "table" and profile.settings.autoProcessMode or SettingsData.keys.autoProcessMode.default -- A-1 방식(설정 · 없는 키 = 기본 = 옛 동작)
+	if index >= DISMANTLE_MIN_GRADE_INDEX and mode ~= "sell" then
 		table.insert(classState.gemInventory, { grade = item.grade, itemLevel = item.itemLevel, option = item.option })
 		GemSync.push(player)
 		return { kind = "dismantle", grade = item.grade, part = item.part, gold = 0 }
