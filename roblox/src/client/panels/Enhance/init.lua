@@ -12,6 +12,7 @@ local RunService = game:GetService("RunService")
 local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
 local Text = require(ReplicatedStorage.Shared.Text)
+local PriceButton = require(script.Parent.Parent.ui.kit.PriceButton)
 local Button = require(script.Parent.Parent.ui.kit.Button)
 local Panel = require(script.Parent.Parent.ui.kit.Panel)
 local Tabs = require(script.Parent.Parent.ui.kit.Tabs)
@@ -110,10 +111,10 @@ local function refresh()
 	OddsView.updateResetFloor(built.resetFloor, state)
 	OddsView.updateGuardHint(built.guardHint, state)
 	if state.maxed then
-		built.button.setText(Text.get("forge.enhance.buttonMax"))
+		built.button.setPrice({ text = Text.get("forge.enhance.buttonMax") })
 		built.button.setEnabled(false, Text.get("forge.err.maxed"))
 	else
-		built.button.setText(Text.get("forge.enhance.button"))
+		built.button.setPrice({ label = Text.get("forge.enhance.button"), currency = "gold", amount = state.cost }) -- QUEUE-ALL9C 1-6R 가격 버튼 컴포넌트(강화 + 골드 아이콘 + 비용)
 		built.button.setEnabled(state.canAfford, state.shortReason)
 	end
 	built.rebirth.update()
@@ -365,6 +366,7 @@ local function build()
 			Controller.requestEnhance(EnhancePanel.id, OddsView.formatPercent)
 		end,
 	})
+	PriceButton.attach(refs.button)
 	refs.resultLabel = Theme.label(footer, "", "caption", "textPrimary")
 	refs.resultLabel.Name = "ResultLine"
 	refs.resultLabel.TextXAlignment = Enum.TextXAlignment.Center

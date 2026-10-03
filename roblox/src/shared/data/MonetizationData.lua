@@ -63,6 +63,18 @@ local D = {
 		item_goldenHammer = 2, item_forgeBrazier = 2, nameplateSet = 2, bundle_blacksmith = 2,
 		theme_starlight = 2, theme_ember = 2, theme_frost = 2, glider_petal = 2, glider_kite = 2,
 	},
+	-- QUEUE-ALL9C 1-6R(사용자 10-03) 상점 카드: NEW 띠 = 공개 단계가 열린 날(UTC)부터 newDays일 · 단계 1 날짜 = 자리값(실제 출시일로 바꾼다 - 보고서 결정 필요)
+	newDays = 14,
+	releaseStageStartUtc = { [1] = 1790985600 }, -- 2026-10-03 00:00 UTC(자리)
+	-- 가격급 띠(등급 색 아님 - UI 중립색 3종 UIColors shopBand*): 49 · 79 · 99 = 기본 / 149 · 199 = 특별 / 그 위(399 · 499) = 대표
+	priceBands = { { maxRobux = 99, id = "basic" }, { maxRobux = 199, id = "special" }, { maxRobux = math.huge, id = "flagship" } },
+	-- 추천 탭 "이번 주 추천" 카드 4개: 주 1회 UTC 월요일 00:00 교체(epochUtc = 월요일 기준점) · 후보 표에서 차례로(공개 · 판매 중 · 산 것 제외는 화면이 거른다) · 카운트다운만(깜빡임 · 압박 문구 없음)
+	weeklyFeatured = {
+		count = 4,
+		epochUtc = 1767571200, -- 2026-01-05 00:00 UTC(월요일)
+		pool = { "theme_anvil", "glider_dragonWing", "item_rocketPop", "item_petCrown", "theme_jelly", "glider_slimeParachute", "item_balloonPop", "item_highFive",
+			"item_crystalBlade", "theme_halloween", "item_goldenHammer", "item_forgeBrazier", "theme_starlight", "glider_petal", "theme_ember", "glider_kite", "theme_frost" },
+	},
 	-- QUEUE-ALL9C 1-6 가방 칸 출처(출처별 한 번): 기본 SaveConfig.bagBaseSlots(35) + 가방 확장 패스 20 + 스타터 20 = 최대 75(bagMaxSlots - 검사)
 	bagSources = { starter = { slots = 20 } },
 	bagMaxSlots = 75,

@@ -526,6 +526,49 @@ local ok, err = pcall(function()
 		Mon.isReleased(Data, "starter_pack") and Mon.isReleased(Data, "theme_halloween") and Mon.isReleased(Data, "item_petCrown") and Mon.isReleased(Data, "recallCooldown")
 		and not Mon.isReleased(Data, "item_forgeBrazier") and not Mon.isReleased(Data, "nameplateSet") and not Mon.isReleased(Data, "theme_starlight") and not Mon.isReleased(Data, "glider_kite"))
 	check("표시 가격: 줍기 79 · 귀환 49 · 이름표 세트 79", Data.gamePasses.pickupRadius.robux == 79 and Data.gamePasses.recallCooldown.robux == 49 and Data.gamePasses.nameplateSet.robux == 79)
+
 end)
 if not ok then print("[MON] 에러 " .. tostring(err)) end
+-- QUEUE-ALL9C 1-6R 카드 규격 · 묶음 · 이번 주 추천(위 pcall 함수는 지역 변수 상한 200에 닿아 따로)
+local ok2, err2 = pcall(function()
+	local Data, Mon = MODS.MonetizationData, MODS.Monetization
+	local Cos, Season = MODS.CosmeticSlotData, MODS.SeasonPassData
+	local RELEASE_NOW = Data.releaseStageNow
+	local sumBS = Mon.bundleComponentSum(Data, "bundle_blacksmith")
+	check("묶음 구성품 합계: 대장장이 = 모루 199 + 슬라임 149 + 황금 망치 99 = 447 · 단품 · 스타터 = 묶음 아님", sumBS == 447 and Mon.bundleComponentSum(Data, "theme_anvil") == nil
+		and Mon.bundleComponentSum(Data, "starter_pack") == nil, tostring(sumBS))
+	local _, _, _, warnCat = Mon.checkCatalog(Data, Cos, Season)
+	local bsWarn = false
+	for _, line in ipairs(warnCat) do
+		bsWarn = bsWarn or line:find("bundle_blacksmith") ~= nil
+	end
+	local fake = table.clone(Data.products)
+	fake.bundle_test = { productId = 0, robux = 300, grants = { { kind = "cosmeticTheme", id = "anvil" }, { kind = "cosmeticItem", id = "goldenHammer" } } } -- 199 + 99 = 298 ≤ 300
+	local okBad, whyBad = Mon.checkCatalog(setmetatable({ products = fake }, { __index = Data }), Cos, nil)
+	fake.bundle_test.robux = 249
+	local okGood = Mon.checkCatalog(setmetatable({ products = fake }, { __index = Data }), Cos, nil)
+	check("등록 검사: 묶음 가격 ≥ 구성품 합계 = 거부 · 미만 = 통과 · 제안 자리(대장장이 499 ≥ 447) = 경고", not okBad and okGood and bsWarn, table.concat(whyBad, " / "))
+	check("가격급 띠: 49 · 79 · 99 기본 / 149 · 199 특별 / 399 · 499 대표", Mon.priceBand(Data, 49) == "basic" and Mon.priceBand(Data, 79) == "basic" and Mon.priceBand(Data, 99) == "basic"
+		and Mon.priceBand(Data, 149) == "special" and Mon.priceBand(Data, 199) == "special" and Mon.priceBand(Data, 399) == "flagship" and Mon.priceBand(Data, 499) == "flagship")
+	Data.releaseStageNow = RELEASE_NOW
+	local d1 = Data.releaseStageStartUtc[1]
+	check("NEW = 공개 날부터 14일(13.9일 O · 14일 X · 공개 전 X · 비공개 단계 X)", Mon.isNew(Data, "theme_anvil", d1 + 13.9 * 86400) and not Mon.isNew(Data, "theme_anvil", d1 + 14 * 86400)
+		and not Mon.isNew(Data, "theme_anvil", d1 - 1) and not Mon.isNew(Data, "theme_starlight", d1 + 86400))
+	local monday = Data.weeklyFeatured.epochUtc + 40 * 604800
+	local wkA, nextA = Mon.weeklyFeatured(Data, monday - 1)
+	local wkB, nextB = Mon.weeklyFeatured(Data, monday)
+	local wkC = Mon.weeklyFeatured(Data, monday + 6 * 86400)
+	local okDistinct = #wkB == 4 and table.concat(wkA, ",") ~= table.concat(wkB, ",") and table.concat(wkB, ",") == table.concat(wkC, ",")
+	local onlyReleased = Mon.weeklyFeatured(Data, monday, function(key) return Mon.isReleased(Data, key) end)
+	local allReleased = #onlyReleased == 4
+	for _, key in ipairs(onlyReleased) do
+		allReleased = allReleased and Mon.isReleased(Data, key)
+	end
+	check("이번 주 추천 4개: UTC 월요일 00:00에 바뀜 · 한 주 안은 같음 · 다음 교체 = 다음 월요일 · 비공개 거르기", okDistinct and nextA == monday and nextB == monday + 604800 and allReleased,
+		table.concat(wkB, ",") .. " | " .. table.concat(onlyReleased, ","))
+	for _, key in ipairs(Data.weeklyFeatured.pool) do
+		assert(Data.products[key], "weeklyFeatured 후보에 없는 상품 " .. key)
+	end
+end)
+if not ok2 then print("[MON] 에러 " .. tostring(err2)) end
 print(("[MON] 끝 %d/%d"):format(pass, total))

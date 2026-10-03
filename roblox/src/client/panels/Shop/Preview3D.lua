@@ -1,4 +1,5 @@
 -- QUEUE-ALL9C 1-6 X6 3D 미리보기 창(상점 위 overlay - 상점을 닫으면 같이 닫힌다 · X · Backspace로 닫기 · Esc는 로블록스 메뉴 그대로).
+--   1-6R(사용자 10-03): 카드 누름 = 이 상세 패널 - 왼쪽 3D(+ 구성품 토글 칩) · 오른쪽 이름 · 칸 · 구성품 목록 · 구매 버튼(토큰 · 로벅스 = kit/PriceButton) 또는 착용 · 환불 문구 ① · [직접 보기].
 --   내 아바타 복제(Character:Clone - 겉모습 그대로)를 ViewportFrame 안 WorldModel에 세우고 끌어서 돌려 본다.
 --   구성품 칩 = 그 치장이 주는 칸마다 하나씩 켜고 끄기: 글라이더 = 실제 글라이더 모양(GlideView.buildOnto) · 테마 = 칸마다 정지 모양(대시 = 뒤 빛줄기 · 점프 = 발밑 고리 ·
 --   활강 = 머리 위 빛줄 · 발자국 = 바닥 자국 - 테마 색 ArtV1CosmeticData). ViewportFrame은 입자 · 트레일을 그리지 않아 움직이는 효과는 [직접 보기](내 캐릭터에 잠깐 입혀 보기 - 옛 미리보기)로 본다.
@@ -10,6 +11,10 @@ local ArtV1CosmeticData = require(ReplicatedStorage.Shared.data.ArtV1CosmeticDat
 local Text = require(ReplicatedStorage.Shared.Text)
 local Panel = require(script.Parent.Parent.Parent.ui.kit.Panel)
 local Button = require(script.Parent.Parent.Parent.ui.kit.Button)
+local PriceButton = require(script.Parent.Parent.Parent.ui.kit.PriceButton)
+local CosmeticSlotData = require(ReplicatedStorage.Shared.data.CosmeticSlotData)
+local MonetizationData = require(ReplicatedStorage.Shared.data.MonetizationData)
+local Monetization = require(ReplicatedStorage.Shared.Monetization)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 local UIManager = require(script.Parent.Parent.Parent.UIManager)
 
@@ -17,10 +22,11 @@ local Preview3D = {}
 Preview3D.id = "shopPreview3D"
 
 local player = Players.LocalPlayer
-local SIZE = Vector2.new(560, 440)
+local SIZE = Vector2.new(700, 440)
+local VIEW_W = 380 -- 왼쪽 3D 칸 폭(나머지 = 오른쪽 정보 칸)
 local PARTS = { "dashTrail", "jumpFx", "glideTrail", "footstep" }
 
-local built -- { panel, viewport, world, camera, chips, title }
+local built -- { panel, viewport, world, camera, chips, info }
 local current -- { kind, entry, model, root, pieces = { [part] = Instance }, on = { [part] = bool } }
 local yaw = 200
 
@@ -57,7 +63,7 @@ local function themePiece(slot, look, root)
 	end
 	local m = Instance.new("Model")
 	m.Name = "Piece_" .. slot
-	local base = root.CFrame
+	local base = typeof(root) == "CFrame" and root or root.CFrame -- QUEUE-ALL9C 1-6R 카드 그림은 CFrame으로 부른다
 	if slot == "dashTrail" then
 		for i = 1, 4 do
 			neon("Dash" .. i, Vector3.new(1.6 - i * 0.25, 2.2 - i * 0.3, 0.9), i % 2 == 1 and theme.core or theme.edge, 0.15 + i * 0.15, base * CFrame.new(0, 0, 1.2 + i * 1.0)).Parent = m
@@ -75,6 +81,8 @@ local function themePiece(slot, look, root)
 	end
 	return m
 end
+
+Preview3D.themePiece = themePiece -- QUEUE-ALL9C 1-6R 카드 정지 그림(Catalog)
 
 local function clearCurrent()
 	if current and current.model then
@@ -115,13 +123,6 @@ local function renderChips()
 			renderChips()
 		end)
 	end
-	if current.tryInWorld then
-		local try = current.tryInWorld
-		chip("TryInWorld", Text.get("shop.preview.tryWorld"), false, function()
-			UIManager.close(Preview3D.id) -- 딤을 걷고 내 캐릭터로 본다(상점 상태 줄에 무엇을 눌러 보는지 나온다)
-			try()
-		end)
-	end
 end
 
 local function build()
@@ -134,7 +135,7 @@ local function build()
 	viewport.Name = "Viewport"
 	viewport.BackgroundColor3 = Color3.fromRGB(28, 32, 42)
 	viewport.Position = UDim2.fromOffset(12, 8)
-	viewport.Size = UDim2.new(1, -24, 1, -(Theme.buttonHeight * 2 + 40))
+	viewport.Size = UDim2.new(0, VIEW_W, 1, -(Theme.buttonHeight * 2 + 40))
 	viewport.Ambient = Color3.fromRGB(170, 170, 180)
 	viewport.LightColor = Color3.fromRGB(255, 255, 250)
 	viewport.LightDirection = Vector3.new(-1, -2, -1)
@@ -157,7 +158,7 @@ local function build()
 	chips.BackgroundTransparency = 1
 	chips.AnchorPoint = Vector2.new(0, 1)
 	chips.Position = UDim2.new(0, 12, 1, -8)
-	chips.Size = UDim2.new(1, -24, 0, Theme.buttonHeight * 2 + 12)
+	chips.Size = UDim2.new(0, VIEW_W, 0, Theme.buttonHeight * 2 + 12)
 	chips.Parent = content
 	local grid = Instance.new("UIGridLayout")
 	grid.CellSize = UDim2.fromOffset(124, Theme.buttonHeight)
@@ -183,7 +184,22 @@ local function build()
 			dragging = false
 		end
 	end)
-	built = { panel = panel, viewport = viewport, world = world, camera = camera, chips = chips }
+	-- 오른쪽 정보 칸(스크롤 - 작은 화면)
+	local info = Instance.new("ScrollingFrame")
+	info.Name = "Info"
+	info.BackgroundTransparency = 1
+	info.BorderSizePixel = 0
+	info.Position = UDim2.fromOffset(VIEW_W + 24, 8)
+	info.Size = UDim2.new(1, -(VIEW_W + 36), 1, -16)
+	info.ScrollBarThickness = 4
+	info.CanvasSize = UDim2.new()
+	info.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	info.Parent = content
+	local infoList = Instance.new("UIListLayout")
+	infoList.SortOrder = Enum.SortOrder.LayoutOrder
+	infoList.Padding = UDim.new(0, 6)
+	infoList.Parent = info
+	built = { panel = panel, viewport = viewport, world = world, camera = camera, chips = chips, info = info }
 end
 
 -- kind = "cosmeticTheme" | "gliderSkin" · entry = CosmeticSlotData 항목 · tryInWorld(선택) = 내 캐릭터에 잠깐 입혀 보기(옛 미리보기)
@@ -249,6 +265,110 @@ function Preview3D.open(kind, entry, tryInWorld)
 		UIManager.open(Preview3D.id)
 	end
 	return true
+end
+
+-- ── 상세(카드 누름) ──
+local TRY_KINDS = { cosmeticTheme = true, gliderSkin = true } -- 직접 보기 = 이동 치장 · 무기 · 펫 칸(처치 · 강화 · 귀환 · 이모트는 서버 사건이 있어야 보임)
+local TRY_ITEM_SLOTS = { weaponSkin = true, petAccessory = true }
+local OWNED = { cosmeticTheme = "themes", gliderSkin = "gliderSkins", cosmeticItem = "items" }
+
+local function fillInfo(env, key)
+	local info = built.info
+	for _, child in ipairs(info:GetChildren()) do
+		if not child:IsA("UIListLayout") then
+			child:Destroy()
+		end
+	end
+	local view = env.state.view
+	local product = MonetizationData.products[key]
+	local Catalog = require(script.Parent.Catalog)
+	local card = Catalog.productCard(env, key)
+	local width = info.AbsoluteSize.X > 0 and info.AbsoluteSize.X - 8 or (SIZE.X - VIEW_W - 44)
+	local order = 0
+	local function line(text, style, color, name, lines)
+		order += 1
+		local l = Theme.label(info, text, style, color)
+		l.Name = name
+		l.LayoutOrder = order
+		l.TextWrapped = true
+		l.Size = UDim2.fromOffset(width, (Theme.textSize(style) + 4) * (lines or 1))
+		return l
+	end
+	line(card.title, "header", "textPrimary", "Name")
+	line(card.slotText, "caption", "textSecondary", "Slot")
+	line(Text.get("shop.detail.parts"), "caption", "textSecondary", "PartsTitle")
+	for i, g in ipairs(product.grants or {}) do -- 구성품 목록
+		local entry = Monetization.findCosmetic(CosmeticSlotData, g.kind, g.id)
+		local slotName = g.kind == "cosmeticTheme" and Text.get("shop.card.themeSlot") or g.kind == "gliderSkin" and Text.get("shop.slot.gliderSkin")
+			or g.kind == "cosmeticItem" and entry and Text.get("shop.slot." .. entry.slot) or ""
+		local owned = (view[OWNED[g.kind] or ""] or {})[g.id] == true
+		line(("· %s  %s%s"):format(entry and Text.name(entry.name) or tostring(g.id), slotName, owned and ("  " .. Text.get("shop.ownedCheck")) or ""), "body", owned and "success" or "textPrimary", "Part" .. i)
+	end
+	local owned, equipped = Catalog.ownership(view, key)
+	local kind, entry = Catalog.firstGrant(key)
+	local function addButton(name, spec)
+		order += 1
+		local holder = Instance.new("Frame")
+		holder.Name = name .. "Row"
+		holder.BackgroundTransparency = 1
+		holder.LayoutOrder = order
+		holder.Size = UDim2.fromOffset(width, Theme.buttonHeight)
+		holder.Parent = info
+		spec.parent, spec.name, spec.width, spec.height = holder, name, width, Theme.buttonHeight
+		return PriceButton.build(spec)
+	end
+	if owned then
+		if #(product.grants or {}) == 1 then
+			addButton("Equip", { kind = "secondary", text = Text.get(PriceButton.stateText[equipped and "equipped" or "equip"]), enabled = not equipped and not env.busy(), onActivated = function()
+				env.send("equipAll", kind, entry.id)
+			end })
+		else
+			addButton("Owned", { kind = "secondary", text = Text.get("shop.ownedCheck"), enabled = false })
+		end
+	else
+		local tokens = (view.productTokens or {})[key]
+		if tokens then -- 토큰가(토큰 불가 = 버튼 없음)
+			addButton("BuyTokens", { kind = "primary", currency = "token", amount = tokens, enabled = (view.shards or 0) >= tokens and not env.busy(), onActivated = function()
+				env.send("buyShards", kind, entry.id)
+			end })
+		end
+		local spec = env.robuxSpec(key, { title = card.title, body = card.slotText })
+		addButton("BuyRobux", { kind = "primary", currency = spec.currency, amount = spec.amount, text = spec.text, enabled = spec.enabled, onActivated = spec.onActivated })
+		local note = line(Text.get("shop.refund.note"), "caption", "textSecondary", "RefundNote", 3) -- 환불 문구 ①
+		note.TextYAlignment = Enum.TextYAlignment.Top
+	end
+	if current and current.tryInWorld and (TRY_KINDS[kind] or (kind == "cosmeticItem" and entry and TRY_ITEM_SLOTS[entry.slot])) then
+		local try = current.tryInWorld
+		order += 1
+		local b = Button.build({ parent = info, name = "TryInWorld", kind = "secondary", text = Text.get("shop.preview.tryWorld"), width = width, height = Theme.buttonHeight, onActivated = function()
+			UIManager.close(Preview3D.id) -- 딤을 걷고 내 캐릭터로 본다(상점 상태 줄에 무엇을 눌러 보는지 나온다)
+			try()
+		end })
+		b.root.LayoutOrder = order
+	end
+end
+
+-- 카드 누름 = 상세: productKey의 첫 구성품을 3D로(묶음도 첫 것) + 오른쪽 정보 칸
+local detailKey
+function Preview3D.openDetail(env, productKey, tryInWorld)
+	local Catalog = require(script.Parent.Catalog)
+	local kind, entry = Catalog.firstGrant(productKey)
+	if not entry then
+		return false
+	end
+	detailKey = productKey
+	local ok = Preview3D.open(kind, entry, tryInWorld)
+	if ok then
+		built.panel.titleLabel.Text = Text.get("shop.preview.titleOf", { name = Catalog.productCard(env, productKey).title })
+		fillInfo(env, productKey)
+	end
+	return ok
+end
+-- 상점 표(ShopSync)가 바뀌면 열린 상세의 버튼(보유 · 착용 · 잔액)을 다시 그린다
+function Preview3D.refresh(env)
+	if built and detailKey and UIManager.isOpen(Preview3D.id) then
+		fillInfo(env, detailKey)
+	end
 end
 
 function Preview3D.debugState()

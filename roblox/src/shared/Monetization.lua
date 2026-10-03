@@ -306,6 +306,7 @@ function Monetization.checkCatalog(data, cosmetics, season)
 	end
 	table.sort(keys)
 	local seenIds = {}
+	local bundleWarnings = {}
 	for _, key in ipairs(keys) do
 		local product = data.products[key]
 		local ok, why = Monetization.checkProduct(data, key, product, cosmetics)
@@ -314,6 +315,15 @@ function Monetization.checkCatalog(data, cosmetics, season)
 				ok, why = false, { ("%s: productId %d 중복(%s)"):format(key, product.productId, seenIds[product.productId]) }
 			end
 			seenIds[product.productId] = key
+		end
+		local sum = Monetization.bundleComponentSum(data, key)
+		if ok and sum and product.robux >= sum then -- QUEUE-ALL9C 1-6R 묶음 가격 < 구성품 합계(제안 자리 proposal = 경고만 - 공개 전 결정)
+			local line = ("%s: 묶음 가격 %d ≥ 구성품 합계 %d"):format(key, product.robux, sum)
+			if product.proposal then
+				table.insert(bundleWarnings, line)
+			else
+				ok, why = false, { line }
+			end
 		end
 		if ok then
 			valid[key] = true
@@ -333,7 +343,66 @@ function Monetization.checkCatalog(data, cosmetics, season)
 		end
 		warnings = warn or {}
 	end
+	for _, line in ipairs(bundleWarnings) do
+		table.insert(warnings, line)
+	end
 	return #reasons == 0, reasons, valid, warnings
+end
+
+-- QUEUE-ALL9C 1-6R 묶음 상품: 구성품마다 따로 파는 상품(theme_ · glider_ · item_ 키)이 있으면 그 로벅스 합계 · 아니면 nil(묶음 아님 · 스타터처럼 따로 안 파는 구성품)
+local COMPONENT_PREFIX = { cosmeticTheme = "theme_", gliderSkin = "glider_", cosmeticItem = "item_" }
+function Monetization.bundleComponentSum(data, key)
+	local product = data.products[key]
+	if type(product) ~= "table" or type(product.grants) ~= "table" or #product.grants < 2 then
+		return nil
+	end
+	local sum = 0
+	for _, g in ipairs(product.grants) do
+		local prefix = COMPONENT_PREFIX[g.kind]
+		local single = prefix and g.id and data.products[prefix .. g.id]
+		if not single or single == product or type(single.robux) ~= "number" then
+			return nil
+		end
+		sum += single.robux
+	end
+	return sum
+end
+
+-- 가격급 띠 id(basic · special · flagship) - MonetizationData.priceBands
+function Monetization.priceBand(data, robux)
+	for _, band in ipairs(data.priceBands or {}) do
+		if (robux or 0) <= band.maxRobux then
+			return band.id
+		end
+	end
+	return nil
+end
+
+-- NEW 띠: 그 키의 공개 단계가 열린 날(UTC)부터 newDays일 안
+function Monetization.isNew(data, key, unixNow)
+	local stage = data.release and data.release[key] or data.releaseDefault or 1
+	local start = data.releaseStageStartUtc and data.releaseStageStartUtc[stage]
+	return start ~= nil and Monetization.isReleased(data, key) and unixNow >= start and unixNow - start < (data.newDays or 14) * 86400
+end
+
+-- 이번 주 추천: 후보 표에서 이번 주 차례부터 available(key) = true인 것 count개 · 반환 (키 목록, 다음 교체 UTC)
+function Monetization.weeklyFeatured(data, unixNow, available)
+	local w = data.weeklyFeatured
+	local week = math.floor((unixNow - w.epochUtc) / 604800)
+	local picked, n = {}, #w.pool
+	if n > 0 then
+		local start = (week * w.count) % n
+		for i = 0, n - 1 do
+			local key = w.pool[(start + i) % n + 1]
+			if available == nil or available(key) then
+				table.insert(picked, key)
+				if #picked >= w.count then
+					break
+				end
+			end
+		end
+	end
+	return picked, w.epochUtc + (week + 1) * 604800
 end
 
 function Monetization.productKeyById(data, productId)

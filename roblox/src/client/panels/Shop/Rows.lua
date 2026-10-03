@@ -5,12 +5,12 @@ local Button = require(script.Parent.Parent.Parent.ui.kit.Button)
 local Gauge = require(script.Parent.Parent.Parent.ui.kit.Gauge)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 local Layout = require(script.Parent.Layout)
-local ArtImage = require(script.Parent.Parent.Parent.ui.ArtImage)
+local Card = require(script.Parent.Card)
+local PriceButton = require(script.Parent.Parent.Parent.ui.kit.PriceButton)
+local Text = require(game:GetService("ReplicatedStorage").Shared.Text)
 
 
 local Rows = {}
--- QUEUE-ALL9C 1-6: 가격 아이콘(로벅스 = 로블록스 기본 그림 · 토큰 = 꾸미기 토큰 그림) - 한 버튼에 한 가격 · 아이콘으로 종류를 분명히
-Rows.ROBUX_ICON = "rbxasset://textures/ui/common/robux.png"
 
 function Rows.new(scroll, L)
 	local ctx = { scroll = scroll, L = L, order = 0, buttons = {} }
@@ -51,13 +51,17 @@ function Rows.new(scroll, L)
 		return label
 	end
 
-	-- 버튼 하나(행 · 칩 공통). spec = { name, text, kind, enabled, width, onActivated, swatch(Color3 - 왼쪽 작은 칸) }
+	-- 버튼 하나(행 · 칩 공통). spec = { name, text, kind, enabled, width, onActivated, swatch(Color3 - 왼쪽 작은 칸) } · 가격 = currency + amount · 상태 = state(owned · equip · equipped)
 	local function makeButton(parent, spec, position, anchorPoint)
-		local button = Button.build({
+		local priced = spec.currency ~= nil or spec.state ~= nil -- QUEUE-ALL9C 1-6R 가격 · 상태 버튼 = kit/PriceButton 하나(묶음 정중앙)
+		local button = (priced and PriceButton or Button).build({
 			parent = parent,
 			name = spec.name,
 			kind = spec.kind or "secondary",
-			text = spec.text,
+			text = priced and (spec.state and Text.get(PriceButton.stateText[spec.state]) or nil) or spec.text,
+			currency = spec.currency,
+			amount = spec.amount,
+			label = spec.label,
 			width = spec.width or Button.minWidth,
 			height = L.buttonH,
 			anchorPoint = anchorPoint,
@@ -75,25 +79,6 @@ function Rows.new(scroll, L)
 			swatch.BorderSizePixel = 0
 			swatch.Parent = button.root
 			Theme.corner(swatch, 3)
-		end
-		if spec.icon then
-			local icon
-			if spec.icon == "robux" then
-				icon = Instance.new("ImageLabel")
-				icon.Image = Rows.ROBUX_ICON
-				icon.ScaleType = Enum.ScaleType.Fit
-			else
-				icon = ArtImage.label(button.root, "icons/reward/sparkleShard", UDim2.fromOffset(18, 18), "◆")
-			end
-			icon.Name = "PriceIcon"
-			icon.BackgroundTransparency = 1
-			icon.AnchorPoint = Vector2.new(0, 0.5)
-			icon.Position = UDim2.new(0, 10, 0.5, 0)
-			icon.Size = UDim2.fromOffset(18, 18)
-			icon.Parent = button.root
-			local pad = Instance.new("UIPadding")
-			pad.PaddingLeft = UDim.new(0, 22)
-			pad.Parent = button.root
 		end
 		if spec.name then
 			ctx.buttons[spec.name] = button
@@ -160,6 +145,79 @@ function Rows.new(scroll, L)
 			makeButton(frame, spec, UDim2.new(0, col * (chipWidth + Layout.gap), 0, line * (L.buttonH + Layout.gap)), Vector2.new(0, 0))
 		end
 		return frame
+	end
+
+	-- QUEUE-ALL9C 1-6R 카드 격자(PC 4 · 태블릿 3 · 폰 2열 · 간격 같음 · 마지막 줄 왼쪽 정렬). specs = Card spec 배열. 반환: 격자 Frame
+	function ctx.cards(name, specs)
+		local rowsCount = math.max(1, math.ceil(#specs / L.cols))
+		local frame = Instance.new("Frame")
+		frame.Name = name
+		frame.LayoutOrder = nextOrder()
+		frame.BackgroundTransparency = 1
+		frame.Size = UDim2.new(0, L.rowW, 0, rowsCount * L.cardH + (rowsCount - 1) * L.cardGap)
+		frame.Parent = scroll
+		local grid = Instance.new("UIGridLayout")
+		grid.CellSize = UDim2.fromOffset(L.cardW, L.cardH)
+		grid.CellPadding = UDim2.fromOffset(L.cardGap, L.cardGap)
+		grid.FillDirectionMaxCells = L.cols
+		grid.HorizontalAlignment = Enum.HorizontalAlignment.Left
+		grid.SortOrder = Enum.SortOrder.LayoutOrder
+		grid.Parent = frame
+		for index, spec in ipairs(specs) do
+			spec.order = index
+			local _, button = Card.build(frame, spec, L)
+			ctx.buttons[spec.name] = button
+		end
+		return frame
+	end
+
+	-- QUEUE-ALL9C 1-6R 추천 탭 맨 위 큰 배너 1개: { name, title, body, button = PriceButton spec, onOpen, picture }
+	function ctx.banner(spec)
+		local h = math.max(L.rowH * 2, 112)
+		local banner = Instance.new("TextButton")
+		banner.Name = spec.name
+		banner.Text = ""
+		banner.AutoButtonColor = false
+		banner.LayoutOrder = nextOrder()
+		banner.Size = UDim2.new(0, L.rowW, 0, h)
+		banner.BackgroundColor3 = Theme.colors.slot
+		banner.BackgroundTransparency = Theme.colors.slotTransparency
+		banner.Parent = scroll
+		Theme.corner(banner, Theme.corner.chip)
+		Theme.stroke(banner, "rimHi", Theme.colors.rimHiTransparency)
+		if spec.onOpen then
+			banner.Activated:Connect(spec.onOpen)
+		end
+		local picW = 0
+		if spec.picture then
+			picW = h - 16
+			local pic = Instance.new("Frame")
+			pic.Name = "Picture"
+			pic.BackgroundTransparency = 1
+			pic.Position = UDim2.fromOffset(8, 8)
+			pic.Size = UDim2.fromOffset(picW, picW)
+			pic.Parent = banner
+			spec.picture(pic)
+			picW += 8
+		end
+		local buttonW = 140
+		local title = Theme.label(banner, spec.title or "", "header", "textPrimary")
+		title.Name = "Title"
+		title.TextTruncate = Enum.TextTruncate.AtEnd
+		title.Position = UDim2.fromOffset(12 + picW, 10)
+		title.Size = UDim2.new(1, -(24 + picW + buttonW), 0, Theme.textSize("header") + 6)
+		local body = Theme.label(banner, spec.body or "", "caption", "textSecondary")
+		body.Name = "Body"
+		body.TextWrapped = true
+		body.TextYAlignment = Enum.TextYAlignment.Top
+		body.Position = UDim2.fromOffset(12 + picW, 14 + Theme.textSize("header") + 6)
+		body.Size = UDim2.new(1, -(24 + picW + buttonW), 1, -(24 + Theme.textSize("header") + 6))
+		local b = spec.button or {}
+		local button = PriceButton.build({ parent = banner, name = "BannerBuy", kind = b.kind or "primary", currency = b.currency, amount = b.amount,
+			text = b.state and Text.get(PriceButton.stateText[b.state]) or b.text, width = buttonW, height = L.buttonH,
+			anchorPoint = Vector2.new(1, 0.5), position = UDim2.new(1, -12, 0.5, 0), enabled = b.enabled ~= false, onActivated = b.onActivated })
+		ctx.buttons[spec.name] = button
+		return banner
 	end
 
 	-- 게이지(높이 22 - 숫자 표시). 반환: Gauge refs

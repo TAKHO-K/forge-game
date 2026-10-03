@@ -38,7 +38,7 @@ function GoldTab.render(ctx, env)
 			name = "Reroll_" .. gradeId,
 			title = Text.get("shop.gold.rerollRow", { grade = grade and grade.displayName or gradeId, count = tostring(env.state.rerollTickets[gradeId] or 0) }),
 			subtitle = Text.get(affordable and "shop.gold.rerollPrice" or "shop.gold.rerollPriceShort", { gold = NumberFormat.currency(price, Text.languageFor()), dust = tostring(dustPrice) }),
-			buttons = { { name = "Buy_reroll_" .. gradeId, text = Text.get("shop.buy"), kind = "primary", enabled = affordable and not env.busy(), onActivated = function()
+			buttons = { { name = "Buy_reroll_" .. gradeId, label = Text.get("shop.buy"), currency = "gold", amount = price, width = 150, kind = "primary", enabled = affordable and not env.busy(), onActivated = function() -- QUEUE-ALL9C 1-6R 가격 버튼 컴포넌트
 				env.buyReroll(gradeId)
 			end } },
 		})

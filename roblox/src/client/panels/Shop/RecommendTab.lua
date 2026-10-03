@@ -1,47 +1,68 @@
--- 상점 [추천] 탭(QUEUE-ALL2 P2 B-4 ① - 왼쪽 메뉴 금색 상점 버튼이 여는 첫 탭): 시즌 패스 유료 줄(안 샀으면) · 아직 안 산 치장 테마 1 · 글라이더 1 · 편의 패스 2.
---   새 상품 없음 - 다른 탭의 행 그리기(CosmeticTab.saleRow · ConvenienceTab.render)를 그대로 쓴다. 규칙 = monetization-p4c(돈으로 강해지지 않음 · 유료 랜덤 없음 · checkCatalog).
+-- 상점 [추천] 탭(QUEUE-ALL9C 1-6R · 사용자 10-03 - 왼쪽 메뉴 금색 상점 버튼이 여는 첫 탭):
+--   ① 받을 선물(있을 때) ② 맨 위 큰 배너 1개 = 스타터 팩(노출 조건 안 · 안 산 사람) · 아니면 시즌 패스 유료 줄(안 산 사람)
+--   ③ "이번 주 추천" 카드 4개(UTC 월요일 00:00 교체 · MonetizationData.weeklyFeatured 후보 표 · 다음 교체까지 남은 시간만 - 깜빡임 · 압박 문구 없음) ④ 시즌 패스 카드.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local MonetizationData = require(ReplicatedStorage.Shared.data.MonetizationData)
+local Monetization = require(ReplicatedStorage.Shared.Monetization)
 local CosmeticSlotData = require(ReplicatedStorage.Shared.data.CosmeticSlotData)
 local Text = require(ReplicatedStorage.Shared.Text)
-local CosmeticTab = require(script.Parent.CosmeticTab)
-local ConvenienceTab = require(script.Parent.ConvenienceTab)
+local Catalog = require(script.Parent.Catalog)
+local StarterTab = require(script.Parent.StarterTab)
 
 local RecommendTab = {}
 
-RecommendTab.passes = { "recallCooldown", "bagExpand" }
-
-local function firstUnowned(list, ownedMap, justBought, view, prefix)
-	for _, entry in ipairs(list) do
-		local product = view.products and view.products[prefix .. entry.id]
-		local sellable = product ~= nil and product.released ~= false and not (entry.seasonOnly or entry.passOnly or entry.boardOnly or entry.starterOnly) -- QUEUE-ALL9C 1-6: 비공개 · 판매 안 하는 치장은 추천 안 함
-		if sellable and (not (ownedMap and ownedMap[entry.id]) or (justBought and justBought[entry.id])) then -- QUEUE-ALL9B: 방금 산 것은 창을 닫을 때까지 "구매 완료"로 남긴다
-			return entry
+-- 이번 주 추천 키(공개 · 판매 중 치장만) · 다음 교체 UTC
+function RecommendTab.weekly(view, unixNow)
+	return Monetization.weeklyFeatured(MonetizationData, unixNow, function(key)
+		if not Catalog.productVisible(view, key) then
+			return false
 		end
-	end
-	return nil
+		local kind, entry = Catalog.firstGrant(key)
+		return entry ~= nil and Monetization.onSale(CosmeticSlotData, kind, entry.id)
+	end)
 end
 
 function RecommendTab.render(ctx, env)
 	local view = env.state.view
-	if not view then
-		ctx.line(Text.get("shop.loading"), "textSecondary", 1, "Loading")
-		return
+	if (view.gifts or 0) > 0 then
+		ctx.row({
+			name = "Gifts",
+			title = Text.get("gift.pending", { n = tostring(view.gifts) }),
+			highlight = true,
+			buttons = { { name = "GiftsClaim", text = Text.get("gift.claimAll"), kind = "primary", width = 110, enabled = not env.busy(), onActivated = function()
+				env.send("giftClaim", "all")
+			end } },
+		})
 	end
-	ctx.line(Text.get("shop.recommend.note"), "textSecondary", 1, "RecommendNote")
-	if view.season and not view.season.premium then
-		ctx.row({ name = "Premium", title = Text.get("season.premiumTitle"), subtitle = Text.get("season.premiumSub"), highlight = true,
-			buttons = { env.robuxButton("season_premium", "PremiumBuy") } })
+	-- ② 배너
+	if StarterTab.visible(view) and not (view.starter and view.starter.owned) then
+		StarterTab.banner(ctx, env)
+	elseif view.season and not view.season.premium then
+		local spec = env.robuxSpec("season_premium")
+		ctx.banner({ name = "BannerSeason", title = Text.get("season.premiumTitle"), body = Text.get("season.premiumSub"), button = spec,
+			picture = Catalog.iconPicture("icons/reward/passExp", "★"), onOpen = function()
+				env.selectTab("season")
+			end })
 	end
-	local theme = firstUnowned(CosmeticSlotData.sets, view.themes, env.state.justBought, view, "theme_")
-	if theme then
-		CosmeticTab.saleRow(ctx, env, view, "cosmeticTheme", theme, view.themes and view.themes[theme.id] == true, (view.productTokens or {})["theme_" .. theme.id], "theme_" .. theme.id, "shop.cos.themeSub")
+	-- ③ 이번 주 추천
+	local unixNow = workspace:GetServerTimeNow()
+	local keys, nextSwap = RecommendTab.weekly(view, unixNow)
+	if #keys > 0 then
+		ctx.section(Text.get("shop.weekly.title"), "WeeklyTitle")
+		local left = math.max(0, nextSwap - unixNow)
+		ctx.line(Text.get("shop.weekly.next", { d = tostring(math.floor(left / 86400)), h = tostring(math.floor(left % 86400 / 3600)) }), "textSecondary", 1, "WeeklyNext")
+		local specs = {}
+		for _, key in ipairs(keys) do
+			table.insert(specs, Catalog.productCard(env, key))
+		end
+		ctx.cards("WeeklyCards", specs)
 	end
-	local skin = firstUnowned(CosmeticSlotData.gliderSkins, view.gliderSkins, env.state.justBought, view, "glider_")
-	if skin then
-		CosmeticTab.saleRow(ctx, env, view, "gliderSkin", skin, view.gliderSkins and view.gliderSkins[skin.id] == true, (view.productTokens or {})["glider_" .. skin.id], "glider_" .. skin.id, "shop.cos.gliderSub")
+	-- ④ 시즌 패스 카드
+	if view.season then
+		ctx.section(Text.get("shop.tab.season"), "SeasonCardTitle")
+		ctx.cards("SeasonCards", { Catalog.seasonCard(env, env.robuxSpec("season_premium")) })
 	end
-	ConvenienceTab.render(ctx, env, RecommendTab.passes)
 end
 
 return RecommendTab

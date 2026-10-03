@@ -178,7 +178,7 @@ local en = {
 	-- ═══ 꾸미기 · 상품(CosmeticSlotData · MonetizationData) ═══
 	["별빛"] = "Starlight", ["불씨"] = "Ember", ["서리꽃"] = "Frost Bloom", ["말랑 젤리"] = "Squishy Jelly",
 	["꽃잎 글라이더"] = "Petal Glider", ["연 글라이더"] = "Kite Glider", ["푸른 드래곤 날개"] = "Blue Dragon Wings", ["구름 고래"] = "Cloud Whale", ["구름 고래 물결"] = "Cloud Whale Wake", ["초원 별빛"] = "Meadow Starlight", ["보랏빛 별"] = "Violet Star", ["오로라 서리"] = "Aurora Frost", ["소다 젤리"] = "Soda Jelly", ["달빛 불씨"] = "Moonlit Embers",
-	["민트 낙하산"] = "Mint Parachute", ["베리 낙하산"] = "Berry Parachute", ["비취 날개"] = "Jade Wings", ["자수정 날개"] = "Amethyst Wings", ["대장장이 세트"] = "Blacksmith Set", ["별빛 왕관"] = "Starlight Crown", ["시즌 출석 개근"] = "Season Regular",
+	["민트 낙하산"] = "Mint Parachute", ["베리 낙하산"] = "Berry Parachute", ["비취 날개"] = "Jade Wings", ["자수정 날개"] = "Amethyst Wings", ["대장장이 세트"] = "Blacksmith Set", ["별빛 왕관"] = "Starlight Crown", ["모험가의 은빛 날"] = "Adventurer's Silver Edge", ["모험가 별빛 궤적"] = "Adventurer's Star Trail", ["시즌 출석 개근"] = "Season Regular",
 	["골드"] = "Gold", ["보석"] = "Gem", ["랜덤 옵션"] = "Random Option", ["전투력"] = "Power", ["강화 보호"] = "Enhance Protection", ["행운 부스트"] = "Luck Boost", ["경험치 배수"] = "EXP Multiplier", ["골드 배수"] = "Gold Multiplier",
 	-- 다른 서버 초월 알림 설정
 	["전체"] = "Full", ["배너만"] = "Banner only", ["끔"] = "Off",

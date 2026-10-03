@@ -45,6 +45,16 @@ return {
 	xp = Color3.fromRGB(242, 196, 61), -- 경험치(목업 --xp, 메이플식 노랑)
 	gold = Color3.fromRGB(240, 180, 41), -- 재화(목업 --gold) - xp와 가까운 톤이지만 구분되는 색
 	-- QUEUE-ALL9C 1-5(J1) 순위 1 · 2 · 3위 메달 · 줄 색(금 · 은 · 동)
+	-- QUEUE-ALL9C 1-6R 상점 카드: 가격급 띠 = UI 중립색 3종(등급 색 사용 금지 · 사용자 10-03) · NEW · 보유 덮개 · 그림 바탕
+	shopBand = {
+		basic = { bg = Color3.fromRGB(74, 80, 92), fg = Color3.fromRGB(226, 230, 236) },
+		special = { bg = Color3.fromRGB(128, 136, 150), fg = Color3.fromRGB(250, 251, 253) },
+		flagship = { bg = Color3.fromRGB(226, 228, 233), fg = Color3.fromRGB(36, 39, 46) },
+	},
+	shopNew = Color3.fromRGB(240, 242, 245),
+	shopNewText = Color3.fromRGB(30, 33, 40),
+	shopOwnedCover = Color3.fromRGB(70, 72, 78),
+	shopCardPicture = Color3.fromRGB(34, 38, 48),
 	rankMedal = { Color3.fromRGB(240, 196, 64), Color3.fromRGB(196, 204, 214), Color3.fromRGB(205, 127, 50) },
 	textPrimary = Color3.fromRGB(234, 238, 245), -- 목업 --ink
 	textSecondary = Color3.fromRGB(150, 153, 159), -- 목업 --ink-2(alpha .62 실효색, panel-solid 기준)

@@ -1,5 +1,5 @@
 -- 패널(30-0 S06, PRD 20.81 [D-3]). 제목줄(제목 · ? · X) + 내용 프레임 + UIManager.register까지 한 번에 한다. **새 창은 반드시 이것으로 만든다.**
--- Panel.create(props) -> refs. props = { id, kind("window"|"station"|"overlay"), title, size(Vector2), hotkey, help(도움말 글), parentId, position(UDim2), anchorPoint, onOpen, onClose }.
+-- Panel.create(props) -> refs. props = { id, kind("window"|"station"|"overlay"), title, size(Vector2), hotkey, help(도움말 글), parentId, position(UDim2), anchorPoint, maxSize(Vector2 - 기본 Panel.maxSize), onOpen, onClose }.
 --   window: 딤 포함(모달). PC는 size 그대로(최대 720 × 480), 모바일은 min(92% W, 720) × min(88% H, 480).
 --   station: 딤 없음(걸을 수 있다). position을 안 주면 화면 중앙.
 --   overlay: 딤 포함 - 뒤의 패널 입력까지 막는다(딤이 TextButton이라 클릭을 먹는다). parentId의 패널이 닫히면 같이 닫힌다.
@@ -55,7 +55,8 @@ function Panel.create(props)
 		constraint.MaxSize = Panel.maxSize
 		constraint.Parent = frame
 	else
-		frame.Size = UDim2.new(0, math.min(size.X, Panel.maxSize.X), 0, math.min(size.Y, Panel.maxSize.Y))
+		local maxSize = props.maxSize or Panel.maxSize -- QUEUE-ALL9C 1-6R 상점(사용자 10-03 "창이 답답") = 창마다 상한을 넘겨 받는다
+		frame.Size = UDim2.new(0, math.min(size.X, maxSize.X), 0, math.min(size.Y, maxSize.Y))
 	end
 	frame.BackgroundColor3 = colors.panel
 	frame.BackgroundTransparency = 1

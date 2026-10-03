@@ -1,5 +1,5 @@
 -- 확인창(30-0 S06, PRD 20.81 [D-3]). overlay 하나를 만들어 두고 재사용한다 - 환생 확인창 · 강화 구간 진입 · 구매가 같은 부품이다.
--- Confirm.ask({ title, body, primaryText, secondaryText, danger, parentId, primaryEnabled, reason }, callback) : callback(true) = 주 버튼, callback(false) = 보조 버튼 · X · Backspace · 부모 패널이 닫힘.
+-- Confirm.ask({ title, body, primaryText, primaryPrice, secondaryText, danger, parentId, primaryEnabled, reason }, callback) : callback(true) = 주 버튼, callback(false) = 보조 버튼 · X · Backspace · 부모 패널이 닫힘.
 --   primaryEnabled = false면 주 버튼이 비활성이다(눌러도 답이 안 나간다). reason = 버튼 위에 danger색으로 적는 한 줄(비활성 이유 - 주지 않으면 줄이 없다).
 --   danger = true면 주 버튼이 위험(danger - 빨강으로 채움) 모양이고 제목이 경고색이다. danger는 되돌릴 수 없는 동작(분해 · 판매 · 환생 · 계승 · 포기)에만 쓴다(ref 18).
 --   버튼 자리(ref 18): 취소(보조) = 왼쪽 · 확인(주 · 위험) = 오른쪽 - 같은 폭. parentId의 패널이 닫히면 이 확인창도 같이 닫힌다(UIManager). 확인창이 떠 있는 동안 뒤의 패널 입력은 딤이 막는다.
@@ -67,6 +67,7 @@ local function build()
 		UIManager.close(Confirm.id)
 	end
 	local primary = makeButton("primary", "Primary", 1, -PAD, accept)
+	require(script.Parent.PriceButton).attach(primary) -- QUEUE-ALL9C 1-6R primaryPrice = { label, currency, amount }(구매 확인 창 = 가격 버튼 컴포넌트) · 글만 있으면 묶음이 숨는다
 	local danger = makeButton("danger", "PrimaryDanger", 1, -PAD, accept)
 	local secondary = makeButton("secondary", "Secondary", 0, PAD, function()
 		UIManager.close(Confirm.id) -- onClose가 callback(false)를 낸다
@@ -121,7 +122,12 @@ function Confirm.ask(props, callback)
 	built.panel.titleLabel.Text = props.title or ""
 	built.panel.titleLabel.TextColor3 = Theme.color(props.danger == true and "danger" or "textPrimary") -- ref 18: 되돌릴 수 없는 물음은 제목도 경고색
 	built.bodyLabel.Text = props.body or ""
-	built.primary.setText(props.primaryText or Text.get("ui.confirm.ok"))
+	if props.primaryPrice then
+		built.primary.setText("")
+		built.primary.setPrice(props.primaryPrice)
+	else
+		built.primary.setText(props.primaryText or Text.get("ui.confirm.ok"))
+	end
 	built.danger.setText(props.primaryText or Text.get("ui.confirm.ok"))
 	built.secondary.setText(props.secondaryText or Text.get("ui.confirm.cancel"))
 	built.primary.root.Visible = props.danger ~= true
