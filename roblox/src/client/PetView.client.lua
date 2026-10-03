@@ -10,7 +10,18 @@ local EggData = require(ReplicatedStorage.Shared.data.EggData)
 local NestState = require(script.Parent.NestState)
 local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit) -- A2-N3 Open Cloud 펫 메시
 local ArtImportData = require(ReplicatedStorage.Shared.data.ArtImportData)
-local CROWN = require(ReplicatedStorage.Shared.data.ArtV1CosmeticData).items.crown -- QUEUE-ALL6 H 펫 꾸미기(왕관)
+local COS_ITEMS = require(ReplicatedStorage.Shared.data.ArtV1CosmeticData).items -- QUEUE-ALL6 H 펫 꾸미기(왕관)
+local SLOT_ITEMS = require(ReplicatedStorage.Shared.data.CosmeticSlotData).items
+-- QUEUE-ALL9B 5: 장착한 펫 꾸미기 id → 왕관 모양 표(look · 색 변형 = base "crown" - 출석판 전용 별빛 왕관)
+local function crownSpec(itemId)
+	for _, e in ipairs(SLOT_ITEMS) do
+		if e.id == itemId and e.slot == "petAccessory" then
+			local spec = COS_ITEMS[e.look]
+			return spec and (spec.base or e.look) == "crown" and spec or nil
+		end
+	end
+	return nil
+end
 
 local localPlayer = Players.LocalPlayer
 for _ = 1, 50 do -- 구역 색은 NestView가 NestState에 붙인다(먼저 돌면 잠깐 기다림)
@@ -86,7 +97,8 @@ local function build(player)
 		light.Parent = parts.Body.part
 	end
 	local head = parts.Head
-	if head and player:GetAttribute("Cosmetic_petAccessory") == "petCrown" then -- QUEUE-ALL6 H 왕관 = 머리 위 금 테 + 뾰족 셋 + 보석(머리 크기에 맞춤 · 몸 3종 공통)
+	local CROWN = crownSpec(player:GetAttribute("Cosmetic_petAccessory"))
+	if head and CROWN then -- QUEUE-ALL6 H 왕관 = 머리 위 금 테 + 뾰족 셋 + 보석(머리 크기에 맞춤 · 몸 3종 공통)
 		local w = head.part.Size.X * CROWN.width
 		local top = head.offset * CFrame.new(0, head.part.Size.Y / 2 + CROWN.height * w / 2, 0)
 		local function piece(name, size, cf, color, shape)

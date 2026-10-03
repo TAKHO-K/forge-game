@@ -232,6 +232,62 @@ do
 	check("보완 1-4 매일 40칸 30 ~ 32일 · 주 4일 56일 안 · 매일 반복 20회 56일 안", daily[40] >= 30 and daily[40] <= 32 and four[40] and four[40] <= 56 and daily[60] and daily[60] <= 56, table.concat(line, " | "))
 end
 
+-- ══ 5 시즌 출석판 ══
+do
+	local Quest, Board, Data = MODS.Quest, MODS.SeasonBoardData, MODS.MonetizationData
+	local tokens, growth, rows = 0, {}, {}
+	for i, cell in ipairs(Board.cells) do
+		tokens += cell.sparkleShard or 0
+		for k in pairs(cell) do
+			if Board.growthKinds[k] then table.insert(growth, i .. ":" .. k) end
+		end
+		local t = {}
+		for k, v in pairs(cell) do table.insert(t, k .. "=" .. tostring(v)) end
+		table.insert(rows, ("%d[%s]"):format(i, table.concat(t, ",")))
+	end
+	print("[ALL9B] 5 표 " .. table.concat(rows, " "))
+	check("5-1 32칸 · 토큰 합 78 · 16칸 칭호 · 32칸 출석판 전용 소품 · 성장 재화 = 강화석 소량만", #Board.cells == 32 and tokens == 78 and Board.cells[16].title == "seasonRegular" and Board.cells[32].cosmeticItem == "starCrown" and #growth == 0,
+		("토큰 %d · 성장 %s"):format(tokens, table.concat(growth, ",")))
+	local crown = MODS.Monetization.findCosmetic(MODS.CosmeticSlotData, "cosmeticItem", "starCrown")
+	check("5-1 32칸 소품 = boardOnly(토큰 · 상점 · 선물 X)", crown and crown.boardOnly ~= nil and MODS.Monetization.tokenBlocked(MODS.CosmeticSlotData, "cosmeticItem", "starCrown") == "board_only")
+	check("5-2 남은 날 = 토큰 1만(비성장)", Board.after.sparkleShard == 1 and next(Board.after, next(Board.after)) == nil)
+	local robux = {}
+	for key, product in pairs(Data.products) do
+		for _, g in ipairs(product.grants) do
+			if g.kind:lower():find("board") or g.kind:lower():find("attend") then table.insert(robux, key) end
+		end
+	end
+	check("5-3 로벅스로 칸을 사는 상품 없음", #robux == 0, table.concat(robux, ","))
+	-- 하루 첫 접속 1칸 · 같은 날 다시 = 안 늚 · 날마다 받기 · 연타 · 32칸 뒤 보너스 · 시즌 경계
+	local DAY = 86400
+	local t0 = 1790000000 - 1790000000 % DAY + 3600
+	local st = Quest.newState(t0)
+	Quest.roll(st, t0, 7)
+	Quest.roll(st, t0 + 600, 7)
+	local c1 = Quest.claim(st, "board", "1", t0, nil, 7)
+	local c1b, w1b = Quest.claim(st, "board", "1", t0, nil, 7)
+	local c2, w2 = Quest.claim(st, "board", "2", t0, nil, 7)
+	check("5-1 하루 첫 접속 = 1칸 · 같은 날 다시 접속 = 그대로 · 받기 연타 = claimed · 내일 칸 = not_done", st.board.count == 1 and c1 ~= nil and not c1b and w1b == "claimed" and not c2 and w2 == "not_done")
+	for d = 1, 40 do
+		local now = t0 + d * DAY
+		Quest.roll(st, now, 7)
+		local kind, cell = Quest.boardToday(st)
+		if kind == "cell" then
+			Quest.claim(st, "board", tostring(cell), now, nil, 7)
+		elseif kind == "bonus" then
+			Quest.claim(st, "boardBonus", nil, now, nil, 7)
+		end
+	end
+	local bonusAgain, wb = Quest.claim(st, "boardBonus", nil, t0 + 40 * DAY, nil, 7)
+	check("5-2 41일 = 32칸 다 받음 · 남은 날 보너스(하루 한 번 - 같은 날 다시 = claimed)", st.board.count == 32 and st.board.claimed["32"] and st.board.bonusDay == Quest.dayOf(t0 + 40 * DAY) and not bonusAgain and wb == "claimed")
+	-- 시즌 경계: 마지막 날(시즌 7) → 다음 날 시즌 8 = 새 판 1칸
+	Quest.roll(st, t0 + 41 * DAY, 8)
+	check("5-3 시즌 경계: 다음 시즌 첫날 = 새 판(1칸 · 받음 비움)", st.board.season == 8 and st.board.count == 1 and next(st.board.claimed) == nil)
+	-- 며칠 빠져도 이어서(연속 아님): 시즌 8에 3일 건너뛰고 접속 = 2칸
+	Quest.roll(st, t0 + 45 * DAY, 8)
+	check("5-1 빠진 날이 있어도 다음 접속에 이어서(연속 아님)", st.board.count == 2)
+end
+
 -- ══ R 재화 표시: 숫자 표기(R5 · R6) ══
 do
 	local NF = MODS.NumberFormat

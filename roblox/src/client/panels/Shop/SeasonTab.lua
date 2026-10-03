@@ -276,6 +276,10 @@ function SeasonTab.render(ctx, env)
 		table.insert(skipButtons, b)
 	end
 	ctx.row({ name = "Skip", title = Text.get("season.skipTitle"), subtitle = Text.get("season.skipSub", { room = tostring(season.skipRoom or 0) }), buttons = skipButtons })
+	ctx.row({ name = "BoardEntry", title = Text.get("board.seasonTitle"), subtitle = Text.get("board.entrySub"), buttons = { { name = "BoardOpen", text = Text.get("board.open"), width = 120, enabled = true,
+		onActivated = function() -- QUEUE-ALL9B 5-4 시즌 출석판 다른 입구
+			require(script.Parent.Parent.SeasonBoard).open()
+		end } } })
 	ctx.line(Text.get("season.eggNote"), "gold", 1, "EggNote")
 	-- 열 제목(칸 | 무료 | 유료)
 	local L = ctx.L

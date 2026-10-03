@@ -2,6 +2,7 @@
 --   저장 모양(profile.quests - SAVE v50): { day, daily = { [id] = { n, claimed } }, week, weekly = { [id] = { n, claimed } }, loginDay, chestDay, main = 다음 메인 단계 번호, currencies = { sparkleShard, passExp } }
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local QuestData = require(ReplicatedStorage.Shared.data.QuestData)
+local SeasonBoardData = require(ReplicatedStorage.Shared.data.SeasonBoardData)
 
 local Quest = {}
 
@@ -34,13 +35,19 @@ function Quest.dailyFor(day)
 	return picked
 end
 
+-- QUEUE-ALL9B 5 시즌 출석판 상태(profile.quests.board - SAVE v67): season = 판의 시즌 번호 · count = 센 칸(하루 첫 접속 1칸 · 32까지) · lastDay = 마지막으로 센 UTC 날짜 ·
+--   claimed = { ["칸"] = true } · bonusDay = 32칸 뒤 남은 날 보너스를 받은 날짜
+function Quest.newBoard(season)
+	return { season = season or 0, count = 0, lastDay = -1, claimed = {}, bonusDay = -1 }
+end
+
 function Quest.newState(now)
 	return { day = Quest.dayOf(now), daily = {}, week = Quest.weekOf(now), weekly = {}, loginDay = -1, chestDay = -1, main = 1, currencies = { sparkleShard = 0, passExp = 0 },
-		guide = 1, attendance = { count = 0, lastDay = -1, claimed = {} }, mainN = 0 } -- QUEUE-ALL3 Q3(v60): mainN = 지금 메인 단계(cond event)에 들어선 뒤 센 수 -- Q12(v53): 첫 5분 이정표 · 7일 출석(새 계정만 - 옛 계정은 이관에서 nil)
+		guide = 1, attendance = { count = 0, lastDay = -1, claimed = {} }, mainN = 0, board = Quest.newBoard(0) } -- QUEUE-ALL3 Q3(v60): mainN = 지금 메인 단계(cond event)에 들어선 뒤 센 수 -- Q12(v53): 첫 5분 이정표 · 7일 출석(새 계정만 - 옛 계정은 이관에서 nil)
 end
 
 -- 날짜 · 주가 바뀌었으면 진행을 비운다(되돌리기 없음 - 받은 보상은 이미 들어갔다). 반환 = 바뀌었는가
-function Quest.roll(state, now)
+function Quest.roll(state, now, season)
 	local changed = false
 	local day, week = Quest.dayOf(now), Quest.weekOf(now)
 	if state.day ~= day then
@@ -57,7 +64,38 @@ function Quest.roll(state, now)
 		att.lastDay = day
 		changed = true
 	end
+	if season then -- QUEUE-ALL9B 5 시즌 출석판(시즌 번호를 아는 호출부만 - 서버 QuestService)
+		if type(state.board) ~= "table" or state.board.season ~= season then
+			state.board = Quest.newBoard(season)
+			changed = true
+		end
+		local b = state.board
+		if b.lastDay ~= day then
+			if b.count < #SeasonBoardData.cells then
+				b.count += 1
+			end
+			b.lastDay = day
+			changed = true
+		end
+	end
 	return changed
+end
+
+-- 출석판 오늘 받을 것: "cell"(칸 번호) | "bonus"(32칸 뒤 남은 날) | nil(오늘 다 받음)
+function Quest.boardToday(state)
+	local b = state.board
+	if type(b) ~= "table" or b.count < 1 then
+		return nil
+	end
+	for n = 1, b.count do
+		if not b.claimed[tostring(n)] then
+			return "cell", n
+		end
+	end
+	if b.count >= #SeasonBoardData.cells and b.lastDay == state.day and b.bonusDay ~= state.day then
+		return "bonus"
+	end
+	return nil
 end
 
 -- 이벤트 하나 → 진행(일간 · 주간). 반환 = 새로 목표에 닿은 퀘스트 id 목록
@@ -107,8 +145,8 @@ local function find(list, id)
 end
 
 -- 받기: kind = "daily" | "weekly" | "login" | "chest" | "main". 반환 = 보상 표 | nil, 이유
-function Quest.claim(state, kind, id, now, facts)
-	Quest.roll(state, now)
+function Quest.claim(state, kind, id, now, facts, season)
+	Quest.roll(state, now, season)
 	if kind == "login" then
 		if state.loginDay == state.day then
 			return nil, "claimed"
@@ -169,6 +207,35 @@ function Quest.claim(state, kind, id, now, facts)
 		end
 		att.claimed[tostring(n)] = true -- 문자열 키(DataStore 왕복 뒤에도 같은 키)
 		return entry.reward
+	elseif kind == "board" then -- QUEUE-ALL9B 5: id = 칸 번호 · 센 칸까지만 · 한 번씩
+		local b, n = state.board, tonumber(id)
+		local cell = n and SeasonBoardData.cells[n]
+		if type(b) ~= "table" or not cell then
+			return nil, "unknown"
+		end
+		if n > b.count then
+			return nil, "not_done"
+		end
+		if b.claimed[tostring(n)] then
+			return nil, "claimed"
+		end
+		b.claimed[tostring(n)] = true
+		return cell
+	elseif kind == "boardBonus" then -- 32칸 뒤 남은 날: 오늘 접속했고 오늘 아직 안 받음
+		local b = state.board
+		if type(b) ~= "table" or b.count < #SeasonBoardData.cells then
+			return nil, "not_done"
+		end
+		for n = 1, #SeasonBoardData.cells do
+			if not b.claimed[tostring(n)] then
+				return nil, "not_done"
+			end
+		end
+		if b.lastDay ~= state.day or b.bonusDay == state.day then
+			return nil, "claimed"
+		end
+		b.bonusDay = state.day
+		return SeasonBoardData.after
 	end
 	return nil, "unknown"
 end

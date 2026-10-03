@@ -18,6 +18,7 @@ local T = {
 			grantedBy = "server/PrimordialRegistry.onRolled" },
 		weeklyChampion = { id = "weeklyChampion", name = "주간 챔피언", grade = "ancient", condition = "주간 도전 한 주 1위(처치 시간)", grantedBy = "server/WeeklyChallengeService" }, -- QUEUE-ALL1 P4 §3
 		communityHero = { id = "communityHero", name = "모두의 영웅", grade = "legendary", condition = "주간 합동 목표 100% 달성 주에 기여하고 받기(한정)", grantedBy = "server/CommunityGoalService" }, -- QUEUE-ALL1 P3 §4
+		seasonRegular = { id = "seasonRegular", name = "시즌 출석 개근", grade = "rare", condition = "시즌 출석판 16칸 받기", grantedBy = "server/QuestService(시즌 출석판 - QUEUE-ALL9B 5)" },
 		curiousCaptain = { id = "curiousCaptain", name = "호기심 대장", grade = "rare", condition = "봉인 입구 틈까지 올라간다", grantedBy = "server/Travel" },
 		nestSeeker = { id = "nestSeeker", name = "둥지 탐험가", grade = "epic", condition = "비밀 둥지를 처음 찾는다", grantedBy = "server/NestServer" },
 		secretKeeper = { id = "secretKeeper", name = "비밀 수집가", grade = "legendary", condition = "비밀 둥지 10곳을 찾는다", grantedBy = "server/NestServer" },

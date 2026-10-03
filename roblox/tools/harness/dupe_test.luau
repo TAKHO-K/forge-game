@@ -107,6 +107,15 @@ local ok, err = pcall(function()
 	local a2 = SP.claimAll(player, "free")
 	line("패스 일괄 받기 연타", a1 == 3 and a2 == 0 and p.gold == goldMid and goldMid > gold0, ("1회 %d칸 · 2회 %d칸 · 골드 +%d"):format(a1, a2, goldMid - gold0))
 
+	-- ⑨ QUEUE-ALL9B 5 시즌 출석판 받기 연타(서버 QuestService.claim - 같은 칸 두 번 · 보너스 두 번)
+	QuestService.onLoaded(player)
+	local qb = PlayerProfile.getQuestState(player)
+	local shard0 = qb.currencies.sparkleShard or 0
+	local bd1 = QuestService.claim(player, "board", "1")
+	local bd2, bw2 = QuestService.claim(player, "board", "1")
+	line("시즌 출석판 받기 연타", bd1 == true and bd2 ~= true and bw2 == "claimed" and (qb.currencies.sparkleShard or 0) == shard0 + MODS.SeasonBoardData.cells[1].sparkleShard,
+		("1회 %s · 2회 %s · 토큰 +%d"):format(tostring(bd1), tostring(bw2), (qb.currencies.sparkleShard or 0) - shard0))
+
 	-- ⑥ 튕김 직전 수령 → 재접속: 받은 표시와 보상이 같은 프로필 한 번의 저장에 함께 들어간다(저장 전 튕김 = 둘 다 없음 - 복사 불가)
 	local snap = SaveSystem.migrate(MODS.SaveSystem.migrate({})) -- 저장 전 상태(재접속 때 읽는 값)
 	line("튕김 직전 수령 = 받은 표시 · 보상이 한 저장 단위(부분 저장 경로 없음)", snap.quests.attendance.claimed["1"] == nil)

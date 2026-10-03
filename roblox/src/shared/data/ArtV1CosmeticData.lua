@@ -101,5 +101,6 @@ D.gliders.mintParachute = variant(D.gliders.slimeParachute, { base = "slimeParac
 D.gliders.berryParachute = variant(D.gliders.slimeParachute, { base = "slimeParachute", color = C(150, 124, 230) }) -- 유료 5칸: 베리 낙하산
 D.gliders.jadeWing = variant(D.gliders.dragonWing, { base = "dragonWing", color = C(80, 190, 140) }) -- 유료 15칸: 비취 날개
 D.gliders.amethystWing = variant(D.gliders.dragonWing, { base = "dragonWing", color = C(150, 100, 210) }) -- 유료 35칸: 자수정 날개
+D.items.starCrown = variant(D.items.crown, { base = "crown", color = C(200, 212, 255), gem = C(255, 236, 150) }) -- QUEUE-ALL9B 5 시즌 출석판 32칸: 별빛 왕관(은청 테 + 노란 별 보석)
 
 return D

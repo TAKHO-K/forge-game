@@ -17,6 +17,14 @@ local Text = require(ReplicatedStorage.Shared.Text)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 
 local QuestService = {}
+local ServerClock = require(script.Parent.ServerClock) -- QUEUE-ALL9B 5 · A8: 날짜 = 서버 시계(Studio /gg day로만 앞당김)
+local SeasonBoardData = require(ReplicatedStorage.Shared.data.SeasonBoardData)
+
+-- 지금(서버 시계) · 시즌 번호(출석판 - 시즌 패스와 같은 시계)
+local function nowSeason()
+	local now = ServerClock.now()
+	return now, require(script.Parent.SeasonPassService).currentSeason(now)
+end
 
 local updateRemote
 local lastRequest = {}
@@ -36,7 +44,8 @@ function QuestService.view(player)
 	if not state then
 		return nil
 	end
-	Quest.roll(state, os.time())
+	local now, season = nowSeason()
+	Quest.roll(state, now, season)
 	local facts = PlayerProfile.getQuestFacts(player)
 	local step = QuestData.main[state.main]
 	local tv = PlayerProfile.getTrainingView(player)
@@ -77,6 +86,11 @@ function QuestService.view(player)
 			end
 			return not all and { count = att.count, claimed = att.claimed, rewards = QuestData.attendance } or nil
 		end)(),
+		board = type(state.board) == "table" and (function() -- QUEUE-ALL9B 5 시즌 출석판(칸 · 받음 · 오늘 받을 것 · 다음 초기화까지 초 = 서버 UTC 자정)
+			local kind, cell = Quest.boardToday(state)
+			return { season = state.board.season, count = state.board.count, claimed = state.board.claimed, cells = SeasonBoardData.cells, after = SeasonBoardData.after,
+				todayKind = kind, todayCell = cell, resetIn = 86400 - now % 86400 }
+		end)() or nil,
 		training = tv and trainRows(TrainingData.stats, tv.training, "stat") or {},
 		abilities = tv and trainRows(TrainingData.classAbilities[tv.classId], tv.abilities, "ability") or {},
 	}
@@ -102,6 +116,9 @@ local function claimableOf(player, v)
 				return true
 			end
 		end
+	end
+	if v.board and v.board.todayKind then -- QUEUE-ALL9B 5
+		return true
 	end
 	if v.attendance then
 		for _, entry in ipairs(v.attendance.rewards) do
@@ -188,6 +205,17 @@ function QuestService.grant(player, reward, source)
 		PlayerProfile.addProtectionTicket(player, "drop", reward.protectDrop)
 		table.insert(parts, Text.getFor(player, "srv.reward.protectDrop", { n = ("%d"):format(reward.protectDrop) }))
 	end
+	if reward.title then -- QUEUE-ALL9B 5 시즌 출석판 칭호 장식(무료 보상 - 판매 금지 목록은 상품에만)
+		if PlayerProfile.grantTitle(player, reward.title) then
+			table.insert(parts, Text.getFor(player, "srv.reward.title", { name = Text.nameFor(player, require(ReplicatedStorage.Shared.data.TitleData).titles[reward.title].name) }))
+		end
+	end
+	if reward.cosmeticItem then -- QUEUE-ALL9B 5 출석판 전용 소품(boardOnly - 지급은 치장 공통 입구)
+		local got = require(script.Parent.CosmeticService).grant(player, "cosmeticItem", reward.cosmeticItem)
+		if got then
+			table.insert(parts, Text.getFor(player, "srv.reward.cosmetic", { name = Text.nameFor(player, require(ReplicatedStorage.Shared.Monetization).findCosmetic(require(ReplicatedStorage.Shared.data.CosmeticSlotData), "cosmeticItem", reward.cosmeticItem).name) }))
+		end
+	end
 	if state and reward.passExp then
 		local passExp = reward.passExp * require(script.Parent.SeasonPassService).passExpMultiplier(source)
 		state.currencies.passExp = (state.currencies.passExp or 0) + passExp
@@ -216,7 +244,7 @@ function QuestService.note(player, event, amount)
 	if not state.guide and (event == "skill" or event == "ult" or event == "pickup" or event == "equip") and not (mainStep and mainStep.event == event) then
 		return -- 이정표를 마쳤으면 이 넷은 일간 · 주간에 없다(위 표) - dailyFor 셔플을 매번 돌지 않게(메인 단계가 세는 이벤트면 센다)
 	end
-	local reached, advanced = Quest.note(state, event, amount or 1, os.time())
+	local reached, advanced = Quest.note(state, event, amount or 1, ServerClock.now())
 	if #reached > 0 then
 		print(("[Q6] 퀘스트 목표 도달: %s - %s"):format(player.Name, table.concat(reached, ",")))
 	end
@@ -258,17 +286,21 @@ function QuestService.claim(player, kind, id)
 	if kind ~= "main" and not PlayerProfile.getTutorialCompleted(player) then -- 리뷰 4: 견습 중에는 접속 · 일간 · 주간 · 상자 보상 없음(메인 1단계 = 견습 마치기만)
 		return false, "tutorial"
 	end
-	local now, facts = os.time(), PlayerProfile.getQuestFacts(player)
-	local probeReward = Quest.claim(deepCopy(state), kind, id, now, facts) -- 리뷰 4: 알 보상은 가방에 자리가 있을 때만(받은 표시를 먼저 확정하고 알이 사라지던 문제)
+	local now, season = nowSeason()
+	local facts = PlayerProfile.getQuestFacts(player)
+	local probeReward = Quest.claim(deepCopy(state), kind, id, now, facts, season) -- 리뷰 4: 알 보상은 가방에 자리가 있을 때만(받은 표시를 먼저 확정하고 알이 사라지던 문제)
 	if probeReward and (probeReward.egg or 0) > 0 and #PlayerProfile.getEggs(player) + probeReward.egg > NestData.eggCap then
 		return false, "egg_full"
 	end
-	local reward, why = Quest.claim(state, kind, id, now, facts)
+	local reward, why = Quest.claim(state, kind, id, now, facts, season)
 	if not reward then
 		return false, why
 	end
 	local summary = QuestService.grant(player, reward, kind)
 	print(("[Q6] 퀘스트 보상: %s %s %s → %s"):format(player.Name, tostring(kind), tostring(id), summary))
+	if kind == "board" or kind == "boardBonus" then
+		require(script.Parent.AuditTrail).note(player, "board", ("%s %s"):format(kind, tostring(id))) -- QUEUE-ALL9B 6-2 감사
+	end
 	require(script.Parent.ImmediateSave).request(player)
 	push(player)
 	return true, summary
@@ -324,7 +356,7 @@ end
 function QuestService.onLoaded(player)
 	local state = PlayerProfile.getQuestState(player)
 	if state then
-		Quest.roll(state, os.time())
+		Quest.roll(state, nowSeason())
 		push(player)
 	end
 end

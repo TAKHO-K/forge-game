@@ -26,6 +26,10 @@ local autoShown = false
 local function build()
 	local panel = Panel.create({ id = Attendance.id, kind = "window", title = Text.get("attendance.windowTitle"), size = PANEL_SIZE, onOpen = function()
 		task.defer(Attendance.render)
+	end, onClose = function() -- QUEUE-ALL9B 5-4: 닫으면 시즌 출석판(받을 것이 있을 때만)
+		task.delay(0.3, function()
+			require(script.Parent.SeasonBoard).openIfReady()
+		end)
 	end })
 	local grid = Instance.new("Frame")
 	grid.Name = "Days"
@@ -130,6 +134,8 @@ local function hasClaimable(v)
 	end
 	return false
 end
+
+Attendance.hasClaimable = hasClaimable
 
 function Attendance.open()
 	UIManager.switchTo(Attendance.id)

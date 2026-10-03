@@ -1140,6 +1140,7 @@ local HELP_TEXT = table.concat({
 	"/gg mat <enhanceStone|highEnhanceStone> <n> - 강화 재료 n개 지급(28-1 S04, /gg reset으로 복원)",
 	"/gg gold <n> - 골드를 n으로 맞춘다(0 이상, /gg reset으로 복원 - 구매 · 골드 부족 화면 검증용)",
 	"/gg token <n> - 꾸미기 토큰 n개 지급(QUEUE-ALL9B - 재화 칸 · 토큰 구매 확인 · /gg reset으로 복원)",
+	"/gg day <+n|reset> - 서버 날짜 n일 앞당기기(QUEUE-ALL9B A8 - 일일 접속 · 7일 출석 · 시즌 출석판 다음 날 확인 · Studio만)",
 	"/gg boss anim <보스 id> <동작|all> [반복] - BR1-4b 모션 확인: 내 앞에 전시용 리그를 세우고 동작 되풀이(idle · walk · run · basic · flinch · stun · death · grab · throw · 스킬 id) · 끄기 = /gg boss anim off",
 	"/gg fall <높이> - 나무 둘레 밖 허브 바닥 위 <높이>로 실제 순간이동해 떨어진다(낙하 피해 실측 - BR1-4b 파트 0-4)",
 	"/gg ticket <drop|reset> <n> - 방지권 n장 지급(28-1 S05, /gg reset으로 복원) · /gg ticket buy <drop|reset> - 상점 구매(강화대 근처 · 골드 · 실제 서버 함수) · /gg ticket claims - 방지권을 이미 받은 보스 스테이지 목록(실제 키 타입 포함) · /gg ticket grantboss <스테이지> - 처치 없이 보스 첫 클리어 지급 함수 호출 · /gg ticket clear - 방지권 · 받은 기록을 비우고 저장",
@@ -2594,6 +2595,17 @@ local function handleCommand(player, args)
 			PlayerProfile.addGold(player, target - PlayerProfile.getGold(player))
 			reply(player, ("골드를 %d로 설정 - 보유 %d"):format(target, PlayerProfile.getGold(player)))
 		end
+	elseif sub == "day" and args[2] then
+		-- QUEUE-ALL9B A8: 서버 날짜 앞당기기(Studio만 · ServerClock) - 일일 접속 · 7일 출석 · 시즌 출석판의 "다음 날"을 기다리지 않고 확인. /gg day +1 · /gg day reset
+		local ServerClock = require(script.Parent.ServerClock)
+		if args[2] == "reset" then
+			ServerClock.reset()
+		elseif tonumber(args[2]) then
+			ServerClock.shiftDays(tonumber(args[2]))
+		end
+		local QS = require(script.Parent.QuestService)
+		QS.onLoaded(player) -- 넘긴 날짜로 다시 세고 화면 갱신
+		reply(player, ("서버 날짜 +%d일(UTC %s)"):format(ServerClock.offsetDays(), os.date("!%Y-%m-%d", ServerClock.now())))
 	elseif sub == "token" and tonumber(args[2]) then
 		-- QUEUE-ALL9B R7: 꾸미기 토큰(sparkleShard) n개 지급 - 실제 지급 입구(QuestService.grant) · 재화 칸 +n 연출 · 토큰 구매 확인용(백업 뒤 · /gg reset으로 복원)
 		local n = math.floor(tonumber(args[2]))

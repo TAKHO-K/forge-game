@@ -1376,6 +1376,14 @@ local function migrate(data)
 		data.version = 66
 	end
 
+	if data.version < 67 then
+		-- QUEUE-ALL9B 5: quests.board(시즌 출석판 - season · count · lastDay · claimed · bonusDay) - 옛 계정 = 빈 판(다음 roll이 이번 시즌으로 바꾸고 오늘을 1칸으로 센다)
+		if type(data.quests) == "table" and type(data.quests.board) ~= "table" then
+			data.quests.board = require(ReplicatedStorage.Shared.Quest).newBoard(0)
+		end
+		data.version = 67
+	end
+
 	data.savedAt = data.savedAt or 0
 	SaveSystem.clampStageCap(data) -- S1 리뷰 7: 불러온 옛 값도 상한으로
 	return data

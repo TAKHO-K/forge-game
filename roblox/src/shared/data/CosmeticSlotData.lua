@@ -28,6 +28,7 @@ return {
 		{ id = "forgeBrazier", slot = "recallFx", name = "대장간 화로", look = "brazier" }, -- #64 귀환 집중 · 사라짐
 		{ id = "highFive", slot = "emote", name = "하이파이브", look = "highFive" }, -- #86 파티원 둘 · 상대 수락
 		{ id = "petCrown", slot = "petAccessory", name = "펫 왕관", look = "crown" }, -- #75 펫 몸 3종(개 · 고양이 · 용)에 맞춤
+		{ id = "starCrown", slot = "petAccessory", name = "별빛 왕관", look = "starCrown", boardOnly = 1 }, -- QUEUE-ALL9B 5 시즌 출석판 32칸 전용(상점 · 토큰 · 선물 X · 시즌 번호)
 	},
 	-- 트레일 세트 1개 = unlock "set" 칸 전부(4). 세트 항목 모양 = { id, name, looks = { dashTrail = …, jumpFx = …, glideTrail = …, footstep = … } }
 	setSlots = { "dashTrail", "jumpFx", "glideTrail", "footstep" },

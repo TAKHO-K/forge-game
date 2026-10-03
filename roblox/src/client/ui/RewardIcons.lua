@@ -14,9 +14,10 @@ local RewardDetail = require(script.Parent.RewardDetail)
 local RewardIcons = {}
 
 -- 보상 키 → 아이콘 id(icons/reward/_map.json과 같은 이름) · 순서
-RewardIcons.order = { "gold", "goldKills", "enhanceStone", "highEnhanceStone", "egg", "gemDust", "sparkleShard", "protectDrop", "protectReset", "rerollTicket", "rebirthTicket", "passExp", "title" }
+RewardIcons.order = { "gold", "goldKills", "enhanceStone", "highEnhanceStone", "egg", "gemDust", "sparkleShard", "protectDrop", "protectReset", "rerollTicket", "rebirthTicket", "passExp", "title", "cosmeticItem" }
 RewardIcons.icon = { gold = "gold", goldKills = "gold", enhanceStone = "enhanceStone", highEnhanceStone = "highEnhanceStone", egg = "egg", eggZone = "egg", gemDust = "gemDust",
-	sparkleShard = "sparkleShard", protectDrop = "protectDrop", protectReset = "protectReset", rerollTicket = "rerollTicket", rebirthTicket = "rebirthTicket", passExp = "passExp", title = "title" }
+	sparkleShard = "sparkleShard", protectDrop = "protectDrop", protectReset = "protectReset", rerollTicket = "rerollTicket", rebirthTicket = "rebirthTicket", passExp = "passExp", title = "title", cosmeticItem = "cosmeticTheme" } -- QUEUE-ALL9B 5 출석판 소품(치장 그림 · 개수 없음)
+local NO_QTY = { title = true, cosmeticItem = true }
 local SHORT = { gold = "G", goldKills = "G", passExp = "EXP" }
 local SHORT_KEY = { enhanceStone = "ui.reward.short.enhanceStone", egg = "ui.reward.short.egg", gemDust = "ui.reward.short.gemDust", sparkleShard = "ui.reward.short.sparkleShard", protectDrop = "ui.reward.short.protectDrop", title = "ui.reward.short.title", rebirthTicket = "ui.reward.short.rebirthTicket" }
 
@@ -56,11 +57,11 @@ function RewardIcons.row(parent, reward, size, opts)
 				cell.Text = ""
 				cell.AutoButtonColor = false
 			end
-			cell.Size = UDim2.fromOffset(key == "title" and size or size + 34, size)
+			cell.Size = UDim2.fromOffset(NO_QTY[key] and size or size + 34, size)
 			cell.Parent = row
 			local img = ArtImage.label(cell, "icons/reward/" .. (RewardIcons.icon[key] or key), UDim2.fromOffset(size, size), SHORT[key] or (SHORT_KEY[key] and Text.get(SHORT_KEY[key])) or "?")
 			img.Name = "Icon"
-			if key ~= "title" then
+			if not NO_QTY[key] then
 				local qty = Instance.new("TextLabel")
 				qty.Name = "Qty"
 				qty.BackgroundTransparency = 1
@@ -75,7 +76,7 @@ function RewardIcons.row(parent, reward, size, opts)
 				qty.Parent = cell
 			end
 			if not opts.noDetail then
-				local qtyText = key ~= "title" and ((key == "gold" or key == "goldKills") and (opts.goldText or RewardIcons.goldText(v)) or ("×" .. tostring(v))) or nil
+				local qtyText = not NO_QTY[key] and ((key == "gold" or key == "goldKills") and (opts.goldText or RewardIcons.goldText(v)) or ("×" .. tostring(v))) or nil
 				RewardDetail.attach(cell, key, qtyText)
 			end
 		end

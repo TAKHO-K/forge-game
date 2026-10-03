@@ -87,6 +87,17 @@ local ok, err = pcall(function()
 		local m = SaveSystem.migrate(d)
 		check("v65 → v66 seasonPass.skipBought 0 · skipTiers 빈 표 · 받은 칸 유지", m.version >= 66 and m.seasonPass.skipBought == 0 and type(m.seasonPass.skipTiers) == "table" and m.seasonPass.claimedFree["1"] == true and m.seasonPass.premium == true)
 	end
+	-- 8) QUEUE-ALL9B v67: 시즌 출석판(옛 계정 = 빈 판 · 7일 출석 · 퀘스트 그대로)
+	do
+		local d = SaveSystem.migrate({})
+		d.version = 66
+		d.quests.board = nil
+		d.quests.attendance = { count = 3, lastDay = 5, claimed = { ["1"] = true } }
+		local m = SaveSystem.migrate(d)
+		check("v66 → v67 quests.board 빈 판 · 7일 출석 유지", m.version >= 67 and type(m.quests.board) == "table" and m.quests.board.count == 0 and m.quests.attendance.count == 3)
+		local fresh = SaveSystem.migrate({})
+		check("새 계정 = 출석판 있음(count 0)", type(fresh.quests.board) == "table" and fresh.quests.board.count == 0)
+	end
 	-- 5) 새 계정 빈 표
 	local okEmpty, m = pcall(SaveSystem.migrate, {})
 	check("migrate({})", okEmpty and type(m) == "table" and m.version == MODS.SaveConfig.saveVersion, okEmpty and ("v" .. tostring(m.version)) or tostring(m))
