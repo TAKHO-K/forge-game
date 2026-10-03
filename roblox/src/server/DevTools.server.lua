@@ -5103,3 +5103,41 @@ end
 if DevToolsConfig.verifyArmed and #skippedVerifyBlocks > 0 then
 	print(("[DevTools] 건너뛴 자동 검증 블록 %d개(서버 시작 시점): %s - 전체 회귀는 DevToolsConfig.verify.regression = true"):format(#skippedVerifyBlocks, table.concat(skippedVerifyBlocks, " · ")))
 end
+
+-- ═══ QUEUE-ALL9C 1-6R 치장 감사 촬영(Studio 전용 - 이 스크립트 첫머리 가드): RemoteEvent CosAuditFire("kill:<처치 이펙트 id>" | "enhance" | "emote") ═══
+--   서버 사건이 있어야 그려지는 치장(처치 · 강화 성공 · 하이파이브)을 실전과 같은 Remote로 부른 사람 클라에만 쏜다(판정 · 드랍 · 저장 없음). 클라 CosmeticAudit이 부른다.
+do
+	local cosAuditFire = Instance.new("RemoteEvent")
+	cosAuditFire.Name = "CosAuditFire"
+	cosAuditFire.Parent = ReplicatedStorage
+	cosAuditFire.OnServerEvent:Connect(function(player, v)
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if type(v) ~= "string" or not root then
+			return
+		end
+		local look = v:match("^kill:(%w+)$")
+		if look then
+			local model = Instance.new("Model")
+			model.Name = "CosAuditDummy"
+			local body = Instance.new("Part")
+			body.Name = "Body"
+			body.Shape = Enum.PartType.Ball
+			body.Size = Vector3.new(4, 4, 4)
+			body.Color = Color3.fromRGB(110, 200, 120)
+			body.Anchored = true
+			body.CanCollide = false
+			body.CFrame = root.CFrame * CFrame.new(0, -1, -9)
+			body.Parent = model
+			model.PrimaryPart = body
+			model.Parent = workspace
+			ReplicatedStorage.CosmeticKill:FireClient(player, player.UserId, look, model, body.Position)
+			task.delay(0.15, function()
+				model:Destroy() -- 실제 처치와 같이 몹은 곧 사라진다(연출 = 복제본)
+			end)
+		elseif v == "enhance" then
+			ReplicatedStorage.EnhanceResult:FireClient(player, { result = "success" })
+		elseif v == "emote" then
+			ReplicatedStorage.EmoteEvent:FireClient(player, "play", player.UserId, player.UserId) -- 감사용 = 한 사람(상대 자리 = 나)
+		end
+	end)
+end

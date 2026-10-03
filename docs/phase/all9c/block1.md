@@ -149,3 +149,9 @@
 
 - Play(PC 1321 × 484): 추천 · 치장(칩 · 카드) · 상세(3D · 구성품 · 토큰 · 로벅스 · 환불 ① · 직접 보기) · 편의 · 강화 창 버튼 실제 클릭 · 화면 확인. 폰 · 작은 폰 · 태블릿 = 가상 화면 강제(실제 인스턴스).
 - 함정: MCP 클릭이 왼쪽 위 채팅 자리(CoreGui)에 닿으면 실패 → 창 · 메뉴바를 잠깐 옮겨 누르고 되돌림 · 서버 Attribute를 nil로 바꿔도 클라가 직접 켠 값은 안 지워짐(복제 안 됨 - 클라에서 지움) · 개발 계정 시작 자리 고정 → 강화대 이동 = 서버에서 HRP Anchored 뒤 PivotTo.
+
+### 1-6R (나) 치장 외형 감사(구현 변경 없음)
+- 33개(테마 13 · 글라이더 9 · 소품 9 · 이름표 2) × 장면 = 300장 → `docs/art/cosmetics-audit/<id>/`(정지 · 한가운데 3각도 + 시작 · 중간 · 끝 · 테마 = 칸마다) + `_sheet.jpg` 모음 + 표 `README.md`.
+- 도구(Studio 전용): `client/CosmeticAudit.client.lua`(DebugCosAudit) · 서버 DevTools `CosAuditFire` Remote(처치 · 강화 · 하이파이브를 실전 Remote로 내 클라에만) · 스크래치패드 `cosaudit_watch.ps1`(로그 SHOT 줄 → PrintWindow). 캡처 지연 실측 약 0.04초(사진 속 t 라벨로 확인).
+- 결과 요지: 치장 코드에 **소리 0**(99 · 149 · 199 기준은 전부 소리로 미달) · 글라이더 꽃잎 · 연 = 고유 외형 없음(기본 잎 · 2단계 비공개) · 드래곤 날개 = 몹 메시 재사용 · 슬라임 낙하산 = 곧은 줄 4 · 무기 스킨 = 재질만 · 펫 왕관 · 이름표 = 정지. 출시 공개 미달 목록 = README "결정 필요".
+- 함정: 기본 ControlModule이 매 프레임 `Humanoid:Move`를 덮는다(걷기 = MoveTo) · 내 글라이더는 GlideController가 활강 상태가 아니면 걷어낸다(감사 동안 다시 붙임) · 첫 시험에서 라벨이 로블록스 위 단추 줄에 가려짐(IgnoreGuiInset 위치).
