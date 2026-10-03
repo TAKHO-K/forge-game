@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
+local GradeColor = require(game:GetService("ReplicatedStorage").Shared.GradeColor) -- QUEUE-ALL9C 2-2 등급 색 쓰임별(text · border)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
@@ -190,12 +191,12 @@ local function applyGradeVisual(cellFrame, gradeStroke, glowFrame, gradeId)
 		return
 	end
 
-	gradeStroke.Color = visual.color
+	gradeStroke.Color = GradeColor.border(gradeId) -- QUEUE-ALL9C 2-2 테두리(초월 = 금)
 	gradeStroke.Transparency = 0
 	cellFrame.BackgroundColor3 = blendToward(UIColors.slot, visual.color, 0.05)
 
 	if gradeId ~= "normal" then
-		glowFrame.BackgroundColor3 = visual.color
+		glowFrame.BackgroundColor3 = GradeColor.border(gradeId)
 		glowFrame.BackgroundTransparency = math.clamp(1 - (visual.glowBrightness / 5) * 0.6, 0.4, 0.95)
 	end
 end

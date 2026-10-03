@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
 
+local GradeColor = require(game:GetService("ReplicatedStorage").Shared.GradeColor) -- QUEUE-ALL9C 2-2 등급 색 쓰임별(text · border)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
@@ -35,7 +36,7 @@ local function dropColor(gradeId)
 	end
 	local visual = ItemVisualData.gradeVisuals[gradeId]
 	local look = PrimordialData.dropLook[gradeId]
-	local base = visual and visual.color or PrimordialData.dropGray
+	local base = visual and GradeColor.border(gradeId) or PrimordialData.dropGray -- QUEUE-ALL9C 2-2 드랍 빛 = border(초월 = 금)
 	return base:Lerp(PrimordialData.dropGray, look and look.desaturate or 0)
 end
 ItemDropSpawner.dropColor = dropColor

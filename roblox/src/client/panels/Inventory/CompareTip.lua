@@ -4,6 +4,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TextService = game:GetService("TextService")
 
+local GradeColor = require(game:GetService("ReplicatedStorage").Shared.GradeColor) -- QUEUE-ALL9C 2-2 등급 색 쓰임별(text · border)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local ItemDescribe = require(ReplicatedStorage.Shared.ItemDescribe)
@@ -58,7 +59,7 @@ function CompareTip.create(screenGui)
 		local described = ItemDescribe.item(item, classId)
 		local visual = ItemVisualData.gradeVisuals[item.grade]
 		local lines = {
-			{ text = Text.get("inv.detail.inBag", { name = described.title }), color = visual and visual.color or UIColors.textPrimary },
+			{ text = Text.get("inv.detail.inBag", { name = described.title }), color = visual and GradeColor.text(item.grade) or UIColors.textPrimary }, -- QUEUE-ALL9C 2-2
 			{ text = described.meta, color = UIColors.textSecondary },
 			Compare.baseLine(item, equipped),
 		}

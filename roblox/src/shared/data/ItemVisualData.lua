@@ -1,7 +1,9 @@
 -- 드랍 아이템의 시각 표현(색·발광·글자 크기)과 부위별 모양 치수(14-1). 밸런스 수치(드랍
 -- 확률·스탯)가 아니라 순수 표현 데이터라 ArmorData·Loot과 분리해 여기 둔다.
 --
--- 등급 색은 웹 v1 data/items.js ITEM_GRADES.color를 그대로 옮긴다 - "색이 곧 정보다"라는
+-- QUEUE-ALL9C 2-2(사용자 10-03 확정): 등급 색 = docs/design/gear-art-v3.md 2절 hex(메인 · 밝은 · 어두운) - 이 표가 유일한 정의(읽기 = shared/GradeColor).
+--   text = 이름 글자(대비 4.5:1 미만인 메인은 밝은 색) · border = 칸 테두리 · 빛기둥(초월 = 금 #D8B96E - 검정 테두리는 안 보인다) · 태초 = 흰 + 자홍 외곽선 + 무지개 띠 · 초월 = 검정 + 금 + 미세 무지개.
+-- (옛) 등급 색은 웹 v1 data/items.js ITEM_GRADES.color를 그대로 옮긴다 - "색이 곧 정보다"라는
 -- 원칙(PRD-forge-game.md 7.1-1)이 로블록스에서도 그대로 적용돼야 한다. 등급이 높을수록
 -- 발광이 강해지고(glowBrightness·glowRange) 드랍 순간 연출(burstOnDrop)이 켜진다 -
 -- "낮은 등급은 조용해야 한다"는 지시를 정확도 있게 반영한다(일반만 조용함, 희귀부터
@@ -23,42 +25,60 @@ return {
 	gradeStep = GRADE_STEP,
 	gradeVisuals = {
 		normal = {
-			color = Color3.fromRGB(230, 230, 230), -- 웹 #e6e6e6
+			color = Color3.fromRGB(146, 153, 161), -- 메인 #9299A1(ART-REF v2 2절 · QUEUE-ALL9C 2-2)
+			light = Color3.fromRGB(193, 198, 204), dark = Color3.fromRGB(98, 107, 117), -- 밝은 #C1C6CC · 어두운 #626B75
+			text = Color3.fromRGB(146, 153, 161), -- 어두운 패널 위 이름 · 글자(대비 4.5:1 이상 - main)
+			border = Color3.fromRGB(146, 153, 161), -- 칸 테두리 · 빛기둥 · 점(메인)
 			statMultiplier = GRADE_STEP ^ 0,
 			glowBrightness = 0.5, glowRange = 8,
 			burstOnDrop = false,
 			toastTextSize = 18,
 		},
 		rare = {
-			color = Color3.fromRGB(77, 166, 255), -- 웹 #4da6ff
+			color = Color3.fromRGB(36, 120, 212), -- 메인 #2478D4(ART-REF v2 2절 · QUEUE-ALL9C 2-2)
+			light = Color3.fromRGB(101, 184, 242), dark = Color3.fromRGB(23, 74, 145), -- 밝은 #65B8F2 · 어두운 #174A91
+			text = Color3.fromRGB(101, 184, 242), -- 어두운 패널 위 이름 · 글자(대비 4.5:1 이상 - light)
+			border = Color3.fromRGB(36, 120, 212), -- 칸 테두리 · 빛기둥 · 점(메인)
 			statMultiplier = GRADE_STEP ^ 1,
 			glowBrightness = 1.2, glowRange = 12,
 			burstOnDrop = true,
 			toastTextSize = 22,
 		},
 		epic = {
-			color = Color3.fromRGB(166, 77, 255), -- 웹 #a64dff
+			color = Color3.fromRGB(117, 69, 198), -- 메인 #7545C6(ART-REF v2 2절 · QUEUE-ALL9C 2-2)
+			light = Color3.fromRGB(182, 154, 244), dark = Color3.fromRGB(72, 43, 131), -- 밝은 #B69AF4 · 어두운 #482B83
+			text = Color3.fromRGB(182, 154, 244), -- 어두운 패널 위 이름 · 글자(대비 4.5:1 이상 - light)
+			border = Color3.fromRGB(117, 69, 198), -- 칸 테두리 · 빛기둥 · 점(메인)
 			statMultiplier = GRADE_STEP ^ 2,
 			glowBrightness = 1.8, glowRange = 14,
 			burstOnDrop = true,
 			toastTextSize = 24,
 		},
 		legendary = {
-			color = Color3.fromRGB(255, 153, 51), -- 웹 #ff9933
+			color = Color3.fromRGB(216, 120, 40), -- 메인 #D87828(ART-REF v2 2절 · QUEUE-ALL9C 2-2)
+			light = Color3.fromRGB(255, 195, 106), dark = Color3.fromRGB(152, 80, 29), -- 밝은 #FFC36A · 어두운 #98501D
+			text = Color3.fromRGB(216, 120, 40), -- 어두운 패널 위 이름 · 글자(대비 4.5:1 이상 - main)
+			border = Color3.fromRGB(216, 120, 40), -- 칸 테두리 · 빛기둥 · 점(메인)
 			statMultiplier = GRADE_STEP ^ 3,
 			glowBrightness = 2.4, glowRange = 16,
 			burstOnDrop = true,
 			toastTextSize = 26,
 		},
 		relic = {
-			color = Color3.fromRGB(255, 215, 0), -- 웹 #ffd700
+			color = Color3.fromRGB(185, 47, 72), -- 메인 #B92F48(ART-REF v2 2절 · QUEUE-ALL9C 2-2)
+			light = Color3.fromRGB(240, 107, 118), dark = Color3.fromRGB(114, 29, 54), -- 밝은 #F06B76 · 어두운 #721D36
+			text = Color3.fromRGB(240, 107, 118), -- 어두운 패널 위 이름 · 글자(대비 4.5:1 이상 - light)
+			border = Color3.fromRGB(185, 47, 72), -- 칸 테두리 · 빛기둥 · 점(메인)
 			statMultiplier = GRADE_STEP ^ 4,
 			glowBrightness = 3.0, glowRange = 18,
 			burstOnDrop = true,
 			toastTextSize = 28,
 		},
 		ancient = {
-			color = Color3.fromRGB(224, 57, 62), -- 웹 #e0393e
+			color = Color3.fromRGB(8, 127, 130), -- 메인 #087F82(ART-REF v2 2절 · QUEUE-ALL9C 2-2)
+			light = Color3.fromRGB(75, 212, 194), dark = Color3.fromRGB(7, 83, 86), -- 밝은 #4BD4C2 · 어두운 #075356
+			text = Color3.fromRGB(75, 212, 194), -- 어두운 패널 위 이름 · 글자(대비 4.5:1 이상 - light)
+			border = Color3.fromRGB(8, 127, 130), -- 칸 테두리 · 빛기둥 · 점(메인)
 			statMultiplier = GRADE_STEP ^ 5,
 			glowBrightness = 3.6, glowRange = 20,
 			burstOnDrop = true,
@@ -76,7 +96,11 @@ return {
 		-- G1-1: 옛 (160, 255, 250) 옅은 청록은 작은 글자 · Neon에서 흰색(일반)처럼 보였다(D0 (h)) → 다른 6등급과 겹치지 않는 진한 자홍(style-bible §6-1 제안).
 		-- 표시는 전부 shared/GradeColor.of가 이 값을 읽는다(흰색으로 바꾸는 분기 없음).
 		primordial = {
-			color = Color3.fromRGB(255, 60, 200),
+			color = Color3.fromRGB(247, 245, 239), -- 메인 #F7F5EF(ART-REF v2 2절 · QUEUE-ALL9C 2-2)
+			light = Color3.fromRGB(213, 217, 226), dark = Color3.fromRGB(233, 91, 200), -- 밝은 #D5D9E2 · 어두운 #E95BC8
+			text = Color3.fromRGB(247, 245, 239), -- 어두운 패널 위 이름 · 글자(대비 4.5:1 이상 - main)
+			border = Color3.fromRGB(247, 245, 239), -- 칸 테두리 · 빛기둥 · 점(메인)
+			textStroke = Color3.fromRGB(233, 91, 200), -- 태초 이름 = 흰 + 자홍 외곽선(강조 #E95BC8)
 			statMultiplier = GRADE_STEP ^ 6,
 			glowBrightness = 4.5, glowRange = 24,
 			burstOnDrop = true,
@@ -85,7 +109,10 @@ return {
 		},
 		-- C5-7 초월: 흑금(검은 본체 + 옅은 금빛 균열 + 미세 무지개 - 보스 경고색 330 ~ 50° 밖). color = 글자 · 테두리 기본색(금) · blackGold = 칸 배경을 검게 + 금 균열(U1에서 최종 스타일 - 지금은 기본색만).
 		transcendent = {
-			color = Color3.fromRGB(214, 176, 62),
+			color = Color3.fromRGB(32, 33, 39), -- 메인 #202127(ART-REF v2 2절 · QUEUE-ALL9C 2-2)
+			light = Color3.fromRGB(73, 69, 75), dark = Color3.fromRGB(216, 185, 110), -- 밝은 #49454B · 어두운 #D8B96E
+			text = Color3.fromRGB(216, 185, 110), -- 어두운 패널 위 이름 · 글자(대비 4.5:1 이상 - #D8B96E)
+			border = Color3.fromRGB(216, 185, 110), -- 칸 테두리 · 빛기둥 · 점(금 테두리)
 			statMultiplier = GRADE_STEP ^ 7,
 			glowBrightness = 5.5, glowRange = 28,
 			burstOnDrop = true,
@@ -113,6 +140,9 @@ return {
 	},
 
 	-- 태초(rainbow = true) 테두리의 무지개 ColorSequence(30-0 S10부터 Toast의 태초 배너도 쓴다). 값은 InventoryUI.client.lua의 RAINBOW_SEQUENCE와 같다(그쪽은 그대로 두었다).
+	-- QUEUE-ALL9C 2-2 펫 등급 → 장비 등급 색(일반 · 희귀 · 영웅 보라 · 전설 주황 = 장비와 같은 색 - 옛 CodexV2/Info.HATCH_COLOR)
+	petGradeColorOf = { common = "normal", uncommon = "rare", rare = "epic", epic = "legendary" },
+
 	rainbowSequence = ColorSequence.new({
 		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 90, 90)),
 		ColorSequenceKeypoint.new(1 / 6, Color3.fromRGB(242, 196, 61)),

@@ -8,6 +8,7 @@ local Workspace = game:GetService("Workspace")
 local ArtStyleV1Data = require(ReplicatedStorage.Shared.data.ArtStyleV1Data)
 local UiData = require(ReplicatedStorage.Shared.data.ArtV1UiData)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
+local GradeColor = require(ReplicatedStorage.Shared.GradeColor) -- QUEUE-ALL9C 2-2 등급 색 한 곳(테두리 · 글자)
 
 local GradeFrame = {}
 
@@ -38,10 +39,9 @@ local function gradient(parent, seq, spin)
 	return g
 end
 
--- 등급 색(초월 = 금)
+-- 등급 테두리 · 빛 색(초월 = 금 - QUEUE-ALL9C 2-2 GradeColor.border)
 function GradeFrame.colorOf(gradeId)
-	local v = ItemVisualData.gradeVisuals[gradeId]
-	return v and v.color or Color3.new(1, 1, 1)
+	return ItemVisualData.gradeVisuals[gradeId] and GradeColor.border(gradeId) or Color3.new(1, 1, 1)
 end
 
 function GradeFrame.apply(frame, stroke, glowFrame, gradeId)
@@ -67,6 +67,7 @@ function GradeFrame.apply(frame, stroke, glowFrame, gradeId)
 	elseif spec.rainbow then
 		stroke.Color = Color3.new(1, 1, 1)
 		gradient(stroke, ItemVisualData.rainbowSequence, spec.spin)
+		color = ItemVisualData.gradeVisuals[gradeId].textStroke or color -- QUEUE-ALL9C 2-2 태초 = 흰 + 자홍(바깥 빛) + 무지개 띠(테두리)
 	else
 		stroke.Color = spec.sheen > 0 and Color3.new(1, 1, 1) or color
 		if spec.sheen > 0 then
@@ -94,17 +95,18 @@ function GradeFrame.apply(frame, stroke, glowFrame, gradeId)
 	return true
 end
 
--- 글자(이름표 · 확률 창 줄): 등급 색 + 초월 = 금 글자 · 검은 외곽선 / 태초 = 무지개 그라데이션
+-- 글자(이름표 · 확률 창 줄): 등급 글자색(GradeColor.text - 대비 4.5:1) + 초월 = 금 글자 · 검은 외곽선 / 태초 = 흰 + 자홍 외곽선(QUEUE-ALL9C 2-2 - 옛 무지개 그라데이션 글자)
 function GradeFrame.applyText(label, gradeId)
 	local spec = UiData.grades[gradeId]
 	if not spec then
 		return
 	end
-	local color = GradeFrame.colorOf(gradeId)
-	label.TextColor3 = spec.rainbow and Color3.new(1, 1, 1) or color
-	if spec.rainbow then
-		gradient(label, ItemVisualData.rainbowSequence, spec.spin)
-	elseif spec.blackGold then
+	local old = label:FindFirstChild("GradeSheen")
+	if old then
+		old:Destroy()
+	end
+	GradeColor.applyText(label, gradeId)
+	if spec.blackGold then
 		label.TextColor3 = Color3.new(1, 1, 1)
 		local B = UiData.blackGold
 		gradient(label, ColorSequence.new({ ColorSequenceKeypoint.new(0, B.gold), ColorSequenceKeypoint.new(0.5, B.shine), ColorSequenceKeypoint.new(1, B.gold) }), spec.spin)

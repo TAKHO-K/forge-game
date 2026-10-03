@@ -78,7 +78,7 @@ local function itemPart(payload, gradeName, partName)
 	local desc = ItemDescribe.item({ grade = payload.grade, part = payload.part or "armor", itemLevel = tonumber(payload.itemLevel) or 0, option = payload.option }, payload.classId)
 	return {
 		text = Text.get("hud.feed.item", { grade = gradeName, part = partName }),
-		color = visual and visual.color,
+		color = visual and GradeColor.text(payload.grade), -- QUEUE-ALL9C 2-2
 		colorName = "textPrimary",
 		bold = true,
 		onActivate = function(handle)

@@ -73,7 +73,7 @@ local function refreshTitle(player, titleGui, titleLabel)
 		if gradient then
 			gradient:Destroy()
 		end
-		titleLabel.TextColor3 = GradeColor.of(title.grade)
+		GradeColor.applyText(titleLabel, title.grade) -- QUEUE-ALL9C 2-2 글자색 + 태초 외곽선
 	end
 end
 

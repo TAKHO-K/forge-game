@@ -3,7 +3,7 @@
 --   섬광(화면 밝기)은 Player Attribute ReduceFlashes = true면 전부 끈다. 보스전(Player Attribute BossEncounterId) 중에는 입자 × bossParticleScale.
 local C = Color3.fromRGB
 
-local GOLD = C(214, 176, 62)
+local GOLD = require(script.Parent.ItemVisualData).gradeVisuals.transcendent.border -- QUEUE-ALL9C 2-2 초월 금 #D8B96E(ItemVisualData 한 곳 - 옛 C(214, 176, 62))
 local BLACK = C(24, 22, 32)
 
 return {
@@ -19,7 +19,7 @@ return {
 		legendary = { glow = { height = 13, width = 0.9, transparency = 0.45, color = C(255, 110, 20) }, motes = 4, ring = 9, ringColor = C(255, 130, 40), boltColor = C(255, 118, 30) }, -- Play 3 · 검토: 등급 주황이 블룸에서 노랑으로 번져 유물 금과 겹쳤다 → 빛 띠 · 링만 진한 주황(등급 색 자체는 그대로)
 		relic = { glow = { height = 18, width = 1.1, transparency = 0.58 }, motes = 6, ring = 11 },
 		ancient = { glow = { height = 23, width = 1.3, transparency = 0.55 }, motes = 8, ring = 13, flash = 3 },
-		primordial = { glow = { height = 30, width = 1.6, transparency = 0.5, rim = C(255, 60, 200), core = C(255, 255, 255) }, motes = 10, ring = 16, flash = 4 },
+		primordial = { glow = { height = 30, width = 1.6, transparency = 0.5, rim = require(script.Parent.ItemVisualData).gradeVisuals.primordial.textStroke, core = C(255, 255, 255) }, motes = 10, ring = 16, flash = 4 }, -- QUEUE-ALL9C 2-2 테 = 태초 강조 자홍 #E95BC8(옛 C(255, 60, 200))
 		transcendent = { glow = { height = 36, width = 1.8, transparency = 0.1, rim = GOLD, core = BLACK }, motes = 12, ring = 18, flash = 4, moteColor = C(255, 208, 92) }, -- 검은 심 = 비발광 띠(ArtV1Dopamine)
 		moteLifetime = 1.6, moteSpeed = 3.2, moteSize = 0.28, ringSeconds = 0.7, flashSeconds = 0.18,
 		transcendentColor = GOLD, -- ItemVisualData 초월 색과 같다(땅 드랍 표시 전용)

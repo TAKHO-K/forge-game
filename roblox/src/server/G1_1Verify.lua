@@ -47,20 +47,14 @@ function G1_1Verify.runPure()
 	local r = newRecorder("가")
 
 	r.section("등급 색", function()
+		-- QUEUE-ALL9C 2-2(사용자 10-03 확정): 태초 = 백색 본체(#F7F5EF) + 자홍 외곽선 글자 + 무지개 띠 - 옛 G1-1 "흰색과 멀리"(자홍 #ff3cc8)는 대체됐다.
+		--   지금 기준: 일반(회색)과 구분 = 글자 외곽선이 자홍(textStroke) · 테두리 무지개(rainbow) · 메인 색은 데이터 한 곳(GradeColor.of = ItemVisualData)
 		local primordial = GradeColor.of("primordial")
-		local nearest, nearestId = math.huge, nil
-		for _, gradeId in ipairs(ArmorData.gradeOrder) do
-			if gradeId ~= "primordial" then
-				local d = colorDistance(primordial, GradeColor.of(gradeId))
-				if d < nearest then
-					nearest, nearestId = d, gradeId
-				end
-			end
-		end
-		local white = colorDistance(primordial, Color3.new(1, 1, 1))
-		r.check(("태초 색 %s: 가장 가까운 등급 %s까지 %.0f(기대 ≥ 80) · 흰색까지 %.0f(기대 ≥ 150) · GradeColor.of = ItemVisualData 값 %s · hex %s"):format(
-			GradeColor.hex("primordial"), tostring(nearestId), nearest, white, tostring(primordial == ItemVisualData.gradeVisuals.primordial.color), GradeColor.hex("primordial")),
-			nearest >= 80 and white >= 150 and primordial == ItemVisualData.gradeVisuals.primordial.color and GradeColor.hex("primordial") == "#ff3cc8")
+		local visual = ItemVisualData.gradeVisuals.primordial
+		local normalGap = colorDistance(GradeColor.text("primordial"), GradeColor.text("normal"))
+		r.check(("태초 색 %s: 자홍 외곽선 %s · 무지개 띠 %s · 일반 글자색과 거리 %.0f(기대 ≥ 80) · GradeColor.of = ItemVisualData 값 %s"):format(
+			GradeColor.hex("primordial"), tostring(visual.textStroke), tostring(visual.rainbow), normalGap, tostring(primordial == visual.color)),
+			visual.textStroke ~= nil and visual.rainbow == true and normalGap >= 80 and primordial == visual.color)
 	end)
 
 	r.section("Text 템플릿", function()

@@ -252,7 +252,7 @@ local function makeCell(entry, order)
 	selectionStroke.Transparency = (S.selectedKind == "bag" and S.selectedValue == entry.index and not S.itemActions.isPending()) and 0 or 1
 	selectionStroke.Parent = cell
 
-	local iconColor = GradeColor.of(item.grade, UIColors.textPrimary) -- G1-1: 태초도 제 색
+	local iconColor = GradeColor.text(item.grade, UIColors.textPrimary) -- G1-1: 태초도 제 색 · QUEUE-ALL9C 2-2 아이콘 = 글자색
 	local topLeft
 	if item.option then
 		local optionTag = ItemDescribe.optionTag(item, player:GetAttribute("ClassId")) -- S20: 옵션 이름 · 불일치 · 직업색은 ItemDescribe가 준다

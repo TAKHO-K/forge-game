@@ -1,0 +1,40 @@
+[색] normal       메인 (146, 153, 161) 밝은 (193, 198, 204) 어두운/강조 (98, 107, 117) O
+[색] rare         메인 (36, 120, 212) 밝은 (101, 184, 242) 어두운/강조 (23, 74, 145) O
+[색] epic         메인 (117, 69, 198) 밝은 (182, 154, 244) 어두운/강조 (72, 43, 131) O
+[색] legendary    메인 (216, 120, 40) 밝은 (255, 195, 106) 어두운/강조 (152, 80, 29) O
+[색] relic        메인 (185, 47, 72) 밝은 (240, 107, 118) 어두운/강조 (114, 29, 54) O
+[색] ancient      메인 (8, 127, 130) 밝은 (75, 212, 194) 어두운/강조 (7, 83, 86) O
+[색] primordial   메인 (247, 245, 239) 밝은 (213, 217, 226) 어두운/강조 (233, 91, 200) O
+[색] transcendent 메인 (32, 33, 39) 밝은 (73, 69, 75) 어두운/강조 (216, 185, 110) O
+[대비] normal       글자 (146, 153, 161) · 패널/칸 최소 5.47:1 O
+[대비] rare         글자 (101, 184, 242) · 패널/칸 최소 7.27:1 O
+[대비] epic         글자 (182, 154, 244) · 패널/칸 최소 6.69:1 O
+[대비] legendary    글자 (216, 120, 40) · 패널/칸 최소 4.98:1 O
+[대비] relic        글자 (240, 107, 118) · 패널/칸 최소 5.30:1 O
+[대비] ancient      글자 (75, 212, 194) · 패널/칸 최소 8.62:1 O
+[대비] primordial   글자 (247, 245, 239) · 패널/칸 최소 14.44:1 O
+[대비] transcendent 글자 (216, 185, 110) · 패널/칸 최소 8.31:1 O
+[옛 색 남음] 전체 22곳(3D · 허브 장식 · 연출 = ALL9E 대상) · UI 폴더 0곳
+   client\A1UiMockups.lua:15 옛 일반
+   client\A1UiMockups.lua:15 옛 희귀
+   client\A1UiMockups.lua:15 옛 영웅
+   client\A1UiMockups.lua:15 옛 전설
+   client\A1UiMockups.lua:15 옛 유물(금)
+   client\A1UiMockups.lua:15 옛 고대(빨강)
+   client\NestView.client.lua:23 옛 일반
+   client\SkillSlots.client.lua:55 옛 일반
+   shared\WorldMapLayout.lua:1476 옛 일반
+   shared\WorldMapLayout.lua:1479 옛 일반
+   shared\data\ArtImportData.lua:64 옛 초월 금
+   shared\data\ArtImportData.lua:69 옛 초월 금
+   shared\data\ArtStyleV1Data.lua:81 옛 초월 금
+   shared\data\ArtV1UiData.lua:31 옛 초월 금
+   shared\data\HubArtMeta.lua:6 옛 초월 금
+   shared\data\HubArtMeta.lua:7 옛 초월 금
+   shared\data\HubArtMeta.lua:10 옛 초월 금
+   shared\data\HubArtMeta.lua:11 옛 초월 금
+   shared\data\HubArtMeta.lua:17 옛 초월 금
+   shared\data\HubArtMeta.lua:27 옛 초월 금
+   shared\data\UIColors.lua:64 옛 영웅
+   shared\data\UIColors.lua:96 옛 영웅
+결과: 통과

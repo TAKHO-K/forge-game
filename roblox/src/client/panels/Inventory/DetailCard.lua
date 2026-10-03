@@ -6,6 +6,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TextService = game:GetService("TextService")
 
+local GradeColor = require(game:GetService("ReplicatedStorage").Shared.GradeColor) -- QUEUE-ALL9C 2-2 등급 색 쓰임별(text · border)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
@@ -337,7 +338,7 @@ function DetailCard.build(parent, S)
 			local gem = state and Gem.isFilled(state.gems, slot) and state.gems[slot] or nil
 			local unlocked = state and state.slotUnlocked and state.slotUnlocked[slot]
 			local visual = gem and ItemVisualData.gradeVisuals[gem.grade]
-			socket.frame.BackgroundColor3 = visual and visual.color or UIColors.slot
+			socket.frame.BackgroundColor3 = visual and GradeColor.border(gem.grade) or UIColors.slot -- QUEUE-ALL9C 2-2
 			socket.frame.BackgroundTransparency = gem and 0 or 0.2
 			socket.stroke.Color = gem and Color3.new(1, 1, 1) or UIColors.rim
 			socket.stroke.Transparency = gem and 0.3 or 0.5
@@ -400,7 +401,7 @@ function DetailCard.build(parent, S)
 		lastSpec = spec
 		emptyHint.Visible = false
 		local visual = ItemVisualData.gradeVisuals[spec.gradeId]
-		local color = visual and visual.color or UIColors.textPrimary
+		local color = visual and GradeColor.border(spec.gradeId) or UIColors.textPrimary -- QUEUE-ALL9C 2-2 칩 · 테두리 = border
 		-- ① 이름 + 등급 칩
 		nameLabel.Text = spec.title
 		nameLabel.TextColor3 = UIColors.textPrimary

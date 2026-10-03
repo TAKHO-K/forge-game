@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local GradeColor = require(game:GetService("ReplicatedStorage").Shared.GradeColor) -- QUEUE-ALL9C 2-2 등급 색 쓰임별(text · border)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
@@ -209,8 +210,8 @@ local function openConfirm()
 	confirmDismantle.AutoButtonColor = nd > 0
 	confirmDismantle.TextTransparency = nd > 0 and 0 or 0.5
 	local visual = highestSoldGradeId and ItemVisualData.gradeVisuals[highestSoldGradeId]
-	confirmHighestDot.BackgroundColor3 = visual and visual.color or UIColors.textTertiary
-	confirmHighestLabel.TextColor3 = visual and visual.color or UIColors.textTertiary
+	confirmHighestDot.BackgroundColor3 = visual and GradeColor.border(highestSoldGradeId) or UIColors.textTertiary -- QUEUE-ALL9C 2-2
+	confirmHighestLabel.TextColor3 = visual and GradeColor.text(highestSoldGradeId) or UIColors.textTertiary
 	confirmHighestLabel.Text = highestSoldGradeId
 		and Text.get("gear.bulk.highest", { grade = ArmorData.grades[highestSoldGradeId].displayName })
 		or ""
@@ -297,7 +298,7 @@ for order, gradeId in ipairs(ArmorData.bulkSellGrades) do -- QUEUE-ALL8 G1: 체�
 	dot.AnchorPoint = Vector2.new(0, 0.5)
 	dot.Position = UDim2.new(0, 10, 0.5, 0)
 	dot.Size = UDim2.new(0, 8, 0, 8)
-	dot.BackgroundColor3 = ItemVisualData.gradeVisuals[gradeId].color
+	dot.BackgroundColor3 = GradeColor.border(gradeId) -- QUEUE-ALL9C 2-2
 	dot.BorderSizePixel = 0
 	dot.ZIndex = 25
 	dot.Parent = row

@@ -56,7 +56,7 @@ return {
 		clip = { blackoutSeconds = 0.3, crackSeconds = 1.5, crackCount = 7, crackSegments = 6, crackDistance = 700, crackTint = Color3.fromRGB(255, 214, 120), tintAmount = 0.35,
 			rumbleSeconds = 1.5, rumbleStuds = 0.35, orbitSeconds = 3.2, orbitRadius = 14, orbitHeight = 5, bossScale = 0.4, auraMinutes = 5 },
 		glyph = "◆", -- QUEUE-ALL1 A-6: ✦는 GothamBold에 없어 두부(□) - Play 기호 격자 실측
-		color = Color3.fromRGB(214, 176, 62), -- 옅은 금
+		color = require(script.Parent.ItemVisualData).gradeVisuals.transcendent.text, -- 옅은 금 #D8B96E(QUEUE-ALL9C 2-2 등급 색 한 곳 - 옛 214, 176, 62)
 		darkColor = Color3.fromRGB(16, 13, 10), -- 검은 본체
 		chatText = "★ {name}님이 세계 {no}번째 초월 [{part}]를 획득했습니다!", -- TextData transcendent.worldChat과 같은 문장(서버 배너 payload가 이름 · 번호 · 부위를 준다)
 		-- QUEUE-ALL1 P3 §1 밀도(docs/design/v2/04): 항상 = 전 서버 채팅 한 줄 + 작은 배너 + 명예의 전당 · 떨어진 서버 = 항상 최대 연출.

@@ -4,6 +4,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local GradeColor = require(game:GetService("ReplicatedStorage").Shared.GradeColor) -- QUEUE-ALL9C 2-2 등급 색 쓰임별(text · border)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local Theme = require(script.Parent.Theme)
 
@@ -70,7 +71,7 @@ function ItemTooltip.build(props)
 	function refs.set(desc)
 		local visual = ItemVisualData.gradeVisuals[desc.gradeId]
 		title.Text = desc.title
-		title.TextColor3 = (visual and visual.color) or Theme.colors.textPrimary
+		GradeColor.applyText(title, desc.gradeId, Theme.colors.textPrimary) -- QUEUE-ALL9C 2-2
 		meta.Text = desc.meta or ""
 		for index, label in ipairs(optionLabels) do
 			local line = desc.options and desc.options[index]

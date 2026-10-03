@@ -2,6 +2,7 @@
 --   사다리: 등급이 오를수록 테두리 두께 · 그라데이션 · 움직임이 한 겹씩 쌓인다(무기 사다리와 같은 누적 언어). 색 = ItemVisualData 등급 색(여기 없음 · 초월만 흑금 전용).
 --   thickness = UIStroke 두께 · sheen = 테두리 위 밝은 띠(UIGradient 두 색 - 등급 색 → 흰 쪽 섞기 비율) · spin = 띠가 도는 속도(도/초 · 0 = 멈춤) · fill = 칸 배경을 등급 색 쪽으로 섞는 비율 · glow = 바깥 빛(0 ~ 1)
 local C = Color3.fromRGB
+local TRANSCENDENT = require(script.Parent.ItemVisualData).gradeVisuals.transcendent -- QUEUE-ALL9C 2-2 초월 흑금 = 등급 색 한 곳
 
 return {
 	grades = {
@@ -15,7 +16,7 @@ return {
 		transcendent = { thickness = 3.5, blackGold = true, spin = 70, glow = 0.5 }, -- 흑금: 검은 칸 + 금 테두리 위를 도는 흰금 빛 + 금 숨쉬기
 	},
 	blackGold = {
-		cell = C(24, 22, 32), gold = C(214, 176, 62), shine = C(255, 236, 170), dark = C(150, 116, 36), -- 검토: 어두운 금(92, 72, 24)이 올리브로 탁했다 → 금 쪽으로
+		cell = TRANSCENDENT.color, gold = TRANSCENDENT.border, shine = C(255, 236, 170), dark = C(150, 116, 36), -- QUEUE-ALL9C 2-2: 칸 = 초월 메인 #202127 · 금 = #D8B96E(ItemVisualData 한 곳) -- 검토: 어두운 금(92, 72, 24)이 올리브로 탁했다 → 금 쪽으로
 		breatheHz = 0.6, -- 금빛 숨쉬기(바깥 빛 투명도가 오르내린다)
 	},
 	glowPad = 8, -- 바깥 빛 여백(px)

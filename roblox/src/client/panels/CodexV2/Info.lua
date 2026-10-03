@@ -7,6 +7,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local GradeColor = require(game:GetService("ReplicatedStorage").Shared.GradeColor) -- QUEUE-ALL9C 2-2 등급 색 쓰임별(text · border)
 local CodexData = require(ReplicatedStorage.Shared.data.CodexData)
 local CodexRules = require(ReplicatedStorage.Shared.CodexRules)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
@@ -49,12 +50,9 @@ for i, c in ipairs(ClassData.order) do
 	classIndex[c] = i
 end
 
--- 부화 등급 → 장비 등급 색(테두리 색만)
-local HATCH_COLOR = { common = "normal", uncommon = "rare", rare = "epic", epic = "legendary" }
-
+-- 등급 글자색(QUEUE-ALL9C 2-2: shared/GradeColor.text - 대비 4.5:1 · 펫 등급 → 장비 색 = ItemVisualData.petGradeColorOf)
 function Info.gradeColor(grade)
-	local v = ItemVisualData.gradeVisuals[grade]
-	return v and v.color or Color3.fromRGB(200, 200, 210)
+	return ItemVisualData.gradeVisuals[grade] and GradeColor.text(grade) or Color3.fromRGB(200, 200, 210)
 end
 
 function Info.zone(key)
@@ -167,7 +165,7 @@ function Info.detailName(view, m)
 	elseif k == "prim" then
 		return Info.shortName(view, m), Text.name(ArmorData.grades.primordial.displayName), Info.gradeColor("primordial")
 	elseif k == "pet" then
-		return Info.shortName(view, m), Text.name(EggData.hatchGradeNames[m.hatch]), Info.gradeColor(HATCH_COLOR[m.hatch])
+		return Info.shortName(view, m), Text.name(EggData.hatchGradeNames[m.hatch]), Info.gradeColor(GradeColor.petGrade(m.hatch))
 	elseif k == "monster" then
 		local spec = MonsterSpeciesData.species[m.species]
 		return Info.unknown(view, m) and "?" or (spec and Text.name(spec.displayName) or m.species), Info.unknown(view, m) and "?" or Info.shortName(view, m), m.big and Info.gradeColor("legendary") or Info.gradeColor("rare")

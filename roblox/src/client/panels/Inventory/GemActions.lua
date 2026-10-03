@@ -49,7 +49,7 @@ end
 
 -- 보석 등급의 표시 색(G1-1: 태초도 제 색 - shared/GradeColor).
 function GemActions.gradeColor(gradeId)
-	return GradeColor.of(gradeId, Color3.new(1, 1, 1))
+	return GradeColor.text(gradeId, Color3.new(1, 1, 1)) -- QUEUE-ALL9C 2-2 글자 · 아이콘
 end
 
 -- 드래그 · 거절 유령(30px 원). pos = ScreenGui 좌표 중심.

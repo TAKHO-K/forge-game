@@ -63,7 +63,7 @@ local function gradeName(gradeId)
 end
 
 local function gradeColor(gradeId)
-	return GradeColor.of(gradeId, Theme.color("textPrimary")) -- G1-1: 태초도 제 색(옛 흰색 분기 제거)
+	return GradeColor.text(gradeId, Theme.color("textPrimary")) -- G1-1: 태초도 제 색 · QUEUE-ALL9C 2-2 글자색
 end
 
 local function targetGem()

@@ -6,6 +6,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local GradeColor = require(game:GetService("ReplicatedStorage").Shared.GradeColor) -- QUEUE-ALL9C 2-2 등급 색 쓰임별(text · border)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local Text = require(ReplicatedStorage.Shared.Text)
@@ -182,7 +183,7 @@ function GemHeader.createWeaponArt(parent, size)
 			for _, child in ipairs(art:GetChildren()) do
 				child:Destroy()
 			end
-			local iconColor = visual and visual.color or UIColors.textPrimary -- G1-1: 태초도 제 색(옛 흰색 분기 제거)
+			local iconColor = visual and GradeColor.text(weaponGrade) or UIColors.textPrimary -- G1-1 · QUEUE-ALL9C 2-2 글자 · 아이콘색
 			ItemIcons.weapon(art, size, iconColor)
 		end,
 	}

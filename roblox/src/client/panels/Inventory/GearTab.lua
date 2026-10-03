@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local GradeColor = require(game:GetService("ReplicatedStorage").Shared.GradeColor) -- QUEUE-ALL9C 2-2 등급 색 쓰임별(text · border)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local WeaponData = require(ReplicatedStorage.Shared.data.WeaponData)
@@ -451,13 +452,13 @@ local function makeSlot(part, order, equipped)
 			gradeId = gradeId,
 			part = "weapon",
 			iconKey = ItemIcons.keyFor("weapon", gradeId, nil, classId),
-			iconColor = visual and visual.color or UIColors.textPrimary,
+			iconColor = visual and GradeColor.text(gradeId) or UIColors.textPrimary, -- QUEUE-ALL9C 2-2
 			iconSize = 30,
 			topLeft = { text = ("+%d"):format(player:GetAttribute("WeaponLevel") or 0), color = UIColors.xp }, -- 무기만 강화(+N)가 있다
 		}, S.applyGradeVisual)
 	elseif item then
 		local visual = ItemVisualData.gradeVisuals[item.grade]
-		local color = visual and visual.color or UIColors.textPrimary
+		local color = visual and GradeColor.text(item.grade) or UIColors.textPrimary -- QUEUE-ALL9C 2-2
 		local topLeft
 		local optionTag = item.option and ItemDescribe.optionTag(item, classId)
 		if optionTag then

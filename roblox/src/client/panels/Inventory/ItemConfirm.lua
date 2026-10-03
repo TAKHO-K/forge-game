@@ -3,6 +3,7 @@
 -- ItemConfirm.create(content, player) -> { ask(text, color, action), askTwice(first, second, action), item(verb, item, action, isGem) }
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local GradeColor = require(game:GetService("ReplicatedStorage").Shared.GradeColor) -- QUEUE-ALL9C 2-2 등급 색 쓰임별(text · border)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
@@ -123,7 +124,7 @@ function ItemConfirm.create(content, player)
 		if not isGem then -- QUEUE-ALL9C 1-10: 분해 · 판매 결과를 나란히(분해 가능한 장비 = 확인 창이 뜨는 장비)
 			message ..= "\n" .. ItemConfirm.rewardLine(item)
 		end
-		self.ask(message, visual and visual.color or UIColors.textPrimary, action) -- G1-1: 태초도 제 색
+		self.ask(message, visual and GradeColor.text(item.grade) or UIColors.textPrimary, action) -- G1-1: 태초도 제 색 · QUEUE-ALL9C 2-2
 	end
 
 	return self

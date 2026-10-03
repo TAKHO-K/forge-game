@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TextService = game:GetService("TextService")
 
+local GradeColor = require(game:GetService("ReplicatedStorage").Shared.GradeColor) -- QUEUE-ALL9C 2-2 등급 색 쓰임별(text · border)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local DevToolsConfig = require(ReplicatedStorage.Shared.data.DevToolsConfig)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
@@ -45,7 +46,7 @@ local SIGNALS = {
 		local partName = ItemVisualData.partDisplayNames[item.part or "armor"] or Text.get("hud.feed.partFallback")
 		local text = Text.get("hud.toast.pickup", { grade = grade and grade.displayName or item.grade, part = partName, level = ("%d"):format(item.itemLevel) })
 		return {
-			richParts = { { text = text, color = visual and visual.color or Color3.new(1, 1, 1), size = visual and visual.toastTextSize or 18 } },
+			richParts = { { text = text, color = visual and GradeColor.text(item.grade) or Color3.new(1, 1, 1), size = visual and visual.toastTextSize or 18 } },
 			groupKey = "itemPickup", moreFormat = Text.get("hud.toast.more", { count = "%d" }), seconds = 0.8, fadeSeconds = 0.8,
 		}
 	end },
@@ -126,7 +127,7 @@ local function selfCheck()
 			local colorText
 			if case.rich then
 				local part = item.richParts[1]
-				specOk = specOk and part.color == visual.color and part.size == visual.toastTextSize and item.groupKey == "itemPickup"
+				specOk = specOk and part.color == GradeColor.text(case.grade) and part.size == visual.toastTextSize and item.groupKey == "itemPickup"
 				colorText = ("등급색 %s · 글씨 %d(등급표 %d)"):format(tostring(part.color), part.size, visual.toastTextSize)
 			else
 				local gradeDef = item.grade and Toast.grades[item.grade]

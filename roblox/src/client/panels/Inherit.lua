@@ -66,7 +66,7 @@ local keep = "b"
 local pendingSince
 
 local function gradeColor(gradeId)
-	return GradeColor.of(gradeId, Theme.color("textPrimary")) -- G1-1: 태초도 제 색(옛 흰색 분기 제거)
+	return GradeColor.text(gradeId, Theme.color("textPrimary")) -- G1-1: 태초도 제 색 · QUEUE-ALL9C 2-2 글자색
 end
 
 -- 옵션 세트 한 줄(그 세트가 B에 붙었을 때의 값 - 수치는 B 등급 · itemLevel로 다시 계산).

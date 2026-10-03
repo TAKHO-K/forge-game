@@ -9,6 +9,7 @@ local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local GradeColor = require(game:GetService("ReplicatedStorage").Shared.GradeColor) -- QUEUE-ALL9C 2-2 등급 색 쓰임별(text · border)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local EquipSlots = require(ReplicatedStorage.Shared.data.EquipSlots)
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
@@ -255,7 +256,7 @@ refresh = function()
 			order = nextOrder(),
 			title = target.title,
 			subtitle = (owned < 1) and Text.get("forge.workshop.subNoTicket", { subtitle = target.subtitle }) or target.subtitle,
-			gradeColor = visual and visual.color or nil,
+			gradeColor = visual and GradeColor.text(target.gradeId) or nil, -- QUEUE-ALL9C 2-2
 			buttonText = Text.get("forge.workshop.rerollButton", { count = ("%d"):format(owned) }),
 			enabled = owned >= 1 and not busy,
 			onActivated = function()

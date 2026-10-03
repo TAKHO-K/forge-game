@@ -149,7 +149,7 @@ function V.runPure()
 		check(("초월 드랍 = special %s(장갑 = 환영) · 기본 잠금 %s"):format(tostring(item.special), tostring(item.locked)), item.special == "phantom" and item.locked == true)
 		check(("각성: 초월 무료(비용 %d) · 허용 · 분해 금지 · 판매 금지 데이터"):format(Awaken.cost(1000, item)), Awaken.cost(1000, item) == 0 and Awaken.blockReason(item, 1000) == nil and TranscendentData.dismantleBlocked and TranscendentData.sellBlocked)
 		local color = GradeColor.hex("transcendent")
-		check(("등급 색 %s(금 - 보스 경고색 밖) · 특수 옵션 3부위(환영 · 광폭 · 비상)"):format(color), color == "#d6b03e" and TranscendentData.specialByPart.gloves == "phantom" and TranscendentData.specialByPart.armor == "frenzy" and TranscendentData.specialByPart.shoes == "soar")
+		check(("등급 색 %s(금 - 보스 경고색 밖) · 특수 옵션 3부위(환영 · 광폭 · 비상)"):format(color), color == "#d8b96e" and TranscendentData.specialByPart.gloves == "phantom" and TranscendentData.specialByPart.armor == "frenzy" and TranscendentData.specialByPart.shoes == "soar")
 	end)
 
 	print(("===C5 검증 끝(가)=== %d/%d 통과"):format(pass, total))

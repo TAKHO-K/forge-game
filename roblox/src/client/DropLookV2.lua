@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+local GradeColor = require(game:GetService("ReplicatedStorage").Shared.GradeColor) -- QUEUE-ALL9C 2-2 등급 색 쓰임별(text · border)
 local FxData = require(ReplicatedStorage.Shared.data.ArtV1FxData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local ArtImportData = require(ReplicatedStorage.Shared.data.ArtImportData)
@@ -61,7 +62,7 @@ local function silhouette(model, part, grade, root)
 				c.Anchored, c.CanCollide, c.CanQuery, c.CanTouch = true, false, false, false
 				c.CastShadow = false
 				c.Material = p.Name:match("_Glow$") and Enum.Material.Neon or Enum.Material.SmoothPlastic
-				c.Color = p.Name:match("_Glow$") and ItemVisualData.gradeVisuals[grade] and ItemVisualData.gradeVisuals[grade].color or V.silhouette
+				c.Color = p.Name:match("_Glow$") and ItemVisualData.gradeVisuals[grade] and GradeColor.border(grade) or V.silhouette
 				c.Parent = m
 				break
 			end
@@ -282,7 +283,7 @@ RunService.RenderStepped:Connect(function()
 			h.Name = "DropRim"
 			h.FillTransparency = 1
 			h.OutlineTransparency = 0.1
-			h.OutlineColor = ItemVisualData.gradeVisuals[e.st.grade] and ItemVisualData.gradeVisuals[e.st.grade].color or Color3.new(1, 1, 1)
+			h.OutlineColor = ItemVisualData.gradeVisuals[e.st.grade] and GradeColor.border(e.st.grade) or Color3.new(1, 1, 1) -- QUEUE-ALL9C 2-2
 			h.DepthMode = Enum.HighlightDepthMode.Occluded
 			h.Adornee = e.st.mesh
 			h.Parent = e.st.mesh

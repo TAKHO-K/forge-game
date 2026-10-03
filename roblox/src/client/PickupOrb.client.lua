@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+local GradeColor = require(game:GetService("ReplicatedStorage").Shared.GradeColor) -- QUEUE-ALL9C 2-2 등급 색 쓰임별(text · border)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local O = require(ReplicatedStorage.Shared.data.FxMomentData).pickupOrb
@@ -91,7 +92,7 @@ local function fly(worldPos, grade)
 	orb.Name = "PickupOrb"
 	orb.AnchorPoint = Vector2.new(0.5, 0.5)
 	orb.Size = UDim2.fromOffset(size, size)
-	orb.BackgroundColor3 = visual and visual.color or Color3.new(1, 1, 1)
+	orb.BackgroundColor3 = visual and GradeColor.border(grade) or Color3.new(1, 1, 1) -- QUEUE-ALL9C 2-2
 	orb.BorderSizePixel = 0
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(1, 0)

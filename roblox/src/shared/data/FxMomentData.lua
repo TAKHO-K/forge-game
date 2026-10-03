@@ -2,6 +2,7 @@
 --   세기 = 값 × LocalPlayer FxScale(보통 1 · 약 0.5 · 끔 0 = 꾸밈 연출 없음) · ReduceFlashes = 흰 번쩍 · 광택 스윕 없음.
 --   시간 규칙(09 B-2): 일반 ≤ 0.6초 · 클라이맥스 ≤ 2.5초 · 배너 ≤ 3초. 흔들림은 client/CameraShake 한 통로(3초 규칙).
 local C = Color3.fromRGB
+local TRANS = require(script.Parent.ItemVisualData).gradeVisuals.transcendent -- QUEUE-ALL9C 2-2 초월 금 = 등급 색 한 곳
 
 return {
 	-- 상단 가운데 배너 한 줄(client/FxMoment): 중앙 금지 구역(40% × 50%) 위 · ScreenMap TC bossBar 자리(아트 켬이면 보스바는 아래로 가서 비어 있다)
@@ -12,7 +13,7 @@ return {
 		displayOrder = 40, -- HUD 위 · 창(UIManager window)보다 아래
 		styles = {
 			stamp = { seconds = 1.0, bg = C(28, 10, 10), bgTransparency = 0.15, rim = C(255, 196, 70), text = C(255, 236, 200), textSize = 30, popScale = 1.6 }, -- 보스 처치 도장
-			trans = { seconds = 3.0, bg = C(16, 13, 10), bgTransparency = 0.05, rim = C(214, 176, 62), text = C(240, 206, 110), sub = C(200, 186, 150), textSize = 22 }, -- 초월 세트 줄(TranscendentData.banner 흑금)
+			trans = { seconds = 3.0, bg = C(16, 13, 10), bgTransparency = 0.05, rim = TRANS.border, text = TRANS.text, sub = C(200, 186, 150), textSize = 22 }, -- 초월 세트 줄(TranscendentData.banner 흑금)
 			line = { seconds = 2.5, bg = C(40, 30, 10), bgTransparency = 0.2, rim = C(240, 180, 41), text = C(255, 222, 120), sub = C(230, 220, 200), textSize = 20 }, -- 줄 칭호
 			cell = { seconds = 1.6, bg = C(18, 22, 30), bgTransparency = 0.2, rim = C(120, 200, 140), text = C(235, 245, 235), textSize = 16, height = 36, width = 300, picture = 30 }, -- 도감 칸 완성(작게)
 		},
@@ -57,7 +58,7 @@ return {
 		cellBatchSeconds = 0.6, -- 이 안에 완성된 칸은 한 장으로 묶음("외 n")
 		firstViewDelay = 6, retryViewSeconds = 12, -- 접속 뒤 기준 표를 받으려 한 번 "view" 요청(도감 창과 같은 요청)
 		lineRing = { size = 9, seconds = 0.6, color = C(240, 180, 41) }, -- 줄 칭호 발밑 금 링
-		transRing = { size = 12, seconds = 0.9, color = C(214, 176, 62), innerColor = C(16, 13, 10) }, -- 초월 줄 발밑 흑금 링 2겹
+		transRing = { size = 12, seconds = 0.9, color = TRANS.border, innerColor = C(16, 13, 10) }, -- 초월 줄 발밑 흑금 링 2겹
 	},
 
 	-- 장비 줍기 빛 구슬(PickupOrb): 드랍 자리(화면 투영) → 가방 버튼

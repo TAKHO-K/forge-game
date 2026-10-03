@@ -10,6 +10,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local GradeColor = require(game:GetService("ReplicatedStorage").Shared.GradeColor) -- QUEUE-ALL9C 2-2 등급 색 쓰임별(text · border)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local PrimordialData = require(game:GetService("ReplicatedStorage").Shared.data.PrimordialData) -- D1 ⑤ 태초 테두리
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
@@ -261,7 +262,7 @@ local function render()
 			local text, gradeId = EquipCompare.title(slotName, item, data.classId)
 			local visual = ItemVisualData.gradeVisuals[gradeId]
 			row.titleLabel.Text = text
-			row.titleLabel.TextColor3 = (visual and visual.color) or Theme.colors.textPrimary
+			GradeColor.applyText(row.titleLabel, item.grade, Theme.colors.textPrimary) -- QUEUE-ALL9C 2-2
 		else
 			row.titleLabel.Text = Text.get(slotName:match("^gem") and "ui.inspect.emptyGem" or "ui.inspect.none")
 			row.titleLabel.TextColor3 = Theme.colors.textTertiary

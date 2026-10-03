@@ -95,7 +95,7 @@ local function styleNameplate(model, on)
 end
 
 local function colorOf(grade)
-	return grade == "transcendent" and D.transcendentColor or GradeColor.of(grade)
+	return grade == "transcendent" and D.transcendentColor or GradeColor.border(grade) -- QUEUE-ALL9C 2-2
 end
 
 local function build(model)
