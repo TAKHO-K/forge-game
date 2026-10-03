@@ -127,6 +127,15 @@ local ok, err = pcall(function()
 		and m.purchases.protectionRefund.gold == want and m.purchases.protectionRefund.drop == 7, ("골드 1000 → %d(+%d)"):format(m.gold, want))
 	local again = SaveSystem.migrate(m)
 	check("v68 환산 멱등(다시 돌려도 골드 그대로)", again.gold == m.gold)
+	local bad = SaveSystem.migrate({})
+	bad.version = 67
+	bad.purchases.protectionRefund = nil
+	bad.purchases.protectionTickets = { drop = 0, reset = 2 }
+	bad.gold = 500
+	for _, cs in pairs(bad.classes) do cs.stageProgress.infiniteBest = 1e12 end
+	local mb = SaveSystem.migrate(bad)
+	check("v68 환산: 손상된 큰 스테이지 = 상한으로 자름 · 0장 칸은 곱하지 않음(골드 NaN 아님)", mb.gold == mb.gold and mb.gold < math.huge and mb.purchases.protectionRefund.stage == MODS.InfiniteStageConfig.hardMaxStage,
+		("골드 %s · 기준 스테이지 %s"):format(tostring(mb.gold), tostring(mb.purchases.protectionRefund.stage)))
 	local fresh = SaveSystem.migrate({})
 	check("새 계정 = 환산 0 · 골드 0", fresh.purchases.protectionRefund.gold == 0 and fresh.gold == 0)
 	local okValid = SaveSystem.isValidProfile == nil or SaveSystem.isValidProfile(m)

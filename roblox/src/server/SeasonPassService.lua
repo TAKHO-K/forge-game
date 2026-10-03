@@ -108,6 +108,7 @@ function SeasonPassService.skipRoom(player)
 	local reach = Monetization.seasonReach(quests.currencies.passExp or 0, SeasonPassData.expPerTier)
 	return math.max(0, math.min(SeasonPassData.skip.capPerSeason - pass.skipBought, SeasonPassData.skip.maxTier - reach))
 end
+local lastSkipMarked = setmetatable({}, { __mode = "k" }) -- player → 마지막 applySkip이 표시한 칸 키(revertSkip 전용)
 -- 칸 n개 올리기(영수증 지급 - 방은 호출부가 먼저 확인). 오른 칸 = 건너뛴 칸 표시. 반환: ok, 이유
 function SeasonPassService.applySkip(player, n)
 	local pass = SeasonPassService.ensure(player)
@@ -121,9 +122,12 @@ function SeasonPassService.applySkip(player, n)
 	local per = SeasonPassData.expPerTier
 	local exp = quests.currencies.passExp or 0
 	local reach = Monetization.seasonReach(exp, per)
+	local marked = {}
 	for i = 1, n do
 		pass.skipTiers[tostring(reach + i)] = true
+		table.insert(marked, tostring(reach + i))
 	end
+	lastSkipMarked[player] = marked -- 리뷰: 저장 대기 중 경험치가 늘어도 되돌리기가 이 칸들만 지운다
 	quests.currencies.passExp = exp + n * per
 	pass.skipBought += n
 	return true
@@ -136,9 +140,17 @@ function SeasonPassService.revertSkip(player, n)
 		return
 	end
 	local per = SeasonPassData.expPerTier
-	local reach = Monetization.seasonReach(quests.currencies.passExp or 0, per)
-	for i = 0, n - 1 do
-		pass.skipTiers[tostring(reach - i)] = nil
+	local marked = lastSkipMarked[player]
+	lastSkipMarked[player] = nil
+	if marked then
+		for _, key in ipairs(marked) do
+			pass.skipTiers[key] = nil
+		end
+	else
+		local reach = Monetization.seasonReach(quests.currencies.passExp or 0, per)
+		for i = 0, n - 1 do
+			pass.skipTiers[tostring(reach - i)] = nil
+		end
 	end
 	quests.currencies.passExp = math.max(0, (quests.currencies.passExp or 0) - n * per)
 	pass.skipBought = math.max(0, pass.skipBought - n)

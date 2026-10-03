@@ -171,7 +171,7 @@ function P25aVerify.runPure()
 		local rowsOk = #EnhanceConfig.probability == 30 and #EnhanceConfig.goldCost == 30 and Enhance.getCost(30) == nil and Enhance.getCost(29) ~= nil
 		local monotone = true
 		for level = 1, 29 do
-			monotone = monotone and Enhance.getCost(level) > Enhance.getCost(level - 1)
+			monotone = monotone and Enhance.getCost(level) >= Enhance.getCost(level - 1) -- QUEUE-ALL9B G: +26 ~ +29 같은 값(67,200 → 67,000)
 		end
 		local matsOk = true
 		for level = 25, 29 do

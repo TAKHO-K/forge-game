@@ -336,6 +336,7 @@ function MonetizationService.buyWithTokens(player, key)
 			local quests = PlayerProfile.getQuestState(player)
 			if quests then
 				quests.currencies.sparkleShard = (quests.currencies.sparkleShard or 0) + price
+				require(script.Parent.QuestService).syncWallet(player) -- 리뷰: 되돌린 토큰을 재화 칸에도
 			end
 			warn(("[ALL9B] 토큰 구매 지급 실패: %s - %s %s → 토큰 %d 되돌림"):format(tostring(player), key, tostring(why), price))
 			return false, why

@@ -127,6 +127,8 @@ return {
 		["forge.enhance.ticket.gaugeFull"] = "불씨가 가득 차 필요 없습니다",
 		["forge.enhance.guard.dropToggle"] = "하락 방지(비용 ×{k})", -- QUEUE-ALL9B G 방지 옵션(방지권 폐지)
 		["forge.enhance.guard.costNoReset"] = "이번 시도 비용: 방지 끔 {off}골드 · 방지 켬 {on}골드",
+		["forge.enhance.guard.dropName"] = "하락 방지",
+		["forge.enhance.guard.resetName"] = "초기화 방지",
 		["forge.enhance.guard.noDrop"] = "+{level}에서는 하락이 없습니다",
 		["forge.enhance.result.dropBlocked"] = "하락 방지가 막았습니다. +{level} 유지",
 		["forge.enhance.guard.toggle"] = "초기화 방지(비용 ×{k})",
@@ -281,6 +283,8 @@ return {
 		["forge.enhance.ticket.gaugeFull"] = "Ember is full - not needed",
 		["forge.enhance.guard.dropToggle"] = "Drop Guard (cost x{k})",
 		["forge.enhance.guard.costNoReset"] = "This try: {off} gold without guard · {on} gold with guard",
+		["forge.enhance.guard.dropName"] = "Drop Guard",
+		["forge.enhance.guard.resetName"] = "Reset Guard",
 		["forge.enhance.guard.noDrop"] = "No level drop at +{level}",
 		["forge.enhance.result.dropBlocked"] = "Drop Guard blocked it. Stays +{level}",
 		["forge.enhance.guard.toggle"] = "Reset Guard (cost x{k})",

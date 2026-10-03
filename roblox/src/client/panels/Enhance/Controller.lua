@@ -43,6 +43,11 @@ end
 
 function Controller.setToggle(kind, value)
 	toggles[kind] = value == true
+	-- QUEUE-ALL9B G 리뷰: 두 방지가 한 배수인 구간(+22 ~ +25)은 하나만 켜도 × k를 다 낸다 → 둘을 함께 켜고 끈다
+	local band = Enhance.getGuardBand(player:GetAttribute("WeaponLevel") or 0)
+	if band and band.guards.drop and band.guards.reset then
+		toggles.drop, toggles.reset = value == true, value == true
+	end
 end
 
 -- 이 방지(kind)를 켤 수 있는 첫 단계(guardBands에서) - 안내 문구용.
@@ -69,7 +74,9 @@ local function optionState(kind, level, gaugeFull, maxed)
 		reason = Text.get("forge.enhance.ticket.gaugeFull")
 	end
 	local k = band and band.guards[kind] and band.costMultiplier
-	return { label = Text.get(kind == "drop" and "forge.enhance.guard.dropToggle" or "forge.enhance.guard.toggle", { k = k and ("%.1f"):format(k) or "-" }),
+	local label = k and Text.get(kind == "drop" and "forge.enhance.guard.dropToggle" or "forge.enhance.guard.toggle", { k = ("%.1f"):format(k) })
+		or Text.get(kind == "drop" and "forge.enhance.guard.dropName" or "forge.enhance.guard.resetName") -- 이 단계에서 못 켜면 배수 없이 이름만
+	return { label = label,
 		want = toggles[kind], enabled = reason == nil, reason = reason }
 end
 

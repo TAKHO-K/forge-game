@@ -113,9 +113,10 @@ function P2Verify.runPure()
 		-- P2.5a C8: 강화 비용 기준 스테이지 100 → 1 · 배수는 골드 성장률(InfiniteStage.getGoldMultiplier) - 최고 1 · 없음은 표 그대로, 그 위는 표 × 골드 배수.
 		local ok = true
 		for level = 0, EnhanceConfig.maxLevel - 1 do
-			ok = ok and Enhance.getCost(level, 1) == EnhanceConfig.goldCost[level + 1] and Enhance.getCost(level) == EnhanceConfig.goldCost[level + 1]
+			local nice = level >= 26 and GoldCost.niceReward or function(n) return n end -- QUEUE-ALL9B G: +26 이상 비용 = niceReward(끝자리 0)
+			ok = ok and Enhance.getCost(level, 1) == nice(EnhanceConfig.goldCost[level + 1]) and Enhance.getCost(level) == nice(EnhanceConfig.goldCost[level + 1])
 			for _, stage in ipairs({ 50, 100 }) do
-				ok = ok and Enhance.getCost(level, stage) == math.floor(EnhanceConfig.goldCost[level + 1] * InfiniteStage.getGoldMultiplier(stage))
+				ok = ok and Enhance.getCost(level, stage) == nice(math.floor(EnhanceConfig.goldCost[level + 1] * InfiniteStage.getGoldMultiplier(stage)))
 			end
 		end
 		r.check(("C1.1 강화 0 ~ %d강 × 계정 최고 1 · 없음 = 표 그대로 · 50 · 100 = 표 × 골드 배수(P2.5a 기준 1) %s"):format(EnhanceConfig.maxLevel - 1, tostring(ok)), ok)

@@ -215,7 +215,7 @@ return {
 
 	-- 강화대
 	["enhance.help.short"] = "Each fail fills the Ember. When full, the next Enhance always succeeds.",
-	["enhance.help.detail"] = "At +0~{safeTo}, a fail keeps your level. From +{dropFrom}, a fail can drop your level. From +{resetFrom}, a fail can reset it. Even after a reset, +{a1}~+{a2} stops at +{t1} and +{b1} or higher stops at +{t2}. Your Ember stays.",
+	["enhance.help.detail"] = "At +0~{safeTo}, a fail keeps your level. From +{dropFrom}, a fail can drop your level (no drops from +26). From +{resetFrom}, a fail can reset it. Even after a reset, +{a1}~+{a2} stops at +{t1} and +{b1} or higher stops at +{t2}. Your Ember stays.",
 	["enhance.odds.headResult"] = "Result",
 	["enhance.odds.headProb"] = "Chance",
 	["enhance.odds.headLevel"] = "Level",

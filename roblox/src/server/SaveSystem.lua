@@ -1394,12 +1394,18 @@ local function migrate(data)
 				local progress = type(classState) == "table" and classState.stageProgress
 				best = math.max(best, type(progress) == "table" and tonumber(progress.infiniteBest) or 1)
 			end
+			best = math.min(best, require(ReplicatedStorage.Shared.data.InfiniteStageConfig).hardMaxStage) -- 리뷰: 손상된 큰 스테이지가 환산을 부풀리거나 inf × 0 = NaN이 되지 않게
 			local Enhance = require(ReplicatedStorage.Shared.Enhance)
 			local refund = { drop = 0, reset = 0, gold = 0, stage = best }
 			for _, kind in ipairs({ "drop", "reset" }) do
 				local count = math.max(0, math.floor(tonumber(p.protectionTickets[kind]) or 0))
+				if count ~= count or count == math.huge then
+					count = 0
+				end
 				refund[kind] = count
-				refund.gold += count * Enhance.getProtectionPrice(kind, best)
+				if count > 0 then
+					refund.gold += count * Enhance.getProtectionPrice(kind, best)
+				end
 				p.protectionTickets[kind] = 0
 			end
 			data.gold = (tonumber(data.gold) or 0) + refund.gold

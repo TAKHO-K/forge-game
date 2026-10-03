@@ -1081,6 +1081,7 @@ local HELP_TEXT = table.concat({
 	"/gg additem <part> <grade> <itemLevel> - 잠기지 않은 아이템 1개를 인벤토리에 직접 추가(분해·판매 UI 클릭 검증용, part=armor/gloves/shoes)",
 	"/gg fillbag [n] - 등급 · 부위가 섞인 잠기지 않은 장비를 가방에 n개 지급(기본 = 가방이 가득 찰 만큼 · 가득 참 시험용 · /gg reset으로 복원)",
 	"/gg enhance <n> - 무기 강화 단계 지정(0~" .. EnhanceConfig.maxLevel .. ")",
+	"/gg pass exp <n> · /gg pass premium - 시즌 패스 경험치 · 유료 줄(실제 함수 - Studio 전용 Play 확인)",
 	"/gg gauge <천분율> - 불씨 게이지 지정 · /gg enhanceroll <success|maintain|down1|down2|reset> - 다음 강화 1회 결과 강제(QUEUE-ALL9B G Play 확인)",
 	"/gg weapon <n|등급명> - 무기 등급 지정(0~6 또는 " .. table.concat(ArmorData.gradeOrder, "/") .. ")",
 	"/gg class <classId> - 직업 전환(greatsword/dualblade/bow/healer)",
@@ -1490,6 +1491,18 @@ local function handleCommand(player, args)
 				end
 			end
 			reply(player, ("가방에 장비 %d개 지급(요청 %d) - 지금 %d / %d칸 · %s"):format(added, want, #profile.inventory, PlayerProfile.inventoryCapacity(profile), table.concat(summary, " · ")))
+		end
+	elseif sub == "pass" and args[2] then
+		-- QUEUE-ALL9B Play 확인(Studio 전용): /gg pass exp <n>(실제 QuestService.grant passExp - 주말 배수 포함) · /gg pass premium(실제 영수증 처리가 부르는 SeasonPassService.setPremium - 로벅스 없이 유료 줄 열기)
+		ensureBackup(player)
+		local SeasonPassService = require(script.Parent.SeasonPassService)
+		if args[2] == "exp" and tonumber(args[3]) then
+			require(script.Parent.QuestService).grant(player, { passExp = math.floor(tonumber(args[3])) })
+			require(script.Parent.QuestService).push(player)
+			reply(player, ("패스 경험치 +%s"):format(args[3]))
+		elseif args[2] == "premium" then
+			local ok, why = SeasonPassService.setPremium(player)
+			reply(player, ("유료 줄 %s"):format(ok and "열림" or tostring(why)))
 		end
 	elseif sub == "gauge" and tonumber(args[2]) then
 		-- QUEUE-ALL9B G: 불씨 게이지 지정(천분율 0 ~ max) - Play 확인용(불씨 가득 → 확정 성공)
