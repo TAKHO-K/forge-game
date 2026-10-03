@@ -3,7 +3,7 @@
 --   B4 사운드: kind volume(0 ~ 1 숫자) = 카테고리별 음량(SoundData.categories가 settingKey로 가리킨다 · 클라 SoundHooks가 Attribute로 읽는다). 저장은 같은 settings 표(없는 키 = 기본값 - 이관 없음).
 --   reduceFlashes = 번개 · 태초 화면 섬광 끄기(관문 날씨 섬광 끔 · 피뢰침 방전은 흰 번쩍 대신 밝기만 · 태초 연출의 화면 밝아짐 없음 - 보스 경고 표시는 그대로).
 return {
-	order = { "cameraTopDown", "reduceFlashes", "screenShake", "dimOthersTrail", "autoStage", "volumeSfx", "volumeMusic", "volumeUi", "volumeBossCue", "transcendNotice", "fxLevel", "volumeAmbient", "muteSfx", "muteUi", "muteAmbient", "muteMusic", "graphics", "language", "quietOthersSfx", "minimapOn", "minimapRotate", "minimapFar", "mapHintSeen", "hubIntroRank", "hubIntroBoard", "hubIntroChallenge", "hubIntroTailor", "bulkSellGrades", "sellHintSeen", "weekendBannerAt" },
+	order = { "cameraTopDown", "reduceFlashes", "screenShake", "dimOthersTrail", "autoStage", "volumeSfx", "volumeMusic", "volumeUi", "volumeBossCue", "transcendNotice", "fxLevel", "volumeAmbient", "muteSfx", "muteUi", "muteAmbient", "muteMusic", "windowPositions", "graphics", "language", "quietOthersSfx", "minimapOn", "minimapRotate", "minimapFar", "mapHintSeen", "hubIntroRank", "hubIntroBoard", "hubIntroChallenge", "hubIntroTailor", "bulkSellGrades", "sellHintSeen", "weekendBannerAt" },
 	keys = {
 		cameraTopDown = { kind = "boolean", default = false, attrs = { "CameraTopDown" } },
 		reduceFlashes = { kind = "boolean", default = false, attrs = { "ReduceFlashes" } },
@@ -39,6 +39,8 @@ return {
 		muteUi = { kind = "boolean", default = false, attrs = { "SoundMuteUi" } },
 		muteAmbient = { kind = "boolean", default = false, attrs = { "SoundMuteAmbient" } },
 		muteMusic = { kind = "boolean", default = false, attrs = { "SoundMuteMusic" } },
+		-- QUEUE-ALL9C 1-8 창 위치(PC · 태블릿): "id:x,y;id:x,y"(화면 가운데 기준 픽셀 · client/ui/WindowPositions) · 빈 글 = 전부 기본 자리 · 없는 키 = 기본값(이관 없음)
+		windowPositions = { kind = "positions", default = "", attrs = { "WindowPositions" } },
 		-- 가벼움 = 먼 산 LOD · 나무 바람 · 풀 덤불 끔(게임 쪽 부담만 - 로블록스 품질 설정은 그대로). QUEUE-ALL6 A2: 기본 "auto"(안 고름 - 저장 안 됨) = 클라 GraphicsMode가 기기로 판별(graphicsAuto).
 		--   고를 수 있는 값은 options(normal · lite)뿐 - 설정 창에서 바꾸면 그 값이 저장되고 이후 유지.
 		graphics = { kind = "choice", default = "auto", options = { "normal", "lite" }, attrs = { "GraphicsMode" } },

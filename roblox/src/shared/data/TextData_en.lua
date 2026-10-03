@@ -357,6 +357,8 @@ return {
 	["settings.volume.bossCue"] = "Boss Cue",
 	["settings.muteOn"] = "Muted",
 	["settings.muteOff"] = "Mute",
+	["settings.windowReset"] = "Reset Window Positions",
+	["settings.windowResetDone"] = "Window positions reset",
 	["variant.line"] = "Skill Variant: {class} {slot} {name}({parts})",
 	["variant.off"] = "{line} - other class (off)",
 	["variant.axis.damage"] = "Damage {pct}%",

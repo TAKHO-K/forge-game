@@ -318,6 +318,15 @@ local function build()
 		purchaseHelp.TextWrapped = true
 		purchaseHelp.Position = UDim2.fromOffset(PAD, y + Theme.buttonHeight + 12)
 		purchaseHelp.Size = UDim2.new(1, -PAD * 2, 0, 40)
+		-- QUEUE-ALL9C 1-8 [창 위치 초기화](PC · 태블릿 - 옮긴 창 · 가방 창을 기본 자리로)
+		if not Theme.isMobile then
+			Button.build({ parent = g, name = "WindowResetButton", kind = "secondary", width = 160, position = UDim2.fromOffset(PAD, y + Theme.buttonHeight + 60),
+				text = Text.get("settings.windowReset"), onActivated = function()
+					require(script.Parent.Parent.ui.WindowPositions).reset()
+					local Toast = require(script.Parent.Parent.ui.kit.Toast)
+					Toast.push("TC", { richParts = { { text = Text.get("settings.windowResetDone"), colorName = "textPrimary", bold = true } }, seconds = 2, fadeSeconds = 0.3 })
+				end })
+		end
 	end
 
 	-- [단축키] 단축키 보기(09 문서 B-3 최종 표)

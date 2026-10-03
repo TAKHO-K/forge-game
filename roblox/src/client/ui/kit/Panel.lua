@@ -140,6 +140,12 @@ function Panel.create(props)
 		UIManager.close(props.id)
 	end)
 
+	-- QUEUE-ALL9C 1-8(Q1 · 결정 6): PC · 태블릿 주요 창 = 제목줄 끌어 옮기기 + 위치 저장(폰 = 고정 · 자리를 직접 정한 창 = 그대로)
+	if kind == "window" and not Theme.isMobile and props.position == nil and props.anchorPoint == nil and props.movable ~= false then
+		titleLabel.Active = true
+		require(script.Parent.Parent.WindowPositions).attach(props.id, frame, titleLabel, gui)
+	end
+
 	return { screenGui = gui, frame = frame, content = content, closeButton = closeButton, titleLabel = titleLabel, dim = dim }
 end
 

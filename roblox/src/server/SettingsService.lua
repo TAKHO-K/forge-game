@@ -46,6 +46,20 @@ function SettingsService.sanitize(key, value)
 			return math.floor(value * 100 + 0.5) / 100
 		end
 		return nil
+	elseif def.kind == "positions" then -- QUEUE-ALL9C 1-8 창 위치 "id:x,y;…"(짧은 글 · 모양만 검사 · 좌표 ±10000 · 화면 안 자르기는 클라)
+		if type(value) ~= "string" or #value > 800 then
+			return nil
+		end
+		if value == "" then
+			return value
+		end
+		for entry in (value .. ";"):gmatch("([^;]*);") do
+			local id, x, y = entry:match("^([%w_]+):(%-?%d+),(%-?%d+)$")
+			if not id or #id > 40 or math.abs(tonumber(x)) > 10000 or math.abs(tonumber(y)) > 10000 then
+				return nil
+			end
+		end
+		return value
 	elseif def.kind == "stamp" then -- QUEUE-ALL9A 1-2: 시각 도장(유닉스 초 정수 - 주말 배너 본 창)
 		if type(value) == "number" and value == math.floor(value) and value >= 0 and value < 2 ^ 40 then
 			return value

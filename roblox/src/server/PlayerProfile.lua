@@ -2493,7 +2493,13 @@ end
 -- 넣는다).
 function PlayerProfile.setInventoryWindowPosition(player, x, y)
 	local profile = profiles[player]
-	if not profile or type(x) ~= "number" or type(y) ~= "number" then
+	if profile and x == "reset" then -- QUEUE-ALL9C 1-8 설정 [창 위치 초기화]
+		profile.inventoryWindowPosition = false
+		player:SetAttribute("InventoryWindowX", nil)
+		player:SetAttribute("InventoryWindowY", nil)
+		return true
+	end
+	if not profile or type(x) ~= "number" or type(y) ~= "number" or x ~= x or y ~= y then
 		return false
 	end
 	profile.inventoryWindowPosition = { x = x, y = y }
