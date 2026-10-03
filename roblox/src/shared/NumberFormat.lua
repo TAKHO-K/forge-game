@@ -155,11 +155,19 @@ end
 --   ko = 1만 미만 쉼표(9,850) · 만 · 억 · 조 · 경 · 해 · 자 · 양 · 구 · 간(1e36) → 그 뒤 en 알파벳 단위
 --   소수 한 자리(1.0K · 12.3M · 345.0만 · 9,999.9억) · 버림(가진 것보다 크게 안 보이게 - 999,999 = 999.9K · 1,000,000 = 1.0M) · 음수 = "-" + 같은 규칙 · NaN = "—" · inf = "∞". 정확한 값 = commas.
 local KO_UNITS = { { 1e36, "간" }, { 1e32, "구" }, { 1e28, "양" }, { 1e24, "자" }, { 1e20, "해" }, { 1e16, "경" }, { 1e12, "조" }, { 1e8, "억" }, { 1e4, "만" } }
-local function oneDecimal(scaled)
-	local t = math.floor(scaled * 10 * (1 + 1e-12)) -- 거듭제곱 나눗셈 반올림(769.99999…)이 한 칸 내려 찍히지 않게 아주 작게 올려서 버린다
+-- 단위의 0.1(10의 거듭제곱)로 한 번 나눠 버린 정수(1.0 = 10). 2^53 미만은 n이 정확한 정수라 보정 없이 버린다(999,999,999,999 → 9999 = 999.9B).
+-- 2^53 이상은 n 자체가 근사값 - 거듭제곱 나눗셈 반올림(769.99999…)이 한 칸 내려 찍히지 않게 아주 작게 올려서 버린다.
+local function tenths(n, unit)
+	local q = n / (unit / 10)
+	if n >= 2 ^ 53 then
+		q *= 1 + 1e-12
+	end
+	return math.floor(q)
+end
+local function oneDecimal(t)
 	return withCommas(math.floor(t / 10)) .. "." .. tostring(t % 10)
 end
--- 1,000 이상 n의 영어 단위 칸(0 = K · 10 = Dc · 11 = aa …)과 나눈 값. 10의 거듭제곱 경계는 한 번 나누기 + 보정(1e33 → 1.0Dc · 1e36 → 1.0aa).
+-- 1,000 이상 n의 영어 단위 칸 k(1 = K · 11 = Dc · 12 = aa …). 10의 거듭제곱 경계는 log10 반올림을 한 번 보정(1e33 → Dc · 1e36 → aa).
 local function enStep(n)
 	local k = math.floor(math.log10(n) / 3)
 	if STEP ^ k > n then
@@ -167,11 +175,7 @@ local function enStep(n)
 	elseif STEP ^ (k + 1) <= n then
 		k += 1
 	end
-	local scaled = n / STEP ^ k
-	if scaled >= STEP then
-		scaled, k = scaled / STEP, k + 1
-	end
-	return k - 1, scaled
+	return k
 end
 function NumberFormat.currency(value, lang)
 	if value ~= value or value == math.huge or value == -math.huge then
@@ -186,9 +190,13 @@ function NumberFormat.currency(value, lang)
 			return withCommas(n)
 		end
 		if n < 1e40 then
-			for _, u in ipairs(KO_UNITS) do
+			for i, u in ipairs(KO_UNITS) do
 				if n >= u[1] then
-					return oneDecimal(n / u[1]) .. u[2]
+					local t = tenths(n, u[1])
+					if t >= 100000 and i > 1 then -- 보정이 9,999.99…를 10,000.0으로 올린 경우(2^53 이상만) - 다음 단위 1.0
+						return oneDecimal(tenths(n, KO_UNITS[i - 1][1])) .. KO_UNITS[i - 1][2]
+					end
+					return oneDecimal(t) .. u[2]
 				end
 			end
 		end
@@ -196,8 +204,13 @@ function NumberFormat.currency(value, lang)
 	if n < STEP then
 		return withCommas(n)
 	end
-	local idx, scaled = enStep(n)
-	return oneDecimal(scaled) .. unitLabel(idx)
+	local k = enStep(n)
+	local t = tenths(n, STEP ^ k)
+	if t >= 10000 then -- 보정이 999.99…를 1,000.0으로 올린 경우(2^53 이상만) - 다음 단위 1.0
+		k += 1
+		t = tenths(n, STEP ^ k)
+	end
+	return oneDecimal(t) .. unitLabel(k - 1)
 end
 
 return NumberFormat
