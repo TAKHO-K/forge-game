@@ -1363,6 +1363,25 @@ local function handleCommand(player, args)
 		local profile = PlayerProfile.getProfile(player)
 		if args[2] == "dismantle" and args[3] then
 			reply(player, ("일괄 분해 ~%s → %d개"):format(args[3], PlayerProfile.dismantleItemsUpTo(player, args[3])))
+		elseif args[2] == "max" and profile then -- QUEUE-ALL9C 1-9: 가방 75칸(확장 패스 + 스타터 출처 - 이 세션 메모리만 · /gg reset 복원)
+			profile.gamepasses = profile.gamepasses or {}
+			profile.gamepasses.bagExpand = true
+			profile.purchases = profile.purchases or {}
+			profile.purchases.bagSources = profile.purchases.bagSources or {}
+			profile.purchases.bagSources.starter = true
+			require(script.Parent.InventorySync).push(player, profile)
+		elseif args[2] == "lock" and tonumber(args[3]) and profile then -- QUEUE-ALL9C 1-9: 앞에서부터 고르게 n개 잠금(일괄 판매 제외 확인)
+			local n = math.floor(tonumber(args[3]))
+			local step = math.max(1, math.floor(#profile.inventory / math.max(1, n)))
+			local done = 0
+			for i = 1, #profile.inventory, step do
+				if done >= n then
+					break
+				end
+				profile.inventory[i].locked = true
+				done += 1
+			end
+			require(script.Parent.InventorySync).push(player, profile)
 		end
 		local grades = {}
 		for _, item in ipairs(profile and profile.inventory or {}) do

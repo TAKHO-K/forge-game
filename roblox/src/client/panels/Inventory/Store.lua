@@ -241,7 +241,7 @@ local function bulkSellEstimate()
 	local count, total = 0, 0
 	local highestSoldGradeId, highestSoldGradeIndex = nil, 0
 	for _, item in ipairs(S.inventory) do
-		if not item.locked and not item.skillVariant and S.bulkSellChecked[item.grade] then -- 서버 sellItemsByGrades와 같은 조건(QUEUE-ALL8 G1 체크한 등급 · 스킬 변형 · 잠금 제외)
+		if Loot.isBulkSellTarget(item, S.bulkSellChecked) then -- 서버 sellItemsByGrades와 같은 함수(QUEUE-ALL9C 1-9 · 체크한 등급 · 스킬 변형 · 잠금 제외)
 			count += 1
 			total += Loot.getSellPrice(item)
 			for i, id in ipairs(ArmorData.gradeOrder) do

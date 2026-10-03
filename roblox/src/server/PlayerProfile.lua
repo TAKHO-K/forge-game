@@ -2356,7 +2356,7 @@ function PlayerProfile.sellItemsByGrades(player, grades, expectedCount)
 	end
 	local remaining, totalGold, soldCount = {}, 0, 0
 	for _, item in ipairs(profile.inventory) do
-		if not item.locked and not item.skillVariant and want[item.grade] then
+		if Loot.isBulkSellTarget(item, want) then -- QUEUE-ALL9C 1-9 클라 확인 창과 같은 함수
 			totalGold += Loot.getSellPrice(item)
 			soldCount += 1
 		else

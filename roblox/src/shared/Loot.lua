@@ -408,6 +408,12 @@ function Loot.getSellPrice(item)
 	return price
 end
 
+-- QUEUE-ALL9C 1-9 등급 체크 일괄 판매 대상(서버 PlayerProfile.sellItemsByGrades · 클라 확인 창 개수/골드 합계가 같은 함수 - 둘이 어긋날 수 없게):
+--   잠금 X · 스킬 변형 X · 체크한 등급(gradeSet[등급] = true - 체크 목록 자체가 ArmorData.bulkSellGrades 안 = 전설 이상 없음). 착용 중 = 가방 밖(이 함수를 거치지 않음).
+function Loot.isBulkSellTarget(item, gradeSet)
+	return type(item) == "table" and type(gradeSet) == "table" and not item.locked and not item.skillVariant and gradeSet[item.grade] == true
+end
+
 -- QUEUE-10h Q13 등급 선택 일괄 분해 대상(서버 판정 · 클라 미리보기 같은 함수): 잠금 X · 영웅(분해 최소) ~ 기준 등급(일괄판매 상한 이하) · 초월 · 태초 보호(태초는 기본 잠금이지만 풀어도 일괄에선 빼 준다 - 한 개씩만).
 function Loot.isBulkDismantleTarget(item, cutoffGradeId)
 	if type(item) ~= "table" or item.locked or item.grade == TranscendentData.gradeId or item.grade == "primordial" or item.skillVariant then -- 리뷰: 스킬 변형 장비도 일괄에선 빼 준다(한 개씩만)
