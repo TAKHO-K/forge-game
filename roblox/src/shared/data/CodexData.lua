@@ -52,33 +52,15 @@ function C.boardReward(threshold)
 	return { goldKills = 30 + threshold, enhanceStone = 3 + math.floor(threshold / 10) } -- QUEUE-ALL6 K: 점수판 반짝 조각 5 → 0(칸 쪽 C.shards로 옮김)
 end
 
--- QUEUE-ALL6 K(사용자 결정): 도감 반짝(꾸미기) 조각 = 도감 점수 절반(약 179점)에 닿으면 테마 세트 1개(MonetizationData.shardPrices.theme = 120)를 살 만큼.
---   분류마다 나눠 배치 - 한 분류만 다 채워도 120 미만(쉬운 칸부터 채우는 흐름표 = docs/phase/QUEUE-ALL6-report.md K절 · 계산 roblox/tools/harness/codex_shard_flow.luau).
---   값 = 그 칸 하나의 조각 수(없는 칸 = 0): 장비 = 부위 갑옷 칸만 · 펫 = 부화 등급 희귀/영웅 · 몬스터 = 100 · 1,000 · 반짝이 · 탐험 · 보스 · 직업 = 칸마다.
-C.shards = {
-	armor = { part = "armor", n = 2 },
-	pet = { uncommon = 1, rare = 1, epic = 2 },
-	nest = 1,
-	monster = { k10 = 1, k100 = 1, k1000 = 1, sparkle = 1 },
-	boss = 1,
-	class = 1,
-}
+-- QUEUE-ALL9B 3-6(사용자 "도감 업데이트 = 토큰 증가"): 꾸미기 토큰(id sparkleShard)을 칸 수에서 자동 계산 - 새 도감 칸 · 줄이 생기면 얻을 수 있는 총 토큰이 저절로 는다.
+--   칸 = 점수 칸(score > 0)마다 perCell · 줄 완성 = 그 줄 칸 수 × linePerCell(올림 - CodexService가 칭호와 함께 지급).
+--   도감 1칸 추가 = perCell + linePerCell × (그 칸이 속한 줄 수) = 1.5토큰(장비 칸 = 등급 줄 + 세트 줄 = 2토큰). 옛 분류별 값(QUEUE-ALL6 K - 합 310)은 이 식으로 바뀌었다(합 = CodexRules.totalTokens).
+C.tokens = { perCell = 1, linePerCell = 0.5 }
 function C.shardsFor(c)
-	local s = C.shards
-	if c.kind == "armor" then
-		return c.part == s.armor.part and s.armor.n or 0
-	elseif c.kind == "pet" then
-		return s.pet[c.hatch] or 0
-	elseif c.kind == "nest" then
-		return s.nest
-	elseif c.kind == "monster" then
-		return s.monster[c.step] or 0
-	elseif c.kind == "boss" then
-		return s.boss
-	elseif c.kind == "class" then
-		return s.class
-	end
-	return 0
+	return (c.score == nil or c.score > 0) and c.kind ~= "board" and C.tokens.perCell or 0
+end
+function C.lineTokens(cellCount)
+	return math.ceil((cellCount or 0) * C.tokens.linePerCell)
 end
 
 -- 줄 칭호 이름(구역 이름 = WorldMapData.zones[].theme 앞 짧은 이름 · 등급 = ArmorData 이름 · 보스 = BossData 이름 · 직업 = ClassData 이름)

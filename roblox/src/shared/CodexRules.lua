@@ -192,4 +192,16 @@ function CodexRules.reward(c, stage, goldPerKill)
 	return r
 end
 
+-- QUEUE-ALL9B 3-6 · 3-7: 이 도감에서 얻을 수 있는 토큰 합(칸 + 줄 완성). 도감 업데이트 소식 "토큰 +n" = totalTokens(새) - totalTokens(옛).
+function CodexRules.totalTokens(book)
+	local sum = 0
+	for _, c in ipairs(book.cells) do
+		sum += CodexData.shardsFor(c)
+	end
+	for _, l in pairs(book.lines) do
+		sum += CodexData.lineTokens(#l.cells)
+	end
+	return sum
+end
+
 return CodexRules

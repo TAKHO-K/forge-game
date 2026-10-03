@@ -30,13 +30,14 @@ local function saleRow(ctx, env, view, kind, entry, owned, shardPrice, productKe
 	elseif not Monetization.onSale(CosmeticSlotData, kind, entry.id) then -- QUEUE-ALL6 H 시즌 한정(할로윈 = 10월) 판매 기간 밖
 		buttons = { { name = "OffSeason_" .. entry.id, text = Text.get("shop.cos.offSeason", { month = tostring(entry.seasonMonth) }), width = 140, enabled = false } }
 	else
-		buttons = {
-			{ name = "Shards_" .. entry.id, text = Text.get("shop.shardPrice", { n = tostring(shardPrice) }), kind = "primary",
+		buttons = {}
+		if shardPrice then -- QUEUE-ALL9B 3-7: 상품마다 토큰가(서버 view.productTokens - 토큰 불가 = 버튼 없음)
+			table.insert(buttons, { name = "Shards_" .. entry.id, text = Text.get("shop.shardPrice", { n = tostring(shardPrice) }), kind = "primary",
 				enabled = (view.shards or 0) >= shardPrice and not env.busy(), onActivated = function()
 					env.send("buyShards", kind, entry.id)
-				end },
-			env.robuxButton(productKey, "Robux_" .. entry.id),
-		}
+				end })
+		end
+		table.insert(buttons, env.robuxButton(productKey, "Robux_" .. entry.id))
 		if kind ~= "cosmeticItem" or TRY_ITEM_SLOTS[entry.slot] then
 			table.insert(buttons, { name = "Try_" .. entry.id, text = Text.get("shop.cos.try"), width = 84, enabled = true, onActivated = function() -- QUEUE-ALL2 P2 B-4 ①: 내 캐릭터에 입혀 보기(로컬 · 잠깐)
 				env.preview(kind, entry)
@@ -93,22 +94,25 @@ function CosmeticTab.render(ctx, env)
 
 	ctx.section(Text.get("shop.cos.themeSection"), "ThemeSection")
 	for _, set in ipairs(CosmeticSlotData.sets) do
-		saleRow(ctx, env, view, "cosmeticTheme", set, view.themes and view.themes[set.id] == true, view.shardPrices.theme, "theme_" .. set.id, "shop.cos.themeSub")
+		if set.seasonOnly or set.passOnly or set.boardOnly then
+			continue -- QUEUE-ALL9B 패스 · 출석판 전용 테마 = 판매 줄 없음
+		end
+		saleRow(ctx, env, view, "cosmeticTheme", set, view.themes and view.themes[set.id] == true, (view.productTokens or {})["theme_" .. set.id], "theme_" .. set.id, "shop.cos.themeSub")
 	end
 	ctx.section(Text.get("shop.cos.gliderSection"), "GliderSection")
 	for _, skin in ipairs(CosmeticSlotData.gliderSkins) do
-		if skin.seasonOnly then
-			continue -- QUEUE-ALL1 R1: 시즌 한정(구름 고래) = 판매 줄 없음(시즌 탭 · 장착 칩에만)
+		if skin.seasonOnly or skin.passOnly or skin.boardOnly then
+			continue -- QUEUE-ALL1 R1: 시즌 한정(구름 고래) · QUEUE-ALL9B 패스 · 출석판 전용 = 판매 줄 없음(시즌 탭 · 장착 칩에만)
 		end
-		saleRow(ctx, env, view, "gliderSkin", skin, view.gliderSkins and view.gliderSkins[skin.id] == true, view.shardPrices.gliderSkin, "glider_" .. skin.id, "shop.cos.gliderSub")
+		saleRow(ctx, env, view, "gliderSkin", skin, view.gliderSkins and view.gliderSkins[skin.id] == true, (view.productTokens or {})["glider_" .. skin.id], "glider_" .. skin.id, "shop.cos.gliderSub")
 	end
 	-- QUEUE-ALL6 H 소품(칸 하나짜리) - 칸별 묶음
 	ctx.section(Text.get("shop.cos.itemSection"), "ItemSection")
 	for _, slotId in ipairs(CosmeticSlotData.itemSlots) do
 		ctx.line(Text.get("shop.slot." .. slotId), "textSecondary", 1, "ItemSlot_" .. slotId)
 		for _, item in ipairs(CosmeticSlotData.items) do
-			if item.slot == slotId then
-				saleRow(ctx, env, view, "cosmeticItem", item, view.items and view.items[item.id] == true, view.shardPrices.item, "item_" .. item.id, "shop.cos.itemSub." .. slotId)
+			if item.slot == slotId and not (item.seasonOnly or item.passOnly or item.boardOnly) then -- QUEUE-ALL9B 패스 · 출석판 전용 = 판매 줄 없음
+				saleRow(ctx, env, view, "cosmeticItem", item, view.items and view.items[item.id] == true, (view.productTokens or {})["item_" .. item.id], "item_" .. item.id, "shop.cos.itemSub." .. slotId)
 			end
 		end
 	end

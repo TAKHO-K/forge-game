@@ -111,7 +111,7 @@ local en = {
 	["이끼 슬라임"] = "Moss Slime", ["바위 멧돼지"] = "Rock Boar", ["수정 딱정벌레"] = "Crystal Beetle", ["자수정 박쥐"] = "Amethyst Bat", ["소라게 기사"] = "Hermit Crab Knight", ["물방울 해파리"] = "Bubble Jelly",
 	["모래 전갈"] = "Sand Scorpion", ["선인장 꼬마"] = "Cactus Kid", ["번개 임프"] = "Thunder Imp", ["구름 양"] = "Cloud Sheep", ["얼음 골렘"] = "Ice Golem", ["눈토끼"] = "Snow Bunny", ["푸른 드래곤"] = "Blue Dragon",
 	["연약한"] = "Weak", ["단단한"] = "Tough", ["거대한"] = "Giant",
-	["반짝이 몬스터"] = "Sparkle Monster", ["반짝 조각"] = "Sparkle Shard",
+	["반짝이 몬스터"] = "Sparkle Monster", ["반짝 조각"] = "Style Token", ["꾸미기 토큰"] = "Style Token",
 
 	-- ═══ 알 · 펫(EggData · PetData) ═══
 	["석조 평원 알"] = "Stone Plains Egg", ["수정 동굴 알"] = "Crystal Cave Egg", ["수몰 사원 알"] = "Sunken Temple Egg", ["모래 유적 알"] = "Sand Ruins Egg", ["폭풍 첨탑 알"] = "Storm Spire Egg", ["빙하 동굴 알"] = "Glacier Cave Egg",

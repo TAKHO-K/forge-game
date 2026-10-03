@@ -105,5 +105,60 @@ do
 	check("2-3 보스 = 실력: 기믹 실패 피해 = 최대 체력 비율(체력 수련으로 버틸 수 없음)", gf ~= nil and gf.maxHpFraction < 1 and gf.firstMaxHpFraction < 1, gf and ("%.2f · %.2f"):format(gf.firstMaxHpFraction, gf.maxHpFraction) or "nil")
 end
 
+-- ══ 3 꾸미기 토큰 ══
+do
+	local Mon, Data, Cos, CodexRules, CodexData = MODS.Monetization, MODS.MonetizationData, MODS.CosmeticSlotData, MODS.CodexRules, MODS.CodexData
+	local TI = MODS.TextData_items
+	check("3-1 표시 이름 = 꾸미기 토큰 / Style Token(id sparkleShard 그대로)", TI.ko["item.name.sparkleShard"] == "꾸미기 토큰" and TI.en["item.name.sparkleShard"] == "Style Token")
+	local nests = {}
+	for _, spec in ipairs(MODS.SecretNestData) do
+		if spec.track == "C" and spec.sub ~= "village" and CodexData.zoneShort[spec.zone] then
+			nests[spec.zone] = nests[spec.zone] or {}
+			table.insert(nests[spec.zone], spec.id)
+		end
+	end
+	local book = CodexRules.build(nests)
+	local total = CodexRules.totalTokens(book)
+	-- 도감 1칸 추가(몬스터 종 하나 더 = 칸 5 · 같은 줄) → 토큰 증가 = 칸 × 1.5
+	local zone = MODS.WorldMapData.zones[1]
+	local saved = zone.hunt.monsters
+	local more = table.clone(saved)
+	table.insert(more, { species = saved[1].species .. "_test" })
+	zone.hunt.monsters = more
+	local book2 = CodexRules.build(nests)
+	zone.hunt.monsters = saved
+	local delta = CodexRules.totalTokens(book2) - total
+	local newCells = #book2.cells - #book.cells
+	check("3-6 도감 칸 추가 = 토큰 자동 증가(칸 + 줄 완성)", newCells == 5 and delta >= newCells, ("칸 %d개 추가 → 토큰 +%d(칸당 %.1f) · 도감 총 토큰 %d"):format(newCells, delta, delta / math.max(newCells, 1), total))
+	local prog = Mon.premiumTokenProgress(Data, 300)
+	check("3-7 다음 499급까지(토큰 300) = 500 남음 · 37.5%", prog.price == 800 and prog.need == 500 and math.abs(prog.ratio - 0.375) < 1e-9)
+	local blocked = {}
+	for _, list in ipairs({ Cos.sets, Cos.gliderSkins, Cos.items }) do
+		for _, e in ipairs(list) do
+			if e.seasonOnly or e.passOnly or e.boardOnly then
+				table.insert(blocked, e.id)
+			end
+		end
+	end
+	local leak = {}
+	for key, product in pairs(Data.products) do
+		for _, g in ipairs(product.grants) do
+			if Mon.tokenBlocked(Cos, g.kind, g.id) then
+				table.insert(leak, key)
+			end
+		end
+	end
+	check("3-5 토큰 불가 치장(시즌 한정 · 패스 · 출석판 전용)은 상품에 없음", #leak == 0, ("불가 %s · 새는 상품 %s"):format(table.concat(blocked, ","), table.concat(leak, ",")))
+	local untok = {}
+	for key, product in pairs(Data.products) do
+		if key ~= "season_premium" and not Mon.productTokenPrice(Data, Cos, key) then
+			table.insert(untok, key)
+		end
+	end
+	check("3-5 모든 상점 치장 = 토큰으로도 살 수 있음", #untok == 0, table.concat(untok, ","))
+	local ok, reasons = Mon.checkCatalog(Data, Cos, MODS.SeasonPassData)
+	check("3-4 카탈로그 검사 통과(499급 묶음 tier premium 포함)", ok, table.concat(reasons, " / "))
+end
+
 -- ══ 끝 ══
 print(("===ALL9B 끝 %d/%d"):format(pass, total))

@@ -134,6 +134,10 @@ function refresh(player)
 			end
 		end
 		if all and PlayerProfile.grantTitle(player, l.titleId) then
+			local lineTokens = CodexData.lineTokens(#l.cells) -- QUEUE-ALL9B 3-6 줄 완성 토큰(칸 수 × linePerCell - 칭호 1회와 같이 1회)
+			if lineTokens > 0 then
+				require(script.Parent.QuestService).grant(player, { sparkleShard = lineTokens })
+			end
 			local t = TitleData.titles[l.titleId]
 			noticeRemote:FireClient(player, "srv.codex.lineDone", { title = t and t.name or l.titleId, titleId = l.titleId }) -- QUEUE-ALL6R 3: 키 + 인자(칭호 = 클라 CodexRules.titleText - 도감 칭호는 틀 + 이름을 따로 번역)
 			changed = true

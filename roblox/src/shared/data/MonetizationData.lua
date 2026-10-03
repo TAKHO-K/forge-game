@@ -2,7 +2,7 @@
 --   설계 = docs/design/monetization-p4c.md · 검사 = shared/Monetization.lua(checkCatalog - 판매 금지 목록 · 유료 랜덤 · 무료 줄 규칙) · 서버 = server/MonetizationService.lua(영수증 · 게임패스 · 정책).
 --   치장 목록(테마 세트 · 글라이더 스킨)은 shared/data/CosmeticSlotData.lua(MV1 치장 슬롯 자리 - §7-6 기존 입구) · 시즌 패스 줄 = shared/data/SeasonPassData.lua.
 --   치장 재화 = 반짝 조각(profile.quests.currencies.sparkleShard - G3 퀘스트 보상이 이미 쓰는 칸 · 지급 입구 QuestService.grant). 골드로는 치장을 못 산다.
-return {
+local D = {
 	-- 판매 금지(사용자 규칙): 상품 · 시즌 패스 유료 줄 · 선물의 grants에 이 종류가 하나라도 있으면 등록 검사가 거부한다.
 	--   이름 = grant.kind. 보상 표의 옛 키(gold · enhanceStone 등)도 같은 뜻으로 막는다(aliases).
 	forbiddenKinds = {
@@ -38,7 +38,17 @@ return {
 		item_forgeBrazier = { productId = 0, robux = 99, grants = { { kind = "cosmeticItem", id = "forgeBrazier" } } },
 		item_highFive = { productId = 0, robux = 49, grants = { { kind = "cosmeticItem", id = "highFive" } } },
 		item_petCrown = { productId = 0, robux = 49, grants = { { kind = "cosmeticItem", id = "petCrown" } } },
+		-- QUEUE-ALL9B 3-4 499R$급(tier = premium) 자리 - **인식용 임시 제안**(실제 상품 · 이름 · 구성은 사용자가 정한다 · productId 0 = 로벅스 준비 중 · 토큰으로는 살 수 있다).
+		--   묶음 = 이미 있는 에셋만(새 메시 없음): 망치와 모루 테마 + 슬라임 낙하산 + 황금 망치.
+		bundle_blacksmith = { productId = 0, robux = 499, tier = "premium", name = "대장장이 세트", proposal = true,
+			grants = { { kind = "cosmeticTheme", id = "anvil" }, { kind = "gliderSkin", id = "slimeParachute" }, { kind = "cosmeticItem", id = "goldenHammer" } } },
 	},
+	-- QUEUE-ALL9B 3-4 가격 등급(표시 · 검사용): premium = 499R$급 대표 치장. 상품의 tier가 여기 이름이면 robux가 이 값이어야 한다(checkCatalog).
+	tiers = { premium = { robux = 499 } },
+	-- QUEUE-ALL9B 3-3 꾸미기 토큰 가격 = 로벅스 가격에 비례(499R$급 = premiumTokens · roundTo 단위 반올림) - 계산 = shared/Monetization.tokenPriceForRobux 한 곳.
+	--   근거 = 토큰 유입 모형(docs/phase/QUEUE-ALL9B-report.md 4절): 캐주얼(하루 1시간)이 도감 60% · 67% · 75%에 닿는 날 누적 토큰 556 · 794 · 1,144 → 가운데 67% ≈ 800.
+	--   49 → 80 · 99 → 160 · 149 → 240 · 199 → 320 · 399 → 640 · 499 → 800. 토큰으로 못 사는 것 = 시즌 패스 보상(passOnly) · 시즌 한정(seasonOnly) · 출석판 전용(boardOnly) · 시즌 유료 줄.
+	tokenPricing = { premiumRobux = 499, premiumTokens = 800, roundTo = 10 },
 	-- 게임패스(편의만 - 전투력 · 획득량 없음). passId = Creator Hub 번호(자리 0). 효과 수치도 여기(편의 값).
 	gamePasses = {
 		bagExpand = { passId = 0, robux = 149, bonusSlots = 20 }, -- 가방 칸 +20(InventorySync.capacity)
@@ -47,10 +57,8 @@ return {
 		nameplateColor = { passId = 0, robux = 49, colors = { "gold", "success", "stealShield", "ember" } }, -- 이름표 색(UIColors 기존 이름 - 새 색 금지 · 전투력 없음)
 		nameplateBadge = { passId = 0, robux = 49, badges = { "hammer", "slime", "star", "heart" } }, -- QUEUE-ALL1 P6 이름표 배지: 이름 앞 작은 정지 아이콘 1개(고르기) · 칭호 흐름 띠와 안 겹침 · 전투력 없음
 	},
-	-- 반짝 조각 가격(로벅스 대신 조각으로 살 때 - 골드 불가). 조각을 **상품으로 직접** 팔지 않는다(유료 재화 상품 없음 - 시즌 유료 줄 보상에는 조각이 있다 · 조각은 치장만 산다 - 설계 문서 §3 · §10-2).
-	shardPrices = { theme = 120, gliderSkin = 80, item = 60 }, -- QUEUE-ALL6 H item = 꾸미기 소품 하나(도감 절반 120 = 테마 1 또는 소품 2)
-	-- QUEUE-B1 결정 8: 이미 가진 것을 (클라가 직접 연 구매 창으로) 산 영수증 · 지난 시즌에 연 유료 줄 영수증 = 반짝 조각으로 환산(자리값 - 조각 가격 기준).
-	ownedRefundShards = { cosmeticTheme = 120, gliderSkin = 80, seasonPremium = 120, cosmeticItem = 60 },
+	-- 꾸미기 토큰(id sparkleShard) 가격 · 환산 = 아래 tokenPricing에서 계산(파일 끝 - shardPrices · ownedRefundShards = 종류별 대표값 · 표시 · 옛 호출 호환).
+	--   토큰을 **상품으로 직접** 팔지 않는다(유료 재화 상품 없음 - 시즌 유료 줄 보상에는 토큰이 있다 · 토큰은 치장만 산다 - 설계 문서 §3 · §10-2).
 	-- 반짝 조각 출처(퀘스트 · 출석 · 메인 퀘스트 보상은 QuestData에 이미 있다 - 여기는 새 출처만)
 	shardSources = {
 		treeStation = 2, -- 나무 정거장 처음 오르기(정거장마다 1회 · 리프트 · 순간이동 도착은 제외)
@@ -71,3 +79,13 @@ return {
 		userToUser = { enabled = false, productKey = nil }, -- 유저 간 로벅스 선물 자리(P4c 뒤 - 대상 UserId를 프롬프트 전에 서버에 맡기는 방식)
 	},
 }
+
+-- QUEUE-ALL9B 3-3: 로벅스 → 토큰 가격(식 한 곳 - Monetization.tokenPriceForRobux가 이 함수를 부른다). 종류별 대표값 = 표시 · 옛 호출 호환(실제 가격 · 영수증 환산은 상품의 robux로 상품마다).
+local function tokens(robux)
+	local p = D.tokenPricing
+	return math.max(p.roundTo, math.floor(p.premiumTokens * robux / p.premiumRobux / p.roundTo + 0.5) * p.roundTo)
+end
+D.tokenPrice = tokens
+D.shardPrices = { theme = tokens(199), gliderSkin = tokens(149), item = tokens(99) }
+D.ownedRefundShards = { cosmeticTheme = tokens(199), gliderSkin = tokens(149), seasonPremium = tokens(399), cosmeticItem = tokens(99) }
+return D

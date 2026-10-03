@@ -52,7 +52,12 @@ function Monetization.checkProduct(data, key, product, cosmetics)
 			table.insert(reasons, ("%s: 없는 치장 %s"):format(key, tostring(grant.id)))
 		elseif cosmetics and Monetization.seasonOnly(cosmetics, grant.kind, grant.id) then
 			table.insert(reasons, ("%s: 시즌 한정 치장 %s는 상품으로 못 판다(재판매 없음)"):format(key, tostring(grant.id))) -- QUEUE-ALL1 R1
+		elseif cosmetics and Monetization.tokenBlocked(cosmetics, grant.kind, grant.id) then
+			table.insert(reasons, ("%s: 패스 · 출석판 전용 치장 %s는 상품으로 못 판다"):format(key, tostring(grant.id))) -- QUEUE-ALL9B 4-3 · 5-1
 		end
+	end
+	if product.tier ~= nil and not (data.tiers and data.tiers[product.tier] and data.tiers[product.tier].robux == product.robux) then
+		table.insert(reasons, ("%s: 가격 등급 %s와 robux %s가 안 맞음"):format(key, tostring(product.tier), tostring(product.robux))) -- QUEUE-ALL9B 3-4
 	end
 	if product.paidRandom and type(product.odds) ~= "table" then
 		table.insert(reasons, key .. ": 유료 랜덤인데 확률표(odds) 없음 - 구매 전 확률 표시 필수")
@@ -85,6 +90,56 @@ end
 function Monetization.seasonOnly(cosmetics, kind, id)
 	local entry = Monetization.findCosmetic(cosmetics, kind, id)
 	return type(entry) == "table" and entry.seasonOnly or nil
+end
+
+-- ── QUEUE-ALL9B 3 꾸미기 토큰(id sparkleShard) ──
+-- 로벅스 가격 → 토큰 가격(식 = MonetizationData.tokenPrice 한 곳 · 499R$급 = tokenPricing.premiumTokens)
+function Monetization.tokenPriceForRobux(data, robux)
+	if type(robux) ~= "number" or robux <= 0 then
+		return nil
+	end
+	return data.tokenPrice(robux)
+end
+-- 토큰으로 못 사는 치장인가: 시즌 한정(seasonOnly) · 시즌 패스 보상 전용(passOnly) · 출석판 전용(boardOnly). 반환 = 이유 | nil
+function Monetization.tokenBlocked(cosmetics, kind, id)
+	local entry = Monetization.findCosmetic(cosmetics, kind, id)
+	if type(entry) ~= "table" then
+		return nil
+	end
+	if entry.seasonOnly then
+		return "season_only"
+	elseif entry.passOnly then
+		return "pass_only"
+	elseif entry.boardOnly then
+		return "board_only"
+	end
+	return nil
+end
+-- 상품 하나의 토큰 가격(치장만 · 토큰 불가 치장이 하나라도 있으면 nil + 이유). 상점 "가격 옆 토큰가"(3-7)와 서버 구매가 같은 함수.
+function Monetization.productTokenPrice(data, cosmetics, key)
+	local product = data.products[key]
+	if type(product) ~= "table" or type(product.grants) ~= "table" or #product.grants == 0 then
+		return nil, "unknown"
+	end
+	for _, g in ipairs(product.grants) do
+		if g.kind ~= "cosmeticTheme" and g.kind ~= "gliderSkin" and g.kind ~= "cosmeticItem" then
+			return nil, "not_cosmetic" -- 시즌 유료 줄 = 로벅스만
+		end
+		if not Monetization.findCosmetic(cosmetics, g.kind, g.id) then
+			return nil, "unknown"
+		end
+		local blocked = Monetization.tokenBlocked(cosmetics, g.kind, g.id)
+		if blocked then
+			return nil, blocked
+		end
+	end
+	return Monetization.tokenPriceForRobux(data, product.robux), nil
+end
+-- 도감 · 상점 "다음 499급까지 n토큰"(3-7): 가진 토큰 → { price = 499급 토큰가, need = 모자란 토큰, ratio = 0 ~ 1 }
+function Monetization.premiumTokenProgress(data, balance)
+	balance = type(balance) == "number" and balance == balance and math.max(0, balance) or 0
+	local price = Monetization.tokenPriceForRobux(data, data.tokenPricing.premiumRobux)
+	return { price = price, need = math.max(0, price - balance), ratio = math.min(1, balance / price) }
 end
 
 -- 치장 찾기(CosmeticSlotData). kind = cosmeticTheme | gliderSkin | cosmeticItem(QUEUE-ALL6 H 꾸미기 소품)

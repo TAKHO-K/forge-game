@@ -49,7 +49,7 @@ function MonetizationService.applyReward(player, reward, source)
 		return false, "egg_full" -- 받은 표시를 하기 전에 막는다(QuestService.claim과 같은 규칙)
 	end
 	for _, grant in ipairs(Monetization.rewardToGrants(reward)) do
-		if source == "product" then
+		if source == "product" or source == "token" then -- QUEUE-ALL9B 3-5 토큰 구매도 상품과 같은 판매 금지 검사
 			local ok, why = Monetization.checkGrant(MonetizationData, grant)
 			if not ok then
 				return false, why
@@ -129,9 +129,7 @@ function MonetizationService.processReceipt(receiptInfo, deps)
 		hasPremium = hasPremium or grant.kind == "seasonPremium"
 	end
 	if MonetizationService.ownsAll(player, product) or (hasPremium and staleSeason) then
-		for _, grant in ipairs(product.grants) do
-			refund += MonetizationData.ownedRefundShards[grant.kind] or 0
-		end
+		refund = Monetization.tokenPriceForRobux(MonetizationData, product.robux) or 0 -- QUEUE-ALL9B 3-3: 상품 robux 비례(토큰 가격과 같은 식)
 		reward = { sparkleShard = refund }
 	else
 		for _, grant in ipairs(product.grants) do
@@ -243,6 +241,14 @@ function MonetizationService.view(player)
 	return {
 		shards = CosmeticService.shards(player),
 		shardPrices = MonetizationData.shardPrices,
+		productTokens = (function() -- QUEUE-ALL9B 3-7: 상품마다 토큰가(토큰 불가 = 없음) · 499급 진행
+			local out = {}
+			for key in pairs(MonetizationData.products) do
+				out[key] = validProducts[key] and Monetization.productTokenPrice(MonetizationData, CosmeticSlotData, key) or nil
+			end
+			return out
+		end)(),
+		premiumTokens = Monetization.premiumTokenProgress(MonetizationData, CosmeticService.shards(player)),
 		themes = table.clone(s.cosmetics.themes),
 		gliderSkins = table.clone(s.cosmetics.gliderSkins),
 		items = table.clone(type(s.cosmetics.items) == "table" and s.cosmetics.items or {}), -- QUEUE-ALL6 H 꾸미기 소품
@@ -276,6 +282,49 @@ function MonetizationService.ownsAll(player, product)
 			return false
 		end
 	end
+	return true
+end
+
+-- QUEUE-ALL9B 3-5 토큰(sparkleShard)으로 상품 사기 - 모든 상점 치장(묶음 포함). 가격 = Monetization.productTokenPrice(로벅스 비례 · 화면과 같은 함수).
+--   거부: 모르는 · 등록 거부 상품 · 토큰 불가(시즌 한정 · 패스 · 출석판 전용 · 시즌 유료 줄) · 판매 기간 밖 · 이미 전부 가짐 · 토큰 부족.
+--   차감 → 지급(applyReward - 상품 · 시즌 줄 · 선물과 같은 입구) · 중간 yield 없음(같은 요청이 겹쳐도 두 번째는 owned) · 감사 기록 · 즉시 저장 요청.
+function MonetizationService.buyWithTokens(player, key)
+	local product = type(key) == "string" and MonetizationData.products[key]
+	if not product or not validProducts[key] then
+		return false, "unknown"
+	end
+	local price, blocked = Monetization.productTokenPrice(MonetizationData, CosmeticSlotData, key)
+	if not price then
+		return false, blocked or "not_token"
+	end
+	for _, grant in ipairs(product.grants) do
+		if not Monetization.onSale(CosmeticSlotData, grant.kind, grant.id) then
+			return false, "off_season"
+		end
+	end
+	if not PlayerProfile.getMonetizationState(player) then
+		return false, "no_profile"
+	end
+	if MonetizationService.ownsAll(player, product) then
+		return false, "owned"
+	end
+	if not CosmeticService.spendShards(player, price) then
+		return false, "shards"
+	end
+	for _, grant in ipairs(product.grants) do
+		local ok, why = MonetizationService.applyReward(player, { [grant.kind] = grant.id }, "token")
+		if not ok then -- 데이터 오류(위에서 걸러져 일어나지 않아야 한다) - 토큰을 돌려준다(이미 지급된 치장은 소유 그대로 · 멱등)
+			local quests = PlayerProfile.getQuestState(player)
+			if quests then
+				quests.currencies.sparkleShard = (quests.currencies.sparkleShard or 0) + price
+			end
+			warn(("[ALL9B] 토큰 구매 지급 실패: %s - %s %s → 토큰 %d 되돌림"):format(tostring(player), key, tostring(why), price))
+			return false, why
+		end
+	end
+	require(script.Parent.AuditTrail).note(player, "tokenBuy", ("%s · %d토큰"):format(key, price)) -- QUEUE-ALL9B 6-2 감사
+	require(script.Parent.ImmediateSave).request(player)
+	print(("[ALL9B] 토큰 구매: %s - %s · %d토큰"):format(tostring(player), key, price))
 	return true
 end
 
@@ -325,7 +374,7 @@ function MonetizationService.promptPass(player, key)
 	return true
 end
 
-local ACTIONS = { view = true, buyShards = true, buyRobux = true, buyPass = true, equip = true, seasonClaim = true, giftClaim = true }
+local ACTIONS = { view = true, buyShards = true, buyTokens = true, buyRobux = true, buyPass = true, equip = true, seasonClaim = true, giftClaim = true }
 function MonetizationService.handle(player, action, a, b)
 	if type(action) ~= "string" or not ACTIONS[action] then
 		return false, "bad_action"
@@ -333,6 +382,8 @@ function MonetizationService.handle(player, action, a, b)
 	local ok, why = true, nil
 	if action == "buyShards" and type(a) == "string" and type(b) == "string" then
 		ok, why = CosmeticService.buyWithShards(player, a, b)
+	elseif action == "buyTokens" and type(a) == "string" then -- QUEUE-ALL9B 3-5 상품 키(묶음 포함)
+		ok, why = MonetizationService.buyWithTokens(player, a)
 	elseif action == "buyRobux" and type(a) == "string" then
 		ok, why = MonetizationService.promptProduct(player, a)
 	elseif action == "buyPass" and type(a) == "string" then

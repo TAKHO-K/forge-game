@@ -19,14 +19,14 @@ run save_lock res_lock.txt SaveSystem save_lock_test.luau
 run migrate_curve res_curve.txt SaveSystem migrate_curve_test.luau
 run id_quarantine res_quar.txt SaveSystem id_quarantine_test.luau
 run monetize res_mon.txt "$(python deps.py MonetizationService,SaveSystem,OpsServer.server,InventorySync)" monetize_test.luau
-run dupe res_dupe.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem)" dupe_test.luau
+run dupe res_dupe.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem,MonetizationService)" dupe_test.luau
 run multiplayer res_multi.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem)" multiplayer_test.luau
 run attack res_attack.txt "$ATTACK" attack_test.luau
 run request_gate res_gate.txt "$ATTACK,RequestGate" request_gate_test.luau
 run mesh_import res_mesh.txt "" mesh_import_test.luau
 run ops_security res_ops.txt OpsRollback,SuspicionMonitor,AuditTrail ops_security_test.luau # QUEUE-ALL6 F 되돌리기 · 차단 · 탐지 · 감사
 run season_pass res_season.txt "" season_pass_test.luau # QUEUE-ALL9A 1-5 패스 패턴 6종 × 8주 · 주말 경계
-run economy_all9b res_all9b.txt "" economy_all9b_test.luau # QUEUE-ALL9B 판매가 · 수련 · 토큰 · 패스 가치 · 출석판
+run economy_all9b res_all9b.txt SecretNestData economy_all9b_test.luau # QUEUE-ALL9B 판매가 · 수련 · 토큰 · 패스 가치 · 출석판
 run community_goal res_goal.txt "" community_goal_test.luau # QUEUE-ALL7 B5 합동 목표 00 · ±25% · 문턱 순서
 run boss_motion res_motion.txt "" boss_motion_test.luau motion_prelude.luau
 printf "%-22s %s\n" regrow_timing "$(python regrow_timing_test.py 2>&1 | grep -a -E '끝 [0-9]+/[0-9]+' | tail -1)"

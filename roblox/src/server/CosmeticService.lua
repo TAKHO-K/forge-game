@@ -118,30 +118,16 @@ function CosmeticService.grant(player, kind, id)
 	return true
 end
 
--- 반짝 조각으로 사기. 반환: ok, 이유
+-- 반짝 조각(꾸미기 토큰)으로 사기(옛 요청 buyShards - 치장 하나). QUEUE-ALL9B 3-5: 그 치장의 상품(theme_ · glider_ · item_ 키)으로 MonetizationService.buyWithTokens 한 곳에 맡긴다.
+local PRODUCT_PREFIX = { cosmeticTheme = "theme_", gliderSkin = "glider_", cosmeticItem = "item_" }
 function CosmeticService.buyWithShards(player, kind, id)
-	local price = kind == "cosmeticTheme" and MonetizationData.shardPrices.theme or kind == "gliderSkin" and MonetizationData.shardPrices.gliderSkin
-		or kind == "cosmeticItem" and MonetizationData.shardPrices.item or nil
-	if not price or not Monetization.findCosmetic(CosmeticSlotData, kind, id) then
+	local prefix = PRODUCT_PREFIX[kind]
+	if not prefix or type(id) ~= "string" or not Monetization.findCosmetic(CosmeticSlotData, kind, id) then
 		return false, "unknown"
 	end
-	if Monetization.seasonOnly(CosmeticSlotData, kind, id) then
-		return false, "season_only" -- QUEUE-ALL1 R1: 시즌 한정(구름 고래) = 시즌 줄에서만
-	end
-	if not Monetization.onSale(CosmeticSlotData, kind, id) then
-		return false, "off_season" -- QUEUE-ALL6 H: 할로윈 = 10월만 판매
-	end
-	if (kind == "cosmeticTheme" and CosmeticService.ownsTheme(player, id)) or (kind == "gliderSkin" and CosmeticService.ownsGlider(player, id)) or (kind == "cosmeticItem" and CosmeticService.ownsItem(player, id)) then
-		return false, "owned"
-	end
-	if not spendShards(player, price) then
-		return false, "shards"
-	end
-	CosmeticService.grant(player, kind, id)
-	require(script.Parent.AuditTrail).note(player, "shardBuy", ("%s %s · %d조각"):format(kind, tostring(id), price)) -- QUEUE-ALL6 F3 감사
-	require(script.Parent.ImmediateSave).request(player)
-	return true
+	return require(script.Parent.MonetizationService).buyWithTokens(player, prefix .. id)
 end
+CosmeticService.spendShards = spendShards
 
 -- 장착: slot = CosmeticSlotData 칸 id · id = 세트 id(gliderSkin 칸은 스킨 id) · nil = 기본 모습. 반환: ok, 이유
 function CosmeticService.equip(player, slot, id)

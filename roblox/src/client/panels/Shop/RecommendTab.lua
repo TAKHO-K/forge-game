@@ -33,11 +33,11 @@ function RecommendTab.render(ctx, env)
 	end
 	local theme = firstUnowned(CosmeticSlotData.sets, view.themes)
 	if theme then
-		CosmeticTab.saleRow(ctx, env, view, "cosmeticTheme", theme, false, view.shardPrices.theme, "theme_" .. theme.id, "shop.cos.themeSub")
+		CosmeticTab.saleRow(ctx, env, view, "cosmeticTheme", theme, false, (view.productTokens or {})["theme_" .. theme.id], "theme_" .. theme.id, "shop.cos.themeSub")
 	end
 	local skin = firstUnowned(CosmeticSlotData.gliderSkins, view.gliderSkins)
 	if skin then
-		CosmeticTab.saleRow(ctx, env, view, "gliderSkin", skin, false, view.shardPrices.gliderSkin, "glider_" .. skin.id, "shop.cos.gliderSub")
+		CosmeticTab.saleRow(ctx, env, view, "gliderSkin", skin, false, (view.productTokens or {})["glider_" .. skin.id], "glider_" .. skin.id, "shop.cos.gliderSub")
 	end
 	ConvenienceTab.render(ctx, env, RecommendTab.passes)
 end

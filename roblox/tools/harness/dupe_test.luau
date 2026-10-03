@@ -85,6 +85,17 @@ local ok, err = pcall(function()
 	local l2 = QuestService.claim(player, "login")
 	line("출석 · 접속 보상 연타", r1 == true and r2 ~= true and l1 == true and l2 ~= true, ("출석 %s/%s · 접속 %s/%s"):format(tostring(r1), tostring(r2), tostring(l1), tostring(l2)))
 
+	-- ⑦ QUEUE-ALL9B 3-5 토큰 구매 연타(같은 상품 두 번 · 토큰은 한 번 값만 있음) → 두 번째 owned · 토큰 한 번만 차감 · 음수 없음
+	local MS = MODS.MonetizationService
+	local price = MODS.Monetization.productTokenPrice(MODS.MonetizationData, MODS.CosmeticSlotData, "theme_jelly")
+	qs.currencies.sparkleShard = price
+	local k1, kw1 = MS.buyWithTokens(player, "theme_jelly")
+	local k2, kw2 = MS.buyWithTokens(player, "theme_jelly")
+	local k3, kw3 = MS.buyWithTokens(player, "theme_frost")
+	local ms = PlayerProfile.getMonetizationState(player)
+	line("토큰 구매 연타(같은 상품 · 남은 토큰 0에서 다른 상품)", k1 == true and k2 ~= true and kw2 == "owned" and k3 ~= true and kw3 == "shards" and qs.currencies.sparkleShard == 0 and ms.cosmetics.themes.jelly == true and not ms.cosmetics.themes.frost,
+		("1회 %s · 2회 %s · 다른 %s · 남은 %d"):format(tostring(k1), tostring(kw2), tostring(kw3), qs.currencies.sparkleShard))
+
 	-- ⑥ 튕김 직전 수령 → 재접속: 받은 표시와 보상이 같은 프로필 한 번의 저장에 함께 들어간다(저장 전 튕김 = 둘 다 없음 - 복사 불가)
 	local snap = SaveSystem.migrate(MODS.SaveSystem.migrate({})) -- 저장 전 상태(재접속 때 읽는 값)
 	line("튕김 직전 수령 = 받은 표시 · 보상이 한 저장 단위(부분 저장 경로 없음)", snap.quests.attendance.claimed["1"] == nil)

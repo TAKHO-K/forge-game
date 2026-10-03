@@ -142,7 +142,7 @@ local ok, err = pcall(function()
 	qs.currencies.sparkleShard = 500
 	local b2 = MODS.CosmeticService.buyWithShards(player, "cosmeticTheme", "frost")
 	local b3, w3 = MODS.CosmeticService.buyWithShards(player, "cosmeticTheme", "frost")
-	check("조각 모자람 거부 · 구매 120 차감 · 두 번째 owned · 골드 그대로", not b1 and w1 == "shards" and b2 and not b3 and w3 == "owned" and qs.currencies.sparkleShard == 380 and p.gold == gold0,
+	check(("조각 모자람 거부 · 구매 %d 차감(199R$ 테마 = 토큰가) · 두 번째 owned · 골드 그대로"):format(Data.shardPrices.theme), not b1 and w1 == "shards" and b2 and not b3 and w3 == "owned" and qs.currencies.sparkleShard == 500 - Data.shardPrices.theme and p.gold == gold0,
 		("조각 %d"):format(qs.currencies.sparkleShard))
 	local e1 = MODS.CosmeticService.equip(player, "dashTrail", "frost")
 	local e2 = MODS.CosmeticService.equip(player, "jumpFx", "ember")
@@ -152,13 +152,13 @@ local ok, err = pcall(function()
 	check("칸별 섞어 장착(frost + ember) · 안 산 세트 거부 · 패스 없는 이름표 색 거부", e1 and e2 and not e3 and w4 == "not_owned" and not e4 and w5 == "no_pass"
 		and s.cosmetics.equipped.dashTrail == "frost" and s.cosmetics.equipped.jumpFx == "ember" and s.cosmetics.equipped.glideTrail == nil)
 	-- QUEUE-ALL6 H 꾸미기 소품(cosmeticItem): 조각 60 · 칸 맞춤 장착 · 다른 칸 거부 · 소품 상품 지급 멱등 · 할로윈 10월만
-	qs.currencies.sparkleShard = 100
+	qs.currencies.sparkleShard = Data.tokenPrice(Data.products.item_rocketPop.robux) + 40
 	local i1 = MODS.CosmeticService.buyWithShards(player, "cosmeticItem", "rocketPop")
 	local i2, wi2 = MODS.CosmeticService.buyWithShards(player, "cosmeticItem", "rocketPop")
 	local q1 = MODS.CosmeticService.equip(player, "killFx", "rocketPop")
 	local q2, wq2 = MODS.CosmeticService.equip(player, "weaponSkin", "rocketPop")
 	local q3, wq3 = MODS.CosmeticService.equip(player, "killFx", "balloonPop")
-	check("소품: 조각 60 차감 · 두 번째 owned · 처치 칸 장착 · 다른 칸 거부 · 안 산 소품 거부", i1 and not i2 and wi2 == "owned" and qs.currencies.sparkleShard == 40 and q1 and not q2 and wq2 == "unknown" and not q3 and wq3 == "not_owned"
+	check("소품: 조각 토큰가(99R$) 차감 · 두 번째 owned · 처치 칸 장착 · 다른 칸 거부 · 안 산 소품 거부", i1 and not i2 and wi2 == "owned" and qs.currencies.sparkleShard == 40 and q1 and not q2 and wq2 == "unknown" and not q3 and wq3 == "not_owned"
 		and s.cosmetics.equipped.killFx == "rocketPop", ("조각 %d"):format(qs.currencies.sparkleShard))
 	local g1 = MODS.CosmeticService.grant(player, "cosmeticItem", "petCrown")
 	local g2, wg2 = MODS.CosmeticService.grant(player, "cosmeticItem", "petCrown")
@@ -166,6 +166,29 @@ local ok, err = pcall(function()
 	local oct = os.time({ year = 2026, month = 10, day = 15, hour = 3 })
 	local sep = os.time({ year = 2026, month = 9, day = 15, hour = 3 })
 	check("할로윈 테마 = 10월(KST)만 판매 · 다른 테마는 늘", Mon.onSale(Cos, "cosmeticTheme", "halloween", oct) and not Mon.onSale(Cos, "cosmeticTheme", "halloween", sep) and Mon.onSale(Cos, "cosmeticTheme", "anvil", sep))
+
+	-- ④-2 QUEUE-ALL9B 3-5 토큰 구매(상품 키 - 묶음 포함): 499급 묶음 = 800 · 시즌 유료 줄 · 시즌 한정 = 토큰 불가 · 연타 = 두 번째 owned · 부족 거부 · 감사
+	MS.validProducts.bundle_blacksmith = true
+	local bundlePrice = Mon.productTokenPrice(Data, Cos, "bundle_blacksmith")
+	qs.currencies.sparkleShard = bundlePrice - 1
+	local tb0, wtb0 = MS.buyWithTokens(player, "bundle_blacksmith")
+	qs.currencies.sparkleShard = bundlePrice + 5
+	local tb1 = MS.buyWithTokens(player, "bundle_blacksmith")
+	local tb2, wtb2 = MS.buyWithTokens(player, "bundle_blacksmith")
+	check(("토큰 묶음(499R$급 %d): 부족 거부 · 구매 = 3종 지급 · 연타 = owned · 남은 5"):format(bundlePrice), bundlePrice == 800 and not tb0 and wtb0 == "shards" and tb1 and not tb2 and wtb2 == "owned"
+		and s.cosmetics.themes.anvil and s.cosmetics.gliderSkins.slimeParachute and s.cosmetics.items.goldenHammer and qs.currencies.sparkleShard == 5, ("토큰 %d"):format(qs.currencies.sparkleShard))
+	qs.currencies.sparkleShard = 5000
+	local tp, wtp = MS.buyWithTokens(player, "season_premium")
+	local tw, wtw = MODS.CosmeticService.buyWithShards(player, "gliderSkin", "cloudWhale")
+	local tu, wtu = MS.buyWithTokens(player, "nope")
+	check("토큰 불가: 시즌 유료 줄 · 시즌 한정(구름 고래) · 모르는 상품 - 토큰 그대로", not tp and wtp == "not_cosmetic" and not tw and not tu and wtu == "unknown" and qs.currencies.sparkleShard == 5000,
+		("%s · %s · %s"):format(tostring(wtp), tostring(wtw), tostring(wtu)))
+	local prices = {}
+	for _, r in ipairs({ 49, 99, 149, 199, 399, 499 }) do
+		table.insert(prices, ("%d→%d"):format(r, Mon.tokenPriceForRobux(Data, r)))
+	end
+	check("토큰가 = 로벅스 비례(10 단위)", Mon.tokenPriceForRobux(Data, 49) == 80 and Mon.tokenPriceForRobux(Data, 99) == 160 and Mon.tokenPriceForRobux(Data, 149) == 240
+		and Mon.tokenPriceForRobux(Data, 199) == 320 and Mon.tokenPriceForRobux(Data, 499) == 800, table.concat(prices, " "))
 
 	-- ⑤ 조각 출처: 나무 정거장 1회 · 순간이동 도착 제외
 	local before = qs.currencies.sparkleShard
@@ -344,13 +367,13 @@ local ok, err = pcall(function()
 	local afterFail = qs.currencies.sparkleShard
 	saveResult = true
 	local r2 = MS.processReceipt({ PlayerId = 77, ProductId = 9001, PurchaseId = "P-OWN", CurrencySpent = 199 }, deps)
-	check("이미 가진 테마 영수증 = 조각 +120 환산 · 저장 실패 때 되돌림 · 재시도 Granted", tostring(r1):find("NotProcessedYet") ~= nil and afterFail == shard0
-		and tostring(r2):find("PurchaseGranted") ~= nil and qs.currencies.sparkleShard == shard0 + Data.ownedRefundShards.cosmeticTheme, ("%d → %d → %d"):format(shard0, afterFail, qs.currencies.sparkleShard))
+	check("이미 가진 테마 영수증 = 토큰가 환산 · 저장 실패 때 되돌림 · 재시도 Granted", tostring(r1):find("NotProcessedYet") ~= nil and afterFail == shard0
+		and tostring(r2):find("PurchaseGranted") ~= nil and qs.currencies.sparkleShard == shard0 + Data.tokenPrice(Data.products.theme_ember.robux), ("%d → %d → %d"):format(shard0, afterFail, qs.currencies.sparkleShard))
 	s.seasonPass.premium = false
 	s.seasonPass.promptSeason = s.seasonPass.season - 1 -- 지난 시즌에 연 구매 창
 	local shard1 = qs.currencies.sparkleShard
 	MS.processReceipt({ PlayerId = 77, ProductId = 9002, PurchaseId = "P-OLDSEASON", CurrencySpent = 399 }, deps)
-	check("지난 시즌에 연 유료 줄 영수증 = 이번 시즌 유료 안 켜고 조각 환산", not s.seasonPass.premium and qs.currencies.sparkleShard == shard1 + Data.ownedRefundShards.seasonPremium and s.seasonPass.promptSeason == nil)
+	check("지난 시즌에 연 유료 줄 영수증 = 이번 시즌 유료 안 켜고 조각 환산", not s.seasonPass.premium and qs.currencies.sparkleShard == shard1 + Data.tokenPrice(Data.products.season_premium.robux) and s.seasonPass.promptSeason == nil)
 	local logN = #s.purchases.log
 	MS.processReceipt({ PlayerId = 77, ProductId = 55555, PurchaseId = "P-UNK" }, deps)
 	MS.processReceipt({ PlayerId = 77, ProductId = 55555, PurchaseId = "P-UNK" }, deps)
