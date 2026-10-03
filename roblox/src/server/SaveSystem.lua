@@ -240,6 +240,8 @@ local function defaultProfile()
 			optionRerollTickets = { ancient = 0, primordial = 0 },
 			protectionTickets = { drop = 0, reset = 0 },
 			protectionClaimedStages = {},
+			bagSources = {}, -- QUEUE-ALL9C 1-6(v69): 가방 칸 출처 { starter = true } - MonetizationData.bagSources(출처별 한 번)
+			shopViews = 0, -- QUEUE-ALL9C 1-6(v69): 상점 연 횟수(스타터 팩 노출 = 첫 보스 처치 또는 두 번째 방문)
 			receipts = {}, -- QUEUE-B1 B2(v56): { { id = PurchaseId 문자열, at } } 최근 MonetizationData.receiptKeep개 - ProcessReceipt 중복 지급 방지
 			log = {}, -- QUEUE-B1 B2(v56): 구매 기록 { { at, key, purchaseId, robux, result } } 최근 logKeep줄
 			-- bossCodex(30-0 S11) = { [bossId] = true } - 기여 10% 이상으로 처치한 보스 종(계정 공유 · 표시는 스테이지 선택 패널의 도감 줄뿐, 성능 보상 없음). 키는 BossData.bosses의 id.
@@ -1412,6 +1414,14 @@ local function migrate(data)
 			p.protectionRefund = refund
 		end
 		data.version = 68
+	end
+	if data.version < 69 then
+		-- QUEUE-ALL9C 1-6: 가방 칸 출처 · 상점 연 횟수(빈 값 - 옛 계정은 스타터를 산 적이 없다)
+		if type(data.purchases) == "table" then
+			data.purchases.bagSources = type(data.purchases.bagSources) == "table" and data.purchases.bagSources or {}
+			data.purchases.shopViews = tonumber(data.purchases.shopViews) or 0
+		end
+		data.version = 69
 	end
 
 	data.savedAt = data.savedAt or 0

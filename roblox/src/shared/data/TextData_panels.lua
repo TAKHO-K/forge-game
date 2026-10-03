@@ -45,6 +45,7 @@ return {
 		["ui.rank.me.rank"] = "내 순위 {rank}위 · 스테이지 {stage}",
 		["ui.rank.me.rankTime"] = "내 순위 {rank}위 · 스테이지 {stage} · {time}",
 		["ui.rank.me.outOfTop"] = "내 순위: {top}위 밖 · 스테이지 {stage}",
+		["ui.rank.me.topPercent"] = "내 순위: 상위 약 {percent}% · 스테이지 {stage}", -- QUEUE-ALL9C 1-5
 		["ui.rank.me.retry"] = "내 순위: 잠시 뒤 다시 불러옵니다",
 		["ui.rank.me.partyNone"] = "내 파티: {top}위 안 기록 없음",
 		["ui.rank.me.none"] = "내 순위: 기록 없음",
@@ -234,6 +235,7 @@ return {
 		["ui.rank.me.rank"] = "My rank #{rank} · Stage {stage}",
 		["ui.rank.me.rankTime"] = "My rank #{rank} · Stage {stage} · {time}",
 		["ui.rank.me.outOfTop"] = "My rank: Not in top {top} · Stage {stage}",
+		["ui.rank.me.topPercent"] = "My rank: Top ~{percent}% · Stage {stage}",
 		["ui.rank.me.retry"] = "My rank: Retrying soon",
 		["ui.rank.me.partyNone"] = "My party: Not in top {top}",
 		["ui.rank.me.none"] = "My rank: No record",

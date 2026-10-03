@@ -2675,6 +2675,8 @@ function PlayerProfile.getMonetizationState(player)
 	profile.gamepasses = tbl(profile.gamepasses)
 	profile.purchases.receipts = tbl(profile.purchases.receipts)
 	profile.purchases.log = tbl(profile.purchases.log)
+	profile.purchases.bagSources = tbl(profile.purchases.bagSources) -- QUEUE-ALL9C 1-6(v69)
+	profile.purchases.shopViews = tonumber(profile.purchases.shopViews) or 0
 	return { purchases = profile.purchases, cosmetics = profile.cosmetics, mailbox = profile.mailbox, seasonPass = profile.seasonPass, gamepasses = profile.gamepasses }
 end
 

@@ -81,6 +81,11 @@ function MonetizationService.applyReward(player, reward, source)
 			table.insert(parts, require(ReplicatedStorage.Shared.Text).getFor(player, "srv.reward.gold", { n = ("%d"):format(grant.amount) }))
 		elseif grant.kind == "enhanceStone" or grant.kind == "highEnhanceStone" or grant.kind == "gemDust" then -- 보완 2-3 · 2-4 무료 줄 성장 소모품(기존 재화)
 			table.insert(parts, (require(script.Parent.QuestService).grant(player, { [grant.kind] = grant.amount }))) -- 괄호 = 요약 문자열 하나(grant는 지급 표도 돌려준다)
+		elseif grant.kind == "bagSlots" and MonetizationData.bagSources[grant.id] then -- QUEUE-ALL9C 1-6 가방 칸 출처(출처별 한 번 - 이미 있으면 그대로 · 멱등)
+			local s = PlayerProfile.getMonetizationState(player)
+			s.purchases.bagSources[grant.id] = true
+			require(script.Parent.InventorySync).push(player, PlayerProfile.getProfile(player))
+			table.insert(parts, ("가방 출처 %s"):format(grant.id))
 		elseif grant.kind == "passTierSkip" then -- QUEUE-ALL9B 4-8 칸 건너뛰기(방 = 영수증 처리 전에 확인)
 			local got, why = SeasonPassService.applySkip(player, grant.amount)
 			if not got then
@@ -250,12 +255,12 @@ function MonetizationService.view(player)
 	end
 	local products = {}
 	for key, product in pairs(MonetizationData.products) do
-		products[key] = { robux = product.robux, ready = validProducts[key] == true and product.productId ~= 0,
+		products[key] = { robux = product.robux, ready = validProducts[key] == true and product.productId ~= 0, released = Monetization.isReleased(MonetizationData, key), productId = product.productId,
 			blocked = not Monetization.paidRandomAllowed(product, MonetizationService.isRestricted(player)), paidRandom = product.paidRandom == true, odds = product.odds }
 	end
 	local passes = {}
 	for key, pass in pairs(MonetizationData.gamePasses) do
-		passes[key] = { robux = pass.robux, ready = pass.passId ~= 0, owned = s.gamepasses[key] == true }
+		passes[key] = { robux = pass.robux, ready = pass.passId ~= 0, owned = s.gamepasses[key] == true, released = Monetization.isReleased(MonetizationData, key), passId = pass.passId }
 	end
 	return {
 		shards = CosmeticService.shards(player),
@@ -279,6 +284,14 @@ function MonetizationService.view(player)
 		season = SeasonPassService.view(player),
 		gifts = #s.mailbox.gifts,
 		paidRandomRestricted = MonetizationService.isRestricted(player),
+		-- QUEUE-ALL9C 1-6 스타터 팩: 노출 = 아직 안 샀고 (첫 보스 처치 또는 상점 두 번째 방문) · 가방 칸 = 서버 capacity와 같은 함수(지금 칸 · 출처)
+		starter = {
+			owned = s.purchases.bagSources.starter == true,
+			visible = s.purchases.bagSources.starter ~= true and ((PlayerProfile.getAccountBestBossCleared(player) or 0) > 0 or (s.purchases.shopViews or 0) >= 2),
+		},
+		bag = { slots = require(script.Parent.InventorySync).capacity(PlayerProfile.getProfile(player)), max = MonetizationData.bagMaxSlots,
+			pass = s.gamepasses.bagExpand == true, starter = s.purchases.bagSources.starter == true,
+			passSlots = MonetizationData.gamePasses.bagExpand.bonusSlots, starterSlots = MonetizationData.bagSources.starter.slots },
 	}
 end
 function MonetizationService.push(player)
@@ -297,6 +310,7 @@ function MonetizationService.ownsAll(player, product)
 		local owned = (grant.kind == "cosmeticTheme" and s.cosmetics.themes[grant.id]) or (grant.kind == "gliderSkin" and s.cosmetics.gliderSkins[grant.id])
 			or (grant.kind == "cosmeticItem" and type(s.cosmetics.items) == "table" and s.cosmetics.items[grant.id]) -- QUEUE-ALL6 H
 			or (grant.kind == "seasonPremium" and SeasonPassService.ensure(player) and s.seasonPass.premium)
+			or (grant.kind == "bagSlots" and s.purchases.bagSources[grant.id]) -- QUEUE-ALL9C 1-6
 		if not owned then
 			return false
 		end
@@ -311,6 +325,9 @@ function MonetizationService.buyWithTokens(player, key)
 	local product = type(key) == "string" and MonetizationData.products[key]
 	if not product or not validProducts[key] then
 		return false, "unknown"
+	end
+	if not Monetization.isReleased(MonetizationData, key) then
+		return false, "not_released" -- QUEUE-ALL9C 1-6
 	end
 	local price, blocked = Monetization.productTokenPrice(MonetizationData, CosmeticSlotData, key)
 	if not price then
@@ -354,6 +371,9 @@ function MonetizationService.promptProduct(player, key)
 	if not product or not validProducts[key] then
 		return false, "not_for_sale"
 	end
+	if not Monetization.isReleased(MonetizationData, key) then
+		return false, "not_released" -- QUEUE-ALL9C 1-6 순차 공개(비공개 = 프롬프트 거부)
+	end
 	if product.productId == 0 then
 		return false, "not_ready"
 	end
@@ -392,6 +412,9 @@ function MonetizationService.promptPass(player, key)
 	if not pass then
 		return false, "unknown"
 	end
+	if not Monetization.isReleased(MonetizationData, key) then
+		return false, "not_released" -- QUEUE-ALL9C 1-6
+	end
 	if pass.passId == 0 then
 		return false, "not_ready"
 	end
@@ -426,6 +449,11 @@ function MonetizationService.handle(player, action, a, b)
 	elseif action == "giftClaim" and type(a) == "string" then
 		local got = GiftService.claim(player, a)
 		ok, why = got > 0, if got > 0 then nil else "none"
+	elseif action == "view" then
+		local s = PlayerProfile.getMonetizationState(player) -- QUEUE-ALL9C 1-6: 상점을 연 횟수(스타터 노출 조건 - 두 번째 방문)
+		if s then
+			s.purchases.shopViews = math.min((s.purchases.shopViews or 0) + 1, 1000)
+		end
 	elseif action ~= "view" then
 		ok, why = false, "bad_args"
 	end

@@ -144,7 +144,8 @@ do
 	local leak = {}
 	for key, product in pairs(Data.products) do
 		for _, g in ipairs(product.grants) do
-			if Mon.tokenBlocked(Cos, g.kind, g.id) then
+			local why = Mon.tokenBlocked(Cos, g.kind, g.id)
+			if why and not (why == "starter_only" and product.starterPack) then -- QUEUE-ALL9C 1-6: 스타터 전용 치장 = 스타터 팩만
 				table.insert(leak, key)
 			end
 		end

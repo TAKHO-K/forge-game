@@ -91,9 +91,9 @@ local ok, err = pcall(function()
 	qs.currencies.sparkleShard = price
 	local k1, kw1 = MS.buyWithTokens(player, "theme_jelly")
 	local k2, kw2 = MS.buyWithTokens(player, "theme_jelly")
-	local k3, kw3 = MS.buyWithTokens(player, "theme_frost")
+	local k3, kw3 = MS.buyWithTokens(player, "theme_anvil") -- QUEUE-ALL9C 1-6: 서리꽃 = 비공개(2단계) → 출시 상품 모루
 	local ms = PlayerProfile.getMonetizationState(player)
-	line("토큰 구매 연타(같은 상품 · 남은 토큰 0에서 다른 상품)", k1 == true and k2 ~= true and kw2 == "owned" and k3 ~= true and kw3 == "shards" and qs.currencies.sparkleShard == 0 and ms.cosmetics.themes.jelly == true and not ms.cosmetics.themes.frost,
+	line("토큰 구매 연타(같은 상품 · 남은 토큰 0에서 다른 상품)", k1 == true and k2 ~= true and kw2 == "owned" and k3 ~= true and kw3 == "shards" and qs.currencies.sparkleShard == 0 and ms.cosmetics.themes.jelly == true and not ms.cosmetics.themes.anvil,
 		("1회 %s · 2회 %s · 다른 %s · 남은 %d"):format(tostring(k1), tostring(kw2), tostring(kw3), qs.currencies.sparkleShard))
 
 	-- ⑧ QUEUE-ALL9B 4-6 일괄 받기 연타(같은 요청 두 번) → 두 번째 0칸 · 보상 한 번

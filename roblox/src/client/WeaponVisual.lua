@@ -31,7 +31,8 @@ local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit) -- A2-N3 Open Cl
 local ArtImportData = require(ReplicatedStorage.Shared.data.ArtImportData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local GradeColor = require(ReplicatedStorage.Shared.GradeColor)
-local CRYSTAL = require(ReplicatedStorage.Shared.data.ArtV1CosmeticData).items.crystal -- QUEUE-ALL6 H 무기 꾸미기(수정 결정)
+local SKIN_LOOKS = require(ReplicatedStorage.Shared.data.ArtV1CosmeticData).items -- QUEUE-ALL6 H 무기 꾸미기 · QUEUE-ALL9C 1-6: 소품 look 표로(수정 결정 · 스타터 은빛 날)
+local CosmeticItems = require(ReplicatedStorage.Shared.data.CosmeticSlotData).items
 local MoveRules = require(ReplicatedStorage.Shared.MoveRules) -- W3c 공중 공격 해금(칼 들어 올림)
 
 local WeaponVisual = {}
@@ -376,12 +377,19 @@ local function rebuild(st)
 	if artModel then
 		artModel:Destroy() -- 무기 폴더에는 복제본이 들어간다
 	end
-	if st.weapon and attrOf(st, "Cosmetic_weaponSkin") == "crystalBlade" then -- QUEUE-ALL6 H: 몸 파트만 반투명 자수정(Neon · 빛 = 등급 · 강화 연출은 손대지 않는다)
+	local skinId = st.weapon and attrOf(st, "Cosmetic_weaponSkin")
+	local skin
+	for _, item in ipairs(skinId and CosmeticItems or {}) do
+		if item.id == skinId and item.slot == "weaponSkin" then
+			skin = SKIN_LOOKS[item.look]
+		end
+	end
+	if skin then -- QUEUE-ALL6 H: 몸 파트만 바꾼다(Neon · 빛 = 등급 · 강화 연출은 손대지 않는다) - 색 · 재질 · 반사 · 투명 = look 표
 		for _, d in ipairs(st.weapon.folder:GetDescendants()) do
 			if d:IsA("BasePart") and d.Material ~= Enum.Material.Neon and d.Transparency < 1 then
-				d.Color, d.Material, d.Reflectance = CRYSTAL.color, Enum.Material.Glass, CRYSTAL.reflectance
-				d.Transparency = math.max(d.Transparency, CRYSTAL.transparency)
-				if d:IsA("MeshPart") then
+				d.Color, d.Material, d.Reflectance = skin.color, Enum.Material[skin.material or "SmoothPlastic"], skin.reflectance or 0
+				d.Transparency = math.max(d.Transparency, skin.transparency or 0)
+				if d:IsA("MeshPart") and skin.clearTexture then
 					d.TextureID = ""
 				end
 			end

@@ -14,6 +14,7 @@
 
 local Players = game:GetService("Players")
 local DataStoreService = game:GetService("DataStoreService")
+local MemoryStoreService = game:GetService("MemoryStoreService") -- QUEUE-ALL9C 1-5 100위 밖 "상위 약 n%" 인원 구간
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -106,10 +107,11 @@ end
 -- 정렬 값은 "더 클 때만" 올린다 - 같은 키를 서버 두 대가 동시에 써도(드문 경합) 큰 값이 남는다. 반환: (성공, 실제로 올렸는가).
 local function raiseOrdered(kind, key, value)
 	stats.orderedWrite += 1
-	local raised = false
+	local raised, previous = false, nil
 	local ok = withRetry(("쓰기 %s/%s"):format(kind, key), function()
 		raised = false
 		ordered(kind):UpdateAsync(key, function(old)
+			previous = type(old) == "number" and old or nil
 			if type(old) == "number" and old >= value then
 				raised = false
 				return nil -- 바꾸지 않는다
@@ -118,7 +120,67 @@ local function raiseOrdered(kind, key, value)
 			return value
 		end)
 	end)
-	return ok, ok and raised
+	return ok, ok and raised, previous
+end
+
+-- QUEUE-ALL9C 1-5(J2): 인원 구간(스테이지 histBucketStages칸) - 기록이 오르면 옛 구간 −1 · 새 구간 +1(MemoryStore 해시맵 · 실패해도 순위 기록에는 영향 없음 - "약" 표시용)
+local function histMap(kind)
+	return MemoryStoreService:GetHashMap(storeName(kind) .. "_hist")
+end
+local function stageOfValue(kind, value)
+	if type(value) ~= "number" then
+		return nil
+	end
+	if kind == "personal" then
+		return value
+	end
+	return (LeaderboardRules.decode(value))
+end
+local function noteHistogram(kind, oldValue, newValue)
+	local width = LeaderboardConfig.histBucketStages
+	local newBucket = LeaderboardRules.histBucket(stageOfValue(kind, newValue), width)
+	local oldStage = stageOfValue(kind, oldValue)
+	local oldBucket = oldStage and LeaderboardRules.histBucket(oldStage, width)
+	if oldBucket == newBucket then
+		return
+	end
+	local map = histMap(kind)
+	local function bump(bucket, delta)
+		pcall(function()
+			map:UpdateAsync(tostring(bucket), function(n)
+				return math.max((tonumber(n) or 0) + delta, 0)
+			end, LeaderboardConfig.histExpirationSeconds)
+		end)
+	end
+	bump(newBucket, 1)
+	if oldBucket then
+		bump(oldBucket, -1)
+	end
+end
+local histCache = {} -- [kind] = { counts, at }
+local function readHistogram(kind)
+	local cached = histCache[kind]
+	if cached and os.clock() - cached.at < LeaderboardConfig.histCacheSeconds then
+		return cached.counts
+	end
+	local counts = {}
+	local ok = pcall(function()
+		local pages = histMap(kind):ListItemsAsync(200)
+		while true do
+			for _, item in ipairs(pages:GetCurrentPage()) do
+				counts[item.key] = item.value
+			end
+			if pages.IsFinished then
+				break
+			end
+			pages:AdvanceToNextPageAsync()
+		end
+	end)
+	if not ok then
+		return cached and cached.counts or nil
+	end
+	histCache[kind] = { counts = counts, at = os.clock() }
+	return counts
 end
 
 local function setPlain(kind, key, value)
@@ -291,8 +353,14 @@ function Leaderboard.onBossCleared(info)
 			local value = LeaderboardRules.encode(info.stage, info.seconds)
 			table.insert(judgement.writes, { player = member, classId = classId, value = value })
 			spawnWrite(function()
-				raiseOrdered("personal", key, info.stage)
-				raiseOrdered("class_" .. classId, key, value)
+				local _, raisedP, oldP = raiseOrdered("personal", key, info.stage)
+				local _, raisedC, oldC = raiseOrdered("class_" .. classId, key, value)
+				if raisedP then
+					noteHistogram("personal", oldP, info.stage)
+				end
+				if raisedC then
+					noteHistogram("class_" .. classId, oldC, value)
+				end
 				writeCard(member, classId)
 			end)
 		elseif entry.advanced then
@@ -672,7 +740,8 @@ function Leaderboard.handle(player, action, boardId, key, now)
 			return { ok = true, rank = nil, outOfTop = false }
 		end
 		local decoded = decodeEntry(boardId, nil, { key = playerKey(player.UserId), value = value })
-		return { ok = true, rank = nil, outOfTop = true, topN = LeaderboardConfig.topN, stage = decoded.stage, seconds = decoded.seconds }
+		local topPercent = LeaderboardRules.topPercent(readHistogram(kindOf(boardId)), decoded.stage, LeaderboardConfig.histBucketStages) -- QUEUE-ALL9C 1-5: 인원 구간이 비면 nil(옛 "100위 밖")
+		return { ok = true, rank = nil, outOfTop = true, topN = LeaderboardConfig.topN, stage = decoded.stage, seconds = decoded.seconds, topPercent = topPercent }
 	elseif action == "card" then
 		if type(key) ~= "string" or #key > 50 then
 			return { ok = false, reason = "bad_request" }
@@ -811,7 +880,7 @@ function Leaderboard.debugFill(player)
 	fakeMine = {}
 	for _, classId in ipairs(ClassData.order) do
 		if classId ~= myClass then
-			fakeMine["class:" .. classId] = { ok = true, rank = nil, outOfTop = true, topN = LeaderboardConfig.topN, stage = 40, seconds = 612.3 }
+			fakeMine["class:" .. classId] = { ok = true, rank = nil, outOfTop = true, topN = LeaderboardConfig.topN, stage = 40, seconds = 612.3, topPercent = 37 } -- QUEUE-ALL9C 1-5 "상위 약 n%" 화면 확인
 		end
 	end
 	return filled

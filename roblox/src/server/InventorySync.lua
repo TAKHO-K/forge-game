@@ -40,7 +40,16 @@ local InventorySync = {}
 function InventorySync.capacity(profile)
 	-- QUEUE-B1 B2: 게임패스 bagExpand(편의) = + bonusSlots(캐시 profile.gamepasses - 패스를 잃으면 칸만 줄고 든 장비는 그대로 · 더 넣기만 막힌다)
 	local passBonus = profile and type(profile.gamepasses) == "table" and profile.gamepasses.bagExpand and MonetizationData.gamePasses.bagExpand.bonusSlots or 0
-	return (profile and profile.inventorySlots or 0) + math.max(0, (SaveConfig.bagBaseSlots or SaveConfig.defaultInventorySlots) - SaveConfig.defaultInventorySlots) + passBonus
+	-- QUEUE-ALL9C 1-6: 가방 칸 출처(스타터 팩 +20 · 출처별 한 번 - purchases.bagSources) · 합계 상한 bagMaxSlots(75)
+	local sourceBonus = 0
+	local sources = profile and type(profile.purchases) == "table" and type(profile.purchases.bagSources) == "table" and profile.purchases.bagSources or {}
+	for id, source in pairs(MonetizationData.bagSources or {}) do
+		if sources[id] then
+			sourceBonus += source.slots
+		end
+	end
+	local total = (profile and profile.inventorySlots or 0) + math.max(0, (SaveConfig.bagBaseSlots or SaveConfig.defaultInventorySlots) - SaveConfig.defaultInventorySlots) + passBonus + sourceBonus
+	return math.min(total, math.max(MonetizationData.bagMaxSlots or total, profile and profile.inventorySlots or 0))
 end
 
 -- 19-1: 장비는 이제 profile.classes[profile.classId] 아래에 있다. classId 미선택이면

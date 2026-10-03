@@ -44,6 +44,8 @@ return {
 	hpDark = Color3.fromRGB(92, 26, 26), -- 체력바 트랙 바닥색(목업 --hp-dark)
 	xp = Color3.fromRGB(242, 196, 61), -- 경험치(목업 --xp, 메이플식 노랑)
 	gold = Color3.fromRGB(240, 180, 41), -- 재화(목업 --gold) - xp와 가까운 톤이지만 구분되는 색
+	-- QUEUE-ALL9C 1-5(J1) 순위 1 · 2 · 3위 메달 · 줄 색(금 · 은 · 동)
+	rankMedal = { Color3.fromRGB(240, 196, 64), Color3.fromRGB(196, 204, 214), Color3.fromRGB(205, 127, 50) },
 	textPrimary = Color3.fromRGB(234, 238, 245), -- 목업 --ink
 	textSecondary = Color3.fromRGB(150, 153, 159), -- 목업 --ink-2(alpha .62 실효색, panel-solid 기준)
 	textTertiary = Color3.fromRGB(87, 90, 96), -- 목업 --ink-3(alpha .34 실효색, panel-solid 기준)

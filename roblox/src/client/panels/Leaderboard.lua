@@ -113,6 +113,9 @@ local function meText(result, isParty)
 		return Text.get("ui.rank.me.rank", args)
 	end
 	if result.outOfTop and result.stage then
+		if result.topPercent then -- QUEUE-ALL9C 1-5(J2): 100위 밖 = 상위 약 n%(서버 인원 구간)
+			return Text.get("ui.rank.me.topPercent", { percent = ("%d"):format(result.topPercent), stage = ("%d"):format(result.stage) })
+		end
 		return Text.get("ui.rank.me.outOfTop", { top = ("%d"):format(result.topN or 100), stage = ("%d"):format(result.stage) })
 	end
 	if result.retry then
@@ -142,13 +145,159 @@ local function makeButton(parent, name, text)
 	return button, stroke
 end
 
+-- ══ QUEUE-ALL9C 1-5 J1 메달 · J3 시상대(위 3명 · 헤드샷 = GetUserThumbnailAsync, 실패 = 기본 실루엣) - 같은 순위표 응답(허브 명예의 전당 지점도 이 창) ══
+local PODIUM_H = 172
+local headshots = {} -- [userId] = 이미지 주소 | false(실패)
+local function silhouette(parent)
+	local s = Instance.new("Frame")
+	s.Name = "Silhouette"
+	s.BackgroundTransparency = 1
+	s.Size = UDim2.fromScale(1, 1)
+	s.Parent = parent
+	local head = Instance.new("Frame")
+	head.BackgroundColor3 = Color3.fromRGB(110, 116, 128)
+	head.AnchorPoint = Vector2.new(0.5, 0)
+	head.Position = UDim2.fromScale(0.5, 0.16)
+	head.Size = UDim2.fromScale(0.42, 0.42)
+	head.Parent = s
+	Theme.corner(head, 999)
+	local body = Instance.new("Frame")
+	body.BackgroundColor3 = Color3.fromRGB(110, 116, 128)
+	body.AnchorPoint = Vector2.new(0.5, 1)
+	body.Position = UDim2.fromScale(0.5, 1)
+	body.Size = UDim2.fromScale(0.78, 0.36)
+	body.Parent = s
+	Theme.corner(body, 999)
+	return s
+end
+function Leaderboard.paintMedal(row, rank)
+	local color = UIColors.rankMedal[rank]
+	row.medal.Visible = color ~= nil
+	row.rank.Visible = color == nil
+	if color then
+		row.medal.BackgroundColor3 = color
+		row.medal.Text = tostring(rank)
+	end
+end
+function Leaderboard.buildPodium(list)
+	local root = Instance.new("Frame")
+	root.Name = "Podium"
+	root.BackgroundTransparency = 1
+	root.Size = UDim2.new(1, -8, 0, PODIUM_H)
+	root.Visible = false
+	root.Parent = list
+	local cards = {}
+	local layout = { { rank = 2, x = 0.17, h = 0.86 }, { rank = 1, x = 0.5, h = 1 }, { rank = 3, x = 0.83, h = 0.78 } } -- 2 · 1 · 3위(가운데가 가장 높다)
+	for _, spot in ipairs(layout) do
+		local card = Instance.new("TextButton")
+		card.Name = "Podium" .. spot.rank
+		card.Text = ""
+		card.AutoButtonColor = false
+		card.AnchorPoint = Vector2.new(0.5, 1)
+		card.Position = UDim2.new(spot.x, 0, 1, 0)
+		card.Size = UDim2.new(0.3, 0, spot.h, 0)
+		card.BackgroundColor3 = UIColors.slot
+		card.BackgroundTransparency = UIColors.slotTransparency
+		card.Parent = root
+		Theme.corner(card, 10)
+		local stroke = Theme.stroke(card)
+		stroke.Color = UIColors.rankMedal[spot.rank]
+		stroke.Transparency = 0
+		stroke.Thickness = 2
+		local face = Instance.new("ImageLabel")
+		face.Name = "Headshot"
+		face.AnchorPoint = Vector2.new(0.5, 0)
+		face.Position = UDim2.new(0.5, 0, 0, 8)
+		face.Size = UDim2.fromOffset(64, 64)
+		face.BackgroundColor3 = Color3.fromRGB(46, 52, 64)
+		face.Parent = card
+		Theme.corner(face, 999)
+		local sil = silhouette(face)
+		local medal = Instance.new("TextLabel")
+		medal.Name = "Medal"
+		medal.AnchorPoint = Vector2.new(0.5, 0.5)
+		medal.Position = UDim2.new(0.5, 26, 0, 66)
+		medal.Size = UDim2.fromOffset(26, 26)
+		medal.BackgroundColor3 = UIColors.rankMedal[spot.rank]
+		medal.Text = tostring(spot.rank)
+		medal.Font = Enum.Font.GothamBlack
+		medal.TextScaled = true
+		medal.TextColor3 = Color3.fromRGB(40, 30, 10)
+		medal.Parent = card
+		Theme.corner(medal, 999)
+		local name = Theme.label(card, "", "body", "textPrimary")
+		name.Name = "PlayerName"
+		name.AnchorPoint = Vector2.new(0.5, 0)
+		name.Position = UDim2.new(0.5, 0, 0, 80)
+		name.Size = UDim2.new(1, -12, 0, 22)
+		name.TextXAlignment = Enum.TextXAlignment.Center
+		name.TextTruncate = Enum.TextTruncate.AtEnd
+		local stage = Theme.label(card, "", "caption", "textSecondary")
+		stage.Name = "Stage"
+		stage.AnchorPoint = Vector2.new(0.5, 0)
+		stage.Position = UDim2.new(0.5, 0, 0, 102)
+		stage.Size = UDim2.new(1, -12, 0, 18)
+		stage.TextXAlignment = Enum.TextXAlignment.Center
+		local item = { card = card, face = face, silhouette = sil, name = name, stage = stage, entry = nil }
+		card.Activated:Connect(function()
+			if item.entry then
+				Leaderboard.onRowPressed(item.entry)
+			end
+		end)
+		cards[spot.rank] = item
+	end
+	return { root = root, cards = cards }
+end
+local function setHeadshot(item, userId)
+	local url = userId and headshots[userId]
+	item.face.Image = url or ""
+	item.silhouette.Visible = not url
+	if not userId or userId <= 0 or headshots[userId] ~= nil then
+		return
+	end
+	headshots[userId] = false -- 한 사람 한 번만 묻는다(실패 = 실루엣 그대로)
+	task.spawn(function()
+		local ok, image = pcall(function()
+			return Players:GetUserThumbnailAsync(userId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+		end)
+		if ok and type(image) == "string" and image ~= "" then
+			headshots[userId] = image
+			if item.userId == userId then
+				item.face.Image = image
+				item.silhouette.Visible = false
+			end
+		end
+	end)
+end
+-- 시상대 그리기 - 반환 = 목록에서 차지한 높이(없으면 0)
+function Leaderboard.renderPodium(entries, names)
+	local podium = refs and refs.podium
+	if not podium then
+		return 0
+	end
+	local show = #entries > 0
+	podium.root.Visible = show
+	for rank, item in pairs(podium.cards) do
+		local entry = entries[rank]
+		item.card.Visible = entry ~= nil
+		item.entry = entry
+		item.userId = entry and entry.userId
+		if entry then
+			item.name.Text = nameOf(names, entry.userId)
+			item.stage.Text = Text.get("ui.rank.stage", { stage = ("%d"):format(entry.stage or 0) })
+			setHeadshot(item, entry.userId)
+		end
+	end
+	return show and (PODIUM_H + 8) or 0
+end
+
 local function build()
 	Theme.recompute()
 	local panel = Panel.create({
 		id = Leaderboard.id,
 		kind = "window",
 		title = Text.get("ui.rank.title"),
-		size = Vector2.new(660, 440),
+		size = Vector2.new(780, 560), -- QUEUE-ALL9C 1-5(J3): 창 크게(옛 660 × 440) - 위 시상대 + 100줄 + 아래 내 줄
 		help = { -- G1-1: "자기 최고 다음 보스" 모호 정리 + 2단
 			short = Text.get("leaderboard.help.short"),
 			detail = Text.get("leaderboard.help.detail"),
@@ -202,18 +351,33 @@ local function build()
 			Leaderboard.selectClass(classId)
 		end)
 	end
-	local meLabel = Theme.label(header, "", "body", "textPrimary")
+	-- QUEUE-ALL9C 1-5(J2): 내 줄 = 목록 아래 항상 고정(옛 머리 줄 오른쪽 글)
+	local myBar = Instance.new("Frame")
+	myBar.Name = "MyRow"
+	myBar.AnchorPoint = Vector2.new(0, 1)
+	myBar.Position = UDim2.new(0, 0, 1, 0)
+	myBar.Size = UDim2.new(1, -8, 0, rowHeight())
+	myBar.BackgroundColor3 = UIColors.slot
+	myBar.BackgroundTransparency = UIColors.slotTransparency
+	myBar.Parent = pane
+	Theme.corner(myBar, Theme.corner.chip)
+	local myStroke = Theme.stroke(myBar)
+	myStroke.Color = UIColors.ember
+	myStroke.Transparency = 0
+	local meLabel = Theme.label(myBar, "", "body", "textPrimary")
 	meLabel.Name = "MyRank"
 	meLabel.TextTruncate = Enum.TextTruncate.AtEnd
-	meLabel.Size = UDim2.new(1, 0, 1, 0)
+	meLabel.Position = UDim2.new(0, 10, 0, 0)
+	meLabel.Size = UDim2.new(1, -20, 1, 0)
 	r.meLabel = meLabel
+	r.myBar = myBar
 
 	local list = Instance.new("ScrollingFrame")
 	list.Name = "List"
 	list.BackgroundTransparency = 1
 	list.BorderSizePixel = 0
 	list.Position = UDim2.new(0, 0, 0, rowHeight() + GAP)
-	list.Size = UDim2.new(1, 0, 1, -(rowHeight() + GAP))
+	list.Size = UDim2.new(1, 0, 1, -(rowHeight() + GAP) * 2)
 	list.ScrollBarThickness = 4
 	list.ScrollBarImageColor3 = UIColors.rim
 	list.AutomaticCanvasSize = Enum.AutomaticSize.None
@@ -229,6 +393,7 @@ local function build()
 	emptyLabel.Visible = false
 	r.emptyLabel = emptyLabel
 
+	r.podium = Leaderboard.buildPodium(list)
 	refs = r
 end
 
@@ -269,7 +434,18 @@ local function rowAt(index)
 	time.Position = UDim2.new(1, -8, 0, 0)
 	time.Size = UDim2.new(0, 80, 1, 0)
 	time.TextXAlignment = Enum.TextXAlignment.Right
-	row = { button = button, stroke = stroke, rank = rank, name = name, stage = stage, time = time, entry = nil }
+	local medal = Instance.new("TextLabel") -- QUEUE-ALL9C 1-5(J1): 1 · 2 · 3위 = 금 · 은 · 동 동그라미(순위 글 대신)
+	medal.Name = "Medal"
+	medal.AnchorPoint = Vector2.new(0.5, 0.5)
+	medal.Position = UDim2.new(0, 26, 0.5, 0)
+	medal.Size = UDim2.fromOffset(rowHeight() - 10, rowHeight() - 10)
+	medal.Font = Enum.Font.GothamBlack
+	medal.TextScaled = true
+	medal.TextColor3 = Color3.fromRGB(40, 30, 10)
+	medal.Visible = false
+	medal.Parent = button
+	Theme.corner(medal, 999)
+	row = { button = button, stroke = stroke, rank = rank, name = name, stage = stage, time = time, entry = nil, medal = medal }
 	button.Activated:Connect(function()
 		if row.entry then
 			Leaderboard.onRowPressed(row.entry)
@@ -319,9 +495,7 @@ local function paintTabs()
 		handle.stroke.Color = selected and UIColors.ember or UIColors.rim
 		handle.stroke.Transparency = selected and 0 or UIColors.rimTransparency
 	end
-	local chipsWidth = showChips and ((refs.chipsWidth or #ClassData.order * (CHIP_WIDTH + 4)) + 8) or 0
-	refs.meLabel.Position = UDim2.new(0, chipsWidth + 4, 0, 0)
-	refs.meLabel.Size = UDim2.new(1, -(chipsWidth + 4), 1, 0)
+	refs.myBar.Visible = state.tab ~= "season" -- QUEUE-ALL9C 1-5: 내 줄 = 아래 고정(머리 줄 칩 옆 자리 계산 없음)
 	refs.meLabel.Visible = state.tab ~= "season"
 end
 
@@ -367,6 +541,7 @@ local function render()
 	local y = 0
 	local used, usedMembers = 0, 0
 	if state.tab == "season" then
+		Leaderboard.renderPodium({}, nil)
 		refs.emptyLabel.Visible = true
 		refs.emptyLabel.Text = seasonText(state.season) .. "\n\n" .. hallTitle(state.hall)
 		refs.emptyLabel.Size = UDim2.new(1, -8, 0, (Theme.textSize("body") + 6) * 12)
@@ -380,6 +555,7 @@ local function render()
 			row.button.Visible = true
 			row.button.Position = UDim2.new(0, 0, 0, y)
 			row.rank.Text = tostring(entry.rank)
+			Leaderboard.paintMedal(row, entry.rank)
 			local isMine = entry.userId == player.UserId
 			row.name.Text = nameOf(hall.names, entry.userId)
 			row.name.TextColor3 = isMine and UIColors.ember or UIColors.textPrimary
@@ -399,6 +575,7 @@ local function render()
 		if #entries == 0 then
 			y = Theme.textSize("body") * 3 + 8
 		end
+		y += Leaderboard.renderPodium(not isParty and entries or {}, board and board.names) -- QUEUE-ALL9C 1-5(J3): 위 시상대(개인 · 직업별)
 		for index, entry in ipairs(entries) do
 			local row = rowAt(index)
 			used = index
@@ -406,6 +583,7 @@ local function render()
 			row.button.Visible = true
 			row.button.Position = UDim2.new(0, 0, 0, y)
 			row.rank.Text = tostring(entry.rank)
+			Leaderboard.paintMedal(row, entry.rank)
 			local isMine = entry.userId == player.UserId or (entry.members and table.find(entry.members, player.UserId) ~= nil)
 			local nameText
 			if isParty then
@@ -419,8 +597,8 @@ local function render()
 			end
 			row.name.Text = nameText
 			row.name.TextColor3 = isMine and UIColors.ember or UIColors.textPrimary
-			row.stroke.Color = isMine and UIColors.ember or UIColors.rim
-			row.stroke.Transparency = isMine and 0 or UIColors.rimTransparency
+			row.stroke.Color = isMine and UIColors.ember or (UIColors.rankMedal[entry.rank] or UIColors.rim)
+			row.stroke.Transparency = (isMine or UIColors.rankMedal[entry.rank]) and 0 or UIColors.rimTransparency
 			row.stage.Text = Text.get("ui.rank.stage", { stage = ("%d"):format(entry.stage or 0) })
 			row.time.Text = Leaderboard.formatSeconds(entry.seconds)
 			y += rowH + 4

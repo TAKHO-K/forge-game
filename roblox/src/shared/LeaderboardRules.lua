@@ -121,6 +121,33 @@ function LeaderboardRules.seasonEndsAt(season, config)
 	return start + season * config.seasonLengthDays * 86400
 end
 
+-- QUEUE-ALL9C 1-5(J2): 스테이지 → 인원 구간 번호 · 구간 인원 표로 "상위 약 n%"(내 구간 위 인원 + 내 구간 절반 + 1 ÷ 전체 · 1 ~ 100 · 표가 비면 nil).
+function LeaderboardRules.histBucket(stage, width)
+	return math.max(0, math.floor((tonumber(stage) or 0) / math.max(width or 50, 1)))
+end
+function LeaderboardRules.topPercent(counts, myStage, width)
+	if type(counts) ~= "table" then
+		return nil
+	end
+	local mine = LeaderboardRules.histBucket(myStage, width)
+	local total, above, same = 0, 0, 0
+	for bucket, n in pairs(counts) do
+		local b, c = tonumber(bucket), math.max(tonumber(n) or 0, 0)
+		if b then
+			total += c
+			if b > mine then
+				above += c
+			elseif b == mine then
+				same += c
+			end
+		end
+	end
+	if total <= 0 then
+		return nil
+	end
+	return math.clamp(math.ceil((above + same / 2 + 1) / total * 100), 1, 100)
+end
+
 function LeaderboardRules.partyKey(userIds)
 	local sorted = table.clone(userIds)
 	table.sort(sorted)

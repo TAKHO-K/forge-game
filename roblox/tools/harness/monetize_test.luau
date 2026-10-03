@@ -37,6 +37,8 @@ local ok, err = pcall(function()
 	local SaveSystem, PlayerProfile = MODS.SaveSystem, MODS.PlayerProfile
 	local Data, Mon = MODS.MonetizationData, MODS.Monetization
 	local Cos, Season = MODS.CosmeticSlotData, MODS.SeasonPassData
+	local RELEASE_NOW = Data.releaseStageNow
+	Data.releaseStageNow = 99 -- QUEUE-ALL9C 1-6: 옛 검사(구매 · 토큰 · 장착 원리)는 공개 단계와 무관 - 시험 상품(별빛 · 서리꽃 · 묶음)이 2단계라 전부 열어 둔다 · 순차 공개 검사 직전에 되돌림
 
 	-- ① 판매 금지 목록 강제
 	local okCat, reasons = Mon.checkCatalog(Data, Cos, Season)
@@ -473,6 +475,57 @@ local ok, err = pcall(function()
 	local cap1 = MODS.InventorySync.capacity(p)
 	s.gamepasses.bagExpand = nil
 	check(("가방 확장 패스 +%d칸"):format(Data.gamePasses.bagExpand.bonusSlots), cap1 - cap0 == Data.gamePasses.bagExpand.bonusSlots, ("%d → %d"):format(cap0, cap1))
+	-- ══ QUEUE-ALL9C 1-6 스타터 팩 · 가방 출처 · 순차 공개 ══
+	Data.releaseStageNow = RELEASE_NOW
+	local fresh69 = SaveSystem.migrate({})
+	check("v69 새 계정 = purchases.bagSources {} · shopViews 0", type(fresh69.purchases.bagSources) == "table" and next(fresh69.purchases.bagSources) == nil and fresh69.purchases.shopViews == 0)
+	local old68 = SaveSystem.migrate({})
+	old68.version = 68
+	old68.purchases.bagSources, old68.purchases.shopViews = nil, nil
+	local m69 = SaveSystem.migrate(old68)
+	check("v68 → v69 빈 칸 채움 · 멱등", m69.version == LATEST and type(m69.purchases.bagSources) == "table" and m69.purchases.shopViews == 0 and SaveSystem.migrate(m69).purchases.shopViews == 0)
+	local okStarter, whyStarter = Mon.checkProduct(Data, "starter_pack", Data.products.starter_pack, Cos)
+	check("스타터 팩 등록 통과(가방 출처 · 스타터 전용 치장 2)", okStarter, table.concat(whyStarter or {}, " / "))
+	local leak = Mon.checkProduct(Data, "leak", { productId = 1, robux = 49, grants = { { kind = "cosmeticItem", id = "starterEdge" } } }, Cos)
+	local badBag = Mon.checkProduct(Data, "badBag", { productId = 1, robux = 49, grants = { { kind = "bagSlots", id = "nope" } } }, Cos)
+	check("스타터 전용 치장을 다른 상품에 넣으면 거부 · 모르는 가방 출처 거부", not leak and not badBag)
+	check("스타터 전용 치장 토큰 · 선물 불가(tokenBlocked = starter_only)", Mon.tokenBlocked(Cos, "cosmeticItem", "starterEdge") == "starter_only" and Mon.tokenBlocked(Cos, "cosmeticTheme", "starterStar") == "starter_only")
+	-- 가방 칸: 기본 35 · 패스 + 20 · 스타터 + 20 = 75(출처별 한 번)
+	s.gamepasses.bagExpand = nil
+	p.purchases.bagSources = {}
+	local base = MODS.InventorySync.capacity(p)
+	s.gamepasses.bagExpand = true
+	local withPass = MODS.InventorySync.capacity(p)
+	p.purchases.bagSources.starter = true
+	local both = MODS.InventorySync.capacity(p)
+	s.gamepasses.bagExpand = nil
+	local starterOnly = MODS.InventorySync.capacity(p)
+	check("가방 칸 기본 35 · 패스 55 · 스타터만 55 · 둘 다 75(최대)", base == 35 and withPass == 55 and starterOnly == 55 and both == 75 and Data.bagMaxSlots == 75, ("%d · %d · %d · %d"):format(base, withPass, starterOnly, both))
+	p.purchases.bagSources = {}
+	-- 스타터 구매(영수증) → 3종 지급 · 다시 = 프롬프트 거부(계정당 1회)
+	Data.products.starter_pack.productId = 9201
+	MS.validProducts.starter_pack = true
+	s.cosmetics.items.starterEdge, s.cosmetics.themes.starterStar = nil, nil
+	local rStarter = MS.processReceipt({ PlayerId = 77, ProductId = 9201, PurchaseId = "P-STARTER", CurrencySpent = 199 }, deps)
+	local okAgain, whyAgain = MS.promptProduct(player, "starter_pack")
+	check("스타터 영수증 = 가방 출처 + 은빛 날 + 별빛 궤적 · 두 번째 프롬프트 owned", tostring(rStarter):find("PurchaseGranted") ~= nil and p.purchases.bagSources.starter == true
+		and s.cosmetics.items.starterEdge == true and s.cosmetics.themes.starterStar == true and not okAgain and whyAgain == "owned" and MODS.InventorySync.capacity(p) == 55, ("%s · %s"):format(tostring(rStarter), tostring(whyAgain)))
+	Data.products.starter_pack.productId = 0
+	p.purchases.bagSources = {}
+	-- 순차 공개: 비공개 상품 = 프롬프트 · 토큰 구매 거부(게임패스도)
+	Data.products.item_goldenHammer.productId = 9202
+	MS.validProducts.item_goldenHammer = true
+	local okHidden, whyHidden = MS.promptProduct(player, "item_goldenHammer")
+	qs.currencies.sparkleShard = 9999
+	local okHiddenTok, whyHiddenTok = MS.buyWithTokens(player, "item_goldenHammer")
+	local okSet, whySet = MS.promptPass(player, "nameplateSet")
+	Data.products.item_goldenHammer.productId = 0
+	check("비공개(2단계) 상품 · 게임패스 = 프롬프트 · 토큰 거부 not_released", not okHidden and whyHidden == "not_released" and not okHiddenTok and whyHiddenTok == "not_released" and not okSet and whySet == "not_released",
+		("%s · %s · %s"):format(tostring(whyHidden), tostring(whyHiddenTok), tostring(whySet)))
+	check("공개 단계 표: 출시 = 스타터 · 패스 · 모루 · 젤리 · 할로윈 · 드래곤 날개 · 슬라임 · 로켓 · 풍선 · 수정 · 하이파이브 · 펫 왕관 · 편의 5 / 나중 = 황금 망치 · 화로 · 이름표 세트 · 패스 보상 5",
+		Mon.isReleased(Data, "starter_pack") and Mon.isReleased(Data, "theme_halloween") and Mon.isReleased(Data, "item_petCrown") and Mon.isReleased(Data, "recallCooldown")
+		and not Mon.isReleased(Data, "item_forgeBrazier") and not Mon.isReleased(Data, "nameplateSet") and not Mon.isReleased(Data, "theme_starlight") and not Mon.isReleased(Data, "glider_kite"))
+	check("표시 가격: 줍기 79 · 귀환 49 · 이름표 세트 79", Data.gamePasses.pickupRadius.robux == 79 and Data.gamePasses.recallCooldown.robux == 49 and Data.gamePasses.nameplateSet.robux == 79)
 end)
 if not ok then print("[MON] 에러 " .. tostring(err)) end
 print(("[MON] 끝 %d/%d"):format(pass, total))

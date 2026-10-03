@@ -23,7 +23,8 @@ return {
 	items = {
 		{ id = "rocketPop", slot = "killFx", name = "로켓 반짝", look = "rocket" }, -- #24 하늘 멀리 "반짝" + 작은 별 터짐(실제 몹은 그 자리에서 죽음 · 날아가는 건 그림)
 		{ id = "balloonPop", slot = "killFx", name = "풍선 펑", look = "balloon" }, -- #26 부풀었다가 펑 + 색종이
-		{ id = "crystalBlade", slot = "weaponSkin", name = "수정 결정 무기", look = "crystal" }, -- #3 반투명 자수정(무기 등급 빛은 그 위에 그대로)
+		{ id = "crystalBlade", slot = "weaponSkin", name = "수정 결정 무기", look = "crystal" },
+		{ id = "starterEdge", slot = "weaponSkin", name = "모험가의 은빛 날", look = "starterEdge", starterOnly = true }, -- QUEUE-ALL9C 1-6 스타터 팩 전용: 은빛 금속 몸 + 은은한 광택(무기 등급 빛 그대로) -- #3 반투명 자수정(무기 등급 빛은 그 위에 그대로)
 		{ id = "goldenHammer", slot = "enhanceFx", name = "황금 망치", look = "goldenHammer" }, -- #70 강화 성공 장면만 금빛
 		{ id = "forgeBrazier", slot = "recallFx", name = "대장간 화로", look = "brazier" }, -- #64 귀환 집중 · 사라짐
 		{ id = "highFive", slot = "emote", name = "하이파이브", look = "highFive" }, -- #86 파티원 둘 · 상대 수락
@@ -40,6 +41,8 @@ return {
 		{ id = "frost", name = "서리꽃", looks = { dashTrail = "frost", jumpFx = "frost", glideTrail = "frost", footstep = "frost" } },
 		{ id = "jelly", name = "말랑 젤리", looks = { dashTrail = "jelly", jumpFx = "jelly", glideTrail = "jelly", footstep = "jelly" } }, -- QUEUE-ALL1 P6(07 문서 · 199)
 		{ id = "anvil", name = "망치와 모루", looks = { dashTrail = "anvil", jumpFx = "anvil", glideTrail = "anvil", footstep = "anvil" } }, -- QUEUE-ALL6 H #42 대시 금노랑 불꽃 · 점프 "깡!" 고리 · 활강 불씨 줄 · 발자국 망치 자국
+		-- QUEUE-ALL9C 1-6 스타터 팩 전용: 짧은 별빛 궤적(대시 칸만 - 나머지 칸은 기본 모습 "")
+		{ id = "starterStar", name = "모험가 별빛 궤적", looks = { dashTrail = "starterStar", jumpFx = "", glideTrail = "", footstep = "" }, starterOnly = true },
 		{ id = "halloween", name = "할로윈 박쥐", looks = { dashTrail = "halloween", jumpFx = "halloween", glideTrail = "halloween", footstep = "halloween" }, seasonMonth = 10 },
 		-- QUEUE-ALL9B 4 시즌 패스 전용(passOnly - 상점 · 토큰 · 선물 X · 시즌 줄에서만) · 외형 = ArtV1CosmeticData 색 변형
 		{ id = "meadowStar", name = "초원 별빛", looks = { dashTrail = "meadowStar", jumpFx = "meadowStar", glideTrail = "meadowStar", footstep = "meadowStar" }, passOnly = true },

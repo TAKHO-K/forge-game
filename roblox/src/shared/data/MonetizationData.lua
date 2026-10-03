@@ -14,11 +14,14 @@ local D = {
 		rebirthTicket = "expMultiplier", titleId = "title", expBoost = "expMultiplier", goldBoost = "goldMultiplier",
 	},
 	-- 팔 수 있는 종류(이 밖의 종류는 모르는 종류로 거부 - 새 종류는 여기와 검사에 같이 넣는다)
-	allowedKinds = { cosmeticTheme = true, gliderSkin = true, seasonPremium = true, gamePass = true, cosmeticItem = true, passTierSkip = true }, -- QUEUE-ALL9B 4-8 passTierSkip = 시즌 패스 칸 건너뛰기(수량형 - 저장 실패 때 되돌림) -- QUEUE-ALL6 H cosmeticItem = 꾸미기 소품(칸 하나 · 겉모습만)
+	allowedKinds = { cosmeticTheme = true, gliderSkin = true, seasonPremium = true, gamePass = true, cosmeticItem = true, passTierSkip = true, bagSlots = true }, -- QUEUE-ALL9C 1-6 bagSlots = 가방 칸 출처(bagSources - 출처별 한 번 · 전투력 · 성장 재화 아님) -- QUEUE-ALL9B 4-8 passTierSkip = 시즌 패스 칸 건너뛰기(수량형 - 저장 실패 때 되돌림) -- QUEUE-ALL6 H cosmeticItem = 꾸미기 소품(칸 하나 · 겉모습만)
 
 	-- 개발자 상품(Developer Product - ProcessReceipt). key = 코드 이름 · productId = Creator Hub 번호(자리 0) · robux = 표시 가격(자리 - 실제 가격은 Creator Hub 값이 우선).
 	--   grants = 산 사람이 받는 것(종류 · id). paidRandom = 유료 랜덤(지금 0개 - 넣으면 odds 필수 · 정책 제한 국가에서 구매 막힘).
 	products = {
+		-- QUEUE-ALL9C 1-6(monetization 확정안): 모험가 스타터 팩 199 · 계정당 1회(starterPack - 스타터 전용 치장 starterOnly는 이 상품만 줄 수 있다) · 가방 +20 = bagSources.starter
+		starter_pack = { productId = 0, robux = 199, starterPack = true, release = 1,
+			grants = { { kind = "bagSlots", id = "starter" }, { kind = "cosmeticItem", id = "starterEdge" }, { kind = "cosmeticTheme", id = "starterStar" } } },
 		theme_starlight = { productId = 0, robux = 199, grants = { { kind = "cosmeticTheme", id = "starlight" } } },
 		theme_ember = { productId = 0, robux = 199, grants = { { kind = "cosmeticTheme", id = "ember" } } },
 		theme_frost = { productId = 0, robux = 199, grants = { { kind = "cosmeticTheme", id = "frost" } } },
@@ -47,6 +50,22 @@ local D = {
 		bundle_blacksmith = { productId = 0, robux = 499, tier = "premium", name = "대장장이 세트", proposal = true,
 			grants = { { kind = "cosmeticTheme", id = "anvil" }, { kind = "gliderSkin", id = "slimeParachute" }, { kind = "cosmeticItem", id = "goldenHammer" } } },
 	},
+	-- QUEUE-ALL9C 1-6 출시 상품 순차 공개: 상품 · 게임패스마다 공개 단계(1 = 출시). releaseStageNow보다 큰 단계 = 상점에 안 보임 + 서버가 구매 프롬프트 · 토큰 구매 거부(Monetization.isReleased 한 곳).
+	--   표에 없는 키 = releaseDefault. ★패스 보상 치장(별빛 · 서리꽃 · 불씨 테마 · 꽃잎 · 연 글라이더)은 시즌 1 동안 상점 비공개(패스 전용 - 결정 4) · 이후 판매 여부 = 결정 필요.
+	releaseStageNow = 1,
+	releaseDefault = 2,
+	release = {
+		starter_pack = 1, season_premium = 1, season_premium_sale = 1, pass_skip1 = 1, pass_skip5 = 1,
+		theme_anvil = 1, theme_jelly = 1, theme_halloween = 1, glider_dragonWing = 1, glider_slimeParachute = 1,
+		item_rocketPop = 1, item_balloonPop = 1, item_crystalBlade = 1, item_highFive = 1, item_petCrown = 1,
+		bagExpand = 1, pickupRadius = 1, recallCooldown = 1, nameplateColor = 1, nameplateBadge = 1,
+		-- 나중(2): 황금 망치 · 화로 · 이름표 세트 · (새벽 깃 날개 · 별의 수호룡 = 상품 자리 없음 - ALL9E 이후) · 대장장이 묶음(제안) · 패스 보상 치장 5종
+		item_goldenHammer = 2, item_forgeBrazier = 2, nameplateSet = 2, bundle_blacksmith = 2,
+		theme_starlight = 2, theme_ember = 2, theme_frost = 2, glider_petal = 2, glider_kite = 2,
+	},
+	-- QUEUE-ALL9C 1-6 가방 칸 출처(출처별 한 번): 기본 SaveConfig.bagBaseSlots(35) + 가방 확장 패스 20 + 스타터 20 = 최대 75(bagMaxSlots - 검사)
+	bagSources = { starter = { slots = 20 } },
+	bagMaxSlots = 75,
 	-- QUEUE-ALL9B 3-4 가격 등급(표시 · 검사용): premium = 499R$급 대표 치장. 상품의 tier가 여기 이름이면 robux가 이 값이어야 한다(checkCatalog).
 	tiers = { premium = { robux = 499 } },
 	-- QUEUE-ALL9B 3-3 꾸미기 토큰 가격 = 로벅스 가격에 비례(499R$급 = premiumTokens · roundTo 단위 반올림) - 계산 = shared/Monetization.tokenPriceForRobux 한 곳.
@@ -57,10 +76,12 @@ local D = {
 	-- 게임패스(편의만 - 전투력 · 획득량 없음). passId = Creator Hub 번호(자리 0). 효과 수치도 여기(편의 값).
 	gamePasses = {
 		bagExpand = { passId = 0, robux = 149, bonusSlots = 20 }, -- 가방 칸 +20(InventorySync.capacity)
-		pickupRadius = { passId = 0, robux = 99, radiusMultiplier = 1.5 }, -- 펫 자동 줍기 반경 ×1.5(PetService.pickupRange - 해금 기준은 그대로)
-		recallCooldown = { passId = 0, robux = 99, cooldownMultiplier = 0.5 }, -- 마을 귀환 도착 뒤 쿨 ×0.5(Travel - hubReturnCooldownSeconds)
+		pickupRadius = { passId = 0, robux = 79, radiusMultiplier = 1.5 }, -- QUEUE-ALL9C 1-6 표시 가격 99 → 79(실제 가격 = Creator Hub) -- 펫 자동 줍기 반경 ×1.5(PetService.pickupRange - 해금 기준은 그대로)
+		recallCooldown = { passId = 0, robux = 49, cooldownMultiplier = 0.5 }, -- QUEUE-ALL9C 1-6 표시 가격 99 → 49 -- 마을 귀환 도착 뒤 쿨 ×0.5(Travel - hubReturnCooldownSeconds)
 		nameplateColor = { passId = 0, robux = 49, colors = { "gold", "success", "stealShield", "ember" } }, -- 이름표 색(UIColors 기존 이름 - 새 색 금지 · 전투력 없음)
-		nameplateBadge = { passId = 0, robux = 49, badges = { "hammer", "slime", "star", "heart" } }, -- QUEUE-ALL1 P6 이름표 배지: 이름 앞 작은 정지 아이콘 1개(고르기) · 칭호 흐름 띠와 안 겹침 · 전투력 없음
+		nameplateBadge = { passId = 0, robux = 49, badges = { "hammer", "slime", "star", "heart" } },
+		-- QUEUE-ALL9C 1-6 이름표 세트 79(색 + 배지) - 색 · 배지 둘 다 없는 사람에게만 보인다(onlyWithout) · 공개 단계 2(나중)
+		nameplateSet = { passId = 0, robux = 79, includes = { "nameplateColor", "nameplateBadge" }, onlyWithout = { "nameplateColor", "nameplateBadge" } }, -- QUEUE-ALL1 P6 이름표 배지: 이름 앞 작은 정지 아이콘 1개(고르기) · 칭호 흐름 띠와 안 겹침 · 전투력 없음
 	},
 	-- 꾸미기 토큰(id sparkleShard) 가격 · 환산 = 아래 tokenPricing에서 계산(파일 끝 - shardPrices · ownedRefundShards = 종류별 대표값 · 표시 · 옛 호출 호환).
 	--   토큰을 **상품으로 직접** 팔지 않는다(유료 재화 상품 없음 - 시즌 유료 줄 보상에는 토큰이 있다 · 토큰은 치장만 산다 - 설계 문서 §3 · §10-2).

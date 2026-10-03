@@ -35,6 +35,11 @@ return {
 	-- 읽기: 서버가 순위표마다 상위 topN을 refreshSeconds마다 한 번 가져와 캐시한다(클라는 캐시만 받는다).
 	topN = 100,
 	refreshSeconds = 90,
+	-- QUEUE-ALL9C 1-5(J2) 100위 밖 "상위 약 n%": 기록이 오를 때 스테이지 구간(histBucketStages칸)별 인원을 MemoryStore 해시맵에 센다(<prefix>_s<시즌>_<종류>_hist).
+	--   읽기 = 서버가 순위표마다 histCacheSeconds에 한 번. 만료 = MemoryStore 상한 45일(오른 기록이 다시 쓰면 갱신 - 오래 안 오른 칸은 빠질 수 있어 "약").
+	histBucketStages = 50,
+	histCacheSeconds = 300,
+	histExpirationSeconds = 3888000,
 
 	-- 클라 요청 최소 간격(초, 요청자별). board = 캐시 읽기(저장소 요청 0) · me = 내 기록 1회 읽기 · card = 무기 카드 1회 읽기(캐시 cardCacheSeconds).
 	requestIntervalSeconds = { board = 1, me = 10, card = 2, hall = 2 }, -- hall(P3c E2) = 지난 시즌 순위표(서버 캐시 읽기)

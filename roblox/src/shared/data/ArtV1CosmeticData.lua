@@ -72,7 +72,8 @@ local D = {
 	trailEmission = 0.6, jumpRingThick = 0.25, -- Play 3: 가산 발광 1 · 두께 0.1은 잔디 위에서 거의 안 보였다
 	-- QUEUE-ALL6 H 꾸미기 소품 겉모습(CosmeticSlotData.items[].look)
 	items = {
-		crystal = { color = C(176, 132, 236), transparency = 0.3, reflectance = 0.15 }, -- 수정 결정 무기: 몸 파트만 반투명 자수정(Neon = 등급 빛은 그대로)
+		crystal = { color = C(176, 132, 236), transparency = 0.3, reflectance = 0.15, material = "Glass", clearTexture = true },
+		starterEdge = { color = C(206, 216, 230), transparency = 0, reflectance = 0.22, material = "Metal" }, -- QUEUE-ALL9C 1-6 스타터: 은빛 금속 + 은은한 광택(흰+자홍 태초 · 검정+금 초월 흉내 없음) -- 수정 결정 무기: 몸 파트만 반투명 자수정(Neon = 등급 빛은 그대로)
 		crown = { color = C(250, 216, 92), gem = C(120, 190, 255), height = 0.45, width = 0.9 }, -- 펫 왕관: 머리 크기 비율(머리 파트 X 크기 × width)
 	},
 }
@@ -101,6 +102,9 @@ D.gliders.mintParachute = variant(D.gliders.slimeParachute, { base = "slimeParac
 D.gliders.berryParachute = variant(D.gliders.slimeParachute, { base = "slimeParachute", color = C(150, 124, 230) }) -- 유료 5칸: 베리 낙하산
 D.gliders.jadeWing = variant(D.gliders.dragonWing, { base = "dragonWing", color = C(80, 190, 140) }) -- 유료 15칸: 비취 날개
 D.gliders.amethystWing = variant(D.gliders.dragonWing, { base = "dragonWing", color = C(150, 100, 210) }) -- 유료 35칸: 자수정 날개
+D.themes.starterStar = variant(D.themes.starlight, { core = C(226, 236, 255), edge = C(120, 140, 236), particle = C(244, 248, 255) }) -- QUEUE-ALL9C 1-6 스타터: 짧은 별빛 궤적(대시만)
+D.themes.starterStar.dash.lifetime = 0.2 -- "짧은" 궤적(별빛 0.38의 절반 정도)
+D.themes.starterStar.dash.width = 1.6
 D.items.starCrown = variant(D.items.crown, { base = "crown", color = C(200, 212, 255), gem = C(255, 236, 150) }) -- QUEUE-ALL9B 5 시즌 출석판 32칸: 별빛 왕관(은청 테 + 노란 별 보석)
 
 return D

@@ -52,6 +52,10 @@ function Monetization.checkProduct(data, key, product, cosmetics)
 			table.insert(reasons, ("%s: 없는 치장 %s"):format(key, tostring(grant.id)))
 		elseif cosmetics and Monetization.seasonOnly(cosmetics, grant.kind, grant.id) then
 			table.insert(reasons, ("%s: 시즌 한정 치장 %s는 상품으로 못 판다(재판매 없음)"):format(key, tostring(grant.id))) -- QUEUE-ALL1 R1
+		elseif grant.kind == "bagSlots" and not (data.bagSources and data.bagSources[grant.id]) then
+			table.insert(reasons, ("%s: 모르는 가방 출처 %s"):format(key, tostring(grant.id))) -- QUEUE-ALL9C 1-6
+		elseif cosmetics and Monetization.tokenBlocked(cosmetics, grant.kind, grant.id) == "starter_only" and product.starterPack then
+			-- QUEUE-ALL9C 1-6 스타터 전용 치장 = 스타터 팩만 줄 수 있다
 		elseif cosmetics and Monetization.tokenBlocked(cosmetics, grant.kind, grant.id) then
 			table.insert(reasons, ("%s: 패스 · 출석판 전용 치장 %s는 상품으로 못 판다"):format(key, tostring(grant.id))) -- QUEUE-ALL9B 4-3 · 5-1
 		end
@@ -112,8 +116,16 @@ function Monetization.tokenBlocked(cosmetics, kind, id)
 		return "pass_only"
 	elseif entry.boardOnly then
 		return "board_only"
+	elseif entry.starterOnly then
+		return "starter_only" -- QUEUE-ALL9C 1-6 스타터 팩 전용(따로 · 토큰 · 선물로 안 판다)
 	end
 	return nil
+end
+
+-- QUEUE-ALL9C 1-6 출시 상품 순차 공개: key = 상품 키 또는 게임패스 키. 공개 = 그 키의 단계 ≤ 지금 단계.
+function Monetization.isReleased(data, key)
+	local stage = data.release and data.release[key] or data.releaseDefault or 1
+	return stage <= (data.releaseStageNow or 1)
 end
 -- 상품 하나의 토큰 가격(치장만 · 토큰 불가 치장이 하나라도 있으면 nil + 이유). 상점 "가격 옆 토큰가"(3-7)와 서버 구매가 같은 함수.
 function Monetization.productTokenPrice(data, cosmetics, key)
