@@ -251,6 +251,12 @@ function Enhance.getGuardBand(level)
 	return nil
 end
 
+-- QUEUE-ALL9B G 리뷰: 두 방지가 한 배수인 구간(+22 ~ +25)은 하나만 켜도 × k를 다 낸다 → 강화 창이 둘을 함께 켜고 끈다(ALL9C 0-1 하네스가 지킨다).
+function Enhance.guardsLinked(level)
+	local band = Enhance.getGuardBand(level)
+	return band ~= nil and band.guards.drop == true and band.guards.reset == true
+end
+
 -- QUEUE-ALL9B G: 방지를 1회 켤 때 더 드는 골드(보상 대체 금액 · 표시) = 켠 비용 − 끈 비용.
 function Enhance.getGuardExtraCost(level, accountBestStage)
 	local band = Enhance.getGuardBand(level)

@@ -196,9 +196,9 @@ function P25cVerify.runPure()
 				table.insert(costs, EnhanceConfig.goldCost[level + 1])
 			end
 		end
-		local ratio = EnhanceConfig.goldCost[26] / EnhanceConfig.goldCost[21] -- QUEUE-ALL9B G: +26 이상은 새 기준(67,200) - 비교는 +20 ~ +25
-		r.check(("D1 +20 ~ +29 1회 %s · +25 ÷ +20 = %.3f(기대 약 1.15 = 1.035^4) · 0 ~ 29 단조 증가 %s · +16 %d(그대로)"):format(table.concat(costs, " · "), ratio, tostring(monotone), EnhanceConfig.goldCost[17]),
-			EnhanceConfig.goldCost[21] == 20000 and math.abs(ratio - 1.035 ^ 4) <= 0.01 and monotone and EnhanceConfig.goldCost[17] == 14900)
+		local ratio = EnhanceConfig.goldCost[26] / EnhanceConfig.goldCost[21] -- QUEUE-ALL9B G: +26 이상은 새 기준(67,200) - 비교는 +20 ~ +25 시도(5단계 - ALL9C 0-1: 옛 기대 1.035^4는 4단계로 잘못 셈)
+		r.check(("D1 +20 ~ +29 1회 %s · +25 ÷ +20 = %.3f(기대 약 1.19 = 1.035^5) · 0 ~ 29 단조 증가 %s · +16 %d(그대로)"):format(table.concat(costs, " · "), ratio, tostring(monotone), EnhanceConfig.goldCost[17]),
+			EnhanceConfig.goldCost[21] == 20000 and math.abs(ratio - 1.035 ^ 5) <= 0.01 and monotone and EnhanceConfig.goldCost[17] == 14900)
 	end)
 
 	r.section("[E] 보석 등급 몫", function()

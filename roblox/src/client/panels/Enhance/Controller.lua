@@ -44,8 +44,7 @@ end
 function Controller.setToggle(kind, value)
 	toggles[kind] = value == true
 	-- QUEUE-ALL9B G 리뷰: 두 방지가 한 배수인 구간(+22 ~ +25)은 하나만 켜도 × k를 다 낸다 → 둘을 함께 켜고 끈다
-	local band = Enhance.getGuardBand(player:GetAttribute("WeaponLevel") or 0)
-	if band and band.guards.drop and band.guards.reset then
+	if Enhance.guardsLinked(player:GetAttribute("WeaponLevel") or 0) then
 		toggles.drop, toggles.reset = value == true, value == true
 	end
 end

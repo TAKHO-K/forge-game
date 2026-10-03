@@ -136,6 +136,28 @@ local ok, err = pcall(function()
 	local mb = SaveSystem.migrate(bad)
 	check("v68 환산: 손상된 큰 스테이지 = 상한으로 자름 · 0장 칸은 곱하지 않음(골드 NaN 아님)", mb.gold == mb.gold and mb.gold < math.huge and mb.purchases.protectionRefund.stage == MODS.InfiniteStageConfig.hardMaxStage,
 		("골드 %s · 기준 스테이지 %s"):format(tostring(mb.gold), tostring(mb.purchases.protectionRefund.stage)))
+	-- ══ QUEUE-ALL9C 0-1: ALL9B 리뷰 수정 지킴이 ══
+	local linked = {}
+	for L = 18, 29 do linked[L] = Enhance.guardsLinked(L) end
+	check("리뷰: 방지 토글 묶음 = +22 ~ +25만(한 배수 구간) · +19 ~ +21 · +26 ~ +29 · +18 아님", linked[22] and linked[25] and not linked[21] and not linked[19] and not linked[26] and not linked[29] and not linked[18],
+		("21 %s · 22 %s · 25 %s · 26 %s"):format(tostring(linked[21]), tostring(linked[22]), tostring(linked[25]), tostring(linked[26])))
+	local noDrop26 = true
+	for L = 26, Cfg.maxLevel - 1 do
+		local p = Cfg.probability[L + 1]
+		noDrop26 = noDrop26 and (p.down1 or 0) == 0 and (p.down2 or 0) == 0
+	end
+	local helpKo, helpEn = MODS.TextData.ko["enhance.help.detail"], MODS.TextData.en["enhance.help.detail"]
+	check("리뷰: 도움말 \"+26부터 하락 없음\"(ko · en) = 확률표 +26 ~ +29 하락 0", noDrop26 and helpKo:find("+26부터는 하락이 없습니다", 1, true) ~= nil and helpEn:find("no drops from +26", 1, true) ~= nil)
+	-- 회귀 블록 기대값 3(P2 C1.1 · P25a C5.2 · P25c D1)과 같은 규칙: +26 이상 비용 = niceReward · 0 ~ 29 비감소 · +25 ÷ +20 = 1.035^4
+	local c11, monotone = true, true
+	for level = 0, Cfg.maxLevel - 1 do
+		local nice = level >= 26 and GoldCost.niceReward or function(n) return n end
+		c11 = c11 and Enhance.getCost(level, 1) == nice(Cfg.goldCost[level + 1]) and Enhance.getCost(level, 100) == nice(math.floor(Cfg.goldCost[level + 1] * MODS.InfiniteStage.getGoldMultiplier(100)))
+		if level > 0 then monotone = monotone and Enhance.getCost(level) >= Enhance.getCost(level - 1) end
+	end
+	local ratio = Cfg.goldCost[26] / Cfg.goldCost[21]
+	check("리뷰: 회귀 블록 기대값 - P2 C1.1(+26 이상 niceReward) · P25a C5.2(비감소) · P25c D1(+25 ÷ +20 시도 = 1.035^5 · +20 20,000 · +16 14,900)", c11 and monotone
+		and math.abs(ratio - 1.035 ^ 5) <= 0.01 and Cfg.goldCost[21] == 20000 and Cfg.goldCost[17] == 14900, ("C1.1 %s · 비감소 %s · 비 %.3f"):format(tostring(c11), tostring(monotone), ratio))
 	local fresh = SaveSystem.migrate({})
 	check("새 계정 = 환산 0 · 골드 0", fresh.purchases.protectionRefund.gold == 0 and fresh.gold == 0)
 	local okValid = SaveSystem.isValidProfile == nil or SaveSystem.isValidProfile(m)

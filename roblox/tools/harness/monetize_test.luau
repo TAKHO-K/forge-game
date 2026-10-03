@@ -292,6 +292,25 @@ local ok, err = pcall(function()
 	MS.processReceipt({ PlayerId = 77, ProductId = 9101, PurchaseId = "P-SKIPFAIL", CurrencySpent = 25 }, deps)
 	saveResult = true
 	check("4-8 저장 실패 = 칸 · 산 칸 되돌림(재시도가 다시 준다)", qs.currencies.passExp == exp1 and s.seasonPass.skipBought == Season.skip.capPerSeason - 2)
+	-- QUEUE-ALL9C 0-1(ALL9B 리뷰): 되돌리기 전에 경험치가 늘어도(저장 대기 중 사냥) 되돌림 = applySkip이 표시한 칸만 지운다
+	s.seasonPass.skipBought, s.seasonPass.skipTiers = 0, {}
+	qs.currencies.passExp = 3 * Season.expPerTier
+	SP.applySkip(player, 2) -- 4 · 5칸 표시 · 도달 5
+	qs.currencies.passExp += 4 * Season.expPerTier -- 되돌리기 전 사냥으로 4칸 더
+	SP.revertSkip(player, 2)
+	check("ALL9B 리뷰: 칸 건너뛰기 되돌림 = 표시한 칸(4 · 5)만 지움 · 경험치 2칸분만 뺌", next(s.seasonPass.skipTiers) == nil and qs.currencies.passExp == 7 * Season.expPerTier and s.seasonPass.skipBought == 0, -- 3 + 2(건너뛰기) + 4(사냥) − 2(되돌림)
+		("남은 표시 %s · 경험치 %d"):format(tostring(next(s.seasonPass.skipTiers)), qs.currencies.passExp))
+	-- QUEUE-ALL9C 0-1(ALL9B 리뷰): 토큰 구매 지급 실패 → 토큰 되돌림 + 재화 칸 동기(syncWallet)
+	local QS = MODS.QuestService
+	local realSync, realApply, synced = QS.syncWallet, MS.applyReward, 0
+	QS.syncWallet = function(...) synced += 1; return realSync(...) end
+	MS.applyReward = function() return false, "test_fail" end
+	MS.validProducts.theme_jelly = true
+	s.cosmetics.themes.jelly = nil
+	qs.currencies.sparkleShard = 9999
+	local rf, wrf = MS.buyWithTokens(player, "theme_jelly")
+	MS.applyReward, QS.syncWallet = realApply, realSync
+	check("ALL9B 리뷰: 토큰 구매 지급 실패 = 토큰 전액 되돌림 + syncWallet 호출", not rf and wrf == "test_fail" and qs.currencies.sparkleShard == 9999 and synced >= 1, ("토큰 %d · sync %d"):format(qs.currencies.sparkleShard, synced))
 	-- QUEUE-ALL9B 4-4 할인: 꺼짐 = 정가만 · 켜짐 = 299만 프롬프트
 	Data.products.season_premium_sale.productId = 9106
 	MS.validProducts.season_premium_sale = true
