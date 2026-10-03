@@ -114,7 +114,7 @@ local ok, err = pcall(function()
 	PlayerProfile.init(player, profile)
 	PlayerProfile.setClassId(player, "bow")
 	local p = PlayerProfile.getProfile(player)
-	local function setGold(g) p.gold = g end
+	local function setGold(g) p.gold = g; attrs.Gold = g end
 
 	-- 3-1. 2^53 미만: 처치당 골드를 1,000번 더해도 정확
 	setGold(P53 - 1000 * 7 - 1)
@@ -154,6 +154,49 @@ local ok, err = pcall(function()
 	setGold(1e18)
 	PlayerProfile.addGold(player, 50)
 	check("addGold 1e18 + 50 정확(작은 보상)", p.gold - 1e18 == 50, ("실제 증가 %.17g(ulp 128)"):format(p.gold - 1e18))
+
+	-- ═══ 4. QUEUE-ALL9C 0-11 안전망: 골드 증감 한 곳(changeGold) · 비정상 금액 · 1e16 / 1e18 / 1e20 ═══
+	setGold(5000)
+	local nanSpend = PlayerProfile.trySpendGold(player, 0 / 0)
+	local negSpend = PlayerProfile.trySpendGold(player, -500)
+	local infSpend = PlayerProfile.trySpendGold(player, math.huge)
+	local strSpend = PlayerProfile.trySpendGold(player, "100")
+	check("0-11 trySpendGold NaN · 음수 · inf · 문자열 = 거부 · 골드 그대로", not nanSpend and not negSpend and not infSpend and not strSpend and p.gold == 5000 and p.gold == p.gold,
+		("→ %.17g(옛 코드 = NaN · 5,500)"):format(p.gold))
+	PlayerProfile.addGold(player, -math.huge)
+	PlayerProfile.addGold(player, -99999)
+	check("0-11 addGold −inf = 건너뜀 · 큰 음수 = 0에서 멈춤(음수 골드 없음)", p.gold == 0, ("→ %.17g"):format(p.gold))
+	setGold(1000)
+	local took = PlayerProfile.takeGold(player, 5000)
+	check("0-11 운영 회수 takeGold = 가진 만큼만(1,000) · 0", took == 1000 and p.gold == 0, ("뺀 양 %s"):format(tostring(took)))
+	local Enhance = MODS.Enhance
+	for _, g in ipairs({ 1e16, 1e18, 1e20 }) do
+		-- 저장 왕복
+		local sp = SaveSystem.migrate({})
+		sp.gold = g
+		SaveSystem.sanitizeForSave(sp, nil, "profile")
+		local back = SaveSystem.migrate(roundTrip(sp))
+		local okSave = SaveSystem.isValidProfile(back) and back.gold == g and #SaveSystem.repairProfile(back) == 0
+		-- 구매 가능 비교(같은 값 · 1ulp 넘게 큰 값 · 작은 값)
+		local ulpG = 2 ^ (math.floor(math.log(g, 2)) - 52)
+		setGold(g)
+		local cmpOk = not PlayerProfile.trySpendGold(player, g + ulpG * 4) and p.gold == g
+		-- 판매(가방 장비 1개 → 판매가만큼 늘어남 · 유한)
+		p.inventory = { { id = "big1", grade = "normal", part = "armor", tierIndex = 1, dropStage = 1, itemLevel = 1 } }
+		local price = MODS.Loot.getSellPrice(p.inventory[1])
+		local sold = PlayerProfile.sellItem(player, 1)
+		local sellOk = sold and p.gold >= g and p.gold == p.gold and p.gold < math.huge
+		-- 강화 비용 차감(스테이지 25,300 · +26 방지 켬 = 최대 단일 비용)
+		setGold(g)
+		local cost = Enhance.getCost(26, 25300, true, true)
+		local spent = PlayerProfile.trySpendGold(player, cost)
+		local enhOk = (spent == (g >= cost)) and p.gold == (spent and g - cost or g) and p.gold >= 0 -- 보유 ≥ 비용일 때만 차감
+		-- 표시
+		local en, ko = NumberFormat.currency(p.gold, "en"), NumberFormat.currency(p.gold, "ko")
+		local dispOk = sane(en) and sane(ko) and attrs.Gold == p.gold
+		check(("0-11 보유 %.0e: 저장 왕복 · 비교 · 판매 · 강화 비용 차감 · 표시"):format(g), okSave and cmpOk and sellOk and enhOk and dispOk,
+			("저장 %s · 비교 %s · 판매 %s(+%s) · 강화 %s(비용 %.3g) · 표시 %s / %s"):format(tostring(okSave), tostring(cmpOk), tostring(sellOk), tostring(price), tostring(enhOk), cost, en, ko))
+	end
 end)
 if not ok then
 	print("[BIG] 하네스 에러 " .. tostring(err))

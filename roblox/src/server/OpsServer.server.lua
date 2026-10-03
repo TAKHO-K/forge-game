@@ -182,8 +182,7 @@ local function revokeCurrency(userId, kind, amount)
 	local before
 	if kind == "gold" then
 		before = profile.gold
-		profile.gold = math.max(0, profile.gold - amount)
-		target:SetAttribute("Gold", profile.gold)
+		PlayerProfile.takeGold(target, amount) -- QUEUE-ALL9C 0-11: 골드 증감 한 곳
 	elseif kind == "gemDust" then
 		before = PlayerProfile.getGemDust(target)
 		PlayerProfile.addGemDust(target, -math.min(amount, before))

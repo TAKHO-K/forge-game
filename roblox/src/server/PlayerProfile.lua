@@ -327,29 +327,58 @@ end
 
 -- 서버만 호출한다(AttackServer의 몬스터 처치 판정 직후). 클라이언트가 보낸 값으로
 -- 골드를 늘리는 경로는 없다 - 이 함수가 유일한 증가 통로다.
+-- QUEUE-ALL9C 0-11: 골드 증감 한 곳(지급 · 차감 · 판매 · 운영 회수가 모두 여기로). delta가 NaN · inf이거나 결과가 유한하지 않으면 바꾸지 않는다 · 결과는 0 아래로 안 내려간다.
+--   2^53(9.0e15) 넘는 보유에서의 정수 정밀도(1e18 근처 128 단위)는 double 한계 - 알려진 문제(bignum KNOWN · ALL10 이관).
+local function changeGold(player, profile, delta)
+	if delta ~= delta or delta == math.huge or delta == -math.huge then
+		return false
+	end
+	local after = profile.gold + delta
+	if after ~= after or after == math.huge or after == -math.huge then
+		return false
+	end
+	profile.gold = math.max(0, after)
+	player:SetAttribute("Gold", profile.gold)
+	return true
+end
+
 function PlayerProfile.addGold(player, amount)
 	local profile = profiles[player]
 	if not profile then
 		return
 	end
 	local add = Sanitize.number(amount, 0)
-	profile.gold += add -- S21-0 A2: 보상 계산 출구 - 오염된 보상은 이번만 0으로 건너뛴다
-	player:SetAttribute("Gold", profile.gold)
+	if not changeGold(player, profile, add) then -- S21-0 A2: 보상 계산 출구 - 오염된 보상은 이번만 0으로 건너뛴다
+		add = 0
+	end
 	if add > 0 then
 		require(script.Parent.SuspicionMonitor).noteGold(player, add) -- QUEUE-ALL6 F2: 골드/분 · 큰 골드 감사 기록
 	end
 	Telemetry.economy(player, "gold", "source", add)
 end
 
+-- QUEUE-ALL9C 0-11: 운영 회수(OpsServer) - 가진 만큼만 뺀다(0 아래로 안 감). 반환 = 실제로 뺀 양.
+function PlayerProfile.takeGold(player, amount)
+	local profile = profiles[player]
+	local take = profile and math.min(Sanitize.number(amount, 0), profile.gold) or 0
+	if not profile or take <= 0 or not changeGold(player, profile, -take) then
+		return 0
+	end
+	Telemetry.economy(player, "gold", "sink", take, "Ops")
+	return take
+end
+
 -- 골드가 충분하면 차감하고 true, 부족하면 아무것도 바꾸지 않고 false(10-2 [3] - 확인과
 -- 차감을 분리하면 그 사이에 값이 바뀔 여지가 생긴다. 여긴 한 함수 안에서 원자적으로 처리).
 function PlayerProfile.trySpendGold(player, amount)
 	local profile = profiles[player]
-	if not profile or profile.gold < amount then
+	-- QUEUE-ALL9C 0-11: 금액이 숫자가 아니거나 NaN · inf · 음수면 거부(옛 코드는 NaN이면 골드가 NaN, 음수면 골드가 늘었다)
+	if not profile or type(amount) ~= "number" or amount ~= amount or amount < 0 or amount == math.huge or profile.gold < amount then
 		return false
 	end
-	profile.gold -= amount
-	player:SetAttribute("Gold", profile.gold)
+	if not changeGold(player, profile, -amount) then
+		return false
+	end
 	Telemetry.economy(player, "gold", "sink", amount)
 	return true
 end
@@ -1200,9 +1229,8 @@ function PlayerProfile.sellGem(player, index)
 	end
 	local price = Sanitize.number(GemCraft.sellPrice(gem, PlayerProfile.getAccountBestStage(player)), 0) -- S21-0 A2: 보상 계산 출구
 	table.remove(classState.gemInventory, index)
-	profile.gold += price
+	changeGold(player, profile, Sanitize.number(price, 0)) -- QUEUE-ALL9C 0-11 한 곳
 	Telemetry.economy(player, "gold", "source", price, "Shop") -- Q15 리뷰: 판매 골드도(addGold를 안 거친다)
-	player:SetAttribute("Gold", profile.gold)
 	GemSync.push(player)
 	return true, price
 end
@@ -1834,9 +1862,8 @@ function PlayerProfile.autoProcessDrop(player, item)
 		return { kind = "dismantle", grade = item.grade, part = item.part, gold = 0 }
 	end
 	local price = Loot.getSellPrice(item)
-	profile.gold += price
+	changeGold(player, profile, Sanitize.number(price, 0)) -- QUEUE-ALL9C 0-11 한 곳
 	Telemetry.economy(player, "gold", "source", price, "Shop") -- Q15 리뷰: 자동 판매
-	player:SetAttribute("Gold", profile.gold)
 	return { kind = "sell", grade = item.grade, part = item.part, gold = price }
 end
 
@@ -2080,9 +2107,8 @@ function PlayerProfile.sellItem(player, index)
 
 	local price = Loot.getSellPrice(item)
 	table.remove(profile.inventory, index)
-	profile.gold += price
+	changeGold(player, profile, Sanitize.number(price, 0)) -- QUEUE-ALL9C 0-11 한 곳
 	Telemetry.economy(player, "gold", "source", price, "Shop") -- Q15 리뷰: 판매
-	player:SetAttribute("Gold", profile.gold)
 	InventorySync.push(player, profile)
 	return price
 end
@@ -2127,9 +2153,8 @@ function PlayerProfile.sellItemsBulkUpTo(player, gradeId)
 	end
 
 	profile.inventory = remaining
-	profile.gold += totalGold
+	changeGold(player, profile, Sanitize.number(totalGold, 0)) -- QUEUE-ALL9C 0-11 한 곳
 	Telemetry.economy(player, "gold", "source", totalGold, "Shop") -- Q15 리뷰: 일괄 판매
-	player:SetAttribute("Gold", profile.gold)
 	InventorySync.push(player, profile)
 	return soldCount, totalGold
 end
@@ -2168,9 +2193,8 @@ function PlayerProfile.sellItemsByGrades(player, grades, expectedCount)
 		return 0, 0, soldCount == 0 and "none" or "count_mismatch"
 	end
 	profile.inventory = remaining
-	profile.gold += totalGold
+	changeGold(player, profile, Sanitize.number(totalGold, 0)) -- QUEUE-ALL9C 0-11 한 곳
 	Telemetry.economy(player, "gold", "source", totalGold, "Shop") -- 일괄 판매(옛 sellItemsBulkUpTo와 같은 출처 이름 - EconSim 흐름 그대로)
-	player:SetAttribute("Gold", profile.gold)
 	InventorySync.push(player, profile)
 	return soldCount, totalGold
 end
