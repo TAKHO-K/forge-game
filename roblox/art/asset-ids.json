@@ -2869,6 +2869,118 @@
   "status": "Approved",
   "imageId": 136985282912886
  },
+ "icons/gear_v3/armor_greatsword_legendary.png": {
+  "sha256": "450e7e444b8f2e4acb4a7fb70b23c70e5f54aeb5965a2941cf0089440c828295",
+  "assetType": "Decal",
+  "assetId": 109155440841104,
+  "status": "Approved",
+  "imageId": 135846078642662
+ },
+ "icons/gear_v3/armor_greatsword_normal.png": {
+  "sha256": "b277452f6ee995fea17164f0bf33d616dadf2a74bd50cd6ff71220eba98f68c7",
+  "assetType": "Decal",
+  "assetId": 75393571924773,
+  "status": "Approved",
+  "imageId": 126219080372682
+ },
+ "icons/gear_v3/armor_greatsword_primordial.png": {
+  "sha256": "cb60de9380945d5e21ce713a27d386729cc08edd4e5760cb9118afb8c17a98e6",
+  "assetType": "Decal",
+  "assetId": 137931269244541,
+  "status": "Approved",
+  "imageId": 112959311116235
+ },
+ "icons/gear_v3/armor_greatsword_transcendent.png": {
+  "sha256": "ae090b561ea58044ea8d06a43bd4e3c9aca197fce0ac964afefdb48707573d70",
+  "assetType": "Decal",
+  "assetId": 100515385033887,
+  "status": "Approved",
+  "imageId": 126739101682800
+ },
+ "icons/gear_v3/gloves_greatsword_legendary.png": {
+  "sha256": "53cdcf78da0bbb273eafbe95e3f2fa0eb5abbc1fd82a8f0f7fb7338e9c74917a",
+  "assetType": "Decal",
+  "assetId": 98377012400942,
+  "status": "Approved",
+  "imageId": 121652224800692
+ },
+ "icons/gear_v3/gloves_greatsword_normal.png": {
+  "sha256": "bc93eeeab16d0967b6e3419c96ce6ad2667d4eb7f304064eabfe6e61767c95fe",
+  "assetType": "Decal",
+  "assetId": 89473743799364,
+  "status": "Approved",
+  "imageId": 111347125031650
+ },
+ "icons/gear_v3/gloves_greatsword_primordial.png": {
+  "sha256": "20ddce312b45a37949d327fae387235fc3c0ce3919de04ced1fa1179285608ab",
+  "assetType": "Decal",
+  "assetId": 87354676838398,
+  "status": "Approved",
+  "imageId": 96711825066769
+ },
+ "icons/gear_v3/gloves_greatsword_transcendent.png": {
+  "sha256": "c7724220c1efe62004f2c3379da77755505dc3e4f8500b10d74153d8d2adaace",
+  "assetType": "Decal",
+  "assetId": 115346280889698,
+  "status": "Approved",
+  "imageId": 111533316708431
+ },
+ "icons/gear_v3/shoes_greatsword_legendary.png": {
+  "sha256": "64954de853ca791efe3faceb6a46e237d7dd70fb369002ed09d1b57caf42d7c1",
+  "assetType": "Decal",
+  "assetId": 136268323178320,
+  "status": "Approved",
+  "imageId": 133031510360047
+ },
+ "icons/gear_v3/shoes_greatsword_normal.png": {
+  "sha256": "f5e0d102c60e72bd66ae9762d00a66fcebc55030004f1f3246ec567472237200",
+  "assetType": "Decal",
+  "assetId": 92034485756896,
+  "status": "Approved",
+  "imageId": 72332246668146
+ },
+ "icons/gear_v3/shoes_greatsword_primordial.png": {
+  "sha256": "c1ed13b698b4ce25721d0a1dc320c35ac3b5bd522daea9fc54b77c6a3529915d",
+  "assetType": "Decal",
+  "assetId": 130199570050545,
+  "status": "Approved",
+  "imageId": 137661122291872
+ },
+ "icons/gear_v3/shoes_greatsword_transcendent.png": {
+  "sha256": "2acd718842591c4cd9c76b13ed2531d2cb36872763b73c745a190c032a5a7354",
+  "assetType": "Decal",
+  "assetId": 138121212889264,
+  "status": "Approved",
+  "imageId": 131748965662951
+ },
+ "icons/gear_v3/weapon_greatsword_legendary.png": {
+  "sha256": "7dd8be77d14ede849814ce331f55ad34ca53797a16017bad1b0853ef1a0d840b",
+  "assetType": "Decal",
+  "assetId": 132359992217181,
+  "status": "Approved",
+  "imageId": 134628091080033
+ },
+ "icons/gear_v3/weapon_greatsword_normal.png": {
+  "sha256": "086a8333178078e3486e529c88292c8eb158d1f86b3b8f11076b35f7bdb2e315",
+  "assetType": "Decal",
+  "assetId": 108370062053361,
+  "status": "Approved",
+  "imageId": 128168954814553
+ },
+ "icons/gear_v3/weapon_greatsword_primordial.png": {
+  "sha256": "cd44331576ff913ad36eb205c65b8c1438113e12506ee66af41d22996443ea10",
+  "assetType": "Decal",
+  "assetId": 123193945528279,
+  "status": "Approved",
+  "imageId": 121148282228311
+ },
+ "icons/gear_v3/weapon_greatsword_transcendent.png": {
+  "sha256": "a1053371dec3e78f253128f43a1e743cbc6d72789fd10bbb7639be2e0156db49",
+  "assetType": "Decal",
+  "assetId": 77506985640681,
+  "status": "Approved",
+  "imageId": 138518819769908
+ },
  "icons/hud/attendance.png": {
   "sha256": "8605a16f8b29215ce9a3b33a10ebaae3df58d0800ac8961850757c352f1c91c5",
   "assetType": "Decal",
@@ -3323,6 +3435,48 @@
   "assetId": 117793594585450,
   "status": "Approved",
   "imageId": 92708795814700
+ },
+ "icons/ui/set_tier1.png": {
+  "sha256": "3d34073bf60179a868eed667517920a81f4d1b4ed04323ec2f9b262f048a20af",
+  "assetType": "Decal",
+  "assetId": 107653579688522,
+  "status": "Approved",
+  "imageId": 133286904147240
+ },
+ "icons/ui/set_tier2.png": {
+  "sha256": "13ea787fca0260cfe6c5d2e69d38b487309fc83c036df536fd3237de45077886",
+  "assetType": "Decal",
+  "assetId": 112887482187270,
+  "status": "Approved",
+  "imageId": 122566978753108
+ },
+ "icons/ui/set_tier3.png": {
+  "sha256": "0649b372f5d3bdb2a81737644bb9085200f8b8c28a29c74613529a839dc32c50",
+  "assetType": "Decal",
+  "assetId": 111087198307716,
+  "status": "Approved",
+  "imageId": 130160777226223
+ },
+ "icons/ui/set_tier4.png": {
+  "sha256": "f10bfcff5a181ef13dbc389b575c853f3827924671cf6970e3623f296dc91ddd",
+  "assetType": "Decal",
+  "assetId": 81163552519877,
+  "status": "Approved",
+  "imageId": 114379729814356
+ },
+ "icons/ui/set_tier5.png": {
+  "sha256": "0c480dbb4f7947be988679624930cfcef2ead5231f268188a46a4eee5eece798",
+  "assetType": "Decal",
+  "assetId": 100787354690187,
+  "status": "Approved",
+  "imageId": 133111940866830
+ },
+ "icons/ui/set_tier6.png": {
+  "sha256": "16fe4b089c5ed58459a5cac0761d8f0a456447bede8004df84f8b9b1fcec37e2",
+  "assetType": "Decal",
+  "assetId": 125128345335747,
+  "status": "Approved",
+  "imageId": 109216278428339
  },
  "icons/ui/target_ring.png": {
   "sha256": "b5c237970481875b0898a2c0a241940b96d1dd8d772ea7f1def1e4cd6b85d9a2",

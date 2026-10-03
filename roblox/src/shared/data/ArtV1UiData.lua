@@ -5,6 +5,15 @@ local C = Color3.fromRGB
 local TRANSCENDENT = require(script.Parent.ItemVisualData).gradeVisuals.transcendent -- QUEUE-ALL9C 2-2 초월 흑금 = 등급 색 한 곳
 
 return {
+	-- QUEUE-ALL9C 2-5 칸 틀 ⑥(docs/design/gear-art-v3.md 8절 · GPT ⑥ 시안): 바탕 = 칸 남색 + 등급 어두운 색 · 좌상단 = 세트 문장(ArtAssetIds icons/ui/set_<구역>) ·
+	--   우상단 = 등급 마름모(GradeColor.border) · 등급 이름 글자 없음. 옮긴 것: +N · 옵션 글자 = 왼쪽 아래(옛 세트 번호 칩 자리) · 자물쇠 = 마름모 왼쪽.
+	--   그리는 곳 = client/panels/Inventory/ItemCell(가방 · 착용 칸) · 비교 시트 = roblox/tools/blender/icons_v3.py(같은 규칙) · 끄면 옛 칸(번호 칩 · 오른쪽 위 자물쇠).
+	iconFrameV3 = {
+		enabled = true,
+		cellBg = C(24, 26, 36), darkMix = 0.18, -- 바탕 = cellBg × (1 − darkMix) + 등급 어두운 색 × darkMix
+		crestSize = 0.3, crestMin = 14, crestMax = 22, -- 세트 문장 = 칸 폭 비율(px 하한 · 상한)
+		diamondSize = 0.16, diamondMin = 8, diamondMax = 12, -- 등급 마름모
+	},
 	grades = {
 		normal = { thickness = 1, sheen = 0, spin = 0, fill = 0.03, glow = 0, strokeTransparency = 0.4 }, -- 검토: 일반 흰 테두리가 희귀보다 또렷해 서열이 거꾸로 보였다
 		rare = { thickness = 2, sheen = 0.35, spin = 0, fill = 0.06, glow = 0 },
