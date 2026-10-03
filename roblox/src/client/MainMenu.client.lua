@@ -485,10 +485,10 @@ continueCard.Size = UDim2.new(1, -8, 0, Data.continueHeight + (Theme.isMobile an
 continueCard.LayoutOrder = 1
 continueCard.Parent = mainPage
 Theme.corner(continueCard, Theme.corner.button)
-local continueTitle = Theme.label(continueCard, "", "title", "textPrimary")
+local continueTitle = Theme.label(continueCard, "", "title", "panel") -- QUEUE-N1004 A-2: 주황 카드 위 밝은 글자 2.2:1 → 어두운 글자 7.4:1(검사 = tools/check_grade_colors.py ④)
 continueTitle.Position = UDim2.new(0, 16, 0, 8)
 continueTitle.Size = UDim2.new(1, -32, 0.5, -4)
-local continueSub = Theme.label(continueCard, "", "body", "textPrimary")
+local continueSub = Theme.label(continueCard, "", "body", "panel")
 continueSub.Position = UDim2.new(0, 16, 0.5, 2)
 continueSub.Size = UDim2.new(1, -32, 0.5, -10)
 
@@ -652,7 +652,7 @@ if latest then
 		return { date = latest.date, text = Text.get(latest.textKey) }
 	end)
 end
-local codeNote = Theme.label(newsBox, "", "caption", "textSecondary")
+local codeNote = Theme.label(newsBox, "", "caption", "textPrimary") -- QUEUE-N1004 A-2: 회색 4.48:1(뒤가 밝을 때) → 4.5 이상
 codeNote.Position = UDim2.new(0, 12, 1, -28)
 codeNote.Size = UDim2.new(1, -24, 0, 20)
 bindText(codeNote, "menu.news.codes")

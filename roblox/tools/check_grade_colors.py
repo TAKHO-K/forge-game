@@ -1,5 +1,5 @@
 # QUEUE-ALL9C 2-2 등급 색 검사: ① ART-REF v2 2절 표(docs/design/gear-art-v3.md) hex = ItemVisualData 값(메인 · 밝은 · 어두운)
-#   ② 글자색(text)이 어두운 패널 · 칸 위 대비 4.5:1 이상 ③ 옛 등급 색(웹 v1 · G1-1 자홍 · 옛 초월 금)이 src에 남았는지(3D · 허브 장식은 ALL9E - 목록만)
+#   ② 글자색(text)이 어두운 패널 · 칸 위 대비 4.5:1 이상 ④ 메인 메뉴 글자 대비(QUEUE-N1004 A-2) ③ 옛 등급 색(웹 v1 · G1-1 자홍 · 옛 초월 금)이 src에 남았는지(3D · 허브 장식은 ALL9E - 목록만)
 # 사용: python roblox/tools/check_grade_colors.py  → 끝 줄 "결과: 통과|실패"
 import io, os, re, sys
 
@@ -100,6 +100,53 @@ for rel, i, name in left:
     print("   %s:%d %s" % (rel, i, name))
 if ui_left:
     fail.append("UI 폴더에 옛 등급 색 %d곳" % len(ui_left))
+
+# ④ QUEUE-N1004 A-2 메인 메뉴 글자 대비(4.5:1 이상): MainMenu.client.lua에서 글자색 · 바탕색 토큰을 읽어 계산한다(코드를 바꾸면 검사도 따라간다).
+#   바탕이 반투명이면 가장 나쁜 경우(뒤 배경 그림 = 흰색)에 얹은 실효색으로 잰다. 배경 그림 위에 바로 놓인 글자(로고 · 대기 글 · 설정 안내 줄)는 캡처 측정 항목(목록만).
+MENU = os.path.join(SRC, "client", "MainMenu.client.lua")
+menu = io.open(MENU, encoding="utf-8").read()
+colors = {}
+for mm in re.finditer(r"\n\t(\w+) = Color3\.fromRGB\((\d+), (\d+), (\d+)\)", uic):
+    colors[mm.group(1)] = tuple(int(x) for x in mm.groups()[1:])
+slot_alpha = 1 - float(re.search(r"slotTransparency = ([\d.]+)", uic).group(1))
+
+
+def over(fg, alpha, back):
+    return tuple(fg[i] * alpha + back[i] * (1 - alpha) for i in range(3))
+
+
+WHITE = (255, 255, 255)
+card_bg = re.search(r'continueCard\.BackgroundColor3 = Theme\.color\("(\w+)"\)', menu).group(1)
+panel_tr = float(re.search(r'local function panelBox.*?BackgroundTransparency = ([\d.]+)', menu, re.S).group(1))
+load_tr = float(re.search(r'loadingBack\.BackgroundTransparency = ([\d.]+)', menu).group(1))
+panel_bg = over(colors["panel"], 1 - panel_tr, WHITE)
+bg_of = {
+    "continueCard": (colors[card_bg], "이어하기 카드(%s)" % card_bg),
+    "row": (panel_bg, "설정 줄(panel α%.2f · 뒤 흰색)" % (1 - panel_tr)),
+    "newsBox": (panel_bg, "소식 상자(panel α%.2f · 뒤 흰색)" % (1 - panel_tr)),
+    "loading": (over(colors["panel"], 1 - load_tr, WHITE), "로딩 받침(panel α%.2f · 뒤 흰색)" % (1 - load_tr)),
+}
+pairs = [(mm.group(1), mm.group(2)) for mm in re.finditer(r'Theme\.label\((\w+), [^\n]*?"(\w+)"\)', menu)]
+# 메뉴 버튼(Button secondary = slot α · 뒤 흰색) · 설정 작은 버튼(slot 불투명 · panelBox 위) - 글자 textPrimary
+if 'kind = "secondary"' in menu:
+    bg_of["menuButton"] = (over(colors["slot"], slot_alpha, WHITE), "메뉴 버튼(slot α%.2f · 뒤 흰색)" % slot_alpha)
+    pairs.append(("menuButton", "textPrimary"))
+mm = re.search(r'b\.BackgroundColor3 = Theme\.color\("(\w+)"\)\n\tb\.TextColor3 = Theme\.color\("(\w+)"\)', menu)
+if mm:
+    bg_of["smallButton"] = (colors[mm.group(1)], "설정 작은 버튼(%s)" % mm.group(1))
+    pairs.append(("smallButton", mm.group(2)))
+measured = []
+for parent, fg in pairs:
+    if parent not in bg_of:
+        measured.append("%s(%s)" % (parent, fg))
+        continue
+    bg, what = bg_of[parent]
+    c = contrast(colors[fg], bg)
+    ok = c >= 4.5
+    print("[메뉴 대비] %-40s 글자 %-13s %.2f:1 %s" % (what, fg, c, "O" if ok else "X"))
+    if not ok:
+        fail.append("메뉴 %s 글자 %s 대비 %.2f" % (what, fg, c))
+print("[메뉴 대비] 배경 그림 위 글자(캡처 측정 항목): " + " · ".join(sorted(set(measured))))
 
 print("결과: " + ("통과" if not fail else "실패 - " + " · ".join(fail)))
 sys.exit(0 if not fail else 1)
