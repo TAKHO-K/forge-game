@@ -37,7 +37,7 @@ end
 
 -- 반환: { mode, wide, screenW, screenH, winX, winW, winH, headerH, tabH, tabX, tabY, tabW, tabButtonH, pillH, closeSize, actionH, tabs(= tabNames),
 --         bodyTop, bodyH, bodyX, bodyW(보석 · 도감 본문), gearX/Y/W/H, bagX/Y/W/H, detailX/Y/W/H(PC 오른쪽 카드 - 폰은 시트라 nil), gearSlot, gearCols, bagCols }
-function Layout.compute(screenWidth, screenHeight)
+function Layout.compute(screenWidth, screenHeight, touch)
 	local phone = Layout.isPhone(screenWidth, screenHeight)
 	local L = { screenW = screenWidth, screenH = screenHeight, mode = phone and "phone" or "pc" }
 	local margin = Layout.margin
@@ -58,7 +58,10 @@ function Layout.compute(screenWidth, screenHeight)
 		L.gearCols = 4
 		L.sheetWide = true -- 폰 시트는 항상 두 칸(왼쪽 정보 스크롤 · 오른쪽 버튼)
 	else
-		L.winW, L.winH = math.min(Layout.pcWidth, screenWidth - 2 * margin), math.min(Layout.pcHeight, screenHeight - 2 * margin)
+		-- QUEUE-ALL9C 2-6: 터치 화면(태블릿 · 큰 폰 842 × 534)은 창이 메뉴바 오른쪽(phoneLeftInset)부터 그려진다 → 그만큼 뺀 폭으로 3단을 짠다
+		--   (옛 = 화면 폭으로 짜서 오른쪽 상세 카드가 창 밖으로 밀려 안내 글 · 테두리가 잘렸다)
+		local availW = screenWidth - 2 * margin - (touch and (Layout.phoneLeftInset - margin) or 0)
+		L.winW, L.winH = math.min(Layout.pcWidth, availW), math.min(Layout.pcHeight, screenHeight - 2 * margin)
 		L.headerH, L.tabH = 48, 36
 		L.currencyH = Layout.currencyH -- QUEUE-ALL9B R3
 		L.pillH, L.closeSize, L.actionH, L.tabButtonH = 30, 32, 44, 30
@@ -69,7 +72,8 @@ function Layout.compute(screenWidth, screenHeight)
 		local rightW = L.wide and 360 or 290
 		local colTop = L.headerH + L.currencyH + pad
 		local colH = L.winH - colTop - pad
-		local midW = math.max(Layout.cellSize + 2 * Layout.gridPad, L.winW - 2 * pad - 2 * gap - leftW - rightW)
+		local midMin = Layout.cellSize + 2 * Layout.gridPad
+		local midW = math.max(midMin, L.winW - 2 * pad - 2 * gap - leftW - rightW)
 		local midX = pad + leftW + gap
 		L.gearX, L.gearY, L.gearW, L.gearH = pad, colTop, leftW, colH
 		L.tabX, L.tabY, L.tabW = midX, colTop, midW

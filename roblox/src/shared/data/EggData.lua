@@ -51,7 +51,8 @@ return {
 	hiddenFullRareMaxPerZone = 1,
 	-- 부화 결과 등급 확률(사전 고지 · 알 정보창) - 펫 등급 이름은 자리 표시(펫 단계에서 확정)
 	hatchGrades = { "common", "uncommon", "rare", "epic" },
-	hatchGradeNames = { common = "일반", uncommon = "고급", rare = "희귀", epic = "영웅" },
+	-- 부화 등급 표시 이름(id = 저장 값 그대로). QUEUE-ALL9C 2-6(사용자 N4): 색(장비 일반 · 희귀 · 영웅 · 전설 = ItemVisualData.petGradeColorOf)과 같은 이름으로 - 옛 일반 · 고급 · 희귀 · 영웅("희귀 = 보라" 혼동)
+	hatchGradeNames = { common = "일반", uncommon = "희귀", rare = "영웅", epic = "전설" },
 	hatch = {
 		normal = { common = 70, uncommon = 25, rare = 4.5, epic = 0.5 },
 		good = { common = 45, uncommon = 40, rare = 13, epic = 2 },

@@ -70,12 +70,16 @@ local function build()
 	local PILL_HEIGHT = Theme.isMobile and 44 or 28
 	local nameSize, metaSize = Theme.textSize("body"), Theme.textSize("caption")
 	local nameHeight, metaHeight = nameSize + 2, metaSize + 2
-	local MY_EXTRA_Y = 40 + PartyConfig.maxMembers * (ROW_HEIGHT + ROW_GAP) + 8
+	-- QUEUE-ALL9C 2-6: 폰 = 코드 · 합류 · 만들기 줄을 내 파티 목록 위로(작은 폰 389에서 멤버 4줄 아래에 있던 코드 입력이 스크롤 밖으로 숨던 것)
+	local CODE_FIRST = Theme.isMobile
+	local membersHeight = PartyConfig.maxMembers * (ROW_HEIGHT + ROW_GAP)
+	local MY_EXTRA_Y = CODE_FIRST and 40 or (40 + membersHeight + 8)
 	local codeHeight, hintHeight = Theme.textSize("body") + 4, Theme.textSize("caption") + 4
 	local joinY = MY_EXTRA_Y + codeHeight + hintHeight + 6
 	local createY = joinY + PILL_HEIGHT + 8
 	local friendY = createY + PILL_HEIGHT + 8
-	local BODY_HEIGHT = friendY + PILL_HEIGHT + 8 + PILL_HEIGHT + 8
+	local MEMBERS_TOP = CODE_FIRST and (createY + PILL_HEIGHT + 8) or 40
+	local BODY_HEIGHT = CODE_FIRST and (MEMBERS_TOP + membersHeight + 8) or (friendY + PILL_HEIGHT + 8 + PILL_HEIGHT + 8)
 
 	local panel = Panel.create({
 		id = Party.id,
@@ -159,6 +163,10 @@ local function build()
 	end
 
 	local myColumn, myTitle, myList = makeColumn(14, Text.get("ui.party.myParty"))
+	if CODE_FIRST then -- 폰: 멤버 목록은 코드 줄 아래
+		myList.Position = UDim2.new(0, 0, 0, MEMBERS_TOP)
+		myList.Size = UDim2.new(1, 0, 1, -MEMBERS_TOP)
+	end
 	local serverColumn, serverTitle, serverList = makeColumn(14 + COLUMN_WIDTH + 30, Text.get("ui.party.serverPlayers"))
 	local _ = serverColumn
 
@@ -374,7 +382,7 @@ local function build()
 	end)
 
 	local emptyLabel = Theme.label(myColumn, Text.get("ui.party.empty"), "caption", "textTertiary")
-	emptyLabel.Position = UDim2.new(0, 0, 0, 44)
+	emptyLabel.Position = UDim2.new(0, 0, 0, CODE_FIRST and (MEMBERS_TOP + 4) or 44) -- 폰 = 코드 줄 아래(멤버 자리)
 	emptyLabel.Size = UDim2.new(1, 0, 0, metaSize * 3 + 6)
 	emptyLabel.TextWrapped = true
 	emptyLabel.TextYAlignment = Enum.TextYAlignment.Top

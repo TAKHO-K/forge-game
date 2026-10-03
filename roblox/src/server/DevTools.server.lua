@@ -3214,6 +3214,13 @@ local function handleCommand(player, args)
 		end
 		CosmeticService.applyAttributes(player)
 		reply(player, ("치장 %s: %s %s"):format(table.concat(args, " ", 2), tostring(ok), tostring(why or "")))
+	elseif sub == "codex" and args[2] == "pets4" then
+		-- QUEUE-ALL9C 2-6: 펫 부화 등급 4종(표시 일반 · 희귀 · 영웅 · 전설)을 실제 기록 함수로 도감에 남긴다 - 등급 색(GradeColor.petGrade) 화면 확인용
+		local CodexService = require(script.Parent.CodexService)
+		for _, g in ipairs({ "common", "uncommon", "rare", "epic" }) do
+			CodexService.notePet(player, { species = args[3] or "stoneTurtle", grade = g })
+		end
+		reply(player, "펫 도감 4등급 기록")
 	elseif sub == "codex" and (args[2] == "test" or args[2] == "state") then
 		-- QUEUE-ALL1 P5 도감 v2: test = 실제 기록 함수로 합성 사건(석조 일반 갑옷 6 · 장갑 2 · 이끼 슬라임 10 + 반짝이 · 수호자 1 · 돌 거북 일반 · 수정 초월 1) · state = 점수 · 완료 · 받음 수
 		local CodexService = require(script.Parent.CodexService)

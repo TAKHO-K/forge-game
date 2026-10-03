@@ -438,7 +438,7 @@ return {
 	["prob.option"] = "Option reroll · Drop option (my class pool - equal)",
 	["prob.optionOff"] = "Options now off: {list}",
 	["prob.variant"] = "Skill Variant ({appear} of Epic+ gear · reroll = gold of {kills} monsters)",
-	["prob.hatch"] = "Hatch result (hatch level × egg grade - Common/Uncommon/Rare/Epic %)",
+	["prob.hatch"] = "Hatch result (hatch level × egg grade - Common/Rare/Epic/Legendary %)",
 	["prob.version"] = "Table version {version}",
 	["pet.hatch"] = "Hatch",
 	["pet.hatchingHeader"] = "Hatching {n}/{cap}",
@@ -450,7 +450,7 @@ return {
 	["pet.autoOff"] = "Opens at best Lv.{level}",
 	["pet.equip"] = "Take Along",
 	["pet.unequip"] = "Leave",
-	["pet.levelHeader"] = "Hatch level {level} (hatched {count}) - odds by level (Common/Uncommon/Rare/Epic %)",
+	["pet.levelHeader"] = "Hatch level {level} (hatched {count}) - odds by level (Common/Rare/Epic/Legendary %)",
 	["pet.levelRow"] = "Lv.{level} ({hatches}+ hatches): {rows}",
 
 	-- 도움말(백과사전) 항목 - 창 UI는 P4(목록 = HelpCodexData)

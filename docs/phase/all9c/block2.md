@@ -69,3 +69,13 @@
 - Play(PC): 가방 = 등급 마름모 23칸 · 남색 바탕 · 옵션 글자 왼쪽 아래(`captures/2-5-bag-frame-pc.jpg`) · 세트 문장 6종 칸 표시(`captures/2-5-set-crests-pc.jpg` - 개발 계정 가방에 세트 아이템이 없어 칸 사본에 문장을 얹어 확인 · 폭풍 문장 짙은 남 → 하늘색으로 고쳐 다시 올림).
 - 비교 시트(GPT ⑥ 나란히): `docs/art/ref/compare/icons-v3-by-part.png`(행 = 부위 · 열 = 등급 4) · `icons-v3-by-grade.png`(행 = 등급 · 열 = 부위). 차이: 지금 장갑 · 신발 메시가 단순 통 모양이라 덩어리로 읽힘(손가락 · 발 모양 없음) · 무기 = 대검 하나로 4칸(시안 = 4직업 무기) → ALL9E 새 메시 · 128장 때 해소.
 - 기록 바뀜: `icons/ui/set_tier5` = 색을 바꿔 새 Decal(옛 97380374370117 → 100787354690187 · 옛 Decal은 Roblox에 그대로 · 이 큐에서 처음 만든 기록).
+
+## 2-6 작은 수정 · 확인(2-2 후속)
+
+- 작은 폰 파티 창: 코드 입력 · 합류 · 만들기 줄이 멤버 4줄 아래(스크롤 밖) → 폰은 코드 줄을 내 파티 목록 위로(`Party.lua` CODE_FIRST · 멤버 목록 · 빈 안내는 그 아래). Play 844 × 390: 스크롤 없이 보임(`captures/2-6-smallphone-party-code.jpg`).
+- 작은 폰 도감: 토큰 진행 줄(44)이 칸 목록 높이를 먹어 1줄만 보임 → 본문이 칸 2줄보다 낮은 폰이면 토큰 줄을 오른쪽 상세 칸 위로 옮김(`Codex.lua` stacked - 게이지 + [무료로 모으는 곳] 44 · 상세 칸은 그 아래). Play: 장비 빙고 2번째 줄까지 보임(`2-6-smallphone-codex.jpg`).
+- 가방 오른쪽 안내 글 잘림: 원인 = 842 × 534 터치 화면에서 창은 메뉴바 오른쪽(73)부터 그려지는데 3단 배치는 화면 폭으로 짜서 오른쪽 상세 카드가 창 밖으로 밀림(글자 잘림은 결과) → `Layout.compute(…, touch)`가 메뉴바 자리를 뺀 폭으로 짬 + 빈 안내 높이를 실제 글자 높이(TextBounds)로(`DetailCard`). Play: 카드 · 안내 두 줄 다 보임(전 `2-6-phone-842-bag-before.jpg` · 후 `2-6-phone-842-bag-hint.jpg`).
+- 펫 등급 색: 개발 명령 `/gg codex pets4`(실제 기록 함수 notePet × 4등급) → 도감 상세 등급 글자 = 일반 #9299A1 · 희귀 #65B8F2 · 영웅 #B69AF4 · 전설 #D87828(장비 같은 이름 등급 글자색 · `2-6-pet-grade-legendary-color.jpg`).
+- 펫 등급 표시 이름(사용자 N4): 일반 · 고급 · 희귀 · 영웅 → **일반 · 희귀 · 영웅 · 전설**(ko · en Common · Rare · Epic · Legendary · 색 그대로) - `EggData.hatchGradeNames` 표 한 곳 + 확률 머리글 2줄(prob.hatch · pet.levelHeader ko · en). 데이터 id · 저장 값(common · uncommon · rare · epic) 그대로. 전수 grep: 쓰는 곳 = 도감(Info) · 알 정보창(목록 · 확률표) · 도감 규칙 라벨(CodexRules) · 확률 공개 창(Probability = 알 등급만 · 숫자) · 서버 로그(id) · 펫 모습(id) → 전부 같은 표를 읽음. 문서 = 도움말 사전(help-encyclopedia) · 용어집 갱신(설계 기록 문서 pets-q11 · codex-v2는 옛 이름 그대로 = 기록). 남은 겹침: 알 등급 "희귀 알"과 펫 결과 "희귀"가 같은 낱말(결정 필요). check_textdata · check_names 통과 · 알 가방 창 캡처(`2-6-pet-window-names.jpg`).
+- 유물 진홍 드랍(필드 · 몹 옆): 세로 진홍 번개 기둥 + 발밑 작은 빛 고리(`2-6-relic-drop-field-pc.jpg`). 보스 경고 = 넓은 빨강 바닥 영역 · 이것 = 좁은 세로 기둥이라 혼동 낮다고 판단 → **색 바꾸지 않음**(결정 필요: 실기에서 헷갈리면 빛기둥만 #F06B76 - ItemVisualData 한 줄).
+- 검증: run_all 24/24 · check_textdata · check_names 통과 · 이번 Play들 우리 코드 Error 0 · TEMP-PHONE 원복(grep 0).

@@ -39,7 +39,7 @@
 | 불씨 | Ember | 강화 실패 게이지(가득 차면 다음 강화 확정 성공). 용어라 문장 중간에서도 대문자 Ember. "gauge" 표기 금지 |
 | 홈(보석 홈 · 보석 칸) | Socket | 무기 보석 자리. "Gem slot" 표기 금지(가방 "Slots"와 겹친다). 칸 이름 = "Socket {slot}" |
 | 기믹 · 보스 기믹 | Mechanic · Boss Mechanics | 보스 전멸 패턴과 해법. "Gimmick"(영어에서 깎아내리는 말) · "wipe move"(어려운 말) 안 씀 |
-| 펫 결과 등급 일반 · 고급 · 희귀 · 영웅 | Common · Uncommon · Rare · Epic | 부화 결과 등급(`EggData.hatchGradeNames` 키 uncommon과 같다) |
+| 펫 결과 등급 일반 · 희귀 · 영웅 · 전설 | Common · Rare · Epic · Legendary | 부화 결과 등급 표시 이름(QUEUE-ALL9C 2-6 - 색 = 장비 같은 이름 등급 · 키 common · uncommon · rare · epic은 그대로) |
 | 알 등급 보통 · 좋은 · 희귀 | Normal · Good · Rare | 알 자체 등급. 펫 "고급"을 Uncommon으로 바꿔 "Good" 겹침을 없앴다 |
 | 강화대 | Forge | 강화하는 곳("Enhance station" · 소문자 "forge" 섞임 → Forge) |
 | 하락 방지권 · 초기화 방지권(좁은 칸 줄임) | Drop Guard · Reset Guard | 보상 띠(`hud.band.*`)처럼 한 줄 칸 전용 줄임. 상점 · 보상 목록 · 설명은 정식 이름 Drop/Reset Protection Ticket 유지 |

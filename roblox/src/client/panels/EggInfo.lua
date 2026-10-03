@@ -167,7 +167,7 @@ local function petSection()
 	end
 end
 
--- 부화 결과 확률 표: 열 = 알 등급(보통 · 좋은 · 희귀) · 줄 = 결과 등급(일반 · 고급 · 희귀 · 영웅)
+-- 부화 결과 확률 표: 열 = 알 등급(보통 · 좋은 · 희귀) · 줄 = 결과 등급(일반 · 희귀 · 영웅 · 전설 - 표시 이름 = EggData.hatchGradeNames)
 local function hatchTable()
 	line(Text.get("egg.hatchHeader"), "body", "textPrimary", "HatchHeader")
 	order += 1

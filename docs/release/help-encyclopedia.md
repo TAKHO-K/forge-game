@@ -108,7 +108,7 @@
 | 둥지는 바위 위 · 신전 · 숨은 곳에 있어요. | Nests hide on rocks, in temples, and in secret spots. |
 | 알 등급은 보통 · 좋은 · 희귀예요. 좋은 알일수록 부화가 오래 걸려요(1분 · 3분 · 10분). | Egg grades are Normal, Good, and Rare. Better eggs hatch slower (1 · 3 · 10 min). |
 | 알 가방에는 40개까지 들어가요. | Your Egg Bag holds up to 40 eggs. |
-| 부화하면 펫이 나와요(일반 · 고급 · 희귀 · 영웅). | Hatching gives a pet (Common · Uncommon · Rare · Epic). |
+| 부화하면 펫이 나와요(일반 · 희귀 · 영웅 · 전설). | Hatching gives a pet (Common · Rare · Epic · Legendary). |
 | 부화를 많이 할수록 좋은 등급이 잘 나와요. | Hatch more for better grades more often. |
 | 펫은 60마리까지 보관하고, 하나를 데리고 다녀요. | Keep up to 60 pets. One can follow you. |
 | Lv.30부터 펫이 근처 아이템을 주워요. | From Lv.30, your pet picks up nearby items. |

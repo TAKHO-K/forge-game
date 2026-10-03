@@ -235,19 +235,38 @@ local function relayout()
 	built.claimAll.root.Size = UDim2.fromOffset(ALL_W, S.claimH)
 	local tokenH = phone and 44 or 30 -- QUEUE-ALL9C 1-11 토큰 진행 줄(폰 = 버튼 44)
 	local tokenY = PAD + S.claimH + 6
-	built.tokenBar.Position = UDim2.fromOffset(PAD, tokenY)
-	built.tokenBar.Size = UDim2.new(1, -PAD * 2, 0, tokenH)
-	local gaugeW = math.max(120, W - PAD * 2 - WHERE_W - NEED_W - 16)
-	built.tokenGauge.root.Size = UDim2.fromOffset(gaugeW, 22)
-	built.tokenGauge.root.Position = UDim2.new(0, 0, 0.5, -11)
-	built.tokenNeed.Position = UDim2.fromOffset(gaugeW + 8, 0)
-	built.tokenNeed.Size = UDim2.new(0, NEED_W, 1, 0)
-	built.tokenWhere.root.Size = UDim2.fromOffset(WHERE_W, tokenH)
-	local bodyY = tokenY + tokenH + 6
+	-- QUEUE-ALL9C 2-6: 낮은 폰(본문이 칸 2줄보다 낮음) = 토큰 줄을 오른쪽 상세 칸 위로 옮겨 칸 목록 높이를 돌려준다(작은 폰 389에서 칸이 1줄만 보이던 것)
+	local stacked = phone and (H - (tokenY + tokenH + 6) - PAD) < 2 * (70 + 8) + 40
+	local detailTop
+	if stacked then
+		built.tokenBar.Position = UDim2.new(1, -(S.detailW + PAD), 0, tokenY)
+		built.tokenBar.Size = UDim2.fromOffset(S.detailW, 22 + 4 + tokenH)
+		built.tokenGauge.root.Size = UDim2.fromOffset(S.detailW, 22)
+		built.tokenGauge.root.Position = UDim2.fromOffset(0, 0)
+		built.tokenNeed.Visible = false -- 남은 토큰 = 게이지 글자
+		built.tokenWhere.root.Size = UDim2.fromOffset(S.detailW, tokenH)
+		built.tokenWhere.root.AnchorPoint = Vector2.new(0, 0)
+		built.tokenWhere.root.Position = UDim2.fromOffset(0, 26)
+		detailTop = tokenY + 22 + 4 + tokenH + 6
+	else
+		built.tokenBar.Position = UDim2.fromOffset(PAD, tokenY)
+		built.tokenBar.Size = UDim2.new(1, -PAD * 2, 0, tokenH)
+		local gaugeW = math.max(120, W - PAD * 2 - WHERE_W - NEED_W - 16)
+		built.tokenGauge.root.Size = UDim2.fromOffset(gaugeW, 22)
+		built.tokenGauge.root.Position = UDim2.new(0, 0, 0.5, -11)
+		built.tokenNeed.Visible = true
+		built.tokenNeed.Position = UDim2.fromOffset(gaugeW + 8, 0)
+		built.tokenNeed.Size = UDim2.new(0, NEED_W, 1, 0)
+		built.tokenWhere.root.Size = UDim2.fromOffset(WHERE_W, tokenH)
+		built.tokenWhere.root.AnchorPoint = Vector2.new(1, 0)
+		built.tokenWhere.root.Position = UDim2.new(1, 0, 0, 0)
+	end
+	local bodyY = stacked and tokenY or (tokenY + tokenH + 6)
+	detailTop = detailTop or bodyY
 	built.gridArea.Position = UDim2.fromOffset(PAD, bodyY)
 	built.gridArea.Size = UDim2.new(1, -(S.detailW + PAD * 3), 1, -(bodyY + PAD))
-	built.detail.root.Position = UDim2.new(1, -(S.detailW + PAD), 0, bodyY)
-	built.detail.root.Size = UDim2.new(0, S.detailW, 1, -(bodyY + PAD))
+	built.detail.root.Position = UDim2.new(1, -(S.detailW + PAD), 0, detailTop)
+	built.detail.root.Size = UDim2.new(0, S.detailW, 1, -(detailTop + PAD))
 	for id in pairs(scrolls) do
 		dirty[id] = true
 	end

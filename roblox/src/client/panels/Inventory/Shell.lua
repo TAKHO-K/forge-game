@@ -535,7 +535,7 @@ end
 -- 화면 크기에서 배치를 정해 전부에 적용한다. 화면 크기가 바뀔 때 · 창을 열 때 부른다. 반환: 배치 L.
 function R.applyLayout()
 	local size = screenSize()
-	local L = Layout.compute(size.X, size.Y)
+	local L = Layout.compute(size.X, size.Y, Theme.isMobile) -- 2-6: 터치 = 메뉴바 자리 뺌
 	local modeChanged = S.mode ~= L.mode
 	S.mode, R.layout = L.mode, L
 	positionWindow(L)

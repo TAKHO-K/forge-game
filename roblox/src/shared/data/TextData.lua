@@ -443,7 +443,7 @@ local TextData = {
 		["prob.option"] = "옵션 리롤 · 드랍 옵션(내 직업 풀 - 균등)",
 		["prob.optionOff"] = "지금 꺼진 옵션: {list}",
 		["prob.variant"] = "스킬 변형(영웅 이상 장비의 {appear} · 리롤 = 몬스터 {kills}마리분 골드)",
-		["prob.hatch"] = "부화 결과(부화 레벨 × 알 등급 - 일반/고급/희귀/영웅 %)",
+		["prob.hatch"] = "부화 결과(부화 레벨 × 알 등급 - 일반/희귀/영웅/전설 %)",
 		["prob.version"] = "표 버전 {version}",
 		["pet.hatch"] = "부화",
 		["pet.hatchingHeader"] = "부화 중 {n}/{cap}",
@@ -455,7 +455,7 @@ local TextData = {
 		["pet.autoOff"] = "최고 Lv.{level}에 열림",
 		["pet.equip"] = "데리고 다니기",
 		["pet.unequip"] = "내려놓기",
-		["pet.levelHeader"] = "부화 레벨 {level}(누적 부화 {count}) - 레벨별 결과 확률(일반/고급/희귀/영웅 %)",
+		["pet.levelHeader"] = "부화 레벨 {level}(누적 부화 {count}) - 레벨별 결과 확률(일반/희귀/영웅/전설 %)",
 		["pet.levelRow"] = "Lv.{level}(부화 {hatches}회~): {rows}",
 
 		-- 도움말(백과사전) 항목 - 창 UI는 P4(목록 = HelpCodexData)

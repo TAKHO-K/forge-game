@@ -294,6 +294,12 @@ function DetailCard.build(parent, S)
 	emptyLabel.TextWrapped = true
 	emptyLabel.TextTruncate = Enum.TextTruncate.None
 	emptyLabel.TextYAlignment = Enum.TextYAlignment.Top
+	-- QUEUE-ALL9C 2-6: 높이 = 실제 그려진 글자 높이(TextBounds)를 따라간다 - 옛 = 지을 때 폭으로 한 번 재서, 폭이 다른 폰(842 × 534)에서 둘째 줄이 잘렸다
+	emptyLabel:GetPropertyChangedSignal("TextBounds"):Connect(function()
+		if emptyHint.Visible then
+			emptyHint.Size = UDim2.new(1, -8, 0, math.ceil(emptyLabel.TextBounds.Y) + 4)
+		end
+	end)
 
 	local lockCallback, gemCallback
 	lockRow.Activated:Connect(function()
