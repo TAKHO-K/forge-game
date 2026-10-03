@@ -6,7 +6,8 @@
   "goldenHammer",
   "highFive",
   "petCrown",
-  "rocketPop"
+  "rocketPop",
+  "starCrown"
  ],
  "cosmeticTheme": [
   "anvil",
@@ -69,6 +70,10 @@
   "armor",
   "gloves",
   "shoes"
+ ],
+ "protectionTicket": [
+  "drop",
+  "reset"
  ],
  "setZone": [
   "tier1",
@@ -134,6 +139,7 @@
   "curiousCaptain",
   "nestSeeker",
   "primordialChosen",
+  "seasonRegular",
   "secretKeeper",
   "transcendentOne",
   "weeklyChampion"

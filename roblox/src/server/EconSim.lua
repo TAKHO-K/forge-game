@@ -778,19 +778,18 @@ local function tryEnhanceWithGold(state, profile, rng)
 			return
 		end
 		local gaugeFull = state.gauge >= EnhanceConfig.gauge.max
-		if profile.useProtection and not gaugeFull then
-			for _, kind in ipairs({ "drop", "reset" }) do
-				if level >= EnhanceConfig.protection[kind].usableFromLevel and state.tickets[kind] < 1 then
-					local price = Enhance.getProtectionPrice(kind, state.reach)
-					if state.gold >= cost + price then
-						state.gold -= price
-						state.spend.protection += price
-						state.tickets[kind] += 1
-					end
-				end
+		-- QUEUE-ALL9B G(사용자 10-03 - 방지권 폐지): 방지 옵션 = 비용 × k. +25 이하 = useProtection · +26 이상 = useResetGuard(기본 꺼짐 = 기준 시나리오 "방지 없이").
+		local want = if level >= 26 then profile.useResetGuard == true else profile.useProtection == true
+		local useDrop, useReset = Enhance.resolveProtectionFlags(level, gaugeFull, want, want)
+		if useDrop or useReset then
+			local guarded = Enhance.getCost(level, state.reach, useDrop, useReset)
+			if state.gold < guarded then
+				useDrop, useReset = false, false -- 방지 비용이 모자라면 끄고 시도(시뮬 - 게임에선 사람이 고른다)
+			else
+				state.spend.protection += guarded - cost
+				cost = guarded
 			end
 		end
-		local useDrop, useReset = Enhance.resolveProtectionFlags(level, gaugeFull, profile.useProtection, profile.useProtection, state.tickets.drop, state.tickets.reset)
 		state.gold -= cost
 		state.spend.enhance += cost
 		if mat then
@@ -798,9 +797,6 @@ local function tryEnhanceWithGold(state, profile, rng)
 		end
 		state.enhanceAttempts += 1
 		local result = Enhance.tryEnhance(level, state.gauge, { useDrop, useReset }, EconSimConfig.commonRandom and EconSim.commonDraw(state, level) or rng:NextNumber())
-		if result.blockedBy then
-			state.tickets[result.blockedBy] -= 1
-		end
 		state.weaponLevel, state.gauge = result.level, result.gauge
 	end
 end
@@ -875,9 +871,6 @@ local function seasonPassIncome(state, profile)
 				if r[id] then
 					state.materials[id] = (state.materials[id] or 0) + r[id]
 				end
-			end
-			if r.protectDrop then
-				state.tickets.drop += r.protectDrop
 			end
 		end
 	end
@@ -976,9 +969,9 @@ local function fightBosses(state, profile, loadout, run)
 		local rebirthMult = CharacterLevel.getRebirthExpMultiplier(state.rebirth) * (CharacterLevelConfig.rebirth.reclaimBossExp and CharacterLevel.getReclaimMultiplier(state.rebirth, state.level, state.reclaimLevel) or 1) * CharacterLevel.getExpScale(state.level) -- C5-2 되찾기(보스는 데이터 스위치) · P2.5c: 환생 경험치 배율(캐릭터 경험치에만 - 게임 PlayerProfile.addCharacterExp와 같다) · P3c C4 126 뒤 배수
 		state.exp += data.expReward * run.expMult * rebirthMult
 		state.bossExp += data.expReward * run.expMult * rebirthMult
-		local drop, reset = Enhance.getBossGrant(bossStage)
-		state.tickets.drop += drop
-		state.tickets.reset += reset
+		local grantGold = Enhance.getBossGrantGold(bossStage) -- QUEUE-ALL9B G: 옛 방지권 → 골드
+		state.gold += grantGold
+		state.bossGold += grantGold
 		state.bossClears += 1
 		cleared += 1
 		-- D1: 보스 첫 클리어 장비(영웅 이상 보장 표 - DropTable.bossFirstClearGradeTable) - 희귀 등급도 오래 하면 오도록 "누적 기대 도착"으로 센다

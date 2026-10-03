@@ -14,12 +14,12 @@ local RewardDetail = require(script.Parent.RewardDetail)
 local RewardIcons = {}
 
 -- 보상 키 → 아이콘 id(icons/reward/_map.json과 같은 이름) · 순서
-RewardIcons.order = { "gold", "goldKills", "enhanceStone", "highEnhanceStone", "egg", "gemDust", "sparkleShard", "protectDrop", "protectReset", "rerollTicket", "rebirthTicket", "passExp", "title", "cosmeticItem" }
+RewardIcons.order = { "gold", "goldKills", "enhanceStone", "highEnhanceStone", "egg", "gemDust", "sparkleShard", "rerollTicket", "rebirthTicket", "passExp", "title", "cosmeticItem" }
 RewardIcons.icon = { gold = "gold", goldKills = "gold", enhanceStone = "enhanceStone", highEnhanceStone = "highEnhanceStone", egg = "egg", eggZone = "egg", gemDust = "gemDust",
-	sparkleShard = "sparkleShard", protectDrop = "protectDrop", protectReset = "protectReset", rerollTicket = "rerollTicket", rebirthTicket = "rebirthTicket", passExp = "passExp", title = "title", cosmeticItem = "cosmeticTheme" } -- QUEUE-ALL9B 5 출석판 소품(치장 그림 · 개수 없음)
+	sparkleShard = "sparkleShard", rerollTicket = "rerollTicket", rebirthTicket = "rebirthTicket", passExp = "passExp", title = "title", cosmeticItem = "cosmeticTheme" } -- QUEUE-ALL9B 5 출석판 소품(치장 그림 · 개수 없음)
 local NO_QTY = { title = true, cosmeticItem = true }
 local SHORT = { gold = "G", goldKills = "G", passExp = "EXP" }
-local SHORT_KEY = { enhanceStone = "ui.reward.short.enhanceStone", egg = "ui.reward.short.egg", gemDust = "ui.reward.short.gemDust", sparkleShard = "ui.reward.short.sparkleShard", protectDrop = "ui.reward.short.protectDrop", title = "ui.reward.short.title", rebirthTicket = "ui.reward.short.rebirthTicket" }
+local SHORT_KEY = { enhanceStone = "ui.reward.short.enhanceStone", egg = "ui.reward.short.egg", gemDust = "ui.reward.short.gemDust", sparkleShard = "ui.reward.short.sparkleShard", title = "ui.reward.short.title", rebirthTicket = "ui.reward.short.rebirthTicket" }
 
 -- 몇 마리분 → 실제 골드 글자(서버 grant와 같은 식)
 function RewardIcons.goldText(kills)

@@ -108,7 +108,8 @@ function ResultFx.play(refs, data, titleFor, refresh)
 		shake(refs.resultLabel, k)
 	elseif result == "down1" or result == "down2" or result == "reset" then
 		shake(refs.resultLabel, k)
-		local from, to = fromLevel(data), data.level or EnhanceConfig.resetToLevel
+		local from = fromLevel(data)
+		local to = data.level or Enhance.getResetToLevel(from) or from -- QUEUE-ALL9B G1: 도착점은 시도 단계별
 		if from > to then
 			refs.panel.titleLabel.Text = titleFor(from)
 			roll(refs, from, to, (result == "reset" and P.resetRoll or P.failRoll).seconds, titleFor, function()

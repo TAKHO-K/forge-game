@@ -18,8 +18,8 @@ local ArtImage = require(script.Parent.ArtImage)
 local AttendanceClaimFx = {}
 
 local player = Players.LocalPlayer
-local CURRENCY = { gold = true, sparkleShard = true, enhanceStone = true, highEnhanceStone = true, gemDust = true, protectDrop = true, protectReset = true }
-local ORDER = { "gold", "sparkleShard", "enhanceStone", "highEnhanceStone", "gemDust", "protectDrop", "egg", "title", "cosmeticItem", "passExp", "rebirthTicket" }
+local CURRENCY = { gold = true, sparkleShard = true, enhanceStone = true, highEnhanceStone = true, gemDust = true }
+local ORDER = { "gold", "sparkleShard", "enhanceStone", "highEnhanceStone", "gemDust", "egg", "title", "cosmeticItem", "passExp", "rebirthTicket" }
 
 local gui, rootFrame, active
 

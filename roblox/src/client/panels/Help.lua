@@ -37,7 +37,9 @@ local current = { category = HelpCodexData.categories[1].id, entry = nil }
 local ARGS = {
 	enhance = function()
 		local dropFrom, resetFrom = Enhance.getRiskStartLevels()
-		return { safeTo = (dropFrom or 1) - 1, dropFrom = dropFrom or "?", resetFrom = resetFrom or "?", resetTo = EnhanceConfig.resetToLevel }
+		local args = Enhance.getResetFloorArgs() -- QUEUE-ALL9B G1 초기화 바닥(a1 · a2 · t1 · b1 · t2)
+		args.safeTo, args.dropFrom, args.resetFrom = (dropFrom or 1) - 1, dropFrom or "?", resetFrom or "?"
+		return args
 	end,
 	stealLock = function()
 		return { percent = math.floor(CombatConfig.contributionRewardThreshold * 100 + 0.5) }

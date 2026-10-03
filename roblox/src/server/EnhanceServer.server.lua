@@ -23,5 +23,8 @@ EnhanceService.init(enhanceResult, enhanceAnnounce)
 
 -- 28-1 S05: 요청 인자 2개(useDropTicket · useResetTicket - boolean, 없으면 false). 값 검증은 EnhanceService가 한다(boolean true만 인정).
 enhanceRequest.OnServerEvent:Connect(function(player, useDropTicket, useResetTicket)
-	EnhanceService.handleRequest(player, useDropTicket, useResetTicket)
+	if not require(script.Parent.RequestGate).allow(player, "EnhanceRequest") then -- QUEUE-ALL9B 6: 공통 요청 제한(서비스 쿨다운 0.5초 앞 - 연타가 쿨다운 표를 두드리지 않게)
+		return
+	end
+	EnhanceService.handleRequest(player, useDropTicket, useResetTicket) -- QUEUE-ALL9B G: 두 인자 = 하락 · 초기화 방지 옵션(방지권 폐지)
 end)

@@ -1081,6 +1081,7 @@ local HELP_TEXT = table.concat({
 	"/gg additem <part> <grade> <itemLevel> - 잠기지 않은 아이템 1개를 인벤토리에 직접 추가(분해·판매 UI 클릭 검증용, part=armor/gloves/shoes)",
 	"/gg fillbag [n] - 등급 · 부위가 섞인 잠기지 않은 장비를 가방에 n개 지급(기본 = 가방이 가득 찰 만큼 · 가득 참 시험용 · /gg reset으로 복원)",
 	"/gg enhance <n> - 무기 강화 단계 지정(0~" .. EnhanceConfig.maxLevel .. ")",
+	"/gg gauge <천분율> - 불씨 게이지 지정 · /gg enhanceroll <success|maintain|down1|down2|reset> - 다음 강화 1회 결과 강제(QUEUE-ALL9B G Play 확인)",
 	"/gg weapon <n|등급명> - 무기 등급 지정(0~6 또는 " .. table.concat(ArmorData.gradeOrder, "/") .. ")",
 	"/gg class <classId> - 직업 전환(greatsword/dualblade/bow/healer)",
 	"/gg hitbox <on|off> - W2-2 실제 판정 표시(평타 사거리 원 · 서버 투사체 경로 · 허용 폭 · 적중 지점 - 나에게만)",
@@ -1490,6 +1491,24 @@ local function handleCommand(player, args)
 			end
 			reply(player, ("가방에 장비 %d개 지급(요청 %d) - 지금 %d / %d칸 · %s"):format(added, want, #profile.inventory, PlayerProfile.inventoryCapacity(profile), table.concat(summary, " · ")))
 		end
+	elseif sub == "gauge" and tonumber(args[2]) then
+		-- QUEUE-ALL9B G: 불씨 게이지 지정(천분율 0 ~ max) - Play 확인용(불씨 가득 → 확정 성공)
+		ensureBackup(player)
+		PlayerProfile.setEnhanceGauge(player, math.clamp(math.floor(tonumber(args[2])), 0, EnhanceConfig.gauge.max))
+		reply(player, ("불씨 %d / %d"):format(PlayerProfile.getEnhanceGauge(player), EnhanceConfig.gauge.max))
+	elseif sub == "enhanceroll" and args[2] then
+		-- QUEUE-ALL9B G: 다음 강화 1회의 원래 확률표 결과를 강제(방지권 · 불씨 규칙은 그대로 탄다 - 불씨 가득이면 성공). 롤 = 그 결과 칸의 가운데.
+		local weapon = PlayerProfile.getWeapon(player)
+		local outcomes = weapon and require(ReplicatedStorage.Shared.Enhance).getOutcomeTable(weapon.level, false, false, false)
+		local acc, roll = 0, nil
+		for _, key in ipairs({ "success", "maintain", "down1", "down2", "reset" }) do
+			if key == args[2] and outcomes and outcomes[key] > 0 then
+				roll = acc + outcomes[key] / 2
+			end
+			acc += outcomes and outcomes[key] or 0
+		end
+		require(script.Parent.EnhanceService).debugRolls[player] = roll
+		reply(player, roll and ("다음 강화 결과 = %s(롤 %.4f · +%d 시도)"):format(args[2], roll, weapon.level) or ("이 단계에 없는 결과: %s"):format(args[2]))
 	elseif sub == "enhance" and tonumber(args[2]) then
 		ensureBackup(player)
 		applyEnhance(player, math.floor(tonumber(args[2])))

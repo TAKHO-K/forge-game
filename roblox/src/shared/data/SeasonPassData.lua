@@ -29,7 +29,9 @@ local function stoneFor(tier)
 	return nil
 end
 local GEM_DUST = { [12] = 10, [24] = 10, [36] = 10 } -- 보석 재련 한두 번분
-local PROTECT_DROP = { [25] = 1, [35] = 1 } -- 하락 구간(+19) 시작 뒤(일반 유형 6일째 · 25칸 ≈ 21일째)
+-- QUEUE-ALL9B G(사용자 10-03 - 방지권 폐지): 옛 하락 방지권 1장 → 그 칸을 받는 날 기준선 유저(일반 유형 - 보완 1-3의 높은 쪽)가 방지를 1회 켤 때 더 드는 골드(niceReward).
+--   25칸 ≈ 20일째(일반 21일째 스테이지 2,240 · +21 → k 1.7) = 140,000 · 35칸 ≈ 28일째(스테이지 2,430 · +22 → k 3.0) = 490,000. 그 칸 고정 골드에 더한다.
+local PROTECT_GOLD = { [25] = 140000, [35] = 490000 }
 
 -- 유료 줄: 5칸마다 패스 전용 치장 · 그 밖 = 토큰 15 · 20 · 40칸 = seasonLimited(시즌 대표)
 local PAID_COSMETIC = {
@@ -56,7 +58,9 @@ for tier = 1, TIERS do
 		free.egg = 1
 	end
 	free.gemDust = GEM_DUST[tier]
-	free.protectDrop = PROTECT_DROP[tier]
+	if PROTECT_GOLD[tier] then
+		free.gold = (free.gold or 0) + PROTECT_GOLD[tier]
+	end
 	rows.free[tier] = free
 	rows.paid[tier] = PAID_COSMETIC[tier] and table.clone(PAID_COSMETIC[tier]) or { sparkleShard = PAID_TOKENS }
 end

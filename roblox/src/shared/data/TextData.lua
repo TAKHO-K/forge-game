@@ -119,7 +119,8 @@ local TextData = {
 		["help.enhance.where"] = "강화대에서 무기를 강화해요.",
 		["help.enhance.safe"] = "0~{safeTo}강은 실패해도 단계가 그대로예요.", -- safeTo · dropFrom · resetFrom · resetTo = Enhance.getRiskStartLevels · EnhanceConfig(창이 넘긴다)
 		["help.enhance.drop"] = "{dropFrom}강부터 실패하면 내려갈 수 있어요.",
-		["help.enhance.reset"] = "{resetFrom}강부터 실패하면 {resetTo}강이 될 수 있어요.",
+		["help.enhance.reset"] = "{resetFrom}강부터 실패하면 초기화될 수 있어요.",
+		["help.enhance.resetFloor"] = "초기화되어도 +{a1} ~ +{a2}은 +{t1}에서, +{b1} 이상은 +{t2}에서 멈춥니다. 불씨는 그대로 남습니다.", -- QUEUE-ALL9B G1(사용자 문구 그대로 - 합쇼체)
 		["help.enhance.pity"] = "실패하면 불씨가 차고, 가득 차면 꼭 성공해요.",
 		["help.stealLock.see"] = "회색 체력바와 자물쇠는 남이 먼저 사냥 중이에요.",
 		["help.stealLock.bounce"] = "공격하면 튕겨 나가요(피해 없음).",
@@ -219,7 +220,7 @@ local TextData = {
 
 		-- 강화대
 		["enhance.help.short"] = "실패할 때마다 불씨가 차고, 가득 차면 다음 강화는 반드시 성공합니다.",
-		["enhance.help.detail"] = "0~{safeTo}강은 실패해도 단계가 그대로입니다. {dropFrom}강부터 실패하면 단계가 내려갈 수 있고, {resetFrom}강부터는 실패 시 {resetTo}강으로 초기화될 수 있습니다.",
+		["enhance.help.detail"] = "0~{safeTo}강은 실패해도 단계가 그대로입니다. {dropFrom}강부터 실패하면 단계가 내려갈 수 있고, {resetFrom}강부터는 실패 시 초기화될 수 있습니다. 초기화되어도 +{a1} ~ +{a2}은 +{t1}에서, +{b1} 이상은 +{t2}에서 멈춥니다. 불씨는 그대로 남습니다.",
 		["enhance.odds.headResult"] = "결과",
 		["enhance.odds.headProb"] = "확률",
 		["enhance.odds.headLevel"] = "단계",
@@ -431,7 +432,7 @@ local TextData = {
 		["prob.firstClear"] = "첫 클리어: ",
 		["prob.raid"] = "토벌 · 재도전(전투 {sec}초 이상 기준 · 더 짧으면 고대 이상 몫이 비례해 영웅으로): ",
 		["prob.sparkle"] = "반짝이 몬스터: ",
-		["prob.enhance"] = "무기 강화(게이지 · 방지권 없이)",
+		["prob.enhance"] = "무기 강화(불씨 · 방지 없이)",
 		["prob.option"] = "옵션 리롤 · 드랍 옵션(내 직업 풀 - 균등)",
 		["prob.optionOff"] = "지금 꺼진 옵션: {list}",
 		["prob.variant"] = "스킬 변형(영웅 이상 장비의 {appear} · 리롤 = 몬스터 {kills}마리분 골드)",
@@ -479,7 +480,7 @@ local TextData = {
 		-- QUEUE-B1 B2 상점 창(client/panels/Shop) - 숫자는 창이 문자열로 넘긴다
 		["shop.title"] = "상점",
 		["shop.help.short"] = "골드 소모처 · 치장 · 편의 · 시즌 패스를 한곳에서",
-		["shop.help.detail"] = "골드로는 방지권 · 변환권만 삽니다. 치장은 꾸미기 토큰이나 로벅스로만 사고, 편의 패스는 전투력 · 획득량을 올리지 않습니다. 시즌 패스는 8주마다 새로 시작합니다.",
+		["shop.help.detail"] = "골드로는 변환권만 삽니다(강화 방지는 강화 창에서 골드를 더 내고 켭니다). 치장은 꾸미기 토큰이나 로벅스로만 사고, 편의 패스는 전투력 · 획득량을 올리지 않습니다. 시즌 패스는 8주마다 새로 시작합니다.",
 		["shop.tab.gold"] = "골드",
 		["shop.tab.recommend"] = "추천",
 		-- QUEUE-ALL2 P2 캐릭터 · 수련 · 단축키
@@ -645,7 +646,6 @@ local TextData = {
 		["shop.reason.eggFull"] = "알 가방이 가득 찼습니다",
 		["shop.reason.restricted"] = "이 지역에서는 살 수 없는 상품입니다",
 		["shop.reason.none"] = "받을 선물이 없습니다",
-		["shop.gold.protectionSection"] = "강화 방지권(골드 - 가격은 계정 최고 스테이지 기준 · 구매 전에 보여 줍니다)",
 		["shop.gold.protectionRow"] = "{name} · 보유 {count}장",
 		["shop.gold.protectionSub"] = "강화 하락 · 초기화를 한 번 막는 데 사용함.",
 		["shop.gold.rerollSection"] = "변환권(골드 + 보석 가루 · 가루 보유 {dust})",
@@ -748,7 +748,6 @@ local TextData = {
 		["season.reward.part.enhanceStone"] = "강화석 {n}",
 		["season.reward.part.highEnhanceStone"] = "상급 강화석 {n}",
 		["season.reward.part.gemDust"] = "보석 가루 {n}",
-		["season.reward.part.protectDrop"] = "하락 방지권 {n}",
 		["season.reward.part.sparkleShard"] = "꾸미기 토큰 {n}",
 		["season.reward.part.egg"] = "알 {n}(랜덤)",
 		["season.bonusCapped"] = "이번 시즌 보너스를 모두 받았어요",

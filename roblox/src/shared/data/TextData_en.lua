@@ -114,7 +114,8 @@ return {
 	["help.enhance.where"] = "Enhance your weapon at the Forge.",
 	["help.enhance.safe"] = "At +0~{safeTo}, a fail keeps your level.",
 	["help.enhance.drop"] = "From +{dropFrom}, a fail can drop a level.",
-	["help.enhance.reset"] = "From +{resetFrom}, a fail can reset to +{resetTo}.",
+	["help.enhance.reset"] = "From +{resetFrom}, a fail can reset your level.",
+	["help.enhance.resetFloor"] = "Even after a reset, +{a1}~+{a2} stops at +{t1} and +{b1} or higher stops at +{t2}. Your Ember stays.",
 	["help.enhance.pity"] = "Fails fill the Ember. Full = success!",
 	["help.stealLock.see"] = "Gray bar + lock = another player's hunt.",
 	["help.stealLock.bounce"] = "Your hits bounce off (no damage).",
@@ -214,7 +215,7 @@ return {
 
 	-- 강화대
 	["enhance.help.short"] = "Each fail fills the Ember. When full, the next Enhance always succeeds.",
-	["enhance.help.detail"] = "At +0~{safeTo}, a fail keeps your level. From +{dropFrom}, a fail can drop your level. From +{resetFrom}, a fail can reset it to +{resetTo}.",
+	["enhance.help.detail"] = "At +0~{safeTo}, a fail keeps your level. From +{dropFrom}, a fail can drop your level. From +{resetFrom}, a fail can reset it. Even after a reset, +{a1}~+{a2} stops at +{t1} and +{b1} or higher stops at +{t2}. Your Ember stays.",
 	["enhance.odds.headResult"] = "Result",
 	["enhance.odds.headProb"] = "Chance",
 	["enhance.odds.headLevel"] = "Level",
@@ -426,7 +427,7 @@ return {
 	["prob.firstClear"] = "First clear: ",
 	["prob.raid"] = "Raid · Retry (fights of {sec}s+ · shorter fights move Ancient+ share to Epic): ",
 	["prob.sparkle"] = "Sparkle Monster: ",
-	["prob.enhance"] = "Weapon Enhance (no Ember · no Protection Ticket)",
+	["prob.enhance"] = "Weapon Enhance (no Ember · no guard)",
 	["prob.option"] = "Option reroll · Drop option (my class pool - equal)",
 	["prob.optionOff"] = "Options now off: {list}",
 	["prob.variant"] = "Skill Variant ({appear} of Epic+ gear · reroll = gold of {kills} monsters)",
@@ -474,7 +475,7 @@ return {
 	-- QUEUE-B1 B2 상점 창(client/panels/Shop) - 숫자는 창이 문자열로 넘긴다
 	["shop.title"] = "Shop",
 	["shop.help.short"] = "Gold shop · looks · perks · Season Pass",
-	["shop.help.detail"] = "Gold buys only Protection Tickets and Reroll Tickets. Looks cost Style Tokens or Robux only. Perk passes don't raise power or drops. The Season Pass restarts every 8 weeks.",
+	["shop.help.detail"] = "Gold buys only Reroll Tickets (enhance guards are turned on in the Forge for extra gold). Looks cost Style Tokens or Robux only. Perk passes don't raise power or drops. The Season Pass restarts every 8 weeks.",
 	["shop.tab.gold"] = "Gold",
 	["shop.tab.recommend"] = "Picks",
 	-- QUEUE-ALL2 P2 캐릭터 · 수련 · 단축키
@@ -640,7 +641,6 @@ return {
 	["shop.reason.eggFull"] = "Egg bag is full",
 	["shop.reason.restricted"] = "Not for sale in your region",
 	["shop.reason.none"] = "No gifts to claim",
-	["shop.gold.protectionSection"] = "Protection Tickets (gold · price by best stage · shown before you buy)",
 	["shop.gold.protectionRow"] = "{name} · Have {count}",
 	["shop.gold.protectionSub"] = "Blocks one Enhance drop or reset",
 	["shop.gold.rerollSection"] = "Reroll Tickets (gold + Gem Dust · Dust {dust})",
@@ -745,7 +745,6 @@ return {
 	["season.reward.part.enhanceStone"] = "Enhance Stone {n}",
 	["season.reward.part.highEnhanceStone"] = "Greater Stone {n}",
 	["season.reward.part.gemDust"] = "Gem Dust {n}",
-	["season.reward.part.protectDrop"] = "Drop Guard {n}",
 	["season.reward.part.sparkleShard"] = "Style Token {n}",
 	["season.reward.part.egg"] = "Egg {n} (random)",
 	["season.bonusCapped"] = "You've claimed every bonus this season",

@@ -17,6 +17,7 @@ local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local DropTable = require(ReplicatedStorage.Shared.DropTable)
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
 local Text = require(ReplicatedStorage.Shared.Text)
+local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat) -- QUEUE-ALL9B G 첫 처치 골드
 local Button = require(script.Parent.ui.kit.Button)
 local HelpToggle = require(script.Parent.ui.kit.HelpToggle)
 local Theme = require(script.Parent.ui.kit.Theme)
@@ -117,11 +118,10 @@ function StageRewardBand.describe(stage, entry, rebirthCount)
 	end
 	table.insert(rows, { head = Text.get("hud.band.firstHead"), text = gearBody, claimed = entry.gearClaimed, isGear = true })
 
-	local dropCount, resetCount = Enhance.getBossGrant(stage)
+	-- QUEUE-ALL9B G(사용자 10-03 - 방지권 폐지): 계정 첫 처치 지급 = 골드 한 줄(Enhance.getBossGrantGold - 같은 일정 · 같은 받음 기록). 상태 필드 이름(dropTicket · resetTicket)은 옛 그대로.
 	local ticketParts, claimedCount = {}, 0
 	for _, spec in ipairs({
-		{ state = entry.dropTicket, text = Text.get("hud.band.dropTicket", { count = ("%d"):format(dropCount) }) },
-		{ state = entry.resetTicket, text = Text.get("hud.band.resetTicket", { count = ("%d"):format(resetCount) }) },
+		{ state = entry.dropTicket, text = Text.get("hud.band.grantGold", { gold = NumberFormat.format(Enhance.getBossGrantGold(stage)) }) },
 	}) do
 		if spec.state ~= "none" then
 			table.insert(ticketParts, { text = spec.text, claimed = spec.state == "claimed" })
@@ -481,9 +481,9 @@ function StageRewardBand.selfTest(report)
 	local S45, S50, S75, S100 = grant.firstStage - BossData.stageInterval, grant.firstStage, grant.firstStage + grant.stepStages, grant.resetFromStage
 	local d45, d50, d75, d100 = rowsOf(S45, entryOf(false, "none", "none")), rowsOf(S50, entryOf(false, "available", "none")), rowsOf(S75, entryOf(false, "available", "none")), rowsOf(S100, entryOf(false, "available", "available"))
 	local t45, t50, t75, t100 = joined(d45), joined(d50), joined(d75), joined(d100)
-	report(("방지권 표시 45 / 50 / 75 / 100 = 없음 / 하락 / 하락 / 둘 다: [%s] [%s] [%s] [%s]"):format(t45, t50, t75, t100),
-		not has(t45, "방지권") and has(t50, "하락 방지권 ×1") and not has(t50, "초기화") and has(t75, "하락 방지권 ×1") and not has(t75, "초기화")
-			and has(t100, "하락 방지권 ×1") and has(t100, "초기화 방지권 ×1"))
+	local g50, g100 = NumberFormat.format(Enhance.getBossGrantGold(S50)), NumberFormat.format(Enhance.getBossGrantGold(S100))
+	report(("첫 처치 골드 표시 45 / 50 / 75 / 100 = 없음 / 있음 / 있음 / 있음(QUEUE-ALL9B G - 옛 방지권): [%s] [%s] [%s] [%s]"):format(t45, t50, t75, t100),
+		not has(t45, "첫 처치 골드") and has(t50, "첫 처치 골드 " .. g50) and has(t75, "첫 처치 골드") and has(t100, "첫 처치 골드 " .. g100) and not has(t50 .. t100, "방지권"))
 	-- QUEUE-6h-b R1: 기대값 갱신(보스 hpMultiplier 20 → referenceKillSeconds ÷ killTargetSeconds(≈34.9 - BR1 e8a0bbe)라 옛 ≈5 고정 대신 데이터 식 값 · 표시와 같은 소수 한 자리)
 	local units = BossData.bosses.frost_giant.hpMultiplier
 	local function oneDecimal(value)
@@ -522,9 +522,9 @@ function StageRewardBand.selfTest(report)
 		not gearRow.claimed and not has(gearRow.text, dim) and ticketRow.claimed and has(ticketRow.text, dim) and has(ticketRow.plain, "✓ 받음") and has(gearRow.plain, "[직업]") and has(ticketRow.plain, "[계정]"))
 	local done = rowsOf(S50, entryOf(true, "claimed", "none"))
 	local mixed = rowsOf(S100, entryOf(true, "claimed", "available"))
-	report(("받은 줄은 지워지지 않고 흐려진다: 장비 줄 '✓ 받음' %s · 흐림 %s(기대 true · true) · 줄 수 %d(기대 5 - 그대로) / 방지권이 하나만 받음 → '✓' %s · 줄 흐림 %s(기대 true · false)"):format(
-		tostring(has(done.rows[1].plain, "✓ 받음")), tostring(has(done.rows[1].text, dim)), #done.rows, tostring(has(mixed.rows[2].plain, "하락 방지권 ×1 ✓")), tostring(has(mixed.rows[2].text, colored("하락 방지권 ×1 ✓ · 초기화 방지권 ×1 [계정]", "textTertiary")))),
-		has(done.rows[1].plain, "✓ 받음") and has(done.rows[1].text, dim) and #done.rows == 5 and has(mixed.rows[2].plain, "하락 방지권 ×1 ✓") and not mixed.rows[2].claimed)
+	report(("받은 줄은 지워지지 않고 흐려진다: 장비 줄 '✓ 받음' %s · 흐림 %s(기대 true · true) · 줄 수 %d(기대 5 - 그대로) / 첫 처치 골드 받음(옛 방지권 둘 중 하나 기록) → 골드 줄 %s · 받음 %s(기대 true · true)"):format(
+		tostring(has(done.rows[1].plain, "✓ 받음")), tostring(has(done.rows[1].text, dim)), #done.rows, tostring(has(mixed.rows[2].plain, "첫 처치 골드")), tostring(mixed.rows[2].claimed)),
+		has(done.rows[1].plain, "✓ 받음") and has(done.rows[1].text, dim) and #done.rows == 5 and has(mixed.rows[2].plain, "첫 처치 골드") and mixed.rows[2].claimed)
 	report(("남은 것 판정(★): 미수령 %s · 장비만 받음 %s · 방지권만 남음 %s · 전부 받음 %s · 방지권 없는 스테이지 장비 받음 %s(기대 true true true false false)"):format(
 		tostring(StageRewardBand.hasRemaining(entryOf(false, "available", "none"))), tostring(StageRewardBand.hasRemaining(entryOf(true, "available", "none"))),
 		tostring(StageRewardBand.hasRemaining(entryOf(true, "available", "available"))), tostring(StageRewardBand.hasRemaining(entryOf(true, "claimed", "claimed"))), tostring(StageRewardBand.hasRemaining(entryOf(true, "none", "none")))),

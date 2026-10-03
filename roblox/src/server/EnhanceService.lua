@@ -24,6 +24,8 @@ local enhanceAnnounce -- 20강+ 성공 공지 RemoteEvent(30-0 S08) - 같은 서
 local ENHANCE_REQUEST_COOLDOWN_SECONDS = 0.5
 EnhanceService.requestCooldownSeconds = ENHANCE_REQUEST_COOLDOWN_SECONDS
 local lastRequestTick = setmetatable({}, { __mode = "k" })
+-- QUEUE-ALL9B G Play 확인: DevTools "/gg enhanceroll"이 다음 1회 판정 롤(0 이상 1 미만)을 넣는다 - Studio에서만 읽는다(출시 서버는 DevTools가 안 돌아 항상 비어 있다).
+EnhanceService.debugRolls = {}
 
 -- "강화 중"인가(S12b F - 환생 요청이 이 동안 거절된다). 강화는 한 요청 안에서 끝나는 동기 처리라 진행 중인 구간이 없다 - 마지막 요청 처리 직후 요청 쿨다운(결과를 화면에 보여줄 시간) 안이면 "강화 중"으로 본다.
 function EnhanceService.isBusy(player)
@@ -55,6 +57,8 @@ end
 -- 아님) - 안 되면 그 플래그만 조용히 false로 바꾼다(요청 거절이 아니다). 결과는 원래 확률표로 굴린 뒤 **실제로 막았을 때만** 그 방지권 1장을 차감한다.
 -- payload에 blockedBy("drop" / "reset" / nil) · ticketsLeft({ drop, reset } - 남은 장수)가 붙는다. 규제 관문(EnhancePolicy)이 거부하면
 -- { result = "paid_random_restricted", level } - 지금은 paidInputIds가 비어 있어 절대 안 탄다.
+-- QUEUE-ALL9B G(사용자 10-03 - 방지권 폐지): useDropTicket · useResetTicket = 강화 창 "하락 방지" · "초기화 방지" 옵션(이름은 옛 인자 그대로). 서버가 구간(guardBands) · 불씨를 다시 보고
+-- 켤 수 있는 것만 남긴다. 하나라도 켜지면 이번 시도 비용 = 기본 × k(골드만 - 모자라면 insufficient_gold로 시도 안 됨). 막은 결과는 유지(소모품 없음).
 function EnhanceService.handleRequest(player, useDropTicket, useResetTicket)
 	local now = os.clock()
 	local last = lastRequestTick[player]
@@ -82,18 +86,12 @@ function EnhanceService.handleRequest(player, useDropTicket, useResetTicket)
 
 	-- [3] 방지권 플래그 재검증 + 규제 관문(차감 전, 캐시만 읽는다 - yield 없음). 관문에 넘기는 inputIds = 이번 시도가 소모하는 것들의 id.
 	local oldGauge = PlayerProfile.getEnhanceGauge(player)
-	local useDrop, useReset = Enhance.resolveProtectionFlags(weapon.level, oldGauge >= EnhanceConfig.gauge.max, useDropTicket, useResetTicket,
-		PlayerProfile.getProtectionTicket(player, "drop") or 0, PlayerProfile.getProtectionTicket(player, "reset") or 0)
+	local useDrop, useReset = Enhance.resolveProtectionFlags(weapon.level, oldGauge >= EnhanceConfig.gauge.max, useDropTicket, useResetTicket)
+	cost = Enhance.getCost(weapon.level, PlayerProfile.getAccountBestStage(player), useDrop, useReset) -- QUEUE-ALL9B G: 방지 켬 = 기본 × k
 	local materialCost = EnhanceMaterialData.costByLevel[weapon.level]
 	local inputIds = { "gold" }
 	if materialCost then
 		table.insert(inputIds, materialCost.id)
-	end
-	if useDrop then
-		table.insert(inputIds, "dropTicket")
-	end
-	if useReset then
-		table.insert(inputIds, "resetTicket")
 	end
 	local allowed, reason = EnhancePolicy.canAttempt(player, inputIds)
 	if not allowed then
@@ -119,12 +117,11 @@ function EnhanceService.handleRequest(player, useDropTicket, useResetTicket)
 	-- [3] 확률 판정 - 클라이언트가 보낸 값은 아무것도 쓰지 않는다. 여기까지 전부 동기 실행이라(yield 없음) 골드 차감과 결과 반영 사이에
 	-- 다른 요청이 끼어들 수 없다. 방지권은 원래 확률표로 굴린 결과가 하락 · 초기화일 때만 막는다(tryEnhance가 blockedBy를 돌려준다) - 그때만 1장을 차감한다.
 	local oldLevel = weapon.level -- setWeaponLevel이 weapon 테이블을 바로 고치므로 미리 남겨둔다
-	local outcome = Enhance.tryEnhance(oldLevel, oldGauge, { useDrop, useReset })
+	local debugRoll = game:GetService("RunService"):IsStudio() and EnhanceService.debugRolls[player] or nil
+	EnhanceService.debugRolls[player] = nil
+	local outcome = Enhance.tryEnhance(oldLevel, oldGauge, { useDrop, useReset }, debugRoll)
 	PlayerProfile.setWeaponLevel(player, outcome.level)
 	PlayerProfile.setEnhanceGauge(player, outcome.gauge)
-	if outcome.blockedBy then
-		PlayerProfile.trySpendProtectionTicket(player, outcome.blockedBy, 1)
-	end
 	require(script.Parent.QuestService).note(player, "enhance", 1) -- Q6 G3 퀘스트(강화 시도)
 
 	local payload = send(player, {
@@ -135,12 +132,12 @@ function EnhanceService.handleRequest(player, useDropTicket, useResetTicket)
 		gaugeMax = EnhanceConfig.gauge.max,
 		gaugeGain = math.max(0, outcome.gauge - oldGauge),
 		blockedBy = outcome.blockedBy,
-		ticketsLeft = { drop = PlayerProfile.getProtectionTicket(player, "drop"), reset = PlayerProfile.getProtectionTicket(player, "reset") },
+		guarded = (useDrop or useReset) or nil, -- QUEUE-ALL9B G 방지 옵션(비용 × k)
 	})
 
-	print(("[forge-game] 강화 결과: %s - %s (레벨 %d -> %d, 비용 %.0f, 게이지 %d -> %d%s)"):format(
+	print(("[forge-game] 강화 결과: %s - %s (레벨 %d -> %d, 비용 %.0f, 게이지 %d -> %d%s%s)"):format(
 		player.Name, outcome.result, oldLevel, outcome.level, cost, oldGauge, outcome.gauge,
-		outcome.blockedBy and (", 방지권 " .. outcome.blockedBy .. " 소모") or ""))
+		outcome.blockedBy and (", 방지 옵션이 " .. outcome.blockedBy .. " 막음") or "", (useDrop or useReset) and " · 방지 켬" or ""))
 
 	-- 30-0 S08: 새 단계가 announceFromLevel(20) 이상인 **성공**은 같은 서버 전원에게 알린다(채팅 시스템 메시지는 클라 EnhanceAnnounceClient가 만든다). 실패 · 방지권 · 19강 이하 성공은 없다.
 	if outcome.result == "success" and outcome.level >= require(ReplicatedStorage.Shared.data.SecurityOpsConfig).trail.enhanceFromLevel then

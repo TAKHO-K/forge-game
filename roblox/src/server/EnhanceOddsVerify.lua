@@ -100,16 +100,16 @@ function EnhanceOddsVerify.runPure()
 	end
 	local okWorst = Enhance.getWorstLevel(0) == 0 and Enhance.getWorstLevel(10) == 10 and Enhance.getWorstLevel(18) == 18
 		and Enhance.getWorstLevel(19) == 18 and Enhance.getWorstLevel(20) == 18 and Enhance.getWorstLevel(21) == 19
-		and Enhance.getWorstLevel(22) == EnhanceConfig.resetToLevel and Enhance.getWorstLevel(23) == EnhanceConfig.resetToLevel
-		and Enhance.getWorstLevel(24) == EnhanceConfig.resetToLevel and Enhance.getWorstLevel(EnhanceConfig.maxLevel) == nil
+		and Enhance.getWorstLevel(22) == Enhance.getResetToLevel(22) and Enhance.getWorstLevel(23) == Enhance.getResetToLevel(23)
+		and Enhance.getWorstLevel(24) == Enhance.getResetToLevel(24) and Enhance.getWorstLevel(EnhanceConfig.maxLevel) == nil
 	check(("최악의 단계: %s · 상한 nil(기대 0→0 · 10→10 · 18→18 · 19→18 · 20→18 · 21→19 · 22 ~ 24→12 · 상한 nil)"):format(table.concat(worst, " ")), okWorst)
 
 	-- 6. 표를 주면 그 표로 잰다(한 줄 안내가 방지권을 켠 표로 "최악의 경우"를 읽는다): +23 하락 방지 on = 12(초기화가 남는다) · 둘 다 on = 23(유지) · 불씨 가득 = 24 · 표를 안 주면 5번과 같다.
 	local function worstWith(level, gaugeFull, useDrop, useReset)
 		return Enhance.getWorstLevel(level, Enhance.getOutcomeTable(level, gaugeFull, useDrop, useReset))
 	end
-	local okWorstTable = worstWith(23, false, true, false) == EnhanceConfig.resetToLevel and worstWith(23, false, true, true) == 23
-		and worstWith(23, true, false, false) == 24 and worstWith(19, false, true, false) == 19 and Enhance.getWorstLevel(23) == EnhanceConfig.resetToLevel
+	local okWorstTable = worstWith(23, false, true, false) == Enhance.getResetToLevel(23) and worstWith(23, false, true, true) == 23
+		and worstWith(23, true, false, false) == 24 and worstWith(19, false, true, false) == 19 and Enhance.getWorstLevel(23) == Enhance.getResetToLevel(23)
 	check(("최악의 단계(표를 줄 때): +23 하락방지 = %s · 둘 다 = %s · 불씨 가득 = %s · +19 하락방지 = %s(기대 12 · 23 · 24 · 19)"):format(
 		tostring(worstWith(23, false, true, false)), tostring(worstWith(23, false, true, true)), tostring(worstWith(23, true, false, false)), tostring(worstWith(19, false, true, false))),
 		okWorstTable)

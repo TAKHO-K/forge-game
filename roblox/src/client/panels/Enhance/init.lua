@@ -34,12 +34,6 @@ local TOP_MARGIN = 8
 local PAD = 8
 local BUTTON_WIDTH = 200
 local FADE_HEIGHT = 18 -- 스크롤 영역 아래쪽 흐림(더 볼 내용이 있다는 표시)
-local BUY_FAIL_REASONS = {
-	insufficient_gold = "forge.err.noGold",
-	not_near_station = "forge.enhance.err.notNear",
-	invalid_kind = "forge.enhance.err.invalidKind",
-}
-
 local player = Players.LocalPlayer
 local built -- 지은 패널의 refs 표 하나(아래 build) - 없으면 아직 안 지었다
 local dismissed = false -- X · Backspace로 닫았다: 강화대에서 벗어났다 돌아올 때까지 다시 열지 않는다
@@ -51,7 +45,11 @@ local function helpText()
 	-- G1-1: 2단(짧은 한 줄 + 누르면 상세) · "초기화(12강)" 모호 → "실패 시 12강으로 초기화"
 	return {
 		short = Text.get("enhance.help.short"),
-		detail = Text.get("enhance.help.detail", { safeTo = dropFrom - 1, dropFrom = dropFrom, resetFrom = resetFrom, resetTo = EnhanceConfig.resetToLevel }),
+		detail = Text.get("enhance.help.detail", (function()
+			local args = Enhance.getResetFloorArgs() -- QUEUE-ALL9B G1 초기화 바닥
+			args.safeTo, args.dropFrom, args.resetFrom = dropFrom - 1, dropFrom, resetFrom
+			return args
+		end)()),
 	}
 end
 
@@ -64,8 +62,7 @@ local function resultLine(data)
 		gain = OddsView.formatPercent(data.gaugeGain / (data.gaugeMax or EnhanceConfig.gauge.max))
 	end
 	if data.blockedBy then
-		local left = data.ticketsLeft and data.ticketsLeft[data.blockedBy] or 0
-		return Text.get("forge.enhance.result.blocked", { ticket = EnhanceConfig.protection[data.blockedBy].displayName, left = ("%d"):format(left) }), "textPrimary"
+		return Text.get(data.blockedBy == "drop" and "forge.enhance.result.dropBlocked" or "forge.enhance.result.guardBlocked", { level = ("%d"):format(level) }), "textPrimary" -- QUEUE-ALL9B G 방지 옵션
 	elseif result == "success" then
 		return Text.get("forge.enhance.result.success", { level = ("%d"):format(level) }), "success"
 	elseif result == "maintain" then
@@ -73,7 +70,7 @@ local function resultLine(data)
 	elseif result == "down1" or result == "down2" then
 		return Text.get(gain and "forge.enhance.result.downGauge" or "forge.enhance.result.down", { drop = result == "down1" and "1" or "2", level = ("%d"):format(level), gain = gain }), "ember"
 	elseif result == "reset" then
-		return Text.get("forge.enhance.result.reset", { level = ("%d"):format(EnhanceConfig.resetToLevel) }), "danger"
+		return Text.get("forge.enhance.result.reset", { level = ("%d"):format(level) }), "danger" -- QUEUE-ALL9B G1: 도착 단계는 시도 단계마다 다르다(서버가 보낸 level)
 	elseif result == "max" then
 		return Text.get("forge.enhance.result.max"), "textPrimary"
 	elseif result == "insufficient_gold" then
@@ -84,14 +81,6 @@ local function resultLine(data)
 		return Text.get("forge.enhance.result.noMaterial", { name = name, need = ("%d"):format(data.need), have = ("%d"):format(data.have) }), "danger"
 	end
 	return tostring(result), "textPrimary"
-end
-
--- 방지권 구매 결과(ProtectionTicketBuyResult payload)의 문구와 색.
-local function buyResultLine(data)
-	if data.ok then
-		return Text.get("forge.enhance.bought", { ticket = EnhanceConfig.protection[data.kind].displayName, count = ("%d"):format(data.tickets[data.kind]) }), "success"
-	end
-	return BUY_FAIL_REASONS[data.reason] and Text.get(BUY_FAIL_REASONS[data.reason]) or tostring(data.reason), "danger"
 end
 
 -- P2.5a R4: 최대 단계를 제목에 항상 적는다("최대 +30" - EnhanceConfig.maxLevel).
@@ -115,8 +104,11 @@ local function refresh()
 	CostView.update(built.cost, state)
 	OddsView.updateTable(built.odds, state.level, state.outcomes)
 	OddsView.updateGaugeRow(built.gauge, state)
+	OddsView.updateEmberHint(built.emberHint, state)
 	TicketView.update(built.tickets, state)
 	OddsView.updateHint(built.hint, state)
+	OddsView.updateResetFloor(built.resetFloor, state)
+	OddsView.updateGuardHint(built.guardHint, state)
 	if state.maxed then
 		built.button.setText(Text.get("forge.enhance.buttonMax"))
 		built.button.setEnabled(false, Text.get("forge.err.maxed"))
@@ -309,18 +301,21 @@ local function build()
 	refs.odds = OddsView.buildTable(scroll, PAD, y, innerWidth)
 	y += OddsView.tableHeight() + 4
 	refs.gauge = OddsView.buildGaugeRow(scroll, PAD, y, innerWidth)
-	y += OddsView.gaugeRowHeight() + 6
+	y += OddsView.gaugeRowHeight() + 2
+	refs.emberHint = OddsView.buildHint(scroll, PAD, y, innerWidth, "EmberHint") -- QUEUE-ALL9B G2 불씨 안내
+	y += OddsView.hintHeight() + 2
 	refs.tickets = TicketView.build(scroll, PAD, y, innerWidth, Controller.ticketKinds, {
 		onToggle = function(kind, value)
 			Controller.setToggle(kind, value)
 			refresh()
 		end,
-		onBuy = function(kind)
-			Controller.requestBuy(kind, EnhancePanel.id)
-		end,
 	})
 	y += TicketView.height(#Controller.ticketKinds)
+	refs.guardHint = OddsView.buildHint(scroll, PAD, y, innerWidth, "GuardHint") -- QUEUE-ALL9B G 이번 시도 비용(방지 끔 · 켬) · 초기화 확률
+	y += OddsView.hintHeight() + 2
 	refs.hint = OddsView.buildHint(scroll, PAD, y, innerWidth)
+	y += OddsView.hintHeight() + 2
+	refs.resetFloor = OddsView.buildHint(scroll, PAD, y, innerWidth, "ResetFloorHint") -- QUEUE-ALL9B G1 초기화 바닥
 	y += OddsView.hintHeight() + 4
 	scroll.CanvasSize = UDim2.new(0, 0, 0, y)
 
@@ -399,12 +394,6 @@ local function build()
 				return titleText(gradeName, level, false)
 			end, refresh)
 		end
-	end))
-	connect(Controller.connectBuyResult(function(data)
-		local text, colorName = buyResultLine(data)
-		refs.resultLabel.Text = text
-		refs.resultLabel.TextColor3 = Theme.color(colorName)
-		refresh()
 	end))
 	connect(ReplicatedStorage:WaitForChild("RebirthResult").OnClientEvent:Connect(refs.rebirth.handleResult))
 

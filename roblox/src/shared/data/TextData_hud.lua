@@ -11,8 +11,7 @@ return {
 		["hud.band.gear"] = "장비 1개 확정({grade} 이상 · Lv {min}~{max}) [직업]",
 		["hud.band.gearClaimed"] = "장비 1개 확정({grade} 이상 · Lv {min}~{max}) [직업] ✓", -- QUEUE-ALL6 B4: 폰 caption 14에서 1.03(… 잘림) → "받음" 빼기(✓가 같은 뜻)
 		["hud.band.firstHead"] = "첫 클리어",
-		["hud.band.dropTicket"] = "하락 방지권 ×{count}",
-		["hud.band.resetTicket"] = "초기화 방지권 ×{count}",
+		["hud.band.grantGold"] = "첫 처치 골드 {gold}", -- QUEUE-ALL9B G(옛 방지권 지급 → 골드)
 		["hud.band.ticketClaimed"] = "{ticket} ✓",
 		["hud.band.ticketRow"] = "{tickets} [계정]",
 		["hud.band.ticketRowClaimed"] = "{tickets} [계정] ✓ 받음",
@@ -75,8 +74,7 @@ return {
 		["hud.band.gear"] = "Gear ({grade}+ · Lv {min}~{max}) [Class]", -- QUEUE-ALL6 B4: 폰 Lv 3자리 1.05 → ×1 빼기
 		["hud.band.gearClaimed"] = "Gear ({grade}+ · Lv {min}~{max}) [Class] ✓",
 		["hud.band.firstHead"] = "First Clear",
-		["hud.band.dropTicket"] = "Drop Guard ×{count}",
-		["hud.band.resetTicket"] = "Reset Guard ×{count}",
+		["hud.band.grantGold"] = "First-clear gold {gold}",
 		["hud.band.ticketClaimed"] = "{ticket} ✓",
 		["hud.band.ticketRow"] = "{tickets} [Account]",
 		["hud.band.ticketRowClaimed"] = "{tickets} [Account] ✓",

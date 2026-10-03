@@ -7,13 +7,11 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
-local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
 local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMaterialData)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local Text = require(ReplicatedStorage.Shared.Text)
 
 local materialGained = ReplicatedStorage:WaitForChild("MaterialGained")
-local protectionTicketGranted = ReplicatedStorage:WaitForChild("ProtectionTicketGranted")
 
 local POPUP_LIFETIME_SECONDS = 1.0
 local BASE_OFFSET_STUDS = 4.4 -- 골드 팝업의 끝(4.2) 위
@@ -69,10 +67,3 @@ materialGained.OnClientEvent:Connect(function(materialId, count)
 	end
 end)
 
--- 보스 계정 첫 클리어 방지권 지급(kind = "drop" / "reset", count, stage).
-protectionTicketGranted.OnClientEvent:Connect(function(kind, count)
-	local config = EnhanceConfig.protection[kind]
-	if config and kind ~= "bossGrant" then
-		showPopup(("+%d %s"):format(count, Text.name(config.displayName)))
-	end
-end)

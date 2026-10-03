@@ -185,7 +185,7 @@ function P25aVerify.runPure()
 		end
 		r.check(("C5.2 확률표 · 비용표 30행 %s · 비용 단조 증가 %s · 25 ~ 29강 재료 %s · +30 칭호 %s · 25 ~ 29강 실패 = 하락 + 초기화(최악 단계 = %d)"):format(
 			tostring(rowsOk), tostring(monotone), tostring(matsOk), tostring(visual30), Enhance.getWorstLevel(29)),
-			rowsOk and monotone and matsOk and visual30 and Enhance.getWorstLevel(29) == EnhanceConfig.resetToLevel)
+			rowsOk and monotone and matsOk and visual30 and Enhance.getWorstLevel(29) == Enhance.getResetToLevel(29))
 		local weapon0 = { id = WeaponData.starterId, level = 0, grade = 0 }
 		local weapon30 = { id = WeaponData.starterId, level = 30, grade = 0 }
 		local ratio = PlayerCombat.getAttack(weapon30, "greatsword", 100, 0) / PlayerCombat.getAttack(weapon0, "greatsword", 100, 0)

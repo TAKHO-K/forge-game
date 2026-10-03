@@ -12,7 +12,6 @@ local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
 local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMaterialData)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
-local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local Text = require(ReplicatedStorage.Shared.Text)
 local Confirm = require(script.Parent.Parent.Parent.ui.kit.Confirm)
 
@@ -22,11 +21,7 @@ local player = Players.LocalPlayer
 local stationPosition = WorldConfig.huntingGround.center + WorldConfig.enhance.stationOffset
 local enhanceRequest = ReplicatedStorage:WaitForChild("EnhanceRequest")
 local enhanceResult = ReplicatedStorage:WaitForChild("EnhanceResult")
-local ticketBuyRequest = ReplicatedStorage:WaitForChild("ProtectionTicketBuyRequest")
-local ticketBuyResult = ReplicatedStorage:WaitForChild("ProtectionTicketBuyResult")
-local ticketPriceRequest = ReplicatedStorage:WaitForChild("ProtectionTicketPriceRequest")
-
--- 방지권 종류(서버 PlayerProfile · ProtectionTickets와 같은 순서 · 이름).
+-- 방지 옵션 줄(QUEUE-ALL9B G - 사용자 10-03: 방지권 폐지 → 강화 창 "하락 방지" · "초기화 방지" 켜기/끄기 · 켜면 그 시도 비용 = 기본 × k(골드만)).
 Controller.ticketKinds = { "drop", "reset" }
 local toggles = { drop = false, reset = false } -- 클라가 기억하는 토글(요청에 싣는다 - 서버가 다시 검증한다)
 
@@ -37,19 +32,11 @@ local function materialAttributeName(materialId)
 	return "Material" .. materialId:sub(1, 1):upper() .. materialId:sub(2)
 end
 
--- 서버 PlayerProfile의 방지권 Attribute 이름과 같은 규칙: "Protection" + 종류의 첫 글자를 대문자로(ProtectionDrop · ProtectionReset).
-local function ticketAttributeName(kind)
-	return "Protection" .. kind:sub(1, 1):upper() .. kind:sub(2)
-end
-
 -- 이 패널이 읽는 Attribute 이름 전부(바뀌면 화면을 다시 그린다).
 function Controller.attributeNames()
 	local names = { "WeaponLevel", "WeaponGrade", "Gold", "EnhanceGauge", "AccountBestStage" } -- P2 C1: 강화 비용이 계정 최고 스테이지를 따른다
 	for _, materialId in ipairs(EnhanceMaterialData.order) do
 		table.insert(names, materialAttributeName(materialId))
-	end
-	for _, kind in ipairs(Controller.ticketKinds) do
-		table.insert(names, ticketAttributeName(kind))
 	end
 	return names
 end
@@ -58,21 +45,32 @@ function Controller.setToggle(kind, value)
 	toggles[kind] = value == true
 end
 
--- 방지권 한 종류의 토글 상태. 비활성 이유는 보유 0 → 사용 불가 구간 → 불씨 가득 순(같은 조건을 서버 resolveProtectionFlags가 다시 본다).
-local function ticketState(kind, level, gaugeFull, maxed)
-	local config = EnhanceConfig.protection[kind]
-	local have = player:GetAttribute(ticketAttributeName(kind)) or 0
+-- 이 방지(kind)를 켤 수 있는 첫 단계(guardBands에서) - 안내 문구용.
+local function firstGuardLevel(kind)
+	for _, band in ipairs(EnhanceConfig.guardBands) do
+		if band.guards[kind] then
+			return band.fromLevel
+		end
+	end
+	return EnhanceConfig.maxLevel
+end
+
+-- 방지 옵션 한 줄의 상태. 비활성 이유 = 상한 → 이 단계 구간에 그 방지가 없음(+19 전 · +26 이상 하락) → 불씨 가득(같은 조건을 서버 resolveProtectionFlags가 다시 본다).
+local function optionState(kind, level, gaugeFull, maxed)
+	local band = Enhance.getGuardBand(level)
 	local reason
 	if maxed then
 		reason = Text.get("forge.err.maxed")
-	elseif have < 1 then
-		reason = Text.get("forge.enhance.ticket.none")
-	elseif level < config.usableFromLevel then
-		reason = Text.get("forge.enhance.ticket.fromLevel", { level = ("%d"):format(config.usableFromLevel) })
+	elseif not band or not band.guards[kind] then
+		local from = firstGuardLevel(kind)
+		reason = level < from and Text.get("forge.enhance.ticket.fromLevel", { level = ("%d"):format(from) })
+			or Text.get("forge.enhance.guard.noDrop", { level = ("%d"):format(level) })
 	elseif gaugeFull then
 		reason = Text.get("forge.enhance.ticket.gaugeFull")
 	end
-	return { name = Text.name(config.displayName), have = have, want = toggles[kind], enabled = reason == nil, reason = reason }
+	local k = band and band.guards[kind] and band.costMultiplier
+	return { label = Text.get(kind == "drop" and "forge.enhance.guard.dropToggle" or "forge.enhance.guard.toggle", { k = k and ("%.1f"):format(k) or "-" }),
+		want = toggles[kind], enabled = reason == nil, reason = reason }
 end
 
 local function gradeDisplayName()
@@ -88,12 +86,12 @@ function Controller.getState()
 	local gauge = player:GetAttribute("EnhanceGauge") or 0
 	local gaugeMax = EnhanceConfig.gauge.max
 	local gaugeFull = gauge >= gaugeMax
-	local cost = Enhance.getCost(level, player:GetAttribute("AccountBestStage") or 1) -- P2 C1: 서버(EnhanceService)와 같은 기준 스테이지
+	local stage = player:GetAttribute("AccountBestStage") or 1 -- P2 C1: 서버(EnhanceService)와 같은 기준 스테이지
 
-	local haveDrop = player:GetAttribute(ticketAttributeName("drop")) or 0
-	local haveReset = player:GetAttribute(ticketAttributeName("reset")) or 0
-	local useDrop, useReset = Enhance.resolveProtectionFlags(level, gaugeFull, toggles.drop, toggles.reset, haveDrop, haveReset)
+	local useDrop, useReset = Enhance.resolveProtectionFlags(level, gaugeFull, toggles.drop, toggles.reset)
 	local outcomes = Enhance.getOutcomeTable(level, gaugeFull, useDrop, useReset)
+	local cost = Enhance.getCost(level, stage, useDrop, useReset) -- QUEUE-ALL9B G: 방지 켬 = 기본 × k
+	local band = Enhance.getGuardBand(level)
 
 	local state = {
 		level = level,
@@ -109,9 +107,14 @@ function Controller.getState()
 		worstLevel = outcomes and Enhance.getWorstLevel(level, outcomes),
 		tickets = {},
 		canAfford = true,
+		-- QUEUE-ALL9B G: 방지 구간 = 이번 시도 비용(방지 끔 · 켬) · 초기화 확률(방지 없는 표)
+		guardInfo = band and {
+			off = Enhance.getCost(level, stage, false, false), on = Enhance.getCost(level, stage, band.guards.drop, band.guards.reset),
+			resetChance = Enhance.getOutcomeTable(level, false, false, false).reset,
+		} or nil,
 	}
 	for _, kind in ipairs(Controller.ticketKinds) do
-		state.tickets[kind] = ticketState(kind, level, gaugeFull, cost == nil)
+		state.tickets[kind] = optionState(kind, level, gaugeFull, cost == nil)
 	end
 
 	local materialCost = EnhanceMaterialData.costByLevel[level]
@@ -157,12 +160,12 @@ local function zoneConfirmBody(zone, level, formatPercent)
 		return Text.get("forge.enhance.zone.drop", { level = ("%d"):format(Enhance.getWorstLevel(level)) })
 	end
 	local outcomes = Enhance.getOutcomeTable(level, false, false, false)
-	return Text.get("forge.enhance.zone.reset", { level = ("%d"):format(EnhanceConfig.resetToLevel), chance = formatPercent(outcomes.reset) })
+	return Text.get("forge.enhance.zone.reset", { level = ("%d"):format(Enhance.getResetToLevel(level) or level), chance = formatPercent(outcomes.reset) }) -- QUEUE-ALL9B G1
 end
 
 -- 서버로 보내는 요청 - 인자는 방지권 토글 2개뿐이다(서버 EnhanceService가 보유 · 구간 · 불씨를 다시 검증해 안 되는 것만 조용히 뗀다).
 local function fireEnhance()
-	enhanceRequest:FireServer(toggles.drop, toggles.reset)
+	enhanceRequest:FireServer(toggles.drop, toggles.reset) -- QUEUE-ALL9B G: 하락 · 초기화 방지 옵션
 end
 
 -- 강화를 요청한다. 위험 구간이 시작되는 단계(19 · 22강)의 그 세션 첫 시도에는 확인창을 한 번 띄우고, 확인해야 서버로 보낸다(취소하면 아무 일도 없다).
@@ -188,43 +191,6 @@ function Controller.requestEnhance(parentId, formatPercent)
 			confirmedZones[zone] = true
 			fireEnhance()
 		end
-	end)
-end
-
--- 방지권 구매 결과(ok, kind, price 또는 reason, tickets)를 받는 쪽을 등록한다(반환: 연결).
-function Controller.connectBuyResult(handler)
-	return ticketBuyResult.OnClientEvent:Connect(handler)
-end
-
--- [구매]를 눌렀다: 서버에서 가격(계정 최고 스테이지 기준)을 받아 확인창을 띄운다. 가격 · 차감 · 근접 확인은 서버가 다시 한다(ProtectionTickets.tryBuy) - 여기엔 가격 숫자가 없다.
--- 골드가 모자라면 [구매]를 비활성하고 이유를 적는다. 확인해야 구매 요청을 보낸다.
-function Controller.requestBuy(kind, parentId)
-	task.spawn(function()
-		local ok, prices = pcall(function()
-			return ticketPriceRequest:InvokeServer()
-		end)
-		if not ok or type(prices) ~= "table" or not prices[kind] then
-			return
-		end
-		local config = EnhanceConfig.protection[kind]
-		local price = prices[kind]
-		local gold = player:GetAttribute("Gold") or 0
-		local canAfford = gold >= price
-		Confirm.ask({
-			title = Text.get("forge.enhance.buy.title", { ticket = config.displayName }),
-			body = Text.get("forge.enhance.buy.body", {
-				ticket = config.displayName, price = NumberFormat.format(price), gold = NumberFormat.format(gold),
-				stage = ("%d"):format(prices.accountBestStage), kills = ("%d"):format(config.priceKillEquivalent) }),
-			primaryText = Text.get("forge.buy"),
-			secondaryText = Text.get("forge.cancel"),
-			parentId = parentId,
-			primaryEnabled = canAfford,
-			reason = (not canAfford) and Text.get("forge.enhance.buy.short", { need = NumberFormat.format(price - gold) }) or nil,
-		}, function(accepted)
-			if accepted then
-				ticketBuyRequest:FireServer(kind)
-			end
-		end)
 	end)
 end
 

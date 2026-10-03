@@ -18,7 +18,7 @@ local TIER_COL = 44 -- 칸 번호 열 폭
 local DAY = 86400
 
 -- 보상 표 → 한 문장. 치장(테마 · 글라이더 · 세트)은 이름 · 그 밖은 재화마다 짧은 조각을 " · "로 잇는다(QUEUE-ALL9B 보완: 무료 줄 골드 · 강화석 · 소모품). egg가 있으면 랜덤 표시.
-local PARTS = { "gold", "enhanceStone", "highEnhanceStone", "gemDust", "protectDrop", "sparkleShard", "egg" }
+local PARTS = { "gold", "enhanceStone", "highEnhanceStone", "gemDust", "sparkleShard", "egg" }
 function SeasonTab.rewardText(reward)
 	if type(reward) ~= "table" then
 		return ""

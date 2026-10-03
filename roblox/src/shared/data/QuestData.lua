@@ -81,7 +81,7 @@ return {
 		{ id = "m_partyBoss", cond = "event", event = "partyBoss", target = 1, name = "파티로 보스 1번 잡기(P)", guide = "gate", reward = { gold = 180, enhanceStone = 10, sparkleShard = 1 } },
 		{ id = "m_rift", cond = "event", event = "riftKill", target = 10, name = "균열 시간에 몬스터 {n}마리", guide = "hunt", reward = { gold = 180, enhanceStone = 10 } },
 		{ id = "m_boss50", cond = "bossCleared", value = 50, name = "보스 스테이지 {n} 처치", guide = "gate", reward = { gold = 200, enhanceStone = 12 } },
-		{ id = "m_enhance15", cond = "weaponLevel", value = 15, name = "무기 강화 +{n}", guide = "forge", reward = { gold = 200, enhanceStone = 12, protectDrop = 1 } }, -- 하락 구간(+19) 앞 = 하락 방지권 1
+		{ id = "m_enhance15", cond = "weaponLevel", value = 15, name = "무기 강화 +{n}", guide = "forge", reward = { gold = 2900, enhanceStone = 12 } }, -- 하락 구간(+19) 앞 · QUEUE-ALL9B G: 옛 하락 방지권 1 → 골드 +2,700마리분(= +19 하락 방지 1회 추가 비용 · k 1.7 · 스테이지와 같은 율)
 		{ id = "m_rebirth2", cond = "rebirth", value = 2, name = "두 번째 환생", guide = "altar", reward = { gold = 300, sparkleShard = 2 } },
 		{ id = "m_skillR", cond = "event", event = "skill:R", target = 1, name = "새 스킬 R 써 보기", guide = nil, reward = { gold = 200, enhanceStone = 12 } },
 		{ id = "m_rebirth3", cond = "rebirth", value = 3, name = "세 번째 환생", guide = "altar", reward = { gold = 500, sparkleShard = 3 } },

@@ -1384,6 +1384,30 @@ local function migrate(data)
 		data.version = 67
 	end
 
+	if data.version < 68 then
+		-- QUEUE-ALL9B G(사용자 10-03): 방지권(소모품) 폐지 → 보유 장수 × 폐지 시점 상점가(계정 최고 스테이지 기준 - Enhance.getProtectionPrice)를 골드로 환산 지급(손해 0).
+		--   키는 지우지 않고 0장으로 둔다(id 비활성). 환산 기록 = purchases.protectionRefund { drop, reset, gold }(한 번만 - 이관 멱등).
+		local p = data.purchases
+		if type(p) == "table" and type(p.protectionTickets) == "table" and p.protectionRefund == nil then
+			local best = 1
+			for _, classState in pairs(type(data.classes) == "table" and data.classes or {}) do
+				local progress = type(classState) == "table" and classState.stageProgress
+				best = math.max(best, type(progress) == "table" and tonumber(progress.infiniteBest) or 1)
+			end
+			local Enhance = require(ReplicatedStorage.Shared.Enhance)
+			local refund = { drop = 0, reset = 0, gold = 0, stage = best }
+			for _, kind in ipairs({ "drop", "reset" }) do
+				local count = math.max(0, math.floor(tonumber(p.protectionTickets[kind]) or 0))
+				refund[kind] = count
+				refund.gold += count * Enhance.getProtectionPrice(kind, best)
+				p.protectionTickets[kind] = 0
+			end
+			data.gold = (tonumber(data.gold) or 0) + refund.gold
+			p.protectionRefund = refund
+		end
+		data.version = 68
+	end
+
 	data.savedAt = data.savedAt or 0
 	SaveSystem.clampStageCap(data) -- S1 리뷰 7: 불러온 옛 값도 상한으로
 	return data

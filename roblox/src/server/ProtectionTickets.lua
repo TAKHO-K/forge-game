@@ -40,6 +40,10 @@ end
 -- 골드로 1장을 산다. 반환: ok, reason(실패 사유 - "invalid_kind" · "not_near_station" · "insufficient_gold") 또는 가격. 가격은 클라가 보낸 값을 안 믿고 매번 다시
 -- 계산한다. 강화대 근접이 필수다(GemServer의 변환권 구매와 같은 식). 성공하면 즉시 저장을 요청한다(골드가 빠지는 되돌릴 수 없는 사건).
 function ProtectionTickets.tryBuy(player, kind)
+	-- QUEUE-ALL9B G(사용자 10-03): 방지권 폐지 - 판매 중지(옛 클라 요청이 와도 골드를 안 뺀다). 아래는 이력용으로 남긴다.
+	if true then
+		return false, "discontinued"
+	end
 	if not isKind(kind) then
 		return false, "invalid_kind"
 	end
@@ -71,13 +75,10 @@ function ProtectionTickets.grantForBoss(player, stage)
 		return 0, 0
 	end
 	PlayerProfile.markProtectionStageClaimed(player, stage)
-	for kind, count in pairs({ drop = dropCount, reset = resetCount }) do
-		if count > 0 then
-			PlayerProfile.addProtectionTicket(player, kind, count)
-			granted:FireClient(player, kind, count, stage)
-		end
-	end
-	print(("[forge-game] 방지권 지급: %s - 스테이지 %d 보스 첫 클리어(계정) - 하락 %d · 초기화 %d"):format(player.Name, stage, dropCount, resetCount))
+	-- QUEUE-ALL9B G(사용자 10-03): 방지권 폐지 → 같은 일정에 골드(Enhance.getBossGrantGold - 그 스테이지에서 방지를 1회 켤 때 더 드는 비용).
+	local gold = Enhance.getBossGrantGold(stage)
+	PlayerProfile.addGold(player, gold)
+	print(("[forge-game] 보스 첫 처치 골드: %s - 스테이지 %d(계정) - %d골드(옛 방지권 하락 %d · 초기화 %d)"):format(player.Name, stage, gold, dropCount, resetCount))
 	return dropCount, resetCount
 end
 

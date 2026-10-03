@@ -34,14 +34,24 @@ end
 -- 상한이면 nil(시도 불가 - 웹 getEnhanceCost의 Infinity와 같은 뜻).
 -- P2 C1: 1회 골드 = GoldCost.cost(표의 기본 비용, 계정 최고 스테이지, "enhance") - 골드 수입과 같은 비율로 커진다(P2.5a: 기준 스테이지 1 · 골드 성장률 - GoldCostConfig).
 -- accountBestStage가 nil이면 표의 기본 비용(몬테카를로 기대 비용표 · 옛 검증처럼 스테이지와 무관한 계산용).
-function Enhance.getCost(level, accountBestStage)
+-- QUEUE-ALL9B G: useDrop · useReset = 강화 창 방지 옵션(resolveProtectionFlags가 고른 값). 그 구간에서 하나라도 켜면 × guardBands.costMultiplier.
+--   +26 이상 비용 · 방지를 켠 비용은 GoldCost.niceReward(끝자리 0).
+function Enhance.getCost(level, accountBestStage, useDrop, useReset)
 	if level >= EnhanceConfig.maxLevel then
 		return nil
 	end
 	local cost = GoldCost.cost(EnhanceConfig.goldCost[level + 1], accountBestStage, "enhance")
+	local band = Enhance.getGuardBand(level)
+	local guarded = band ~= nil and ((useDrop and band.guards.drop) or (useReset and band.guards.reset))
+	if level >= EnhanceConfig.ceilingDiscount.toEnhanceLevel + 1 then
+		return GoldCost.niceReward(cost * (guarded and band.costMultiplier or 1))
+	end
 	local discount = EnhanceConfig.ceilingDiscount
-	if discount and level >= discount.fromEnhanceLevel and accountBestStage then
+	if discount and level >= discount.fromEnhanceLevel and level <= (discount.toEnhanceLevel or math.huge) and accountBestStage then
 		cost = math.max(math.floor(cost * Enhance.getCeilingCostFactor(accountBestStage)), 1)
+	end
+	if guarded then
+		return GoldCost.niceReward(cost * band.costMultiplier)
 	end
 	return cost
 end
@@ -104,7 +114,24 @@ function Enhance.getOutcomeTable(level, gaugeFull, useDropTicket, useResetTicket
 	return { success = prob.success, maintain = maintain, down1 = down1, down2 = down2, reset = reset }
 end
 
--- 결과가 만드는 다음 단계. 하락은 어디서 시작해도 downFloorLevel(18)에서 멈추고, 초기화는 resetToLevel(12)로 간다(옛 "math.max(1, …)" ·
+-- QUEUE-ALL9B G1: 시도하는 단계에서 초기화되면 가는 단계(EnhanceConfig.resetToByLevel - +22 ~ +26 → 17 · +27 ~ +29 → 22). 표 밖이면 nil(그 단계엔 초기화가 없다).
+function Enhance.getResetToLevel(level)
+	for _, band in ipairs(EnhanceConfig.resetToByLevel) do
+		if level >= band.fromLevel and level <= band.toLevel then
+			return band.resetTo
+		end
+	end
+	return nil
+end
+
+-- 초기화 바닥 문구의 인자(a1 ~ a2 → t1 · b1 이상 → t2 - 문구 "forge.enhance.resetFloor" · 도움말이 같은 표를 읽는다).
+function Enhance.getResetFloorArgs()
+	local bands = EnhanceConfig.resetToByLevel
+	local first, last = bands[1], bands[#bands]
+	return { a1 = ("%d"):format(first.fromLevel), a2 = ("%d"):format(first.toLevel), t1 = ("%d"):format(first.resetTo), b1 = ("%d"):format(last.fromLevel), t2 = ("%d"):format(last.resetTo) }
+end
+
+-- 결과가 만드는 다음 단계. 하락은 어디서 시작해도 downFloorLevel(18)에서 멈추고, 초기화는 getResetToLevel(시도 단계)로 간다(옛 "math.max(1, …)" ·
 -- "리셋 = 1강"은 없앴다). 검산: 19 → 18 · 20 → 18 · 21 → 19 · 22 → 21 또는 20.
 function Enhance.getResultLevel(level, result)
 	if result == "success" then
@@ -114,9 +141,16 @@ function Enhance.getResultLevel(level, result)
 	elseif result == "down2" then
 		return math.max(EnhanceConfig.downFloorLevel, level - 2)
 	elseif result == "reset" then
-		return EnhanceConfig.resetToLevel
+		return Enhance.getResetToLevel(level) or level
 	end
 	return level -- maintain
+end
+
+-- QUEUE-ALL9B G1 로드 검사: 초기화 확률이 있는 단계는 전부 resetToByLevel에 도착점이 있어야 한다.
+for level, row in ipairs(EnhanceConfig.probability) do
+	if row.reset > 0 and not Enhance.getResetToLevel(level - 1) then
+		error(("EnhanceConfig.resetToByLevel에 +%d 시도의 초기화 도착점이 없다"):format(level - 1))
+	end
 end
 
 -- 위험이 시작되는 단계(28-1 S07): 확률표에서 처음으로 하락(down1 + down2)이 있는 단계, 처음으로 초기화(reset)가 있는 단계 - 구간 진입 확인창 · 도움말 문구가 "19강 · 22강"을
@@ -151,10 +185,15 @@ function Enhance.getWorstLevel(level, outcomes)
 end
 
 -- 실패 1회가 채우는 천장 게이지(천분율 정수) = round(시도한 단계의 성공률 × gainPerSuccessRate). 상한이면 0.
+-- QUEUE-ALL9B G2: gauge.fixedCeiling[level] = N이 있는 단계(+26 ~ +29)는 ceil(max ÷ N) - N번 실패하면 가득.
 function Enhance.getGaugeGain(level)
 	local prob = Enhance.getProbability(level)
 	if not prob then
 		return 0
+	end
+	local fixed = EnhanceConfig.gauge.fixedCeiling and EnhanceConfig.gauge.fixedCeiling[level]
+	if fixed then
+		return math.ceil(EnhanceConfig.gauge.max / fixed)
 	end
 	return math.floor(prob.success * EnhanceConfig.gauge.gainPerSuccessRate + 0.5)
 end
@@ -192,14 +231,33 @@ end
 -- 서버 재검증(28-1 S05): 요청한 방지권 플래그 중 이번 시도에서 **실제로 쓸 수 있는 것**만 true로 남긴다 - 보유 ≥ 1 · 시도하는 단계 ≥ usableFromLevel ·
 -- 게이지가 가득이 아님(가득이면 성공 100%라 무의미). 조건이 안 되면 요청을 거절하지 않고 그 플래그만 조용히 false로 바꾼다(토글을 켠 채 18강에서 눌러도
 -- 강화는 된다). 요청 값이 boolean true가 아니면 false.
-function Enhance.resolveProtectionFlags(level, gaugeFull, wantDrop, wantReset, haveDrop, haveReset)
-	if gaugeFull then
+-- QUEUE-ALL9B G: 방지 옵션(소모품 폐지) - 요청한 방지 중 이 단계 구간(guardBands)에서 켤 수 있는 것만 true. 불씨가 가득이면 둘 다 false(성공 100%라 무의미 · 배수 없음).
+-- 5번째 이후 인자(옛 보유 장수)는 읽지 않는다. 요청 값이 boolean true가 아니면 false.
+function Enhance.resolveProtectionFlags(level, gaugeFull, wantDrop, wantReset)
+	local band = Enhance.getGuardBand(level)
+	if gaugeFull or not band then
 		return false, false
 	end
-	local config = EnhanceConfig.protection
-	local useDrop = wantDrop == true and haveDrop >= 1 and level >= config.drop.usableFromLevel
-	local useReset = wantReset == true and haveReset >= 1 and level >= config.reset.usableFromLevel
-	return useDrop, useReset
+	return wantDrop == true and band.guards.drop == true, wantReset == true and band.guards.reset == true
+end
+
+-- QUEUE-ALL9B G: 시도 단계의 방지 구간(EnhanceConfig.guardBands) - 없으면 nil(+18 이하 · 상한).
+function Enhance.getGuardBand(level)
+	for _, band in ipairs(EnhanceConfig.guardBands) do
+		if level >= band.fromLevel and level <= band.toLevel then
+			return band
+		end
+	end
+	return nil
+end
+
+-- QUEUE-ALL9B G: 방지를 1회 켤 때 더 드는 골드(보상 대체 금액 · 표시) = 켠 비용 − 끈 비용.
+function Enhance.getGuardExtraCost(level, accountBestStage)
+	local band = Enhance.getGuardBand(level)
+	if not band then
+		return 0
+	end
+	return Enhance.getCost(level, accountBestStage, band.guards.drop, band.guards.reset) - Enhance.getCost(level, accountBestStage, false, false)
 end
 
 -- 방지권 상점가(골드) = 계정 최고 스테이지의 잡몹(tier1) 1마리당 골드 × priceKillEquivalent. 지금 서 있는 스테이지가 아니라 **계정 최고 스테이지**가
@@ -216,6 +274,16 @@ function Enhance.getBossGrant(stage)
 		return 0, 0
 	end
 	return 1, stage >= grant.resetFromStage and 1 or 0
+end
+
+-- QUEUE-ALL9B G: 보스 계정 첫 처치 지급(옛 방지권 → 골드). 지급 일정은 getBossGrant 그대로 - 하락만 주던 스테이지 = +19 방지 1회 추가 비용 · 하락 + 초기화 = +22 방지 1회
+-- 추가 비용(그 스테이지 = 계정 최고 스테이지 기준 · GoldCost.niceReward). 지급이 없는 스테이지는 0.
+function Enhance.getBossGrantGold(stage)
+	local drop, reset = Enhance.getBossGrant(stage)
+	if drop == 0 and reset == 0 then
+		return 0
+	end
+	return GoldCost.niceReward(Enhance.getGuardExtraCost(reset > 0 and 22 or 19, stage))
 end
 
 -- 강화 판정 1회(순수 함수 - 저장 · 골드 · 재료 · 방지권 차감은 호출부 몫). flags = { useDropTicket, useResetTicket }(호출부가 resolveProtectionFlags로

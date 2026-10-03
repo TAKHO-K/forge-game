@@ -23,6 +23,7 @@ KIND_KO = {
     "cosmeticTheme": ("치장 테마", "cosmetics.themes 키 · equipped 값", "CosmeticSlotData.sets[].id"),
     "gliderSkin": ("글라이더", "cosmetics.gliderSkins 키 · equipped.gliderSkin", "CosmeticSlotData.gliderSkins[].id"),
     "title": ("칭호", "titles 키 · codex.title", "TitleData.titles(+ CodexRules 줄 칭호)"),
+    "protectionTicket": ("방지권(비활성 - QUEUE-ALL9B G 폐지 · 보유분 골드 환산 v68)", "purchases.protectionTickets 키", "IdRegistry.retired.protectionTicket"),
 }
 
 

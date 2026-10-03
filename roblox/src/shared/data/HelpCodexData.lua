@@ -51,6 +51,7 @@ return {
 				{ key = "help.enhance.safe" },
 				{ key = "help.enhance.drop" },
 				{ key = "help.enhance.reset" },
+				{ key = "help.enhance.resetFloor" },
 				{ key = "help.enhance.pity" },
 			},
 		},

@@ -184,13 +184,7 @@ function R.oddsText(odds)
 end
 
 -- 기존 골드 소모처 입구(새 Remote 없음)
-local protectionController -- panels/Enhance/Controller(방지권 구매 확인창 - 가격 조회 포함)
 local buyRerollRemote
-local function requestProtection(kind)
-	protectionController = protectionController or require(script.Parent.Enhance.Controller)
-	setStatus("", "textSecondary")
-	protectionController.requestBuy(kind, R.id)
-end
 local function buyReroll(gradeId)
 	if busy() then
 		return
@@ -227,7 +221,7 @@ local function preview(kind, entry)
 	end)
 end
 
-R.env = { state = state, send = send, busy = busy, robuxButton = robuxButton, requestProtection = requestProtection, buyReroll = buyReroll, openGemTools = openGemTools, preview = preview }
+R.env = { state = state, send = send, busy = busy, robuxButton = robuxButton, buyReroll = buyReroll, openGemTools = openGemTools, preview = preview }
 
 local function layoutKey(L)
 	return ("%s:%d:%d:%s"):format(L.mode, L.winW, L.winH, tostring(Theme.isMobile))
@@ -414,7 +408,6 @@ local function step()
 end
 
 local REROLL_REASON = { no_gold = "shop.reason.noGold", no_dust = "shop.reason.noDust", out_of_range = "shop.reason.outOfRange" }
-local PROTECTION_REASON = { insufficient_gold = "shop.reason.noGold", not_near_station = "shop.reason.notNearStation" }
 
 function R.start()
 	shopRequest = ReplicatedStorage:WaitForChild("ShopRequest")
@@ -467,15 +460,7 @@ function R.start()
 		setStatus(success and Text.get("shop.status.ticketBought") or Text.get(REROLL_REASON[reason] or "shop.reason.rejected", { reason = tostring(reason) }), success and "success" or "danger")
 		R.render()
 	end)
-	ReplicatedStorage:WaitForChild("ProtectionTicketBuyResult").OnClientEvent:Connect(function(data)
-		if type(data) ~= "table" or not UIManager.isOpen(R.id) then
-			return
-		end
-		setStatus(data.ok and Text.get("shop.status.ticketBought") or Text.get(PROTECTION_REASON[data.reason] or "shop.reason.rejected", { reason = tostring(data.reason) }),
-			data.ok and "success" or "danger")
-		R.render()
-	end)
-	for _, name in ipairs({ "Gold", "GemDust", "AccountBestStage", "ProtectionDrop", "ProtectionReset" }) do
+	for _, name in ipairs({ "Gold", "GemDust", "AccountBestStage" }) do
 		player:GetAttributeChangedSignal(name):Connect(R.render)
 	end
 	RunService.Heartbeat:Connect(step)

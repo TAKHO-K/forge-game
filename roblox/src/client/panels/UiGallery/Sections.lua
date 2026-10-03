@@ -65,7 +65,7 @@ end
 function Sections.toggles(parent, width, ctx)
 	local y = heading(parent, "토글 - 켜짐 ✓ · 꺼짐 · 비활성")
 	local specs = {
-		{ text = "방지권 사용", value = true },
+		{ text = "하락 방지", value = true },
 		{ text = "자동 줍기", value = false },
 		{ text = "구간 진입", value = false, disabled = true },
 	}

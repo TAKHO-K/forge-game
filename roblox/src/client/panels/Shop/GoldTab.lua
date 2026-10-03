@@ -1,12 +1,11 @@
 -- 상점 [골드] 탭(QUEUE-B1 B2 UI) - 기존 골드 소모처를 한곳에 모은 입구. 새 Remote · 새 가격 0(서버 규칙 · 가격 · 근접 확인은 그대로):
---   ① 방지권 하락 · 초기화 = 강화 패널과 같은 입구(panels/Enhance/Controller.requestBuy - 가격 조회 ProtectionTicketPriceRequest → 확인창 → ProtectionTicketBuyRequest)
+--   ① (QUEUE-ALL9B G: 방지권 폐지 - 강화 방지는 강화 창 옵션 · 골드 × k)
 --   ② 변환권 고대 · 태초 = 보석 공방과 같은 요청(BuyRerollTicketRequest - 결과 GemWorkshopResult) · 가격 식은 보석 공방(GemWorkshop.ticketPrice)과 같은 GoldCost
 --   ③ [보석 도구] = 기존 보석 공방 창(panels/GemWorkshop)을 연다(같은 station 자리라 상점은 닫힌다).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
-local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local GemCraft = require(ReplicatedStorage.Shared.GemCraft)
@@ -17,7 +16,6 @@ local Text = require(ReplicatedStorage.Shared.Text)
 local GoldTab = {}
 
 local player = Players.LocalPlayer
-local PROTECTION_KINDS = { "drop", "reset" }
 local REROLL_GRADES = { "ancient", "primordial" }
 
 -- 변환권 골드 가격(서버 GemServer.rerollTicketPrice · 보석 공방 ticketPrice와 같은 식 - 기준 = 계정 최고 스테이지 Attribute)
@@ -26,25 +24,8 @@ function GoldTab.rerollTicketPrice()
 	return GoldCost.cost(MonsterData.tier1.goldDrop, stage, "rerollTicket") * GemData.rerollTicketGoldMultiplier
 end
 
-local function protectionCount(kind)
-	return player:GetAttribute("Protection" .. kind:sub(1, 1):upper() .. kind:sub(2)) or 0
-end
-
--- ctx = Rows ctx · env = init의 환경(state · send · requestProtection · buyReroll · openGemTools · busy)
+-- ctx = Rows ctx · env = init의 환경(state · send · buyReroll · openGemTools · busy) - QUEUE-ALL9B G: 방지권 줄 없음(폐지)
 function GoldTab.render(ctx, env)
-	ctx.section(Text.get("shop.gold.protectionSection"), "ProtectionSection")
-	for _, kind in ipairs(PROTECTION_KINDS) do
-		local config = EnhanceConfig.protection[kind]
-		ctx.row({
-			name = "Protection_" .. kind,
-			title = Text.get("shop.gold.protectionRow", { name = config.displayName, count = tostring(protectionCount(kind)) }),
-			subtitle = Text.get(kind == "drop" and "item.desc.protectDrop" or "item.desc.protectReset"), -- QUEUE-ALL6 C: 아이템 설명 표(보상 카드와 같은 문구)
-			buttons = { { name = "Buy_protection_" .. kind, text = Text.get("shop.buy"), kind = "primary", enabled = not env.busy(), onActivated = function()
-				env.requestProtection(kind)
-			end } },
-		})
-	end
-
 	local gold = player:GetAttribute("Gold") or 0
 	local dustOwned = player:GetAttribute("GemDust") or 0
 	local price = GoldTab.rerollTicketPrice()

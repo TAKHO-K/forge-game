@@ -16,7 +16,9 @@ local TitleData = require(ReplicatedStorage.Shared.data.TitleData)
 
 local IdRegistry = {}
 
-IdRegistry.kinds = { "option", "material", "grade", "part", "setZone", "skillVariant", "special", "cosmeticTheme", "gliderSkin", "title", "cosmeticItem" } -- QUEUE-ALL6 H cosmeticItem
+IdRegistry.kinds = { "option", "material", "grade", "part", "setZone", "skillVariant", "special", "cosmeticTheme", "gliderSkin", "title", "cosmeticItem", "protectionTicket" } -- QUEUE-ALL6 H cosmeticItem · QUEUE-ALL9B G protectionTicket
+-- QUEUE-ALL9B G(사용자 10-03): 비활성 id - 데이터 · 저장 키는 남기고 얻는 길 · 표시만 뺐다(방지권 폐지 → 강화 창 방지 옵션 · 보유분 골드 환산 SAVE v68).
+IdRegistry.retired = { protectionTicket = { drop = true, reset = true } }
 
 local function keysOf(map)
 	local out = {}
@@ -55,6 +57,7 @@ function IdRegistry.lists()
 		gliderSkin = gliders,
 		cosmeticItem = items,
 		title = keysOf(TitleData.titles),
+		protectionTicket = { "drop", "reset" }, -- purchases.protectionTickets 키(비활성 - IdRegistry.retired)
 	}
 	for _, list in pairs(lists) do
 		table.sort(list)

@@ -66,7 +66,6 @@ return {
 		["srv.reward.sparkleShard"] = "꾸미기 토큰 {n}",
 		["srv.reward.rebirthTicket"] = "환생 무료권 {n}",
 		["srv.reward.gemDust"] = "보석 가루 {n}",
-		["srv.reward.protectDrop"] = "하락 방지권 {n}",
 		["srv.reward.passExp"] = "패스 경험치 {n}",
 		["srv.codex.cells"] = "{count}칸",
 		-- QUEUE-ALL6R 3: 서버가 완성해 보내던 문장 → 키 + 인자(도감 알림 · 드랍 · 몹 이름표 · 봉인 명판)
@@ -152,7 +151,6 @@ return {
 		["srv.reward.sparkleShard"] = "Style Token {n}",
 		["srv.reward.rebirthTicket"] = "Free Rebirth Ticket {n}",
 		["srv.reward.gemDust"] = "Gem Dust {n}",
-		["srv.reward.protectDrop"] = "Drop Protection Ticket {n}",
 		["srv.reward.passExp"] = "Pass EXP {n}",
 		["srv.codex.cells"] = "{count} cells",
 		["srv.codex.lineDone"] = "Line complete! Title “{title}”",

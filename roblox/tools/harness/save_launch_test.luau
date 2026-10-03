@@ -274,6 +274,27 @@ local function main()
 			and m.inventoryWindowPosition.x == 10 and m.bulkSellCutoffGrade == "rare",
 			("보석 %s/%s · 키 %d개"):format(tostring(gem and gem.option and gem.option.id), tostring(gem and gem.grade), count(bow.stageProgress.bossFirstClearStages)))
 	end
+	-- QUEUE-ALL9B 6: v64 ~ v67 표본(지금 모양에서 그 버전 뒤 필드를 걷어냄) → 현재(v68) 이관 · 저장 검사 · 다시 이관해도 같은 값(왕복)
+	do
+		local E = MODS.Enhance
+		for _, ver in ipairs({ 64, 65, 66, 67 }) do
+			local d = SaveA.migrate({})
+			d.version, d.gold = ver, 7000 + ver
+			d.purchases.protectionRefund = nil
+			d.purchases.protectionTickets = { drop = 4, reset = 2 }
+			for _, cs in pairs(d.classes) do cs.stageProgress.infiniteBest = 900 end
+			if ver < 67 then d.quests.board = nil end
+			if ver < 66 then d.seasonPass.skipBought, d.seasonPass.skipTiers = nil, nil end
+			if ver < 65 then d.training = { attack = 80, hp = 50, defense = 7 } end
+			local m = SaveA.migrate(d)
+			local refund = 4 * E.getProtectionPrice("drop", 900) + 2 * E.getProtectionPrice("reset", 900)
+			local again = SaveA.migrate(m)
+			local ok = SaveA.isValidProfile(m) and m.version == V and m.gold == 7000 + ver + refund and m.purchases.protectionTickets.drop == 0 and m.purchases.protectionTickets.reset == 0
+				and type(m.quests.board) == "table" and m.seasonPass.skipBought ~= nil and type(m.seasonPass.skipTiers) == "table" and m.training.attack <= 50 and again.gold == m.gold
+			check("MIG", ("v%d → v%d(방지권 4 · 2장 → +%d골드 · 출석판 · 칸 건너뛰기 · 수련 상한 · 왕복)"):format(ver, V, refund), ok,
+				("골드 %d · 수련 공격 %s · 출석판 %s"):format(m.gold, tostring(m.training.attack), tostring(type(m.quests.board))))
+		end
+	end
 	-- v34 · v44 · v54: 지금 모양에서 그 버전 뒤에 생긴 필드를 걷어낸 표본(그 시절 defaultProfile과 같은 칸 - git show 556f7af · 40be64d · e6ab9ea 대조)
 	local AFTER = {
 		[34] = { "autoProcess", "world", "peakLevel", "titles", "eggs", "audit", "comeback", "training", "quests", "pets", "settings", "sessionId", "cosmetics", "mailbox", "seasonPass", "communityGoal", "redeemedCodes", "weeklyChallenge", "codex", "checkpoints" },

@@ -123,7 +123,7 @@ local ok, err = pcall(function()
 	q.cosmetics.equipped.killFx = "ghostItem"
 	local moved = SaveSystem.quarantineUnknownIds(q)
 	check(("모르는 소품 id 보관 · 아는 것 그대로 · 장착 칸 비움: 옮김 %d"):format(#moved), q.cosmetics.items.rocketPop == true and q.cosmetics.items.ghostItem == nil and q.cosmetics.equipped.killFx == nil and #moved >= 1)
-	check("IdRegistry 종류 11(cosmeticItem 추가) · 빈 목록 없음", #IdRegistry.kinds == 11 and (function()
+	check("IdRegistry 종류 12(cosmeticItem · protectionTicket 비활성 추가) · 빈 목록 없음", #IdRegistry.kinds == 12 and IdRegistry.retired.protectionTicket.drop == true and (function()
 		for _, kind in ipairs(IdRegistry.kinds) do if not lists[kind] or #lists[kind] == 0 then return false end end
 		return true
 	end)())

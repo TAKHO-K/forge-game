@@ -205,10 +205,6 @@ function QuestService.grant(player, reward, source)
 		PlayerProfile.addGemDust(player, reward.gemDust)
 		table.insert(parts, Text.getFor(player, "srv.reward.gemDust", { n = ("%d"):format(reward.gemDust) }))
 	end
-	if reward.protectDrop then -- QUEUE-ALL3 Q3: 하락 구간 앞 = 하락 방지권(기존 재화)
-		PlayerProfile.addProtectionTicket(player, "drop", reward.protectDrop)
-		table.insert(parts, Text.getFor(player, "srv.reward.protectDrop", { n = ("%d"):format(reward.protectDrop) }))
-	end
 	if reward.title then -- QUEUE-ALL9B 5 시즌 출석판 칭호 장식(무료 보상 - 판매 금지 목록은 상품에만)
 		if PlayerProfile.grantTitle(player, reward.title) then
 			table.insert(parts, Text.getFor(player, "srv.reward.title", { name = Text.nameFor(player, require(ReplicatedStorage.Shared.data.TitleData).titles[reward.title].name) }))
@@ -381,6 +377,9 @@ function QuestService.start()
 	local QUEST_ACTIONS = { view = true, claim = true, train = true }
 	remote.OnServerEvent:Connect(function(player, action, a, b)
 		if type(action) ~= "string" or not QUEST_ACTIONS[action] then -- QUEUE-6h-b R3 F5(보안): 허용 동작만 제한 표에(임의 문자열로 표가 커지지 않게)
+			return
+		end
+		if not require(script.Parent.RequestGate).allow(player, "QuestRequest") then -- QUEUE-ALL9B 6: 공통 요청 제한(출석판 · 접속 · 7일 받기 · 수련 - 동작별 0.2초 제한 앞)
 			return
 		end
 		local now = os.clock()

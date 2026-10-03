@@ -272,6 +272,12 @@ end
 -- HUD·강화 UI가 접속 직후부터 정확한 값을 보게 한다.
 function PlayerProfile.init(player, profile)
 	profiles[player] = profile
+	-- QUEUE-ALL9B G: 방지권 폐지 환산(SAVE v68 - purchases.protectionRefund)은 처음 접속 때 감사 기록에 한 번 남긴다(noted).
+	local refund = profile.purchases and profile.purchases.protectionRefund
+	if type(refund) == "table" and (refund.gold or 0) > 0 and not refund.noted then
+		refund.noted = true
+		require(script.Parent.AuditTrail).note(player, "protectionRefund", ("하락 %d · 초기화 %d장 → %d골드(스테이지 %d)"):format(refund.drop or 0, refund.reset or 0, refund.gold, refund.stage or 1))
+	end
 	player:SetAttribute("Gold", profile.gold)
 	player:SetAttribute("PrimordialEquipped", InventorySync.primordialEquipped(profile)) -- D1 ⑤
 	player:SetAttribute("PrimordialParts", InventorySync.primordialParts(profile)) -- D1-2 딜 부위 고유 연출

@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
 local Text = require(ReplicatedStorage.Shared.Text)
+local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local Gauge = require(script.Parent.Parent.Parent.ui.kit.Gauge)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 
@@ -150,14 +151,14 @@ function OddsView.updateGaugeRow(refs, state)
 	elseif state.gaugeFull then
 		text = Text.get("forge.enhance.gauge.full")
 	else
-		text = Text.get("forge.enhance.gauge.value", { now = OddsView.formatPercent(ratio), gain = OddsView.formatPercent(state.gaugeGain / state.gaugeMax) })
+		text = Text.get("forge.enhance.gauge.value", { now = ("%.1f%%"):format(ratio * 100), gain = ("%.1f%%"):format(state.gaugeGain / state.gaugeMax * 100) }) -- QUEUE-ALL9B G2: 소수 첫째 자리
 	end
 	refs.gauge.setValue(ratio, text)
 end
 
 -- 한 줄 안내("최악의 경우 …")의 라벨. 반환: label.
-function OddsView.buildHint(parent, x, y, width)
-	local label = cell(parent, "WorstHint", Enum.TextXAlignment.Left, x, width, y, OddsView.hintHeight(), "textSecondary")
+function OddsView.buildHint(parent, x, y, width, name)
+	local label = cell(parent, name or "WorstHint", Enum.TextXAlignment.Left, x, width, y, OddsView.hintHeight(), "textSecondary")
 	label.TextWrapped = true
 	label.TextYAlignment = Enum.TextYAlignment.Top
 	return label
@@ -166,6 +167,30 @@ end
 -- 최악의 단계는 화면에 보이는 표(방지권 토글을 반영한 표)에서 온다(Controller가 worstLevel로 준다). 상한이면 비운다.
 function OddsView.updateHint(label, state)
 	label.Text = state.worstLevel and Text.get("forge.enhance.worst", { level = ("%d"):format(state.worstLevel) }) or ""
+end
+
+-- QUEUE-ALL9B G2 불씨 안내: "가득 차면 다음 시도 확정 · 가득까지 약 n회"(n = 남은 게이지 ÷ 이 단계의 실패 1회 증가분, 올림). 상한이면 비운다.
+function OddsView.updateEmberHint(label, state)
+	if state.maxed then
+		label.Text = ""
+	elseif state.gaugeFull then
+		label.Text = Text.get("forge.enhance.gauge.hintFull")
+	else
+		local n = state.gaugeGain > 0 and math.ceil((state.gaugeMax - state.gauge) / state.gaugeGain) or 0
+		label.Text = Text.get("forge.enhance.gauge.hint", { n = ("%d"):format(n) })
+	end
+end
+
+-- QUEUE-ALL9B G 방지 구간(+19 ~ +29): "이번 시도 비용 - 방지 끔 n골드 · 켬 n골드 · 초기화 확률 n%".
+function OddsView.updateGuardHint(label, state)
+	local info = state.guardInfo
+	label.Text = info and Text.get(info.resetChance > 0 and "forge.enhance.guard.cost" or "forge.enhance.guard.costNoReset",
+		{ off = NumberFormat.format(info.off), on = NumberFormat.format(info.on), chance = OddsView.formatPercent(info.resetChance) }) or ""
+end
+
+-- QUEUE-ALL9B G1 초기화 바닥 안내 - 초기화가 있는 단계(확률표)에서만 보인다.
+function OddsView.updateResetFloor(label, state)
+	label.Text = (not state.maxed and Enhance.getResetToLevel(state.level)) and Text.get("forge.enhance.resetFloor", Enhance.getResetFloorArgs()) or ""
 end
 
 return OddsView
