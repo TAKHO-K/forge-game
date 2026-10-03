@@ -11,9 +11,9 @@ local RecommendTab = {}
 
 RecommendTab.passes = { "recallCooldown", "bagExpand" }
 
-local function firstUnowned(list, ownedMap)
+local function firstUnowned(list, ownedMap, justBought)
 	for _, entry in ipairs(list) do
-		if not entry.seasonOnly and not (ownedMap and ownedMap[entry.id]) then
+		if not entry.seasonOnly and (not (ownedMap and ownedMap[entry.id]) or (justBought and justBought[entry.id])) then -- QUEUE-ALL9B: 방금 산 것은 창을 닫을 때까지 "구매 완료"로 남긴다
 			return entry
 		end
 	end
@@ -31,13 +31,13 @@ function RecommendTab.render(ctx, env)
 		ctx.row({ name = "Premium", title = Text.get("season.premiumTitle"), subtitle = Text.get("season.premiumSub"), highlight = true,
 			buttons = { env.robuxButton("season_premium", "PremiumBuy") } })
 	end
-	local theme = firstUnowned(CosmeticSlotData.sets, view.themes)
+	local theme = firstUnowned(CosmeticSlotData.sets, view.themes, env.state.justBought)
 	if theme then
-		CosmeticTab.saleRow(ctx, env, view, "cosmeticTheme", theme, false, (view.productTokens or {})["theme_" .. theme.id], "theme_" .. theme.id, "shop.cos.themeSub")
+		CosmeticTab.saleRow(ctx, env, view, "cosmeticTheme", theme, view.themes and view.themes[theme.id] == true, (view.productTokens or {})["theme_" .. theme.id], "theme_" .. theme.id, "shop.cos.themeSub")
 	end
-	local skin = firstUnowned(CosmeticSlotData.gliderSkins, view.gliderSkins)
+	local skin = firstUnowned(CosmeticSlotData.gliderSkins, view.gliderSkins, env.state.justBought)
 	if skin then
-		CosmeticTab.saleRow(ctx, env, view, "gliderSkin", skin, false, (view.productTokens or {})["glider_" .. skin.id], "glider_" .. skin.id, "shop.cos.gliderSub")
+		CosmeticTab.saleRow(ctx, env, view, "gliderSkin", skin, view.gliderSkins and view.gliderSkins[skin.id] == true, (view.productTokens or {})["glider_" .. skin.id], "glider_" .. skin.id, "shop.cos.gliderSub")
 	end
 	ConvenienceTab.render(ctx, env, RecommendTab.passes)
 end

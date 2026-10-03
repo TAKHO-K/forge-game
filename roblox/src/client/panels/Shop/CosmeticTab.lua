@@ -22,11 +22,19 @@ end
 CosmeticTab.nameOf = nameOf
 
 -- 판매 행 하나(테마 세트 · 글라이더 공통). kind = "cosmeticTheme" | "gliderSkin" · productKey = MonetizationData.products 키
+-- QUEUE-ALL9B 테마 미리보기 순서(칸 · 이름 · 확인 키) - 한 번 누를 때 하나씩
+CosmeticTab.themeParts = {
+	{ slot = "dashTrail", key = "shop.slot.dashTrail", input = "Shift" },
+	{ slot = "jumpFx", key = "shop.slot.jumpFx", input = "Space" },
+	{ slot = "glideTrail", key = "shop.slot.glideTrail", input = "Space × 2" },
+	{ slot = "footstep", key = "shop.slot.footstep", input = "W" },
+}
 local TRY_ITEM_SLOTS = { weaponSkin = true, petAccessory = true } -- QUEUE-ALL6 H 입혀 보기 = 내 화면 Attribute만 바꿔 바로 보이는 칸(처치 · 강화 · 귀환 · 이모트는 서버 사건이 있어야 보임)
 local function saleRow(ctx, env, view, kind, entry, owned, shardPrice, productKey, subtitleKey)
 	local buttons
 	if owned then
-		buttons = { { name = "Owned_" .. entry.id, text = Text.get("shop.owned"), enabled = false } }
+		-- QUEUE-ALL9B(사용자 10-03): 산 것은 구매칸 전체를 "구매 완료"로 덮는다(토큰 · 로벅스 · 미리보기 자리)
+		buttons = { { name = "Owned_" .. entry.id, text = Text.get("shop.cos.soldOut"), width = 296, enabled = false } }
 	elseif not Monetization.onSale(CosmeticSlotData, kind, entry.id) then -- QUEUE-ALL6 H 시즌 한정(할로윈 = 10월) 판매 기간 밖
 		buttons = { { name = "OffSeason_" .. entry.id, text = Text.get("shop.cos.offSeason", { month = tostring(entry.seasonMonth) }), width = 140, enabled = false } }
 	else
@@ -39,7 +47,12 @@ local function saleRow(ctx, env, view, kind, entry, owned, shardPrice, productKe
 		end
 		table.insert(buttons, env.robuxButton(productKey, "Robux_" .. entry.id))
 		if kind ~= "cosmeticItem" or TRY_ITEM_SLOTS[entry.slot] then
-			table.insert(buttons, { name = "Try_" .. entry.id, text = Text.get("shop.cos.try"), width = 84, enabled = true, onActivated = function() -- QUEUE-ALL2 P2 B-4 ①: 내 캐릭터에 입혀 보기(로컬 · 잠깐)
+			local tryText = Text.get("shop.cos.try")
+			if kind == "cosmeticTheme" then -- QUEUE-ALL9B(사용자 10-03): 4종을 하나씩 - 누를 때마다 다음 효과(버튼에 지금 볼 효과 · 순서)
+				local i, part = env.previewNext(entry)
+				tryText = Text.get("shop.cos.tryPart", { part = part, i = tostring(i), n = tostring(#CosmeticTab.themeParts) })
+			end
+			table.insert(buttons, { name = "Try_" .. entry.id, text = tryText, width = kind == "cosmeticTheme" and 150 or 84, enabled = true, onActivated = function() -- QUEUE-ALL2 P2 B-4 ①: 내 캐릭터에 입혀 보기(로컬 · 잠깐)
 				env.preview(kind, entry)
 			end })
 		end
@@ -48,7 +61,7 @@ local function saleRow(ctx, env, view, kind, entry, owned, shardPrice, productKe
 		name = "Sale_" .. entry.id,
 		title = Text.name(entry.name),
 		titleColor = owned and "success" or nil,
-		subtitle = Text.get(owned and "shop.cos.ownedSub" or subtitleKey),
+		subtitle = Text.get(owned and "shop.cos.ownedSub" or subtitleKey, { name = Text.name(entry.name) }),
 		buttons = buttons,
 	})
 end

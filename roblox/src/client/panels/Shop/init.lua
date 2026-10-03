@@ -43,7 +43,7 @@ local player = Players.LocalPlayer
 local shopRequest, shopSync
 
 -- 서버 스냅샷(그대로)
-local state = { view = nil, rerollTickets = { ancient = 0, primordial = 0 } }
+local state = { view = nil, rerollTickets = { ancient = 0, primordial = 0 }, justBought = {}, previewIndex = {} } -- QUEUE-ALL9B justBought = 이번에 연 창에서 산 것(추천 탭 "구매 완료" 유지) · previewIndex = 테마별 다음 미리보기 효과
 R.state = state
 local built = nil -- { panel, tabs, scroll, status, ctx, L, key }
 local selectedTab = "gold"
@@ -99,7 +99,19 @@ local function send(action, a, b)
 	-- 결과 판정: 다음 ShopSync 표에서 이 요청이 반영됐는지 본다(서버가 이유를 돌려주지 않는다 - 보고 사항)
 	pendingCheck = function(view)
 		if action == "buyShards" then
-			local owned = a == "cosmeticTheme" and view.themes[b] or view.gliderSkins[b]
+			local owned = (a == "cosmeticTheme" and view.themes and view.themes[b]) or (a == "gliderSkin" and view.gliderSkins and view.gliderSkins[b])
+				or (a == "cosmeticItem" and view.items and view.items[b]) -- 리뷰: 소품(cosmeticItem)도 성공으로 본다
+			if owned then
+				state.justBought[b] = true
+				task.defer(function() -- QUEUE-ALL9B(사용자 10-03): 구매 완료 창
+					Confirm.ask({ title = Text.get("shop.bought.title"), body = Text.get("shop.bought.body", { name = CosmeticTab.nameOf(a, b) }),
+						primaryText = Text.get("shop.bought.equip"), secondaryText = Text.get("shop.bought.close"), parentId = R.id }, function(accepted)
+						if accepted then
+							R.selectTab("cosmetic")
+						end
+					end)
+				end)
+			end
 			return owned and "shop.status.bought" or "shop.status.buyFailed", owned and "success" or "danger"
 		elseif action == "equip" then
 			local ok = view.equipped[a] == b
@@ -201,16 +213,39 @@ end
 -- QUEUE-ALL2 P2 B-4 ①: 치장 입혀 보기 - 내 Player Attribute Cosmetic_<칸>을 로컬에서만 잠깐 바꾼다(복제 안 됨 · 서버 값 그대로) → PREVIEW_SECONDS 뒤 원래 값
 local PREVIEW_SECONDS = 10
 local previewToken = 0
+-- QUEUE-ALL9B(사용자 10-03): 테마는 4종을 하나씩 - 버튼이 보여 준 효과(previewNext)를 입히고 다음 효과로 넘긴다.
+local function previewNext(entry)
+	local i = state.previewIndex[entry.id] or 1
+	local part = CosmeticTab.themeParts[i]
+	return i, Text.get(part.key), part
+end
+local previewSaved = {}
 local function preview(kind, entry)
 	previewToken += 1
 	local mine = previewToken
-	local saved = {}
-	local slots = kind == "gliderSkin" and { "gliderSkin" } or kind == "cosmeticItem" and { entry.slot } or { "dashTrail", "jumpFx", "glideTrail", "footstep" } -- QUEUE-ALL6 H 소품 = 그 칸 하나
+	for slot, value in pairs(previewSaved) do -- 앞 미리보기를 먼저 원래 값으로
+		player:SetAttribute("Cosmetic_" .. slot, value)
+	end
+	previewSaved = {}
+	local slots, partInfo
+	if kind == "cosmeticTheme" then
+		local i, partName, part = previewNext(entry)
+		slots, partInfo = { part.slot }, { name = partName, input = part.input }
+		state.previewIndex[entry.id] = i % #CosmeticTab.themeParts + 1
+	else
+		slots = kind == "gliderSkin" and { "gliderSkin" } or { entry.slot } -- QUEUE-ALL6 H 소품 = 그 칸 하나
+	end
 	for _, slot in ipairs(slots) do
-		saved[slot] = player:GetAttribute("Cosmetic_" .. slot)
+		previewSaved[slot] = player:GetAttribute("Cosmetic_" .. slot)
 		player:SetAttribute("Cosmetic_" .. slot, entry.id)
 	end
-	setStatus(Text.get("shop.cos.trying", { name = entry.name, n = tostring(PREVIEW_SECONDS) }), "success")
+	local saved = previewSaved
+	if partInfo then
+		setStatus(Text.get("shop.cos.tryingPart", { name = Text.name(entry.name), part = partInfo.name, n = tostring(PREVIEW_SECONDS), key = partInfo.input }), "success")
+		R.render()
+	else
+		setStatus(Text.get("shop.cos.trying", { name = entry.name, n = tostring(PREVIEW_SECONDS) }), "success")
+	end
 	task.delay(PREVIEW_SECONDS, function()
 		if mine ~= previewToken then
 			return
@@ -218,10 +253,11 @@ local function preview(kind, entry)
 		for slot, value in pairs(saved) do
 			player:SetAttribute("Cosmetic_" .. slot, value)
 		end
+		previewSaved = {}
 	end)
 end
 
-R.env = { state = state, send = send, busy = busy, robuxButton = robuxButton, buyReroll = buyReroll, openGemTools = openGemTools, preview = preview }
+R.env = { state = state, send = send, busy = busy, robuxButton = robuxButton, buyReroll = buyReroll, openGemTools = openGemTools, preview = preview, previewNext = previewNext }
 
 local function layoutKey(L)
 	return ("%s:%d:%d:%s"):format(L.mode, L.winW, L.winH, tostring(Theme.isMobile))
@@ -467,6 +503,7 @@ function R.start()
 	UIManager.changed:Connect(function(id, isOpen)
 		if id == R.id and not isOpen then
 			openedFromHud = false
+			state.justBought = {} -- QUEUE-ALL9B: 창을 닫으면 추천 탭은 다시 안 산 것만
 		end
 	end)
 	-- 시즌 패스 받을 칸 수 → 왼쪽 메뉴 상점 빨간 점(로컬 Attribute ShopClaimable)
