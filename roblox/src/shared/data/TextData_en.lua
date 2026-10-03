@@ -56,12 +56,12 @@ return {
 	["inv.act.craft"] = "Refine",
 	["inv.act.reroll"] = "Reroll({count})",
 	-- (A2-N4 §4-4 파티 모집 게시판 이어서)
-	["party.board.title"] = "Party Board",
+	["party.tab.party"] = "My Party",
+	["party.tab.board"] = "Find Party",
 	-- QUEUE-ALL3 Q8 이름표
 	["nameplate.mob.level"] = "Lv.{level}",
 	["party.inviteTop"] = "Invite a friend · Both get rewards",
 	["party.invitePrompt"] = "Boss down! Invite a friend, both win (P)",
-	["party.board.open"] = "Party Board",
 	["party.board.posted"] = "Posted - others can join with Quick Join",
 	["party.board.row"] = "Stage {stage} · {role} · {count}/{size}",
 	["update.board.title"] = "Updates",

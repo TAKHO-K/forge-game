@@ -6,8 +6,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local Text = require(ReplicatedStorage.Shared.Text)
-local UIManager = require(script.Parent.Parent.UIManager)
-local Panel = require(script.Parent.Parent.ui.kit.Panel)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
 
 local PartyBoard = {}
@@ -45,20 +43,9 @@ local function setSelected(b, on)
 	b.TextColor3 = on and Color3.new(0, 0, 0) or UIColors.textPrimary
 end
 
-local function build()
+local function build(parent)
 	local H = Theme.isMobile and Theme.touchMin or 30
 	local ROW = Theme.isMobile and 52 or 40
-	local panel = Panel.create({
-		id = PartyBoard.id,
-		kind = "window",
-		title = Text.get("party.board.title"),
-		size = Vector2.new(WIDTH + 28, 420),
-		onOpen = function()
-			if refs then
-				refs.update()
-			end
-		end,
-	})
 	local body = Instance.new("ScrollingFrame")
 	body.Name = "Body"
 	body.BackgroundTransparency = 1
@@ -66,7 +53,7 @@ local function build()
 	body.Size = UDim2.new(1, 0, 1, 0)
 	body.ScrollBarThickness = 4
 	body.AutomaticCanvasSize = Enum.AutomaticSize.None
-	body.Parent = panel.content
+	body.Parent = parent
 
 	local sel = { role = 1, size = #B.sizes }
 	local y = 10
@@ -167,16 +154,28 @@ local function build()
 	refs = { update = update, body = body }
 end
 
+-- QUEUE-ALL9C 1-4: 파티창(panels/Party)이 [파티 찾기] 탭 틀을 넘겨 짓는다(옛 독립 window 삭제)
+function PartyBoard.mount(parent)
+	build(parent)
+end
+
+function PartyBoard.refresh()
+	if refs then
+		refs.update()
+	end
+end
+
 function PartyBoard.init()
-	build()
 	boardSync.OnClientEvent:Connect(function(list)
 		posts = type(list) == "table" and list or {}
-		refs.update()
+		if refs then
+			refs.update()
+		end
 	end)
 end
 
 function PartyBoard.open()
-	UIManager.open(PartyBoard.id)
+	require(script.Parent.Party).openTab("board")
 end
 
 function PartyBoard.debugState()

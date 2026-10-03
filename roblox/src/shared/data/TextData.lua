@@ -61,12 +61,12 @@ local TextData = {
 		["inv.act.craft"] = "재련",
 		["inv.act.reroll"] = "리롤({count}장)",
 		-- (A2-N4 §4-4 파티 모집 게시판 이어서)
-		["party.board.title"] = "파티 모집",
+		["party.tab.party"] = "내 파티", -- QUEUE-ALL9C 1-4 파티창 탭
+		["party.tab.board"] = "파티 찾기",
 		-- QUEUE-ALL3 Q8 이름표
 		["nameplate.mob.level"] = "Lv.{level}", -- 몬스터 이름표의 레벨 = 내 스테이지(C1 - 잡몹 세기는 보는 사람 스테이지를 따른다)
 		["party.inviteTop"] = "친구 초대 · 둘 다 보상",
 		["party.invitePrompt"] = "첫 보스 처치! 친구를 초대하면 둘 다 보상을 받아요 (P)",
-		["party.board.open"] = "모집 게시판",
 		["party.board.posted"] = "모집을 올렸습니다 - 다른 사람이 빠른 참가로 들어옵니다",
 		["party.board.row"] = "스테이지 {stage} · {role} · {count}/{size}명",
 		["update.board.title"] = "업데이트 소식", -- QUEUE-STUDIO 0-2: 허브 업데이트 게시판(UpdateBoard)

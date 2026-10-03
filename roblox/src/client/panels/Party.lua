@@ -21,6 +21,8 @@ local PartyAway = require(script.Parent.Parent.hud.PartyAway)
 local Panel = require(script.Parent.Parent.ui.kit.Panel)
 local Toast = require(script.Parent.Parent.ui.kit.Toast)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
+local Tabs = require(script.Parent.Parent.ui.kit.Tabs)
+local PartyBoard = require(script.Parent.PartyBoard) -- QUEUE-ALL9C 1-4: 모집 게시판 = 파티창 [파티 찾기] 탭 안(옛 독립 창)
 
 local Party = {}
 
@@ -92,12 +94,23 @@ local function build()
 		end,
 	})
 
+	-- QUEUE-ALL9C 1-4(H + L1): 파티 기능 한 곳 = HUD [파티] 버튼 · P → 이 창의 탭(내 파티 · 파티 찾기). 친구 초대 = 제목줄 오른쪽(그대로).
+	local tabTop = Theme.tabHeight + 10
+	local boardPage = Instance.new("Frame")
+	boardPage.Name = "BoardPage"
+	boardPage.BackgroundTransparency = 1
+	boardPage.Position = UDim2.fromOffset(0, tabTop)
+	boardPage.Size = UDim2.new(1, 0, 1, -tabTop)
+	boardPage.Visible = false
+	boardPage.Parent = panel.content
+
 	-- 고정 캔버스 + 창 안 스크롤: 화면이 작아 창이 캔버스보다 작아지면 위아래(좁으면 좌우)로 민다.
 	local scroll = Instance.new("ScrollingFrame")
 	scroll.Name = "Body"
 	scroll.BackgroundTransparency = 1
 	scroll.BorderSizePixel = 0
-	scroll.Size = UDim2.new(1, 0, 1, 0)
+	scroll.Position = UDim2.fromOffset(0, tabTop)
+	scroll.Size = UDim2.new(1, 0, 1, -tabTop)
 	scroll.ScrollingDirection = Enum.ScrollingDirection.XY
 	scroll.ScrollBarThickness = 4
 	scroll.ScrollBarImageColor3 = UIColors.rim
@@ -303,12 +316,17 @@ local function build()
 		FriendInvite.prompt()
 	end)
 
-	-- A2-N4 §4-4: [모집 게시판] - 같은 서버 파티 모집(panels/PartyBoard)
-	local boardButton = makePillButton(myColumn, Text.get("party.board.open"), 168, friendY, 110, false)
-	boardButton.Name = "PartyBoardButton"
-	boardButton.Activated:Connect(function()
-		UIManager.open("partyBoard")
-	end)
+	-- A2-N4 §4-4 모집 게시판 → QUEUE-ALL9C 1-4: [파티 찾기] 탭(옛 [모집 게시판] 버튼 · 독립 창 삭제)
+	PartyBoard.mount(boardPage)
+	local tabs = Tabs.build({ parent = panel.content, tabs = { { id = "party", text = Text.get("party.tab.party") }, { id = "board", text = Text.get("party.tab.board") } },
+		selected = "party", width = 420, position = UDim2.fromOffset(12, 4), onSelect = function(id)
+			scroll.Visible = id == "party"
+			boardPage.Visible = id == "board"
+			if id == "board" then
+				PartyBoard.refresh()
+			end
+		end })
+	Party.tabs = tabs
 
 	local function ensureRows(rowsTable, parent, count)
 		for i = #rowsTable + 1, count do
@@ -602,6 +620,16 @@ function Party.init()
 	Players.PlayerRemoving:Connect(function()
 		task.defer(refs.update)
 	end)
+end
+
+-- QUEUE-ALL9C 1-4: 파티창을 그 탭으로 연다(party | board)
+function Party.openTab(tabId)
+	if not UIManager.isOpen(Party.id) then
+		UIManager.open(Party.id)
+	end
+	if Party.tabs then
+		Party.tabs.select(tabId or "party", false)
+	end
 end
 
 -- 검사용: 지금 그려진 파티창 줄들(내 파티 · 서버 플레이어)의 이름 글(태그 없는 글)과 스크롤 캔버스.
