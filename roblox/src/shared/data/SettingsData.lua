@@ -3,7 +3,7 @@
 --   B4 사운드: kind volume(0 ~ 1 숫자) = 카테고리별 음량(SoundData.categories가 settingKey로 가리킨다 · 클라 SoundHooks가 Attribute로 읽는다). 저장은 같은 settings 표(없는 키 = 기본값 - 이관 없음).
 --   reduceFlashes = 번개 · 태초 화면 섬광 끄기(관문 날씨 섬광 끔 · 피뢰침 방전은 흰 번쩍 대신 밝기만 · 태초 연출의 화면 밝아짐 없음 - 보스 경고 표시는 그대로).
 return {
-	order = { "cameraTopDown", "reduceFlashes", "screenShake", "dimOthersTrail", "autoStage", "volumeSfx", "volumeMusic", "volumeUi", "volumeBossCue", "transcendNotice", "fxLevel", "volumeAmbient", "graphics", "language", "quietOthersSfx", "minimapOn", "minimapRotate", "minimapFar", "mapHintSeen", "hubIntroRank", "hubIntroBoard", "hubIntroChallenge", "hubIntroTailor", "bulkSellGrades", "sellHintSeen", "weekendBannerAt" },
+	order = { "cameraTopDown", "reduceFlashes", "screenShake", "dimOthersTrail", "autoStage", "volumeSfx", "volumeMusic", "volumeUi", "volumeBossCue", "transcendNotice", "fxLevel", "volumeAmbient", "muteSfx", "muteUi", "muteAmbient", "muteMusic", "graphics", "language", "quietOthersSfx", "minimapOn", "minimapRotate", "minimapFar", "mapHintSeen", "hubIntroRank", "hubIntroBoard", "hubIntroChallenge", "hubIntroTailor", "bulkSellGrades", "sellHintSeen", "weekendBannerAt" },
 	keys = {
 		cameraTopDown = { kind = "boolean", default = false, attrs = { "CameraTopDown" } },
 		reduceFlashes = { kind = "boolean", default = false, attrs = { "ReduceFlashes" } },
@@ -34,6 +34,11 @@ return {
 		-- QUEUE-ALL2 P2 B-4 ⑤ · 09 문서 B-2: 연출 세기 하나로 흔들림 · 번쩍임 · 남의 효과를 함께 줄인다(client/FxSettings가 옛 Attribute로 풀어 준다 - 흔들림 끔 = 옛 screenShake false와 같음)
 		fxLevel = { kind = "choice", default = "normal", options = { "normal", "low", "off" }, attrs = { "FxLevel" } },
 		volumeAmbient = { kind = "volume", default = 1, attrs = { "SoundVolumeAmbient" } }, -- QUEUE-ALL2 P5 환경음(SoundGroup Ambient)
+		-- QUEUE-ALL9C 1-7 L4 그룹별 음소거(음량 값은 그대로 두고 0으로 - 풀면 원래 음량) · 없는 키 = 기본값(이관 없음)
+		muteSfx = { kind = "boolean", default = false, attrs = { "SoundMuteSfx" } },
+		muteUi = { kind = "boolean", default = false, attrs = { "SoundMuteUi" } },
+		muteAmbient = { kind = "boolean", default = false, attrs = { "SoundMuteAmbient" } },
+		muteMusic = { kind = "boolean", default = false, attrs = { "SoundMuteMusic" } },
 		-- 가벼움 = 먼 산 LOD · 나무 바람 · 풀 덤불 끔(게임 쪽 부담만 - 로블록스 품질 설정은 그대로). QUEUE-ALL6 A2: 기본 "auto"(안 고름 - 저장 안 됨) = 클라 GraphicsMode가 기기로 판별(graphicsAuto).
 		--   고를 수 있는 값은 options(normal · lite)뿐 - 설정 창에서 바꾸면 그 값이 저장되고 이후 유지.
 		graphics = { kind = "choice", default = "auto", options = { "normal", "lite" }, attrs = { "GraphicsMode" } },

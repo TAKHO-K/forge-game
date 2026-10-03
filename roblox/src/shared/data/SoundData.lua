@@ -4,11 +4,11 @@
 --   음원을 넣을 때는 soundId만 "rbxassetid://..."로 채운다. 소리는 보조 단서다 - 시각 전조를 지우지 않는다(docs/design/sound-accessibility-check.md).
 return {
 	categories = {
-		sfx = { settingKey = "volumeSfx" },
-		music = { settingKey = "volumeMusic" },
-		ui = { settingKey = "volumeUi" },
+		sfx = { settingKey = "volumeSfx", muteKey = "muteSfx" }, -- QUEUE-ALL9C 1-7 muteKey = 음소거 설정
+		music = { settingKey = "volumeMusic", muteKey = "muteMusic" },
+		ui = { settingKey = "volumeUi", muteKey = "muteUi" },
 		bossCue = { settingKey = "volumeBossCue" },
-		ambient = { settingKey = "volumeAmbient" }, -- QUEUE-ALL2 P5 환경(귀환 · 체크포인트 집중 등)
+		ambient = { settingKey = "volumeAmbient", muteKey = "muteAmbient" }, -- QUEUE-ALL2 P5 환경(귀환 · 체크포인트 집중 등)
 	},
 	-- QUEUE-ALL2 P5 · 09 문서 C: 설정 창 음량 4줄 = 효과 · UI · 환경 · 음악(보스 전조 bossCue는 효과 줄이 함께 - SoundHooks가 sfx 음량을 곱한다)
 	categoryOrder = { "sfx", "ui", "ambient", "music" }, -- 설정 창 줄 순서

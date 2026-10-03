@@ -10,6 +10,7 @@ local Text = require(ReplicatedStorage.Shared.Text)
 local AutoStageData = require(ReplicatedStorage.Shared.data.AutoStageData)
 local SettingsData = require(ReplicatedStorage.Shared.data.SettingsData)
 local SoundData = require(ReplicatedStorage.Shared.data.SoundData)
+local UserInputService = game:GetService("UserInputService") -- QUEUE-ALL9C 1-7 음량 슬라이더 끌기
 local TranscendentData = require(ReplicatedStorage.Shared.data.TranscendentData)
 local Panel = require(script.Parent.Parent.ui.kit.Panel)
 local Toggle = require(script.Parent.Parent.ui.kit.Toggle)
@@ -140,32 +141,110 @@ local function build()
 		local y = PAD + (index - 1) * 52
 		local nameLabel = Theme.label(pages.sound, Text.get("settings.volume." .. categoryId), "body", "textPrimary")
 		nameLabel.Position = UDim2.fromOffset(PAD, y)
-		nameLabel.Size = UDim2.new(0, 140, 0, Theme.buttonHeight)
-		local valueLabel = Theme.label(pages.sound, "", "body", "textPrimary")
-		valueLabel.Name = "VolumeValue_" .. categoryId
-		valueLabel.TextXAlignment = Enum.TextXAlignment.Center
-		valueLabel.Position = UDim2.fromOffset(PAD + 244, y)
-		valueLabel.Size = UDim2.new(0, 56, 0, Theme.buttonHeight)
+		nameLabel.Size = UDim2.new(0, 110, 0, Theme.buttonHeight)
+		-- QUEUE-ALL9C 1-7 L4: [슬라이더(누르거나 끌기)] [숫자 0 ~ 100 입력] [음소거] - 손을 뗄 때 · 입력을 마칠 때 저장(끄는 중에는 Attribute만 - 소리가 바로 바뀐다)
+		local muteKey = SoundData.categories[categoryId].muteKey
+		local muteDef = muteKey and SettingsData.keys[muteKey]
+		local SLIDER_X, SLIDER_W = PAD + 116, 170 -- 창 폭 520 안: 이름 110 · 슬라이더 170 · 숫자 52 · 음소거 96
+		local track = Instance.new("TextButton")
+		track.Name = "VolumeSlider_" .. categoryId
+		track.Text = ""
+		track.AutoButtonColor = false
+		track.BackgroundColor3 = Theme.color("slot")
+		track.Position = UDim2.fromOffset(SLIDER_X, y + Theme.buttonHeight / 2 - 6)
+		track.Size = UDim2.fromOffset(SLIDER_W, 12)
+		track.Parent = pages.sound
+		Theme.corner(track, 6)
+		local fill = Instance.new("Frame")
+		fill.Name = "Fill"
+		fill.BackgroundColor3 = Theme.color("ember")
+		fill.Size = UDim2.fromScale(1, 1)
+		fill.Parent = track
+		Theme.corner(fill, 6)
+		local knob = Instance.new("Frame")
+		knob.Name = "Knob"
+		knob.AnchorPoint = Vector2.new(0.5, 0.5)
+		knob.Size = UDim2.fromOffset(20, 20)
+		knob.BackgroundColor3 = Color3.fromRGB(240, 240, 245)
+		knob.Parent = track
+		Theme.corner(knob, 10)
+		local box = Instance.new("TextBox")
+		box.Name = "VolumeValue_" .. categoryId
+		box.Position = UDim2.fromOffset(SLIDER_X + SLIDER_W + 12, y)
+		box.Size = UDim2.new(0, 52, 0, Theme.buttonHeight)
+		box.BackgroundColor3 = Theme.color("slot")
+		box.TextColor3 = Theme.color("textPrimary")
+		box.Font = Theme.font
+		box.TextSize = 16
+		box.ClearTextOnFocus = true -- 누르면 비우고 새로 입력(비운 채 나가면 원래 값으로 다시 그림)
+		box.Parent = pages.sound
+		Theme.corner(box, 8)
 		local function current()
 			local v = player:GetAttribute(def.attrs[1])
 			return type(v) == "number" and v or def.default
 		end
-		local function render()
-			valueLabel.Text = Text.get("settings.volumeValue", { percent = tostring(math.floor(current() * 100 + 0.5)) })
+		local function muted()
+			return muteDef ~= nil and player:GetAttribute(muteDef.attrs[1]) == true
 		end
-		local function step(sign)
-			local v = math.clamp(current() + sign * SettingsData.volumeStep, 0, 1)
-			v = math.floor(v * 100 + 0.5) / 100
+		local muteButton
+		local function render()
+			local v = current()
+			fill.Size = UDim2.fromScale(v, 1)
+			knob.Position = UDim2.fromScale(v, 0.5)
+			fill.BackgroundColor3 = muted() and Theme.color("textSecondary") or Theme.color("ember")
+			if not box:IsFocused() then
+				box.Text = tostring(math.floor(v * 100 + 0.5))
+			end
+			if muteButton then
+				muteButton.setText(Text.get(muted() and "settings.muteOn" or "settings.muteOff"))
+			end
+		end
+		local function setValue(v, persist)
+			v = math.floor(math.clamp(v, 0, 1) * 100 + 0.5) / 100
 			player:SetAttribute(def.attrs[1], v)
-			save(key, v)
+			if persist then
+				save(key, v)
+			end
 			render()
 		end
-		Button.build({ parent = pages.sound, name = "VolumeDown_" .. categoryId, kind = "secondary", width = 88, position = UDim2.fromOffset(PAD + 148, y), text = "−", onActivated = function()
-			step(-1)
-		end })
-		Button.build({ parent = pages.sound, name = "VolumeUp_" .. categoryId, kind = "secondary", width = 88, position = UDim2.fromOffset(PAD + 308, y), text = "+", onActivated = function()
-			step(1)
-		end })
+		local dragging = false
+		local function fromX(x)
+			return (x - track.AbsolutePosition.X) / math.max(track.AbsoluteSize.X, 1)
+		end
+		track.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				dragging = true
+				setValue(fromX(input.Position.X), false)
+			end
+		end)
+		UserInputService.InputChanged:Connect(function(input)
+			if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+				setValue(fromX(input.Position.X), false)
+			end
+		end)
+		UserInputService.InputEnded:Connect(function(input)
+			if dragging and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+				dragging = false
+				setValue(current(), true)
+			end
+		end)
+		box.FocusLost:Connect(function()
+			local n = tonumber((box.Text:gsub("%%", "")))
+			if n and n == n then
+				setValue(n / 100, true)
+			end
+			render()
+		end)
+		if muteDef then
+			muteButton = Button.build({ parent = pages.sound, name = "Mute_" .. categoryId, kind = "secondary", width = 96, position = UDim2.fromOffset(SLIDER_X + SLIDER_W + 74, y),
+				text = Text.get("settings.muteOff"), onActivated = function()
+					local v = not muted()
+					player:SetAttribute(muteDef.attrs[1], v)
+					save(muteKey, v)
+					render()
+				end })
+			player:GetAttributeChangedSignal(muteDef.attrs[1]):Connect(render)
+		end
 		player:GetAttributeChangedSignal(def.attrs[1]):Connect(render)
 		render()
 		volumeRows[categoryId] = { render = render }

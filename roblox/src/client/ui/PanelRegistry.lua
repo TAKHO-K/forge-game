@@ -29,10 +29,10 @@ PanelRegistry.panels = {
 	-- S15: 구역(스테이지) 선택(StageSelectPanel.lua) - QUEUE-ALL2: 키 M → N · 이름 "구역 선택". 견습 중에는 UIManager의 canOpen이 막는다.
 	{ id = "stageSelect", kind = "station", hotkey = Enum.KeyCode.N, menuOrder = 4, iconKey = "zone_select", menuLabel = Text.get("ui.panel.menu.stageSelect"), menuHiddenWhile = { "tutorial", "noClass" } },
 	{ id = "quests", kind = "window", hotkey = Enum.KeyCode.J, menuOrder = 5, iconKey = "quest", menuLabel = Text.get("ui.panel.menu.quests"), menuHiddenWhile = { "noClass" } }, -- QUEUE-10h Q7(panels/Quests) · QUEUE-ALL3 Q3 탭
-	{ id = "codex", kind = "window", hotkey = Enum.KeyCode.K, menuOrder = 6, iconKey = "codex", menuLabel = Text.get("ui.panel.menu.codex"), menuHiddenWhile = { "tutorial", "noClass" } }, -- QUEUE-ALL1 P5 도감 v2(panels/Codex)
+	{ id = "codex", kind = "window", hotkey = Enum.KeyCode.K, menuOrder = 6, iconKey = "codex", menuLabel = Text.get("ui.panel.menu.codex"), menuHiddenWhile = { "tutorial", "noClass" }, menuMore = true }, -- QUEUE-ALL1 P5 도감 v2(panels/Codex) · QUEUE-ALL9C 1-7 L2: 더보기 안(가끔 확인 - K · 알림 점은 더보기 버튼으로)
 	{ id = "training", kind = "window", hotkey = Enum.KeyCode.U, menuOrder = 7, iconKey = "training", menuLabel = Text.get("ui.panel.menu.training"), menuHiddenWhile = { "tutorial", "noClass" } }, -- QUEUE-ALL3 Q2(panels/Training - 옛 퀘스트 창 수련 줄)
 	{ id = "party", kind = "window", hotkey = Enum.KeyCode.P, iconKey = "party", menuLabel = Text.get("ui.panel.menu.party") }, -- S12b 파티창(panels/Party.lua) · 친구 초대 = 창 맨 위 · QUEUE-ALL9C 1-4: 더보기에서 뺌 - 열기 = HUD [파티] 버튼 · P 하나(창 안 탭 = 내 파티 · 파티 찾기)
-	{ id = "leaderboard", kind = "window", hotkey = Enum.KeyCode.L, iconKey = "rank", menuLabel = Text.get("ui.panel.menu.leaderboard"), opener = "Leaderboard" }, -- QUEUE-ALL7B 2: 메뉴 칸 없음(허브 명예의 전당 · L 키) -- panels/Leaderboard(처음 열 때 짓는다)
+	{ id = "leaderboard", kind = "window", hotkey = Enum.KeyCode.L, menuOrder = 9, iconKey = "rank", menuLabel = Text.get("ui.panel.menu.leaderboard"), opener = "Leaderboard", menuMore = true }, -- QUEUE-ALL9C 1-7 L2: 더보기 안(허브 명예의 전당 · L 그대로) -- QUEUE-ALL7B 2: 메뉴 칸 없음(허브 명예의 전당 · L 키) -- panels/Leaderboard(처음 열 때 짓는다)
 	{ id = "settings", kind = "window", menuOrder = 10, iconKey = "settings", menuLabel = Text.get("ui.panel.menu.settings"), menuMore = true, opener = "Settings" }, -- panels/Settings(분류 탭 · 단축키 보기)
 }
 

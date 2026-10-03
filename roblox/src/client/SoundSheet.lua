@@ -18,6 +18,7 @@ local SoundSheet = {}
 SoundSheet.otherScale = Mix.otherScale
 SoundSheet.rollOffMax = Mix.rollOffMaxDistance
 local GROUP_ATTR = { SFX = "SoundVolumeSfx", UI = "SoundVolumeUi", Ambient = "SoundVolumeAmbient", Music = "SoundVolumeMusic" }
+local MUTE_ATTR = { SFX = "SoundMuteSfx", UI = "SoundMuteUi", Ambient = "SoundMuteAmbient", Music = "SoundMuteMusic" } -- QUEUE-ALL9C 1-7 음소거(SettingsData mute*)
 local QUIET_OTHERS_ATTR = "QuietOthersSfx" -- 설정 "다른 플레이어 효과음 줄이기"(SettingsData quietOthersSfx)
 
 local player = Players.LocalPlayer
@@ -42,6 +43,9 @@ local function applyGroup(name)
 	local attr = GROUP_ATTR[name]
 	local v = attr and player:GetAttribute(attr)
 	local setting = type(v) == "number" and math.clamp(v, 0, 1) or 1
+	if MUTE_ATTR[name] and player:GetAttribute(MUTE_ATTR[name]) == true then
+		setting = 0
+	end
 	local duck = (os.clock() < duckUntil and table.find(Mix.duck.groups, name)) and Mix.duck.scale or 1
 	g.Volume = (Mix.groups[name] or 1) * setting * duck
 end
@@ -55,8 +59,8 @@ local function group(name)
 		g.Parent = SoundService
 		groups[name] = g
 		local attr = GROUP_ATTR[name]
-		if attr then
-			player:GetAttributeChangedSignal(attr):Connect(function()
+		for _, a in ipairs({ attr, MUTE_ATTR[name] }) do
+			player:GetAttributeChangedSignal(a):Connect(function()
 				applyGroup(name)
 			end)
 		end
