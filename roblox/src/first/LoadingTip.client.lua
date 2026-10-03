@@ -1,6 +1,11 @@
 -- 로딩 문구 한 줄(S12, PRD 20.73 [7-1]) - 화면 하단에 무작위 1개를 띄우고 게임이 다 불러와진 뒤 1초에 페이드아웃한다. 이미지 없음.
 -- 로블록스 기본 로딩 화면은 끄지 않는다(RemoveDefaultLoadingScreen을 부르지 않는다). 새 색을 만들지 않으려고 기본 흰색 글씨 + 검은 외곽선만 쓴다.
 
+-- QUEUE-ALL9C 2-3: 첫 화면이 메인 메뉴 가림막(MenuBoot.client.lua)으로 바뀌어 끔 - 스위치 MenuBootData.legacyLoadingTip(false = 끔 · 코드는 남김 · 문구는 TextData_menu menu.tip.*로 옮김)
+if not require(script.Parent:WaitForChild("MenuBootData")).legacyLoadingTip then
+	return
+end
+
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 

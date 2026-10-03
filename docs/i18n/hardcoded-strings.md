@@ -14,7 +14,7 @@
 | 귀환 · 이동 알림 37 · 토벌 거절 사유 표 | `server/Travel.lua` · `server/BossGate.lua` `raidReasonText`(Travel 740줄이 표 값을 그대로 보냄) | 작업 시각에 다른 작업자(보안)가 Travel 수정 중 - 건너뜀 |
 | 관전 알림 5 · 주간 도전 2 | `server/SpectateService.server.lua` · `server/WeeklyChallengeService.lua` | 같은 이유(다른 작업자 수정 중) |
 | 로드 실패 킥 문장 | `server/SaveServer.server.lua` 30줄 | 저장 감사 작업자 파일 |
-| 로딩 팁 4 | `first/LoadingTips.lua` | ReplicatedFirst - Shared보다 먼저 떠서 Text를 못 부른다(언어 Attribute도 아직 없음) |
+| 로딩 팁 4 | `first/LoadingTips.lua` | ReplicatedFirst - Shared보다 먼저 떠서 Text를 못 부른다(언어 Attribute도 아직 없음) · **QUEUE-ALL9C 2-3: 옛 스크립트 꺼짐(MenuBootData.legacyLoadingTip) - 같은 4줄이 TextData_menu `menu.tip.1~4`(ko · en)로 옮겨져 메뉴 로딩 막대 위에 나온다** |
 | 선물 보낸 이 "운영" · "친구 초대" | `server/GiftService.lua` · `server/SocialRewardService.lua` | 선물 기록 `from`에 **저장**되는 글 - 바꾸려면 저장 구조 변경(결정 필요) |
 | 방송 문장(모두에게 같은 글) | 보물상자 등장 · 소멸 · 열림(`MonsterSpawner` · `CombatResolution` FireAllClients) · 관문 · 상점 · 강화대 ProximityPrompt(`BossGate` · `HuntingGround` · `EnhanceStation`) · 명예의 전당 판(`HallOfFame`) · 정거장 · 전망대 명판(`WorldMapLayout` → 서버 WorldMap 빌보드) | 키는 만들었지만 서버가 ko로 완성해 보낸다 - 키 + 인자로 보내고 클라가 Text.get 하도록 프로토콜 변경 필요 |
 | 데이터 표시 이름 617 | `shared/data/*`(BossData 99 · WorldMapData 85 · QuestData · CodexData · EggData · SkillData 이름 · ArmorData 등급 이름 · DropNoticeData " 외 %d" · CodexData.text 템플릿 등) | 범위가 커서 보고만 - 데이터에 `nameKey` 칸 + TextData 키 방식(값은 지금처럼 ko 원문 유지). en 화면에서도 `{grade}` · `{part}` · `{boss}` 자리에 한국어 이름이 들어간다 |

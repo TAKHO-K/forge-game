@@ -876,6 +876,7 @@ for _, parts in ipairs({
 	require(script.Parent.TextData_shared),
 	require(script.Parent.TextData_server),
 	require(script.Parent.TextData_items), -- QUEUE-ALL6 C 아이템 이름 · 설명
+	require(script.Parent.TextData_menu), -- QUEUE-ALL9C 2-3 메인 메뉴 · 2-4 직업 선택
 }) do
 	for lang, part in pairs(parts) do
 		for key, template in pairs(part) do

@@ -266,7 +266,7 @@
 
 1. 상품 · 패스 13개 **가격**(지금 자리값 199 · 149 · 399 · 99 · 49).
 2. 상품 · 패스 13개 **512 아이콘** - QUEUE-ALL5 E에서 13장 제작(`docs/release/icons/`) → 이대로 쓸지 · 다시 그릴지만 결정.
-3. **게임 이름**(설명 초안 `{게임 이름}`).
+3. **게임 이름**(설명 초안 `{게임 이름}`). **게임 이름 확정 후 교체(ALL9F 출시 전 점검)**: 게임 안 이름 = `roblox/src/shared/data/GameInfoData.lua` `name` 한 곳(지금 자리값 `"NAME"` - 메인 메뉴 로고 자리) · `python roblox/tools/i18n/check_textdata.py`가 자리값이 남아 있으면 "경고: 게임 이름이 아직 자리값" 줄을 낸다(QUEUE-ALL9C 2-3).
 4. 경험 **아이콘 1장**(A 풀밭 · B 빛기둥 · C 근접 · **D 근접 + 초월 대검 + 빛기둥(추천)** - Blender판 `docs/release/icons/game_icon_blender_*.png` · 게임 안 촬영판 `game_icon_capture_D.png`) · **썸네일 순서** · 장르(추천 RPG).
 5. **시즌 1 시작일** `LeaderboardConfig.firstSeasonDateKst`(추천 오픈일) - 합동 목표 때문에 **월요일 오픈** 추천.
 6. **체크포인트 순간이동** 출시 때 켤지(`WorldMapData.lua:451` - 지금 켬).

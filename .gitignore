@@ -12,6 +12,8 @@ docs/art/ref/*
 !docs/art/ref/ChatGPT Image 2026년 10월 3일 *.png
 !docs/art/ref/gpt-gear-index.md
 !docs/art/ref/compare/
+# QUEUE-ALL9C 2-3: 메인 메뉴 안전 영역 안내(우리 키 아트 · roblox/tools/blender/menu_safe_zone.py)
+!docs/art/ref/menu-safe-zone.png
 
 # Python 캐시(Blender 스크립트 실행 산출물)
 __pycache__/
@@ -20,3 +22,6 @@ __pycache__/
 
 # Claude 작업 캡처 · 결과물(세션 산출물 - 저장소에 넣지 않는다 · QUEUE-ALL8)
 Claude outputs/
+
+# QUEUE-ALL9C 2-3: 사용자가 잘못 넣은 키 아트 사본(정본 = roblox/art/ui/menu_keyart_v1.png) - 지우지 않고 저장소에만 안 올림
+docs/art/ui/menu_keyart_v1.png.png

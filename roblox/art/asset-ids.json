@@ -4516,6 +4516,62 @@
   "status": "Approved",
   "imageId": 127730561493160
  },
+ "ui/menu_bg.png": {
+  "sha256": "c5d2b635e1039ce278352b54f6910d6b1f137f1347241247494b42d0edb1e352",
+  "assetType": "Decal",
+  "assetId": 95255177655623,
+  "status": "Approved",
+  "imageId": 123748120333845
+ },
+ "ui/menu_gate.png": {
+  "sha256": "20871b6e3699651b8239c35db4884173fd79d4e089c572c03008f5692a5ad736",
+  "assetType": "Decal",
+  "assetId": 109635341223921,
+  "status": "Approved",
+  "imageId": 91597549008463
+ },
+ "ui/menu_hub.png": {
+  "sha256": "8c57ac5fc77f79aa7ba48602849d2c2f255406d631acb8221c9e158011dc5d96",
+  "assetType": "Decal",
+  "assetId": 89035135155080,
+  "status": "Approved",
+  "imageId": 113685914048484
+ },
+ "ui/menu_hunt.png": {
+  "sha256": "10a5870585170c6a10cb4cb2621f3e96f145d5fa7aad32c26cfcda81ad371fee",
+  "assetType": "Decal",
+  "assetId": 95339089456490,
+  "status": "Approved",
+  "imageId": 132971634405925
+ },
+ "ui/menu_key_L.png": {
+  "sha256": "1efe718997fbe42b78b050fef1df0a469d484c491180cbb3737be0ea01d9309d",
+  "assetType": "Decal",
+  "assetId": 114878405726835,
+  "status": "Approved",
+  "imageId": 116310199343439
+ },
+ "ui/menu_key_R.png": {
+  "sha256": "41e446e76194adc6f3ff847f25be085d0323ad0f71f47bbf30919742f6a22835",
+  "assetType": "Decal",
+  "assetId": 79179646032267,
+  "status": "Approved",
+  "imageId": 111740079079123
+ },
+ "ui/menu_keyart_v1_L.png": {
+  "sha256": "4438cae3d1d4d04d34ece43a9041f18e01cae0a507d07e2b603566cc4a11918c",
+  "assetType": "Decal",
+  "assetId": 111049944909788,
+  "status": "Approved",
+  "imageId": 75056623653247
+ },
+ "ui/menu_keyart_v1_R.png": {
+  "sha256": "7af1b7de8bb9289315e88c2fa934360e8071788cf2330e2ac49929db30afc7db",
+  "assetType": "Decal",
+  "assetId": 132580520230344,
+  "status": "Approved",
+  "imageId": 82966859918208
+ },
  "weapons/bow_ancient.fbx": {
   "sha256": "742f05a890664cd259cc7dd622d39ba8216ae168234344937ed13b13b41f6853",
   "assetType": "Model",

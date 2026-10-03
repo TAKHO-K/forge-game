@@ -7,6 +7,7 @@
 #   QUEUE-ALL9C 1-1(A1) 실패 = 시스템 · 확인 창 · 알림 키(SYS_KEY)의 ko 값이 해요체(~해요 · ~어요 · ~까요? · ~죠) - 합쇼체(~니다 · ~니까)로. 요청형 "~하세요 · ~해 주세요"는 허용.
 #     튜토리얼 · NPC · 안내(help · guide · scene · gimmick · hub …)는 해요체 가능. SYS_KEY에 걸리지만 안내 성격인 키 = TONE_EXCEPT 표(이유와 함께).
 #   참고(실패 아님) = en 40자 넘는 문장 수 · 키를 변수로 넘기는 호출 수(검사 못 함).
+#   QUEUE-ALL9C 2-3 경고(실패 아님) = 게임 이름이 자리값(GameInfoData.name == placeholderName "NAME") - 출시 전 점검에서 확정 후 교체.
 import io
 import os
 import re
@@ -39,6 +40,20 @@ TONE_EXCEPT = {
     'gimmick.frost_giant.fail': '보스 기믹 실패 안내(짧은 구호 - 튜토리얼 성격)',
     'hub.service.noticeBoard.intro': '마을 게시판 NPC 소개(안내)',
 }
+
+
+# QUEUE-ALL9C 2-3: 게임 이름 자리값(GameInfoData.name == placeholderName "NAME") - 실패가 아니라 경고(출시 전 점검: 게임 이름 확정 후 교체)
+GAME_NAME = re.compile(r'^\s*name\s*=\s*"([^"]*)"', re.M)
+GAME_PLACEHOLDER = re.compile(r'^\s*placeholderName\s*=\s*"([^"]*)"', re.M)
+
+
+def game_name_warning():
+    path = os.path.join(DATA, 'GameInfoData.lua')
+    text = io.open(path, encoding='utf-8').read()
+    name, holder = GAME_NAME.search(text), GAME_PLACEHOLDER.search(text)
+    if name and holder and name.group(1) == holder.group(1):
+        return '게임 이름이 아직 자리값 "%s"입니다(GameInfoData.lua) - 게임 이름 확정 후 교체(출시 전 점검)' % name.group(1)
+    return None
 
 
 def a1_text(tables):
@@ -236,6 +251,9 @@ def main():
     show('확인 창 · 버튼 문어체(ALL9A 2-3)', tone)
     a1 = a1_text(tables)
     show('시스템 · 확인 창 · 알림 해요체(ALL9C 1-1 A1 - 합쇼체로)', a1)
+    name_warn = game_name_warning()
+    if name_warn:
+        print('경고: ' + name_warn)
     print('참고: en 40자 넘는 문장(자리 제외) %d · 키를 변수로 넘기는 호출 %d(검사 못 함) · 코드에서 글자 그대로 찾은 키 %d' % (len(long_en), dynamic, len(used)))
     failed = errors or no_en or no_ko or place or missing or prefix_missing or dev or tone or a1
     print('결과: %s' % ('실패' if failed else '통과'))

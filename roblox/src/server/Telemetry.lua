@@ -161,7 +161,38 @@ function Telemetry.onLeaving(player)
 	pending[player] = nil
 end
 
+-- QUEUE-ALL9C 2-3 첫 화면 측정(ALL9F 집계): 클라가 입장 때 한 번 보낸다 - 접속 → 메뉴 표시 · 메뉴 → 플레이(ms) · 15초 상한 발동 · 메뉴 건너뜀.
+--   값 검사만(0 ~ 10분 정수 · 불리언) · 사람당 한 번(재입장 = 새 접속이라 다시 받음).
+local menuTimingSeen = {}
+local MENU_MS_MAX = 600000
+local function menuMs(v)
+	return type(v) == "number" and v == v and v >= 0 and v <= MENU_MS_MAX and math.floor(v) or nil
+end
+function Telemetry.onMenuTiming(player, info)
+	if menuTimingSeen[player] or type(info) ~= "table" then
+		return
+	end
+	local showMs, playMs = menuMs(info.showMs), menuMs(info.playMs)
+	if not showMs or not playMs then
+		return
+	end
+	menuTimingSeen[player] = true
+	local capHit, skipped = info.capHit == true, info.skipped == true
+	Telemetry.custom(player, "MenuShowMs", showMs)
+	Telemetry.custom(player, "MenuToPlayMs", playMs)
+	Telemetry.custom(player, "MenuLoadCapHit", capHit and 1 or 0)
+	Telemetry.custom(player, "MenuSkipped", skipped and 1 or 0)
+	print(("[MENU] 측정 접속→메뉴 %dms · 메뉴→플레이 %dms · 상한 %s · 건너뜀 %s"):format(showMs, playMs, tostring(capHit), tostring(skipped)))
+end
+
 function Telemetry.start()
+	local menuRemote = Instance.new("RemoteEvent")
+	menuRemote.Name = "MenuTiming"
+	menuRemote.Parent = ReplicatedStorage
+	menuRemote.OnServerEvent:Connect(Telemetry.onMenuTiming)
+	Players.PlayerRemoving:Connect(function(player)
+		menuTimingSeen[player] = nil
+	end)
 	task.spawn(function()
 		while true do
 			task.wait(TelemetryData.flushSeconds)

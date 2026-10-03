@@ -1,0 +1,17 @@
+{
+ "source": "raw/menu_hub.jpg(임시 시험)",
+ "width": 1920,
+ "height": 788,
+ "parts": [
+  {
+   "file": "ui/menu_key_L.png",
+   "x0": 0,
+   "x1": 962
+  },
+  {
+   "file": "ui/menu_key_R.png",
+   "x0": 958,
+   "x1": 1920
+  }
+ ]
+}
