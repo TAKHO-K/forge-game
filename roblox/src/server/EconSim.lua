@@ -499,6 +499,7 @@ local PART_SCORE = {
 
 local function newState(profile)
 	return {
+		seed = profile.seed, -- QUEUE-ALL9C 0-3: 프로필 시드(운 나쁜 P90 = 강화 굴림만 다른 시드 · nil = EconSimConfig.seed)
 		classId = profile.classId,
 		level = 1,
 		exp = 0,
@@ -763,7 +764,7 @@ function EconSim.commonDraw(state, level)
 	state.drawCount = state.drawCount or {}
 	local n = (state.drawCount[level] or 0) + 1
 	state.drawCount[level] = n
-	local h = mix32(bit32.bxor(mix32(EconSimConfig.seed % 4294967296), mix32(level * 65537 + n)))
+	local h = mix32(bit32.bxor(mix32((state.seed or EconSimConfig.seed) % 4294967296), mix32(level * 65537 + n)))
 	return h / 4294967296
 end
 

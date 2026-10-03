@@ -63,13 +63,30 @@ end
 -- optionFinalDamageBonus(P2.5a) = 옵션 · 보석이 최종 데미지 버킷에 더하는 값(없으면 0). 강화 몫은 weapon.level에서 여기서 더한다.
 -- permanentMultiplier(P2.5b D) = 환생 후 레벨 마일스톤 영구 능력치 배율(없으면 1 - PlayerProfile.getMilestoneMultiplier). 공격력 전체에 곱한다.
 -- dealItemLevels(C5-1) = { gloves = itemLevel, shoes = itemLevel }(PlayerProfile.getDealItemLevels · BalanceSim) - 딜 부위 itemLevel 지수 몫(CharacterLevel.getDealGearMultiplier). nil = 미착용(배율 1이 아니라 벌점 - 25 이하와 같다).
-function PlayerCombat.getAttack(weapon, classId, characterLevel, attackPercentBonus, optionFinalDamageBonus, permanentMultiplier, dealItemLevels)
+-- QUEUE-ALL9C 0-3: 공격력 성장 요소를 항목별로 나눈 목록(곱하는 순서 그대로 - getAttack이 이 목록을 앞에서부터 곱한다 · 분리 전 식과 비트 단위로 같은 값).
+--   id = weaponBase(무기 기본) · grade(무기 등급) · enhance(강화 공격 몫) · class(직업) · level(캐릭터 레벨) · dealGear(장갑 · 신발 itemLevel) · attackPercent(장갑 · 보석 공격%) ·
+--   finalDamage(강화 최종 피해 몫 + 옵션) · permanent(마일스톤 + 수련 + 직업 능력 합연산 버킷). 새 성장 요소(ALL10 초월 강화 등)는 이 목록에 줄을 더한다. 캐릭터 창 상세 스탯이 같은 목록을 읽는다.
+function PlayerCombat.getAttackParts(weapon, classId, characterLevel, attackPercentBonus, optionFinalDamageBonus, permanentMultiplier, dealItemLevels)
 	local class = ClassData.classes[classId]
 	local weaponData = WeaponData.weapons[weapon.id]
-	local gradeMultiplier = gradeMultiplierForIndex(weapon.grade)
-	local base = Enhance.getPlayerAttack(weaponData, weapon.level, class.atk, gradeMultiplier)
-	local attack = base * CharacterLevel.getWeaponExpMultiplier(characterLevel) * CharacterLevel.getDealGearMultiplier(dealItemLevels) * (1 + (attackPercentBonus or 0))
-		* (1 + PlayerCombat.getFinalDamageBonus(weapon.level, optionFinalDamageBonus)) * (permanentMultiplier or 1)
+	return {
+		{ id = "weaponBase", value = weaponData.baseAttack },
+		{ id = "grade", value = gradeMultiplierForIndex(weapon.grade) },
+		{ id = "enhance", value = Enhance.getDamageMultiplier(weapon.level) },
+		{ id = "class", value = class.atk },
+		{ id = "level", value = CharacterLevel.getWeaponExpMultiplier(characterLevel) },
+		{ id = "dealGear", value = CharacterLevel.getDealGearMultiplier(dealItemLevels) },
+		{ id = "attackPercent", value = 1 + (attackPercentBonus or 0) },
+		{ id = "finalDamage", value = 1 + PlayerCombat.getFinalDamageBonus(weapon.level, optionFinalDamageBonus) },
+		{ id = "permanent", value = permanentMultiplier or 1 },
+	}
+end
+
+function PlayerCombat.getAttack(weapon, classId, characterLevel, attackPercentBonus, optionFinalDamageBonus, permanentMultiplier, dealItemLevels)
+	local attack = 1
+	for _, part in ipairs(PlayerCombat.getAttackParts(weapon, classId, characterLevel, attackPercentBonus, optionFinalDamageBonus, permanentMultiplier, dealItemLevels)) do
+		attack *= part.value
+	end
 	return Sanitize.number(attack, 0) -- S21-0 A2: 스탯 합산 출구(고스테이지 double 붕괴 - PRD 감사 §1-2)
 end
 

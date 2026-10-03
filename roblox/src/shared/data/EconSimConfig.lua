@@ -102,6 +102,15 @@ return {
 			enhanceTarget = 30, useProtection = true, rebirth = true,
 			gearCheckMinutes = 5, gemReroll = true, gemRoll = 1.1,
 		},
+		-- QUEUE-ALL9C 0-3(ALL10 대비): 운 나쁜 P90 = 상위 1%와 같은 사람 · 강화 굴림 시드만 다름. 시드 20개(20260923 + i × 7919) 중 +30 도달 90번째 백분위(18번째 = 620.0h · 기본 시드는 160.8h로 20개 중 2번째 빠름 · 중앙 약 334h).
+		unluckyP90 = {
+			displayName = "운 나쁜 P90", hoursPerDay = 12, classId = "bow", huntTierMax = 6, seed = 20292599,
+			targetKillSeconds = 1.125, minSurviveHits = 3, dpsEfficiency = 0.95, moveOverheadSeconds = 0.6, earlyTargetKillSeconds = nil, gemCritSlots = { 1 },
+			bossDpsEfficiency = 0.9, bossKillLimitSeconds = 60, bossAttemptsPerClear = 1.1, bossOverheadSeconds = 10,
+			partySize = 4, partyExpBonus = true, partyHuntsTogether = false,
+			enhanceTarget = 30, useProtection = true, rebirth = true,
+			gearCheckMinutes = 5, gemReroll = true, gemRoll = 1.1,
+		},
 		-- S1 2-5 속도 봉투(합법 최대 - 보고서 표에는 안 나온다): 전 부위 태초(스테이지 1부터 · what-if primordialHold.parts) · 최적 파티(4인 · 같이 사냥) · 조작 효율 1 · 하루 24시간.
 		--   이 곡선(플레이 시간 → 최고 스테이지) × AuditConfig.envelope.margin을 넘는 상승 = 리더보드 등재 보류(AcquisitionAudit).
 		envelope = {
@@ -115,6 +124,7 @@ return {
 		},
 	},
 	profileOrder = { "casual", "normal", "top" },
+	baselineProfiles = { "casual", "normal", "top", "unluckyP90" }, -- QUEUE-ALL9C 0-4 기준선 스냅샷 · ALL10 비교용 4종(관문 · 보고 = profileOrder 그대로)
 
 	-- W3b 파트 0 옵션 굴림 3단계(U[rollMin, rollMax] = U[0.875, 1.125]): 하위 30% 평균 · 전체 평균 · 상위 30% 평균. 상위 = "편하게 깨는 장비" 모형(장비 옵션 축 = 위력 · what-if rollHigh).
 	--   평균 = 프로필 기본(보석 = 프로필 규칙 · 장비 옵션 = 무작위 축 기대 몫). W3b 전 모형은 장비 옵션을 아예 안 셌다(what-if noItemOptions로 비교).
