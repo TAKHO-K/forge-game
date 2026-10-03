@@ -169,7 +169,7 @@ local function build()
 		for memberCount = 2, PartyConfig.maxMembers do
 			table.insert(bonusParts, Text.get("ui.party.help.bonusPart", { count = ("%d"):format(memberCount), percent = ("%d"):format(math.floor(PartyConfig.expBonusByMemberCount[memberCount] * 100 + 0.5)) }))
 		end
-		HelpTooltip.attach(myColumn, UDim2.new(0, 62, 0, 19), { short = Text.get("party.help.short", { percent = gatePercent }), detail = table.concat({ -- G1-1: 2단
+		local helpButton = HelpTooltip.attach(myColumn, UDim2.new(0, 62, 0, 19), { short = Text.get("party.help.short", { percent = gatePercent }), detail = table.concat({ -- G1-1: 2단
 			Text.get("ui.party.help.gateHead", { percent = ("%d"):format(gatePercent) }),
 			Text.get("ui.party.help.gateBody", { percent = ("%d"):format(gatePercent) }),
 			Text.get("ui.party.help.expHead"),
@@ -179,6 +179,14 @@ local function build()
 			Text.get("ui.party.help.stageHead"),
 			Text.get("ui.party.help.stageBody", { seconds = ("%d"):format(PartyConfig.stageVoteTimeoutSeconds) }),
 		}, "\n") }, nil, { panelSize = Vector2.new(280, 176) })
+		-- QUEUE-ALL9C 블록 1 폰 캡처: "?"가 고정 x 62라 "내 파티 (0/4)"(폰 글씨 ×1.15)와 겹쳤다 → 제목 글자 끝 + 12에 붙인다
+		local function placeHelp()
+			local x = myTitle.AbsolutePosition.X - myColumn.AbsolutePosition.X + myTitle.TextBounds.X + 12
+			helpButton.Position = UDim2.new(0, math.max(62, math.floor(x)), 0, 19)
+		end
+		myTitle:GetPropertyChangedSignal("TextBounds"):Connect(placeHelp)
+		myColumn:GetPropertyChangedSignal("AbsolutePosition"):Connect(placeHelp)
+		task.defer(placeHelp)
 	end
 
 	-- 열 사이 세로 구분선.
