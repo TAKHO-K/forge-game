@@ -132,7 +132,7 @@ return {
 	["help.egg.get"] = "Get eggs from nests, quests, check-ins.",
 	["help.egg.nest"] = "Nests: rocks, temples, hidden spots.",
 	["help.egg.hatch"] = "Press Hatch in the egg window and wait.",
-	["help.egg.time"] = "Better eggs take longer to hatch.",
+	["help.egg.time"] = "Sparkly and Mystic Eggs take longer to hatch.",
 	["gimmick.cardTitle"] = "{boss} · {gimmick}",
 	["gimmick.ok"] = "OK",
 	["gimmick.section_guardian.title"] = "Ground Collapse",
@@ -266,8 +266,8 @@ return {
 	["band.gradeChance"] = "{grade} {percent}",
 
 	-- 가방 자동 처리(G1-2)
-	["bag.autoProcess.off"] = "Auto: Off",
-	["bag.autoProcess.on"] = "Auto: {grade} and below",
+	["bag.autoProcess.off"] = "Auto tidy: Off",
+	["bag.autoProcess.on"] = "Auto tidy: {grade} and below",
 	["toast.autoDismantle"] = "Auto salvage: {item} → Gem",
 	["toast.autoSell"] = "Auto sell: {item} +{gold} gold",
 
@@ -393,7 +393,7 @@ return {
 	-- 둥지 · 알(M1-3)
 	["nest.action"] = "Take Egg",
 	["nest.object"] = "Nest",
-	["nest.gotEgg"] = "Got {grade} {egg}! Could be: {a} / {b}",
+	["nest.gotEgg"] = "Got {egg} ({grade})! Could be: {a} / {b}",
 	["nest.discovered"] = "Secret Nest found! {count} found",
 	["nest.title"] = "Title earned - {name}",
 	["nest.full"] = "Egg bag full ({cap}) - can't take more",
@@ -401,8 +401,8 @@ return {
 	["egg.empty"] = "No eggs yet - find nests on rocks, in temples, and hidden spots",
 	["egg.row"] = "{egg} · {grade}",
 	["egg.candidates"] = "Could be {a} / {b} (50/50)",
-	["egg.hatchHeader"] = "Hatch odds (shown first) - by egg grade",
-	["egg.hatchCol"] = "{grade} Egg",
+	["egg.hatchHeader"] = "Hatch odds (shown first) - by egg type",
+	["egg.hatchCol"] = "{grade}",
 	["egg.dex"] = "Secret Nests found: {count}",
 	["egg.chip"] = "Egg",
 	["guide.now"] = "To do {index}/{total}: {text}",
@@ -438,7 +438,7 @@ return {
 	["prob.option"] = "Option reroll · Drop option (my class pool - equal)",
 	["prob.optionOff"] = "Options now off: {list}",
 	["prob.variant"] = "Skill Variant ({appear} of Epic+ gear · reroll = gold of {kills} monsters)",
-	["prob.hatch"] = "Hatch result (hatch level × egg grade - Common/Rare/Epic/Legendary %)",
+	["prob.hatch"] = "Hatch result (hatch level × egg type - Common/Rare/Epic/Legendary %)",
 	["prob.version"] = "Table version {version}",
 	["pet.hatch"] = "Hatch",
 	["pet.hatchingHeader"] = "Hatching {n}/{cap}",

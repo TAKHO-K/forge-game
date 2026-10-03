@@ -25,7 +25,8 @@ return {
 	candidates = 2,
 	candidateWeights = { 50, 50 },
 	gradeOrder = { "normal", "good", "rare" },
-	gradeNames = { normal = "보통", good = "좋은", rare = "희귀" },
+	-- QUEUE-N1004 A-3(ALL9C 결정 6): 화면 이름 = 등급 단어가 아닌 알 이름(장비 등급 "희귀" 등과 헷갈리지 않게) · id(normal · good · rare)와 저장 값은 그대로 · en = TextData_names
+	gradeNames = { normal = "보통 알", good = "반짝 알", rare = "신비한 알" },
 	-- 겉모습(월드 · 창 같은 규칙): size = 알 크기(stud) · pattern = 무늬 띠 수 · glow = 빛(PointLight 밝기 · 범위)
 	look = {
 		size = Vector3.new(1.8, 2.4, 1.8),

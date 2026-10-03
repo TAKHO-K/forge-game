@@ -137,7 +137,7 @@ local TextData = {
 		["help.egg.get"] = "둥지 · 퀘스트 · 출석에서 알을 얻어요.",
 		["help.egg.nest"] = "바위 위 · 신전 · 숨은 곳에 둥지가 있어요.",
 		["help.egg.hatch"] = "알 창에서 부화를 누르고 기다려요.",
-		["help.egg.time"] = "좋은 알일수록 부화가 오래 걸려요.",
+		["help.egg.time"] = "반짝 알 · 신비한 알일수록 부화가 오래 걸려요.",
 		["gimmick.cardTitle"] = "{boss} · {gimmick}",
 		["gimmick.ok"] = "확인",
 		["gimmick.section_guardian.title"] = "지반 붕괴",
@@ -271,8 +271,8 @@ local TextData = {
 		["band.gradeChance"] = "{grade} {percent}",
 
 		-- 가방 자동 처리(G1-2)
-		["bag.autoProcess.off"] = "자동 처리: 끔",
-		["bag.autoProcess.on"] = "자동 처리: {grade} 이하",
+		["bag.autoProcess.off"] = "자동 정리: 끔",
+		["bag.autoProcess.on"] = "자동 정리: {grade} 이하",
 		["toast.autoDismantle"] = "자동 분해: {item} → 보석",
 		["toast.autoSell"] = "자동 판매: {item} +{gold}골드",
 
@@ -398,7 +398,7 @@ local TextData = {
 		-- 둥지 · 알(M1-3)
 		["nest.action"] = "알 줍기",
 		["nest.object"] = "둥지",
-		["nest.gotEgg"] = "{grade} {egg} 획득! 후보: {a} / {b}",
+		["nest.gotEgg"] = "{egg}({grade}) 획득! 후보: {a} / {b}",
 		["nest.discovered"] = "비밀 둥지 발견! 발견 도감 {count}곳",
 		["nest.title"] = "칭호 획득 - {name}",
 		["nest.full"] = "알 가방이 가득 찼다({cap}개) - 더 주울 수 없다",
@@ -406,8 +406,8 @@ local TextData = {
 		["egg.empty"] = "아직 알이 없다 - 바위 위 · 신전 · 숨은 곳의 둥지에서 알을 주울 수 있다",
 		["egg.row"] = "{egg} · {grade}",
 		["egg.candidates"] = "후보 {a} / {b} (반반)",
-		["egg.hatchHeader"] = "부화 결과 확률(사전 고지) - 알 등급별",
-		["egg.hatchCol"] = "{grade} 알",
+		["egg.hatchHeader"] = "부화 결과 확률(사전 고지) - 알 종류별",
+		["egg.hatchCol"] = "{grade}",
 		["egg.dex"] = "비밀 둥지 발견 {count}곳",
 		["egg.chip"] = "알",
 		["guide.now"] = "지금 할 일 {index}/{total}: {text}",
@@ -443,7 +443,7 @@ local TextData = {
 		["prob.option"] = "옵션 리롤 · 드랍 옵션(내 직업 풀 - 균등)",
 		["prob.optionOff"] = "지금 꺼진 옵션: {list}",
 		["prob.variant"] = "스킬 변형(영웅 이상 장비의 {appear} · 리롤 = 몬스터 {kills}마리분 골드)",
-		["prob.hatch"] = "부화 결과(부화 레벨 × 알 등급 - 일반/희귀/영웅/전설 %)",
+		["prob.hatch"] = "부화 결과(부화 레벨 × 알 종류 - 일반/희귀/영웅/전설 %)",
 		["prob.version"] = "표 버전 {version}",
 		["pet.hatch"] = "부화",
 		["pet.hatchingHeader"] = "부화 중 {n}/{cap}",

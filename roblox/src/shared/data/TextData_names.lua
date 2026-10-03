@@ -122,6 +122,7 @@ local en = {
 	["불꽃 족제비"] = "Spark Ferret", ["천둥 매"] = "Thunder Hawk", ["돌풍 다람쥐"] = "Gale Squirrel",
 	["서리 펭귄"] = "Frost Penguin", ["눈 올빼미"] = "Snow Owl", ["얼음 물범"] = "Ice Seal", ["오로라 여우"] = "Aurora Fox",
 	["보통"] = "Normal", ["좋은"] = "Good", ["고급"] = "Uncommon",
+	["보통 알"] = "Common Egg", ["반짝 알"] = "Sparkly Egg", ["신비한 알"] = "Mystic Egg", -- QUEUE-N1004 A-3 알 등급 화면 이름(EggData.gradeNames)
 	["강아지"] = "Puppy", ["고양이"] = "Kitty", ["새끼 용"] = "Baby Dragon",
 
 	-- ═══ 칭호(TitleData · NestData · CodexData 줄 칭호 틀) ═══
