@@ -5,8 +5,12 @@ local Button = require(script.Parent.Parent.Parent.ui.kit.Button)
 local Gauge = require(script.Parent.Parent.Parent.ui.kit.Gauge)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 local Layout = require(script.Parent.Layout)
+local ArtImage = require(script.Parent.Parent.Parent.ui.ArtImage)
+
 
 local Rows = {}
+-- QUEUE-ALL9C 1-6: 가격 아이콘(로벅스 = 로블록스 기본 그림 · 토큰 = 꾸미기 토큰 그림) - 한 버튼에 한 가격 · 아이콘으로 종류를 분명히
+Rows.ROBUX_ICON = "rbxasset://textures/ui/common/robux.png"
 
 function Rows.new(scroll, L)
 	local ctx = { scroll = scroll, L = L, order = 0, buttons = {} }
@@ -71,6 +75,25 @@ function Rows.new(scroll, L)
 			swatch.BorderSizePixel = 0
 			swatch.Parent = button.root
 			Theme.corner(swatch, 3)
+		end
+		if spec.icon then
+			local icon
+			if spec.icon == "robux" then
+				icon = Instance.new("ImageLabel")
+				icon.Image = Rows.ROBUX_ICON
+				icon.ScaleType = Enum.ScaleType.Fit
+			else
+				icon = ArtImage.label(button.root, "icons/reward/sparkleShard", UDim2.fromOffset(18, 18), "◆")
+			end
+			icon.Name = "PriceIcon"
+			icon.BackgroundTransparency = 1
+			icon.AnchorPoint = Vector2.new(0, 0.5)
+			icon.Position = UDim2.new(0, 10, 0.5, 0)
+			icon.Size = UDim2.fromOffset(18, 18)
+			icon.Parent = button.root
+			local pad = Instance.new("UIPadding")
+			pad.PaddingLeft = UDim.new(0, 22)
+			pad.Parent = button.root
 		end
 		if spec.name then
 			ctx.buttons[spec.name] = button

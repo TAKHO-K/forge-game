@@ -189,6 +189,28 @@ local function buildParachute(model, root, spec)
 	end)
 end
 
+-- QUEUE-ALL9C 1-6 X6: 상점 3D 미리보기가 같은 모양을 짓는다(이 글라이더 look을 model에 · root = 미리보기 캐릭터 몸통). 반환 = 지었나
+function GlideView.buildOnto(model, root, skinId)
+	for _, s in ipairs(CosmeticSlotData.gliderSkins) do
+		local spec = s.id == skinId and s.look ~= "" and CosData.gliders[s.look]
+		if spec then
+			local src = not spec.procedural and ArtMeshKit.get(spec.mesh) or nil
+			local shape = spec.base or s.look
+			if shape == "dragonWing" and src then
+				buildWings(model, root, spec, src)
+			elseif shape == "cloudWhale" and src then
+				buildWhale(model, root, spec, src)
+			elseif shape == "slimeParachute" then
+				buildParachute(model, root, spec)
+			else
+				return false
+			end
+			return true
+		end
+	end
+	return false
+end
+
 function GlideView.show(character)
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if not root or character:FindFirstChild("MV1Glider") then

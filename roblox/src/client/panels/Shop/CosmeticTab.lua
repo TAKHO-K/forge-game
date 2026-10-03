@@ -32,27 +32,27 @@ CosmeticTab.themeParts = {
 local TRY_ITEM_SLOTS = { weaponSkin = true, petAccessory = true } -- QUEUE-ALL6 H 입혀 보기 = 내 화면 Attribute만 바꿔 바로 보이는 칸(처치 · 강화 · 귀환 · 이모트는 서버 사건이 있어야 보임)
 local function saleRow(ctx, env, view, kind, entry, owned, shardPrice, productKey, subtitleKey)
 	local buttons
+	local info = { title = Text.name(entry.name), body = Text.get(subtitleKey, { name = Text.name(entry.name) }) } -- QUEUE-ALL9C 1-6 결제 확인 창 = 구성
 	if owned then
-		-- QUEUE-ALL9B(사용자 10-03): 산 것은 구매칸 전체를 "구매 완료"로 덮는다(토큰 · 로벅스 · 미리보기 자리)
-		buttons = { { name = "Owned_" .. entry.id, text = Text.get("shop.cos.soldOut"), width = 296, enabled = false } }
+		-- QUEUE-ALL9B(사용자 10-03): 산 것은 구매칸 전체를 덮는다 · QUEUE-ALL9C 1-6 X6: 이번 창에서 산 것 = "구매 완료" · 원래 가진 것 = "보유 중 ✓"
+		buttons = { { name = "Owned_" .. entry.id, text = Text.get(env.state.justBought[entry.id] and "shop.cos.soldOut" or "shop.ownedCheck"), width = 296, enabled = false } }
 	elseif not Monetization.onSale(CosmeticSlotData, kind, entry.id) then -- QUEUE-ALL6 H 시즌 한정(할로윈 = 10월) 판매 기간 밖
 		buttons = { { name = "OffSeason_" .. entry.id, text = Text.get("shop.cos.offSeason", { month = tostring(entry.seasonMonth) }), width = 140, enabled = false } }
 	else
 		buttons = {}
 		if shardPrice then -- QUEUE-ALL9B 3-7: 상품마다 토큰가(서버 view.productTokens - 토큰 불가 = 버튼 없음)
-			table.insert(buttons, { name = "Shards_" .. entry.id, text = Text.get("shop.shardPrice", { n = tostring(shardPrice) }), kind = "primary",
+			table.insert(buttons, { name = "Shards_" .. entry.id, text = Text.get("shop.priceNumber", { n = tostring(shardPrice) }), icon = "token", kind = "primary",
 				enabled = (view.shards or 0) >= shardPrice and not env.busy(), onActivated = function()
 					env.send("buyShards", kind, entry.id)
 				end })
 		end
-		table.insert(buttons, env.robuxButton(productKey, "Robux_" .. entry.id))
-		if kind ~= "cosmeticItem" or TRY_ITEM_SLOTS[entry.slot] then
-			local tryText = Text.get("shop.cos.try")
-			if kind == "cosmeticTheme" then -- QUEUE-ALL9B(사용자 10-03): 4종을 하나씩 - 누를 때마다 다음 효과(버튼에 지금 볼 효과 · 순서)
-				local i, part = env.previewNext(entry)
-				tryText = Text.get("shop.cos.tryPart", { part = part, i = tostring(i), n = tostring(#CosmeticTab.themeParts) })
-			end
-			table.insert(buttons, { name = "Try_" .. entry.id, text = tryText, width = kind == "cosmeticTheme" and 150 or 84, enabled = true, onActivated = function() -- QUEUE-ALL2 P2 B-4 ①: 내 캐릭터에 입혀 보기(로컬 · 잠깐)
+		table.insert(buttons, env.robuxButton(productKey, "Robux_" .. entry.id, info))
+		if kind ~= "cosmeticItem" then -- QUEUE-ALL9C 1-6 X6: [미리보기] = 3D 창(내 아바타 복제 · 돌려 보기 · 구성품 켜고 끄기 · 안에 [직접 보기] = 옛 내 캐릭터 입혀 보기)
+			table.insert(buttons, { name = "Preview3D_" .. entry.id, text = Text.get("shop.preview3d"), width = 96, enabled = true, onActivated = function()
+				env.openPreview(kind, entry)
+			end })
+		elseif TRY_ITEM_SLOTS[entry.slot] then -- 소품(무기 · 펫 칸) = 내 캐릭터에 잠깐 입혀 보기(QUEUE-ALL2 P2 B-4 ①)
+			table.insert(buttons, { name = "Try_" .. entry.id, text = Text.get("shop.cos.try"), width = 84, enabled = true, onActivated = function()
 				env.preview(kind, entry)
 			end })
 		end
@@ -86,12 +86,16 @@ local function equipChips(ctx, env, slotId, current, options)
 	ctx.chips("Chips_" .. slotId, chips)
 end
 
-function CosmeticTab.render(ctx, env)
+-- QUEUE-ALL9C 1-6: 한 페이지 구역 = renderHeader(잔액 · 선물) + renderThemes · renderGliders · renderItems · renderEquip(장착 · 이름표). 스타터 전용(starterOnly) = 판매 줄 없음.
+local function forSale(entry)
+	return not (entry.seasonOnly or entry.passOnly or entry.boardOnly or entry.starterOnly)
+end
+local function released(view, productKey)
+	local p = view.products and view.products[productKey]
+	return p ~= nil and p.released ~= false -- 순차 공개(서버 view.products[].released) - 비공개 = 줄 없음
+end
+function CosmeticTab.renderHeader(ctx, env)
 	local view = env.state.view
-	if not view then
-		ctx.line(Text.get("shop.loading"), "textSecondary", 1, "Loading")
-		return
-	end
 	ctx.line(Text.get("shop.cos.balance", { n = tostring(view.shards or 0) }), "gold", 1, "Balance")
 	ctx.line(Text.get("shop.cos.noGold"), "textSecondary", 1, "NoGold")
 	if (view.gifts or 0) > 0 then
@@ -105,32 +109,42 @@ function CosmeticTab.render(ctx, env)
 		})
 	end
 
-	ctx.section(Text.get("shop.cos.themeSection"), "ThemeSection")
+end
+function CosmeticTab.renderThemes(ctx, env)
+	local view = env.state.view
 	for _, set in ipairs(CosmeticSlotData.sets) do
-		if set.seasonOnly or set.passOnly or set.boardOnly then
-			continue -- QUEUE-ALL9B 패스 · 출석판 전용 테마 = 판매 줄 없음
+		if forSale(set) and released(view, "theme_" .. set.id) then -- QUEUE-ALL9B 패스 · 출석판 전용 · QUEUE-ALL9C 스타터 전용 · 비공개 = 판매 줄 없음
+			saleRow(ctx, env, view, "cosmeticTheme", set, view.themes and view.themes[set.id] == true, (view.productTokens or {})["theme_" .. set.id], "theme_" .. set.id, "shop.cos.themeSub")
 		end
-		saleRow(ctx, env, view, "cosmeticTheme", set, view.themes and view.themes[set.id] == true, (view.productTokens or {})["theme_" .. set.id], "theme_" .. set.id, "shop.cos.themeSub")
 	end
-	ctx.section(Text.get("shop.cos.gliderSection"), "GliderSection")
+end
+function CosmeticTab.renderGliders(ctx, env)
+	local view = env.state.view
 	for _, skin in ipairs(CosmeticSlotData.gliderSkins) do
-		if skin.seasonOnly or skin.passOnly or skin.boardOnly then
-			continue -- QUEUE-ALL1 R1: 시즌 한정(구름 고래) · QUEUE-ALL9B 패스 · 출석판 전용 = 판매 줄 없음(시즌 탭 · 장착 칩에만)
+		if forSale(skin) and released(view, "glider_" .. skin.id) then -- QUEUE-ALL1 R1: 시즌 한정(구름 고래) · 패스 · 출석판 전용 = 판매 줄 없음(시즌 구역 · 장착 칩에만)
+			saleRow(ctx, env, view, "gliderSkin", skin, view.gliderSkins and view.gliderSkins[skin.id] == true, (view.productTokens or {})["glider_" .. skin.id], "glider_" .. skin.id, "shop.cos.gliderSub")
 		end
-		saleRow(ctx, env, view, "gliderSkin", skin, view.gliderSkins and view.gliderSkins[skin.id] == true, (view.productTokens or {})["glider_" .. skin.id], "glider_" .. skin.id, "shop.cos.gliderSub")
 	end
-	-- QUEUE-ALL6 H 소품(칸 하나짜리) - 칸별 묶음
-	ctx.section(Text.get("shop.cos.itemSection"), "ItemSection")
+end
+-- QUEUE-ALL6 H 소품(칸 하나짜리) - 칸별 묶음
+function CosmeticTab.renderItems(ctx, env)
+	local view = env.state.view
 	for _, slotId in ipairs(CosmeticSlotData.itemSlots) do
-		ctx.line(Text.get("shop.slot." .. slotId), "textSecondary", 1, "ItemSlot_" .. slotId)
+		local any = false
 		for _, item in ipairs(CosmeticSlotData.items) do
-			if item.slot == slotId and not (item.seasonOnly or item.passOnly or item.boardOnly) then -- QUEUE-ALL9B 패스 · 출석판 전용 = 판매 줄 없음
+			if item.slot == slotId and forSale(item) and released(view, "item_" .. item.id) then
+				if not any then
+					ctx.line(Text.get("shop.slot." .. slotId), "textSecondary", 1, "ItemSlot_" .. slotId)
+					any = true
+				end
 				saleRow(ctx, env, view, "cosmeticItem", item, view.items and view.items[item.id] == true, (view.productTokens or {})["item_" .. item.id], "item_" .. item.id, "shop.cos.itemSub." .. slotId)
 			end
 		end
 	end
+end
 
-	ctx.section(Text.get("shop.cos.equipSection"), "EquipSection")
+function CosmeticTab.renderEquip(ctx, env)
+	local view = env.state.view
 	local equipped = view.equipped or {}
 	for _, slot in ipairs(CosmeticSlotData.slots) do
 		local isGlider = slot.id == "gliderSkin"
@@ -141,7 +155,7 @@ function CosmeticTab.render(ctx, env)
 			if isItem then
 				owned = entry.slot == slot.id and view.items and view.items[entry.id]
 			else
-				owned = isGlider and view.gliderSkins[entry.id] or (not isGlider and view.themes[entry.id])
+				owned = isGlider and view.gliderSkins[entry.id] or (not isGlider and view.themes[entry.id] and (not entry.looks or entry.looks[slot.id] ~= "")) -- QUEUE-ALL9C 1-6: 그 칸 모양이 없는 세트(스타터 별빛 = 대시만) 제외
 			end
 			if owned then
 				table.insert(options, { id = entry.id, text = Text.name(entry.name) })

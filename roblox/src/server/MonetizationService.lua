@@ -425,7 +425,7 @@ function MonetizationService.promptPass(player, key)
 	return true
 end
 
-local ACTIONS = { view = true, buyShards = true, buyTokens = true, buyRobux = true, buyPass = true, equip = true, seasonClaim = true, seasonClaimAll = true, giftClaim = true }
+local ACTIONS = { view = true, buyShards = true, buyTokens = true, buyRobux = true, buyPass = true, equip = true, equipAll = true, seasonClaim = true, seasonClaimAll = true, giftClaim = true }
 function MonetizationService.handle(player, action, a, b)
 	if type(action) ~= "string" or not ACTIONS[action] then
 		return false, "bad_action"
@@ -441,6 +441,8 @@ function MonetizationService.handle(player, action, a, b)
 		ok, why = MonetizationService.promptPass(player, a)
 	elseif action == "equip" and type(a) == "string" and (b == nil or type(b) == "string") then
 		ok, why = CosmeticService.equip(player, a, b)
+	elseif action == "equipAll" and type(a) == "string" and type(b) == "string" then -- QUEUE-ALL9C 1-6 X6 구매 완료 창 [바로 장착] = 그 치장이 들어가는 칸 전부
+		ok, why = CosmeticService.equipAll(player, a, b)
 	elseif action == "seasonClaim" and type(a) == "string" and type(b) == "number" then
 		ok, why = SeasonPassService.claim(player, a, b)
 	elseif action == "seasonClaimAll" and type(a) == "string" then -- QUEUE-ALL9B 4-6 일괄 받기(소급)

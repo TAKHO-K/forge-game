@@ -129,6 +129,33 @@ function CosmeticService.buyWithShards(player, kind, id)
 end
 CosmeticService.spendShards = spendShards
 
+-- QUEUE-ALL9C 1-6 X6 [바로 장착]: 테마 = 모양이 있는 세트 칸 전부 · 글라이더 = gliderSkin · 소품 = 그 소품 칸. 칸마다 equip(같은 검사)을 부른다. 반환: 하나라도 됐나, 마지막 이유
+function CosmeticService.equipAll(player, kind, id)
+	local entry = Monetization.findCosmetic(CosmeticSlotData, kind, id)
+	if not entry then
+		return false, "unknown"
+	end
+	local slots = {}
+	if kind == "cosmeticTheme" then
+		for _, slot in ipairs(CosmeticSlotData.setSlots) do
+			if entry.looks and entry.looks[slot] ~= "" then
+				table.insert(slots, slot)
+			end
+		end
+	elseif kind == "gliderSkin" then
+		slots = { "gliderSkin" }
+	elseif kind == "cosmeticItem" then
+		slots = { entry.slot }
+	end
+	local any, last = false, "unknown"
+	for _, slot in ipairs(slots) do
+		local ok, why = CosmeticService.equip(player, slot, id)
+		any = any or ok
+		last = why or last
+	end
+	return any, if any then nil else last
+end
+
 -- 장착: slot = CosmeticSlotData 칸 id · id = 세트 id(gliderSkin 칸은 스킨 id) · nil = 기본 모습. 반환: ok, 이유
 function CosmeticService.equip(player, slot, id)
 	local s = state(player)

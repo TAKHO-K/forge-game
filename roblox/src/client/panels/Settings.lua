@@ -233,6 +233,12 @@ local function build()
 					box.Text = ""
 				end
 			end })
+		-- QUEUE-ALL9C 1-6 환불 문구 ②: 구매를 못 받았을 때 안내(문구 그대로)
+		local purchaseHelp = Theme.label(g, Text.get("settings.purchaseHelp"), "caption", "textSecondary")
+		purchaseHelp.Name = "PurchaseHelp"
+		purchaseHelp.TextWrapped = true
+		purchaseHelp.Position = UDim2.fromOffset(PAD, y + Theme.buttonHeight + 12)
+		purchaseHelp.Size = UDim2.new(1, -PAD * 2, 0, 40)
 	end
 
 	-- [단축키] 단축키 보기(09 문서 B-3 최종 표)

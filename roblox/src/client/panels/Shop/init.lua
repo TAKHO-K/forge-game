@@ -14,7 +14,8 @@ local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local Text = require(ReplicatedStorage.Shared.Text)
 local Confirm = require(script.Parent.Parent.ui.kit.Confirm)
 local Panel = require(script.Parent.Parent.ui.kit.Panel)
-local Tabs = require(script.Parent.Parent.ui.kit.Tabs)
+local Button = require(script.Parent.Parent.ui.kit.Button)
+local PriceCache = require(script.Parent.Parent.ui.PriceCache) -- QUEUE-ALL9C 1-6 지역 가격
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
 local UIManager = require(script.Parent.Parent.UIManager)
 local Layout = require(script.Layout)
@@ -24,6 +25,7 @@ local CosmeticTab = require(script.CosmeticTab)
 local ConvenienceTab = require(script.ConvenienceTab)
 local SeasonTab = require(script.SeasonTab)
 local RecommendTab = require(script.RecommendTab)
+local StarterTab = require(script.StarterTab) -- QUEUE-ALL9C 1-6 모험가 스타터 팩
 local GiftPopup = require(script.GiftPopup)
 
 local R = {}
@@ -32,9 +34,9 @@ R.id = "shop"
 R.promptName = "ShopPrompt"
 R.GiftPopup = GiftPopup
 R.Layout = Layout
--- QUEUE-ALL2 P2 B-4 ①: 추천 · 치장 · 시즌 패스 · 편의 + 골드(보석상인 좌판 소모처 - 좌판에서 열 때 첫 탭)
-local TAB_ORDER = { "recommend", "cosmetic", "season", "convenience", "gold" }
-local TAB_MODULES = { recommend = RecommendTab, gold = GoldTab, cosmetic = CosmeticTab, convenience = ConvenienceTab, season = SeasonTab }
+-- QUEUE-ALL9C 1-6(K1): 탭 → 한 페이지 스크롤 + 구역(추천 · 스타터 · 시즌 패스 · 테마 · 글라이더 · 소품 · 편의 · 장착 · 골드) · 위 구역 바로가기 칩. 골드 = 보석상인 좌판 소모처(좌판에서 열면 그 구역으로).
+local SECTIONS = { "recommend", "starter", "season", "theme", "glider", "item", "convenience", "equip", "gold" }
+local OLD_TAB = { cosmetic = "theme" } -- 옛 탭 id(다른 화면이 R.open("cosmetic") 등으로 연다) → 구역
 local PENDING_LIMIT = 3 -- 초. 서버 응답(ShopSync · 결과 Remote)이 안 오면 이 뒤에 입력이 풀린다
 local RANGE_MARGIN = 2 -- 서버 반경보다 이만큼 더 벗어나면 창을 닫는다(보석 공방과 같은 값)
 local ROBUX_WIDTH = 104 -- "로벅스 199"가 모바일 글씨(16)에서도 한 줄
@@ -46,7 +48,7 @@ local shopRequest, shopSync
 local state = { view = nil, rerollTickets = { ancient = 0, primordial = 0 }, justBought = {}, previewIndex = {} } -- QUEUE-ALL9B justBought = 이번에 연 창에서 산 것(추천 탭 "구매 완료" 유지) · previewIndex = 테마별 다음 미리보기 효과
 R.state = state
 local built = nil -- { panel, tabs, scroll, status, ctx, L, key }
-local selectedTab = "gold"
+local jumpTo = nil -- 다음 그리기 뒤 이 구역 머리로 스크롤
 local pendingSince, pendingCheck = nil, nil
 local statusText, statusColor = "", "textSecondary"
 local debugSkipRangeClose = false
@@ -80,14 +82,54 @@ local function screenSize()
 	return Vector2.new(camera.ViewportSize.X, camera.ViewportSize.Y - inset.Y)
 end
 
+local SECTION_RENDER -- 아래(env가 생긴 뒤) 채운다
+local function sectionVisible(id)
+	if id == "starter" then
+		return StarterTab.visible(state.view)
+	end
+	return true
+end
 function R.render()
 	if not built or not UIManager.isOpen(R.id) then
 		return
 	end
 	built.ctx.clear()
-	TAB_MODULES[selectedTab].render(built.ctx, R.env)
+	for _, id in ipairs(SECTIONS) do
+		local visible = state.view ~= nil and sectionVisible(id)
+		local chip = built.chipButtons[id]
+		if chip then
+			chip.root.Visible = visible or state.view == nil
+		end
+		if visible then
+			local head = built.ctx.section(Text.get("shop.section." .. id), "Anchor_" .. id)
+			head.TextColor3 = Theme.colors.textPrimary
+			head.Font = Theme.font
+			SECTION_RENDER[id](built.ctx, R.env)
+		end
+	end
+	if not state.view then
+		built.ctx.line(Text.get("shop.loading"), "textSecondary", 1, "Loading")
+	end
 	built.status.Text = statusText
 	built.status.TextColor3 = Theme.colors[statusColor]
+	if jumpTo then
+		local target = jumpTo
+		jumpTo = nil
+		task.defer(function()
+			R.scrollTo(target)
+		end)
+	end
+end
+
+-- 구역 머리를 본문 맨 위로(칩 · 옛 탭 열기)
+function R.scrollTo(id)
+	if not built then
+		return
+	end
+	local anchor = built.scroll:FindFirstChild("Anchor_" .. tostring(OLD_TAB[id] or id))
+	if anchor then
+		built.scroll.CanvasPosition = Vector2.new(0, math.max(0, anchor.AbsolutePosition.Y - built.scroll.AbsolutePosition.Y + built.scroll.CanvasPosition.Y))
+	end
 end
 
 local function send(action, a, b)
@@ -102,17 +144,9 @@ local function send(action, a, b)
 			local owned = (a == "cosmeticTheme" and view.themes and view.themes[b]) or (a == "gliderSkin" and view.gliderSkins and view.gliderSkins[b])
 				or (a == "cosmeticItem" and view.items and view.items[b]) -- 리뷰: 소품(cosmeticItem)도 성공으로 본다
 			if owned then
-				state.justBought[b] = true
-				task.defer(function() -- QUEUE-ALL9B(사용자 10-03): 구매 완료 창
-					Confirm.ask({ title = Text.get("shop.bought.title"), body = Text.get("shop.bought.body", { name = CosmeticTab.nameOf(a, b) }),
-						primaryText = Text.get("shop.bought.equip"), secondaryText = Text.get("shop.bought.close"), parentId = R.id }, function(accepted)
-						if accepted then
-							R.selectTab("cosmetic")
-						end
-					end)
-				end)
+				state.justBought[b] = true -- 구매 완료 창 = ShopSync 비교(R.start - 토큰 · 로벅스 공통)
 			end
-			return owned and "shop.status.bought" or "shop.status.buyFailed", owned and "success" or "danger"
+			return owned and "" or "shop.status.buyFailed", owned and "success" or "danger" -- QUEUE-ALL9C 1-6: 성공 = 구매 완료 창만(상태 줄과 두 번 보이던 것 - ALL9B 넘김 4)
 		elseif action == "equip" then
 			local ok = view.equipped[a] == b
 			return ok and "shop.status.equipped" or "shop.status.equipFailed", ok and "success" or "danger"
@@ -134,7 +168,24 @@ local function send(action, a, b)
 end
 
 -- 로벅스 구매 버튼 spec(치장 · 시즌 공통). 준비 중(productId 0) = 회색 "준비 중" · 유료 랜덤 제한(blocked) = 회색 "구매 불가" · 유료 랜덤이면 확률표 확인창을 먼저 띄운다.
-local function robuxButton(productKey, name)
+-- QUEUE-ALL9C 1-6: 로벅스 결제 전 우리 확인 창(구성 + 환불 문구 ①) → 서버가 로블록스 결제 창을 연다. info = { title, body }(구성 - 행 제목 · 부제)
+local function confirmRobux(info, price, onYes, extraBody)
+	local parts = {}
+	for _, piece in ipairs({ info and info.body or "", extraBody or "", Text.get("shop.refund.note") }) do
+		if piece ~= "" then
+			table.insert(parts, piece)
+		end
+	end
+	local body = table.concat(parts, "\n\n")
+	Confirm.ask({ title = info and info.title or Text.get("shop.confirm.title"), body = body, primaryText = Text.get("shop.confirm.buy", { n = tostring(price) }),
+		secondaryText = Text.get("shop.cancel"), parentId = R.id }, function(accepted)
+		if accepted then
+			onYes()
+		end
+	end)
+end
+R.confirmRobux = confirmRobux
+local function robuxButton(productKey, name, info)
 	local product = state.view and state.view.products and state.view.products[productKey]
 	if not product then
 		return { name = name, text = Text.get("shop.notReady"), enabled = false, width = ROBUX_WIDTH }
@@ -145,23 +196,12 @@ local function robuxButton(productKey, name)
 	if not product.ready then
 		return { name = name, text = Text.get("shop.notReady"), enabled = false, width = ROBUX_WIDTH }
 	end
-	return { name = name, text = Text.get("shop.robuxPrice", { n = tostring(product.robux) }), kind = "primary", width = ROBUX_WIDTH, enabled = not busy(),
+	local price = PriceCache.get("product", product.productId, product.robux) -- QUEUE-ALL9C 1-6 지역 가격(없으면 데이터 값)
+	return { name = name, text = Text.get("shop.priceNumber", { n = tostring(price) }), icon = "robux", kind = "primary", width = ROBUX_WIDTH, enabled = not busy(),
 		onActivated = function()
-			if not product.paidRandom then
+			confirmRobux(info, price, function()
 				send("buyRobux", productKey)
-				return
-			end
-			Confirm.ask({
-				title = Text.get("shop.odds.title"),
-				body = R.oddsText(product.odds),
-				primaryText = Text.get("shop.odds.buy"),
-				secondaryText = Text.get("shop.cancel"),
-				parentId = R.id,
-			}, function(accepted)
-				if accepted then
-					send("buyRobux", productKey)
-				end
-			end)
+			end, product.paidRandom and R.oddsText(product.odds) or nil) -- 유료 랜덤(지금 0개)은 확률표도 같은 창에
 		end }
 end
 
@@ -257,7 +297,36 @@ local function preview(kind, entry)
 	end)
 end
 
-R.env = { state = state, send = send, busy = busy, robuxButton = robuxButton, buyReroll = buyReroll, openGemTools = openGemTools, preview = preview, previewNext = previewNext }
+-- QUEUE-ALL9C 1-6 게임패스 가격(지역 가격 · 없으면 데이터 값)
+local function passPrice(key)
+	local pass = state.view and state.view.passes and state.view.passes[key]
+	return pass and PriceCache.get("pass", pass.passId, pass.robux) or nil
+end
+R.env = { state = state, send = send, busy = busy, robuxButton = robuxButton, buyReroll = buyReroll, openGemTools = openGemTools, preview = preview, previewNext = previewNext,
+	passPrice = passPrice, confirmRobux = confirmRobux, openPreview = function(kind, entry)
+		require(script.Preview3D).open(kind, entry, function() -- QUEUE-ALL9C 1-6 X6 3D 미리보기 · [직접 보기] = 내 캐릭터에 잠깐(테마 = 누를 때마다 다음 칸)
+			preview(kind, entry)
+		end)
+	end }
+SECTION_RENDER = {
+	recommend = RecommendTab.render,
+	starter = StarterTab.render,
+	season = function(ctx, env)
+		SeasonTab.render(ctx, env, { tiersOpen = state.seasonOpen == true, onToggleTiers = function()
+			state.seasonOpen = not state.seasonOpen
+			R.render()
+		end })
+	end,
+	theme = function(ctx, env)
+		CosmeticTab.renderHeader(ctx, env)
+		CosmeticTab.renderThemes(ctx, env)
+	end,
+	glider = CosmeticTab.renderGliders,
+	item = CosmeticTab.renderItems,
+	convenience = ConvenienceTab.render,
+	equip = CosmeticTab.renderEquip,
+	gold = GoldTab.render,
+}
 
 local function layoutKey(L)
 	return ("%s:%d:%d:%s"):format(L.mode, L.winW, L.winH, tostring(Theme.isMobile))
@@ -283,7 +352,7 @@ local function build(L)
 		help = { short = Text.get("shop.help.short"), detail = Text.get("shop.help.detail") },
 		onOpen = function()
 			setStatus("", "textSecondary")
-			if built then
+			if built and not jumpTo then
 				built.scroll.CanvasPosition = Vector2.zero
 			end
 			shopRequest:FireServer("view")
@@ -291,25 +360,32 @@ local function build(L)
 		end,
 	})
 	local content = panel.content
-	local tabList = {}
-	for _, id in ipairs(TAB_ORDER) do
-		table.insert(tabList, { id = id, text = Text.get("shop.tab." .. id) })
+	-- QUEUE-ALL9C 1-6: 위 구역 바로가기 칩(가로 스크롤 - 폰 높이 44 = 터치 타깃)
+	local chips = Instance.new("ScrollingFrame")
+	chips.Name = "SectionChips"
+	chips.BackgroundTransparency = 1
+	chips.BorderSizePixel = 0
+	chips.Position = UDim2.new(0, Layout.pad, 0, 2)
+	chips.Size = UDim2.new(0, L.winW - 2 * Layout.pad, 0, L.tabH)
+	chips.ScrollingDirection = Enum.ScrollingDirection.X
+	chips.ScrollBarThickness = 2
+	chips.AutomaticCanvasSize = Enum.AutomaticSize.X
+	chips.CanvasSize = UDim2.new()
+	chips.Parent = content
+	local chipLayout = Instance.new("UIListLayout")
+	chipLayout.FillDirection = Enum.FillDirection.Horizontal
+	chipLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	chipLayout.Padding = UDim.new(0, 4)
+	chipLayout.Parent = chips
+	local chipButtons = {}
+	for index, id in ipairs(SECTIONS) do
+		local b = Button.build({ parent = chips, name = "Chip_" .. id, kind = "secondary", text = Text.get("shop.section." .. id), width = 76, height = L.tabH - 4,
+			onActivated = function()
+				R.scrollTo(id)
+			end })
+		b.root.LayoutOrder = index
+		chipButtons[id] = b
 	end
-	local tabs = Tabs.build({
-		parent = content,
-		tabs = tabList,
-		selected = selectedTab,
-		width = L.winW - 2 * Layout.pad,
-		position = UDim2.new(0, Layout.pad, 0, 2),
-		onSelect = function(id)
-			selectedTab = id
-			if built then
-				built.scroll.CanvasPosition = Vector2.zero
-			end
-			R.render()
-		end,
-	})
-	tabs.root.Size = UDim2.new(0, L.winW - 2 * Layout.pad, 0, L.tabH) -- 탭 버튼은 root 높이를 채운다(폰 44 = 터치 타깃)
 
 	local scroll = Instance.new("ScrollingFrame")
 	scroll.Name = "Body"
@@ -333,7 +409,7 @@ local function build(L)
 	status.Position = UDim2.new(0, Layout.pad + 2, 1, -2)
 	status.Size = UDim2.new(1, -(2 * Layout.pad + 4), 0, L.statusH - 4)
 
-	built = { panel = panel, tabs = tabs, scroll = scroll, status = status, ctx = Rows.new(scroll, L), L = L, key = layoutKey(L) }
+	built = { panel = panel, chips = chips, chipButtons = chipButtons, scroll = scroll, status = status, ctx = Rows.new(scroll, L), L = L, key = layoutKey(L) }
 end
 
 -- 지금 화면으로 배치를 계산하고, 지은 것과 다르면 다시 짓는다. 반환: L
@@ -367,10 +443,7 @@ end
 
 function R.open(tabId)
 	R.applyLayout()
-	if tabId and TAB_MODULES[tabId] then
-		selectedTab = tabId
-		built.tabs.select(tabId, true)
-	end
+	jumpTo = tabId and (OLD_TAB[tabId] or tabId) or nil -- 옛 탭 id · 구역 id → 그 구역으로 스크롤
 	if UIManager.isOpen(R.id) then
 		R.render()
 		return true
@@ -399,9 +472,7 @@ function R.close()
 end
 
 function R.selectTab(tabId)
-	if built and TAB_MODULES[tabId] then
-		built.tabs.select(tabId, false)
-	end
+	R.scrollTo(OLD_TAB[tabId] or tabId)
 end
 
 -- 점검 · 스크린샷 전용: 합성 표로 그린다(서버 없이). view = MonetizationService.view 모양
@@ -443,6 +514,30 @@ local function step()
 	end
 end
 
+-- QUEUE-ALL9C 1-6 X6: ShopSync 두 표를 비교해 새로 생긴 치장(테마 · 글라이더 · 소품) = 구매 완료 창 [바로 장착 · 닫기]. 첫 표(접속 직후)는 비교하지 않는다.
+local KIND_BAG = { cosmeticTheme = "themes", gliderSkin = "gliderSkins", cosmeticItem = "items" }
+function R.announceNewlyOwned(before, after)
+	if type(before) ~= "table" or type(after) ~= "table" then
+		return
+	end
+	for kind, bag in pairs(KIND_BAG) do
+		for id, owned in pairs(after[bag] or {}) do
+			if owned and not (before[bag] or {})[id] then
+				state.justBought[id] = true
+				task.defer(function()
+					Confirm.ask({ title = Text.get("shop.bought.title"), body = Text.get("shop.bought.body", { name = CosmeticTab.nameOf(kind, id) }),
+						primaryText = Text.get("shop.bought.equip"), secondaryText = Text.get("shop.bought.close"), parentId = UIManager.isOpen(R.id) and R.id or nil }, function(accepted)
+						if accepted then
+							send("equipAll", kind, id) -- 바로 장착(그 치장이 들어가는 칸 전부)
+						end
+					end)
+				end)
+				return -- 한 번에 창 하나(묶음은 첫 것 이름)
+			end
+		end
+	end
+end
+
 local REROLL_REASON = { no_gold = "shop.reason.noGold", no_dust = "shop.reason.noDust", out_of_range = "shop.reason.outOfRange" }
 
 function R.start()
@@ -453,7 +548,7 @@ function R.start()
 	-- QUEUE-B1 결정 10: 서버 결과(action, ok, why) - 실패면 이유 한 줄(표 비교 추정보다 우선) · 성공이면 다음 ShopSync의 추정 문구를 그대로 쓴다
 	local SHOP_REASON = { shards = "shop.reason.shards", owned = "shop.reason.owned", off_season = "item.reason.offSeason", not_ready = "shop.reason.notReady", not_owned = "shop.reason.notOwned",
 		no_pass = "shop.reason.noPass", not_reached = "shop.reason.notReached", claimed = "shop.reason.claimed", not_premium = "shop.reason.notPremium",
-		egg_full = "shop.reason.eggFull", restricted = "shop.reason.restricted", none = "shop.reason.none" }
+		egg_full = "shop.reason.eggFull", restricted = "shop.reason.restricted", none = "shop.reason.none", not_released = "shop.reason.notReleased" }
 	ReplicatedStorage:WaitForChild("ShopResult").OnClientEvent:Connect(function(_, ok, why)
 		if ok then
 			return
@@ -473,7 +568,9 @@ function R.start()
 		if type(view) ~= "table" then
 			return
 		end
+		local before = state.view
 		state.view = view
+		R.announceNewlyOwned(before, view) -- QUEUE-ALL9C 1-6 X6 구매 완료 창(토큰 · 로벅스 공통)
 		if pendingCheck then
 			local key, color = pendingCheck(view)
 			pendingCheck = nil

@@ -214,15 +214,14 @@ function SeasonTab.finalPreview(ctx, season)
 	title.Position = UDim2.fromOffset(104, 8)
 	title.Size = UDim2.new(1, -112, 0, 26)
 	title.TextWrapped = true
-	local value = season.value and season.value.multiple or 0
-	local sub = Theme.label(frame, Text.get("season.finalSub", { x = ("%.0f"):format(value) }), "caption", "textSecondary")
+	local sub = Theme.label(frame, Text.get("season.finalSub"), "caption", "textSecondary") -- QUEUE-ALL9C 0-6: 패스 가치 숫자(×n)는 화면에 보이지 않는다
 	sub.Name = "Sub"
 	sub.Position = UDim2.fromOffset(104, 40)
 	sub.Size = UDim2.new(1, -112, 0, 48)
 	sub.TextWrapped = true
 end
 
-function SeasonTab.render(ctx, env)
+function SeasonTab.render(ctx, env, opts)
 	local view = env.state.view
 	local season = view and view.season
 	if not season then
@@ -281,6 +280,13 @@ function SeasonTab.render(ctx, env)
 			require(script.Parent.Parent.SeasonBoard).open()
 		end } } })
 	ctx.line(Text.get("season.eggNote"), "gold", 1, "EggNote")
+	if opts and opts.onToggleTiers then -- QUEUE-ALL9C 1-6: 한 페이지 상점 = 40칸 목록은 접기/펼치기
+		ctx.row({ name = "TiersToggle", title = Text.get(opts.tiersOpen and "season.tiersHide" or "season.tiersShow", { n = tostring(season.tiers) }),
+			buttons = { { name = "TiersToggleButton", text = opts.tiersOpen and "▲" or "▼", width = 64, enabled = true, onActivated = opts.onToggleTiers } } })
+		if not opts.tiersOpen then
+			return
+		end
+	end
 	-- 열 제목(칸 | 무료 | 유료)
 	local L = ctx.L
 	local head = Instance.new("Frame")
