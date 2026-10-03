@@ -154,6 +154,10 @@ function QuestService.grant(player, reward, source)
 		PlayerProfile.addMaterial(player, "enhanceStone", reward.enhanceStone)
 		table.insert(parts, Text.getFor(player, "srv.reward.enhanceStone", { n = ("%d"):format(reward.enhanceStone) }))
 	end
+	if reward.highEnhanceStone then -- QUEUE-ALL9B 보완 2-3 시즌 패스 무료 줄(+22 이상 재료)
+		PlayerProfile.addMaterial(player, "highEnhanceStone", reward.highEnhanceStone)
+		table.insert(parts, Text.getFor(player, "srv.reward.highEnhanceStone", { n = ("%d"):format(reward.highEnhanceStone) }))
+	end
 	for _ = 1, reward.egg or 0 do
 		local zones = {}
 		for key in pairs(EggData.zones) do

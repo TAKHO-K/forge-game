@@ -14,7 +14,7 @@ local D = {
 		rebirthTicket = "expMultiplier", titleId = "title", expBoost = "expMultiplier", goldBoost = "goldMultiplier",
 	},
 	-- 팔 수 있는 종류(이 밖의 종류는 모르는 종류로 거부 - 새 종류는 여기와 검사에 같이 넣는다)
-	allowedKinds = { cosmeticTheme = true, gliderSkin = true, seasonPremium = true, gamePass = true, cosmeticItem = true }, -- QUEUE-ALL6 H cosmeticItem = 꾸미기 소품(칸 하나 · 겉모습만)
+	allowedKinds = { cosmeticTheme = true, gliderSkin = true, seasonPremium = true, gamePass = true, cosmeticItem = true, passTierSkip = true }, -- QUEUE-ALL9B 4-8 passTierSkip = 시즌 패스 칸 건너뛰기(수량형 - 저장 실패 때 되돌림) -- QUEUE-ALL6 H cosmeticItem = 꾸미기 소품(칸 하나 · 겉모습만)
 
 	-- 개발자 상품(Developer Product - ProcessReceipt). key = 코드 이름 · productId = Creator Hub 번호(자리 0) · robux = 표시 가격(자리 - 실제 가격은 Creator Hub 값이 우선).
 	--   grants = 산 사람이 받는 것(종류 · id). paidRandom = 유료 랜덤(지금 0개 - 넣으면 odds 필수 · 정책 제한 국가에서 구매 막힘).
@@ -27,6 +27,10 @@ local D = {
 		theme_jelly = { productId = 0, robux = 199, grants = { { kind = "cosmeticTheme", id = "jelly" } } }, -- QUEUE-ALL1 P6 말랑 젤리
 		glider_dragonWing = { productId = 0, robux = 149, grants = { { kind = "gliderSkin", id = "dragonWing" } } }, -- QUEUE-ALL1 P6 푸른 드래곤 날개
 		season_premium = { productId = 0, robux = 399, grants = { { kind = "seasonPremium" } } }, -- 이번 시즌 유료 줄(시즌마다 다시 산다)
+		-- QUEUE-ALL9B 4-4 할인 시즌용(SeasonPassData.saleActive가 켜질 때만 프롬프트 - 같은 지급) · 4-8 칸 건너뛰기(시즌당 구매로 오른 칸 상한 · 건너뛴 칸 알 = 토큰 · 성장 재화 = 토큰 1)
+		season_premium_sale = { productId = 0, robux = 299, grants = { { kind = "seasonPremium" } } },
+		pass_skip1 = { productId = 0, robux = 25, grants = { { kind = "passTierSkip", amount = 1 } } },
+		pass_skip5 = { productId = 0, robux = 99, grants = { { kind = "passTierSkip", amount = 5 } } },
 		-- QUEUE-ALL6 H 꾸미기 TOP 10(사용자 확정 · 유료 랜덤 없음 · 자리값 0). 키 규칙 = theme_<id> · glider_<id> · item_<id>
 		theme_anvil = { productId = 0, robux = 199, grants = { { kind = "cosmeticTheme", id = "anvil" } } },
 		theme_halloween = { productId = 0, robux = 199, grants = { { kind = "cosmeticTheme", id = "halloween" } } }, -- 10월만 판매(CosmeticSlotData seasonMonth)
@@ -46,9 +50,10 @@ local D = {
 	-- QUEUE-ALL9B 3-4 가격 등급(표시 · 검사용): premium = 499R$급 대표 치장. 상품의 tier가 여기 이름이면 robux가 이 값이어야 한다(checkCatalog).
 	tiers = { premium = { robux = 499 } },
 	-- QUEUE-ALL9B 3-3 꾸미기 토큰 가격 = 로벅스 가격에 비례(499R$급 = premiumTokens · roundTo 단위 반올림) - 계산 = shared/Monetization.tokenPriceForRobux 한 곳.
-	--   근거 = 토큰 유입 모형(docs/phase/QUEUE-ALL9B-report.md 4절): 캐주얼(하루 1시간)이 도감 60% · 67% · 75%에 닿는 날 누적 토큰 556 · 794 · 1,144 → 가운데 67% ≈ 800.
-	--   49 → 80 · 99 → 160 · 149 → 240 · 199 → 320 · 399 → 640 · 499 → 800. 토큰으로 못 사는 것 = 시즌 패스 보상(passOnly) · 시즌 한정(seasonOnly) · 출석판 전용(boardOnly) · 시즌 유료 줄.
-	tokenPricing = { premiumRobux = 499, premiumTokens = 800, roundTo = 10 },
+	--   근거 = 토큰 유입 모형(docs/phase/QUEUE-ALL9B-report.md 4절): 캐주얼(하루 1시간)이 도감 60% · 67% · 75%에 닿는 날 누적 토큰 498 · 696 · 948 → 가운데 67% ≈ 700
+	--   (보완 지시로 패스 무료 줄 토큰이 성장 재화로 바뀐 뒤 다시 잰 값 - 처음 계산 800).
+	--   49 → 70 · 99 → 140 · 149 → 210 · 199 → 280 · 399 → 560 · 499 → 700. 토큰으로 못 사는 것 = 시즌 패스 보상(passOnly) · 시즌 한정(seasonOnly) · 출석판 전용(boardOnly) · 시즌 유료 줄.
+	tokenPricing = { premiumRobux = 499, premiumTokens = 700, roundTo = 10 },
 	-- 게임패스(편의만 - 전투력 · 획득량 없음). passId = Creator Hub 번호(자리 0). 효과 수치도 여기(편의 값).
 	gamePasses = {
 		bagExpand = { passId = 0, robux = 149, bonusSlots = 20 }, -- 가방 칸 +20(InventorySync.capacity)

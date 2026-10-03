@@ -76,6 +76,17 @@ function MonetizationService.applyReward(player, reward, source)
 			table.insert(parts, "시즌 유료 줄")
 		elseif grant.kind == "sparkleShard" or grant.kind == "egg" then
 			table.insert(parts, require(script.Parent.QuestService).grant(player, { [grant.kind] = grant.amount }))
+		elseif grant.kind == "gold" and type(grant.amount) == "number" and grant.amount > 0 then -- QUEUE-ALL9B 보완 2-2 시즌 무료 줄 고정 골드(스테이지 배율 아님 · 상품 · 유료 줄은 위 검사가 막는다)
+			PlayerProfile.addGold(player, grant.amount)
+			table.insert(parts, require(ReplicatedStorage.Shared.Text).getFor(player, "srv.reward.gold", { n = ("%d"):format(grant.amount) }))
+		elseif grant.kind == "enhanceStone" or grant.kind == "highEnhanceStone" or grant.kind == "gemDust" or grant.kind == "protectDrop" then -- 보완 2-3 · 2-4 무료 줄 성장 소모품(기존 재화)
+			table.insert(parts, require(script.Parent.QuestService).grant(player, { [grant.kind] = grant.amount }))
+		elseif grant.kind == "passTierSkip" then -- QUEUE-ALL9B 4-8 칸 건너뛰기(방 = 영수증 처리 전에 확인)
+			local got, why = SeasonPassService.applySkip(player, grant.amount)
+			if not got then
+				return false, why
+			end
+			table.insert(parts, ("시즌 패스 %d칸"):format(grant.amount))
 		else
 			return false, "unknown_kind " .. tostring(grant.kind)
 		end
@@ -128,7 +139,12 @@ function MonetizationService.processReceipt(receiptInfo, deps)
 	for _, grant in ipairs(product.grants) do
 		hasPremium = hasPremium or grant.kind == "seasonPremium"
 	end
-	if MonetizationService.ownsAll(player, product) or (hasPremium and staleSeason) then
+	local skipN = 0
+	for _, grant in ipairs(product.grants) do
+		skipN += grant.kind == "passTierSkip" and (grant.amount or 0) or 0
+	end
+	local skipOver = skipN > 0 and SeasonPassService.skipRoom(player) < skipN -- QUEUE-ALL9B 4-8: 상한 넘는 영수증(창을 연 뒤 칸이 오름 등) = 토큰 환산
+	if MonetizationService.ownsAll(player, product) or (hasPremium and staleSeason) or skipOver then
 		refund = Monetization.tokenPriceForRobux(MonetizationData, product.robux) or 0 -- QUEUE-ALL9B 3-3: 상품 robux 비례(토큰 가격과 같은 식)
 		reward = { sparkleShard = refund }
 	else
@@ -155,6 +171,9 @@ function MonetizationService.processReceipt(receiptInfo, deps)
 	if not saved then
 		-- 저장 실패: 기록을 빼고 NotProcessedYet → 다음 재시도가 다시 지급(멱등 - 치장 소유 · 유료 줄은 켜진 채라 같은 결과) · 그때 저장되면 Granted
 		Monetization.forgetReceipt(s.purchases, purchaseId)
+		if skipN > 0 and refund == 0 then -- QUEUE-ALL9B 4-8 칸 건너뛰기도 더하기 - 되돌린다
+			SeasonPassService.revertSkip(player, skipN)
+		end
 		if refund > 0 then -- 조각 환산은 더하기라 멱등이 아니다 - 되돌린다(재시도 때 다시 준다)
 			local quests = PlayerProfile.getQuestState(player)
 			if quests then
@@ -347,6 +366,14 @@ function MonetizationService.promptProduct(player, key)
 	if not PlayerProfile.getMonetizationState(player) then
 		return false, "no_profile" -- QUEUE-ALL5 D②: 로드 전 - 아래 seasonPremium 줄이 nil을 인덱싱했다
 	end
+	if (key == "season_premium" or key == "season_premium_sale") and key ~= Monetization.activePremiumKey(SeasonPassData) then
+		return false, "not_active" -- QUEUE-ALL9B 4-4: 지금 활성인 유료 줄 상품만(할인 켜짐 = sale만 · 꺼짐 = 정가만)
+	end
+	for _, grant in ipairs(product.grants) do
+		if grant.kind == "passTierSkip" and SeasonPassService.skipRoom(player) < (grant.amount or 0) then
+			return false, "skip_cap" -- 4-8: 버튼 비활성과 같은 판정(서버도)
+		end
+	end
 	if MonetizationService.ownsAll(player, product) then -- 리뷰 중요 3: 이미 가진 치장 · 이번 시즌 유료 줄을 다시 사지 않게(결제만 되고 받는 것 없음)
 		return false, "owned"
 	end
@@ -374,7 +401,7 @@ function MonetizationService.promptPass(player, key)
 	return true
 end
 
-local ACTIONS = { view = true, buyShards = true, buyTokens = true, buyRobux = true, buyPass = true, equip = true, seasonClaim = true, giftClaim = true }
+local ACTIONS = { view = true, buyShards = true, buyTokens = true, buyRobux = true, buyPass = true, equip = true, seasonClaim = true, seasonClaimAll = true, giftClaim = true }
 function MonetizationService.handle(player, action, a, b)
 	if type(action) ~= "string" or not ACTIONS[action] then
 		return false, "bad_action"
@@ -392,6 +419,9 @@ function MonetizationService.handle(player, action, a, b)
 		ok, why = CosmeticService.equip(player, a, b)
 	elseif action == "seasonClaim" and type(a) == "string" and type(b) == "number" then
 		ok, why = SeasonPassService.claim(player, a, b)
+	elseif action == "seasonClaimAll" and type(a) == "string" then -- QUEUE-ALL9B 4-6 일괄 받기(소급)
+		local got, last = SeasonPassService.claimAll(player, a)
+		ok, why = got > 0, if got > 0 then nil else (last or "none")
 	elseif action == "giftClaim" and type(a) == "string" then
 		local got = GiftService.claim(player, a)
 		ok, why = got > 0, if got > 0 then nil else "none"

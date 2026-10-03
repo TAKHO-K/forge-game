@@ -85,13 +85,63 @@ function SeasonPassService.ensure(player, now)
 		pass.premium = false
 		pass.claimedFree = {}
 		pass.claimedPaid = {}
+		pass.skipBought = 0 -- QUEUE-ALL9B 4-8 이번 시즌 구매로 오른 칸 수
+		pass.skipTiers = {} -- 건너뛰기로 얻은 칸(문자열 키 - 무료 줄 알 · 성장 재화 = 토큰)
 		quests.currencies.passExp = 0
 		if old ~= 0 then
 			print(("[B2] 시즌 패스 넘김: %s - 시즌 %d → %d(경험치 · 받음 · 유료 초기화)"):format(player.Name, old, season))
 		end
 		return pass, true
 	end
+	pass.skipBought = tonumber(pass.skipBought) or 0
+	pass.skipTiers = type(pass.skipTiers) == "table" and pass.skipTiers or {}
 	return pass, false
+end
+
+-- QUEUE-ALL9B 4-8 칸 건너뛰기: 이번 시즌에 더 살 수 있는 칸 수(구매 상한 - 이미 산 칸 · 40칸 - 도달 칸 중 작은 쪽)
+function SeasonPassService.skipRoom(player)
+	local pass = SeasonPassService.ensure(player)
+	local quests = PlayerProfile.getQuestState(player)
+	if not pass or not quests then
+		return 0
+	end
+	local reach = Monetization.seasonReach(quests.currencies.passExp or 0, SeasonPassData.expPerTier)
+	return math.max(0, math.min(SeasonPassData.skip.capPerSeason - pass.skipBought, SeasonPassData.skip.maxTier - reach))
+end
+-- 칸 n개 올리기(영수증 지급 - 방은 호출부가 먼저 확인). 오른 칸 = 건너뛴 칸 표시. 반환: ok, 이유
+function SeasonPassService.applySkip(player, n)
+	local pass = SeasonPassService.ensure(player)
+	local quests = PlayerProfile.getQuestState(player)
+	if not pass or not quests then
+		return false, "no_profile"
+	end
+	if type(n) ~= "number" or n < 1 or n ~= math.floor(n) or SeasonPassService.skipRoom(player) < n then
+		return false, "skip_cap"
+	end
+	local per = SeasonPassData.expPerTier
+	local exp = quests.currencies.passExp or 0
+	local reach = Monetization.seasonReach(exp, per)
+	for i = 1, n do
+		pass.skipTiers[tostring(reach + i)] = true
+	end
+	quests.currencies.passExp = exp + n * per
+	pass.skipBought += n
+	return true
+end
+-- 되돌리기(저장 실패 - 영수증 재시도가 다시 지급)
+function SeasonPassService.revertSkip(player, n)
+	local pass = SeasonPassService.ensure(player)
+	local quests = PlayerProfile.getQuestState(player)
+	if not pass or not quests then
+		return
+	end
+	local per = SeasonPassData.expPerTier
+	local reach = Monetization.seasonReach(quests.currencies.passExp or 0, per)
+	for i = 0, n - 1 do
+		pass.skipTiers[tostring(reach - i)] = nil
+	end
+	quests.currencies.passExp = math.max(0, (quests.currencies.passExp or 0) - n * per)
+	pass.skipBought = math.max(0, pass.skipBought - n)
 end
 
 function SeasonPassService.view(player)
@@ -117,6 +167,14 @@ function SeasonPassService.view(player)
 		rows = SeasonPassData.rowsFor(pass.season), -- QUEUE-ALL1 R1 시즌 한정 칸
 		bonus = SeasonPassData.bonus, -- QUEUE-ALL9A 1-3 반복 보너스 칸(41칸부터 - 도달 = reach)
 		reach = reach,
+		bonusCap = SeasonPassData.bonusCap, -- QUEUE-ALL9B 보완 5-2(41 ~ 40 + 상한)
+		skipRoom = SeasonPassService.skipRoom(player), skipBought = pass.skipBought, skipTiers = table.clone(pass.skipTiers), -- 4-8
+		saleActive = SeasonPassData.saleActive, premiumKey = Monetization.activePremiumKey(SeasonPassData), -- 4-4
+		value = (function() -- 4-7 "가치 약 ×N"
+			local MonetizationData = require(ReplicatedStorage.Shared.data.MonetizationData)
+			local v = Monetization.passValue(MonetizationData, SeasonPassData, require(ReplicatedStorage.Shared.data.CosmeticSlotData), pass.season)
+			return { multiple = v.multiple, total = v.total }
+		end)(),
 		weekend = { active = weekendOn, endsAt = weekendEnds, mult = SeasonPassData.weekend.mult }, -- QUEUE-ALL9A 1-2(남은 시간 = 클라가 서버 시각 GetServerTimeNow로)
 	}
 end
@@ -145,11 +203,14 @@ function SeasonPassService.claim(player, rowName, tier)
 		return false, "no_profile"
 	end
 	local reached = Monetization.seasonReach(quests.currencies.passExp or 0, SeasonPassData.expPerTier) -- QUEUE-ALL9A 1-3: 상한 없음(41칸부터 보너스)
-	local ok, why = Monetization.canClaim(pass, rowName, tier, reached, SeasonPassData.tiers, SeasonPassData.bonus ~= nil)
+	local ok, why = Monetization.canClaim(pass, rowName, tier, reached, SeasonPassData.tiers, SeasonPassData.bonus ~= nil, SeasonPassData.bonusCap)
 	if not ok then
 		return false, why
 	end
 	local reward = SeasonPassData.rewardAt(pass.season, rowName, tier) -- QUEUE-ALL1 R1 시즌 한정 칸 · ALL9A 보너스 칸
+	if rowName == "free" and pass.skipTiers[tostring(tier)] then
+		reward = Monetization.skippedFreeReward(SeasonPassData, reward) -- QUEUE-ALL9B 4-8 · 보완 6-2: 건너뛴 칸 = 알 · 성장 재화 → 토큰
+	end
 	local okReward, summary = require(script.Parent.MonetizationService).applyReward(player, reward, rowName == "paid" and "seasonPaid" or "season")
 	if not okReward then
 		return false, summary
@@ -159,6 +220,36 @@ function SeasonPassService.claim(player, rowName, tier)
 	require(script.Parent.ImmediateSave).request(player)
 	print(("[B2] 시즌 패스 받기: %s - 시즌 %d %s %d칸 → %s"):format(player.Name, pass.season, rowName, tier, summary))
 	return true, summary
+end
+
+-- QUEUE-ALL9B 4-6 일괄 받기(중간 구매 소급 · 받기 버튼 한 번): 그 줄의 도달한 안 받은 칸(40칸 + 보너스 상한까지)을 차례로 claim(같은 검사 · 지급 · 기록).
+--   알 가방이 가득 차는 등 한 칸이 실패하면 거기서 멈춘다(받은 칸은 기록 - 다음 누름이 이어서). 반환: 받은 칸 수, 마지막 이유
+function SeasonPassService.claimAll(player, rowName)
+	if rowName ~= "free" and rowName ~= "paid" then
+		return 0, "bad_row"
+	end
+	local quests = PlayerProfile.getQuestState(player)
+	if not SeasonPassService.ensure(player) or not quests then
+		return 0, "no_profile"
+	end
+	local reached = math.min(Monetization.seasonReach(quests.currencies.passExp or 0, SeasonPassData.expPerTier), SeasonPassData.tiers + (SeasonPassData.bonusCap or 0))
+	local got, last = 0, nil
+	for tier = 1, reached do
+		local pass = SeasonPassService.ensure(player)
+		local claimed = rowName == "free" and pass.claimedFree or pass.claimedPaid
+		if not claimed[tostring(tier)] then
+			local ok, why = SeasonPassService.claim(player, rowName, tier)
+			if not ok then
+				last = why
+				break
+			end
+			got += 1
+		end
+	end
+	if got > 0 then
+		require(script.Parent.AuditTrail).note(player, "passClaimAll", ("%s %d칸"):format(rowName, got)) -- 6-2 감사
+	end
+	return got, last
 end
 
 return SeasonPassService

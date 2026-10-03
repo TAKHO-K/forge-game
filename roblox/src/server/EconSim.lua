@@ -241,6 +241,9 @@ function EconSim.withOverrides(whatIf, fn, ...)
 	if whatIf.sellGoldScale then -- QUEUE-ALL9B 1: 판매가 계수(ArmorData.sellGoldScale)
 		set(ArmorData, "sellGoldScale", whatIf.sellGoldScale)
 	end
+	if whatIf.modelSeasonPass ~= nil then -- QUEUE-ALL9B 보완 6-1
+		set(EconSimConfig, "modelSeasonPass", whatIf.modelSeasonPass)
+	end
 	if whatIf.enhanceCostScale then
 		local scaled = {}
 		for index, cost in ipairs(EnhanceConfig.goldCost) do
@@ -840,6 +843,46 @@ local function tryTrainWithGold(state)
 	end
 end
 
+-- QUEUE-ALL9B 보완 6-1: 시즌 패스 무료 줄 성장 보상(매일 접속 가정 - EconSimConfig.seasonPassDaily). 지난 플레이 날마다 경험치 → 새로 닿은 칸의 골드 · 강화석 · 하락 방지권(40칸 뒤 = 반복 보너스 골드 · 상한까지).
+local function seasonPassIncome(state, profile)
+	if not EconSimConfig.modelSeasonPass then
+		return
+	end
+	local SeasonPassData = require(ReplicatedStorage.Shared.data.SeasonPassData)
+	local P = EconSimConfig.seasonPassDaily
+	local day = math.floor(state.seconds / 3600 / profile.hoursPerDay) + 1
+	state.passDay = state.passDay or 0
+	while state.passDay < day do
+		state.passDay += 1
+		local sd = (state.passDay - 1) % P.seasonDays + 1
+		if sd == 1 then
+			state.passExp, state.passTier = 0, 0
+		end
+		local wd = (sd - 1) % 7
+		state.passExp += wd >= 5 and P.weekend or P.weekday
+		if wd == 6 then
+			state.passExp += P.weekly
+		end
+		local reach = math.min(math.floor(state.passExp / SeasonPassData.expPerTier), SeasonPassData.tiers + (SeasonPassData.bonusCap or 0))
+		while state.passTier < reach do
+			state.passTier += 1
+			local r = SeasonPassData.rewardAt(1, "free", state.passTier)
+			if r.gold then
+				state.gold += r.gold
+				state.passGold = (state.passGold or 0) + r.gold
+			end
+			for _, id in ipairs({ "enhanceStone", "highEnhanceStone" }) do
+				if r[id] then
+					state.materials[id] = (state.materials[id] or 0) + r[id]
+				end
+			end
+			if r.protectDrop then
+				state.tickets.drop += r.protectDrop
+			end
+		end
+	end
+end
+
 local function nextMilestoneRecord(run, state, cap)
 	for _, milestone in ipairs(run.milestones) do
 		if not run.reached[milestone] and state.reach >= milestone and milestone <= cap then
@@ -1297,6 +1340,7 @@ function EconSim.runProgress(profileId, whatIf)
 			break
 		end
 		table.insert(run.chunks, chunk)
+		EconSim.withOverrides(whatIf, seasonPassIncome, state, profile) -- QUEUE-ALL9B 보완 6-1(what-if modelSeasonPass)
 		nextMilestoneRecord(run, state, cap)
 		if state.seconds > EconSimConfig.maxPlayHours * 3600 then
 			run.stall = ("누적 플레이 %d시간 상한(EconSimConfig.maxPlayHours)에서 멈춤 - 최고 스테이지 %d · 레벨 %d"):format(EconSimConfig.maxPlayHours, state.reach, state.level)

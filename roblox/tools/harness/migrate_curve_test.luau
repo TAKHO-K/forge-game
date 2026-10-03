@@ -79,6 +79,14 @@ local ok, err = pcall(function()
 		local again = SaveSystem.migrate(m)
 		check("v65 이관 멱등(다시 돌려도 50/50/12)", again.training.attack == 50 and again.training.hp == 50 and again.training.defense == 12)
 	end
+	-- 7) QUEUE-ALL9B v66: 시즌 패스 건너뛰기 기록(옛 계정 = 0 · 빈 표 · 받은 칸 그대로)
+	do
+		local d = SaveSystem.defaultProfile()
+		d.version = 65
+		d.seasonPass = { season = 3, premium = true, claimedFree = { ["1"] = true }, claimedPaid = {} }
+		local m = SaveSystem.migrate(d)
+		check("v65 → v66 seasonPass.skipBought 0 · skipTiers 빈 표 · 받은 칸 유지", m.version >= 66 and m.seasonPass.skipBought == 0 and type(m.seasonPass.skipTiers) == "table" and m.seasonPass.claimedFree["1"] == true and m.seasonPass.premium == true)
+	end
 	-- 5) 새 계정 빈 표
 	local okEmpty, m = pcall(SaveSystem.migrate, {})
 	check("migrate({})", okEmpty and type(m) == "table" and m.version == MODS.SaveConfig.saveVersion, okEmpty and ("v" .. tostring(m.version)) or tostring(m))

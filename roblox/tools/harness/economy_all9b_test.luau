@@ -130,8 +130,8 @@ do
 	local delta = CodexRules.totalTokens(book2) - total
 	local newCells = #book2.cells - #book.cells
 	check("3-6 도감 칸 추가 = 토큰 자동 증가(칸 + 줄 완성)", newCells == 5 and delta >= newCells, ("칸 %d개 추가 → 토큰 +%d(칸당 %.1f) · 도감 총 토큰 %d"):format(newCells, delta, delta / math.max(newCells, 1), total))
-	local prog = Mon.premiumTokenProgress(Data, 300)
-	check("3-7 다음 499급까지(토큰 300) = 500 남음 · 37.5%", prog.price == 800 and prog.need == 500 and math.abs(prog.ratio - 0.375) < 1e-9)
+	local prog = Mon.premiumTokenProgress(Data, 280)
+	check("3-7 다음 499급까지(토큰 280) = 420 남음 · 40%", prog.price == 700 and prog.need == 420 and math.abs(prog.ratio - 0.4) < 1e-9)
 	local blocked = {}
 	for _, list in ipairs({ Cos.sets, Cos.gliderSkins, Cos.items }) do
 		for _, e in ipairs(list) do
@@ -151,13 +151,85 @@ do
 	check("3-5 토큰 불가 치장(시즌 한정 · 패스 · 출석판 전용)은 상품에 없음", #leak == 0, ("불가 %s · 새는 상품 %s"):format(table.concat(blocked, ","), table.concat(leak, ",")))
 	local untok = {}
 	for key, product in pairs(Data.products) do
-		if key ~= "season_premium" and not Mon.productTokenPrice(Data, Cos, key) then
+		local g1 = product.grants[1] and product.grants[1].kind
+		if (g1 == "cosmeticTheme" or g1 == "gliderSkin" or g1 == "cosmeticItem") and not Mon.productTokenPrice(Data, Cos, key) then
 			table.insert(untok, key)
 		end
 	end
 	check("3-5 모든 상점 치장 = 토큰으로도 살 수 있음", #untok == 0, table.concat(untok, ","))
 	local ok, reasons = Mon.checkCatalog(Data, Cos, MODS.SeasonPassData)
 	check("3-4 카탈로그 검사 통과(499급 묶음 tier premium 포함)", ok, table.concat(reasons, " / "))
+end
+
+-- ══ 4 시즌 패스(보완 지시) ══
+do
+	local Mon, Data, Cos, Season = MODS.Monetization, MODS.MonetizationData, MODS.CosmeticSlotData, MODS.SeasonPassData
+	local v = Mon.passValue(Data, Season, Cos, 1)
+	for _, it in ipairs(v.items) do
+		print(("[ALL9B] 4 유료 치장 %d칸 %dR$"):format(it.tier, it.robux))
+	end
+	check("4-1 · 보완 3-2 유료 줄 가치 ×5 ~ 8 · 토큰 ≤ 20%", v.multiple >= 5 and v.multiple <= 8 and v.tokenShare <= 0.2,
+		("치장 %dR$ + 토큰 %d개(%.0fR$) = %.0fR$ ÷ %d = ×%.2f · 토큰 %.1f%%"):format(v.cosmeticRobux, v.tokens, v.tokenRobux, v.total, v.price, v.multiple, v.tokenShare * 100))
+	local ok, reasons, _, warnings = Mon.checkCatalog(Data, Cos, Season)
+	check("4-5 카탈로그 · 패스 검사 통과 · 2시즌 대표 = 경고", ok and #warnings > 0 and warnings[1]:find("2시즌") ~= nil, table.concat(reasons, " / ") .. " | " .. table.concat(warnings, " / "))
+	local s0 = Season.seasonLimited[1]
+	Season.seasonLimited[1] = nil
+	local ok1 = Mon.checkSeasonPass(Data, Season, Cos)
+	Season.seasonLimited[1] = s0
+	check("4-5 1시즌 대표가 비면 검사 실패", not ok1)
+	local rows = Season.rowsFor(1)
+	local badGold, early, paidGrowth = {}, { gold = false, stone = false }, {}
+	for tier = 1, Season.tiers do
+		local f, pr = rows.free[tier], rows.paid[tier]
+		print(("[ALL9B] 4 표 %d칸 | 무료 %s | 유료 %s"):format(tier, MODS.Monetization.rewardToGrants and (function()
+			local t = {}
+			for _, g in ipairs(Mon.rewardToGrants(f)) do table.insert(t, g.kind .. "=" .. tostring(g.id or g.amount)) end
+			return table.concat(t, ",")
+		end)() or "", (function()
+			local t = {}
+			for _, g in ipairs(Mon.rewardToGrants(pr)) do table.insert(t, g.kind .. "=" .. tostring(g.id or g.amount)) end
+			return table.concat(t, ",")
+		end)()))
+		if f.gold and f.gold % 100 ~= 0 then table.insert(badGold, tier) end
+		if tier <= 10 then
+			early.gold = early.gold or f.gold ~= nil
+			early.stone = early.stone or f.enhanceStone ~= nil
+		end
+		for k in pairs(pr) do
+			if Season.growthKinds[k] or k == "egg" then table.insert(paidGrowth, tier .. ":" .. k) end
+		end
+	end
+	check("보완 2-1 · 6-3 무료 줄 골드 끝 00 · 1 ~ 10칸에 골드 · 강화석", #badGold == 0 and early.gold and early.stone, table.concat(badGold, ","))
+	check("보완 ② 유료 줄 = 성장 재화 · 알 없음(판매 금지 검사 그대로)", #paidGrowth == 0, table.concat(paidGrowth, ","))
+	local sk = Mon.skippedFreeReward(Season, rows.free[5])
+	local sk2 = Mon.skippedFreeReward(Season, rows.free[2])
+	local sk3 = Mon.skippedFreeReward(Season, rows.free[20])
+	check("4-8 · 보완 6-2 건너뛴 칸: 알 + 골드 → 토큰 3 · 골드 + 강화석 → 토큰 1 · 치장 그대로", sk.egg == nil and sk.gold == nil and sk.sparkleShard == 3 and sk2.gold == nil and sk2.enhanceStone == nil and sk2.sparkleShard == 1
+		and sk3.cosmeticTheme == "meadowStar" and sk3.sparkleShard == nil)
+	local pass = { premium = true, claimedFree = {}, claimedPaid = {} }
+	local okB, whyB = Mon.canClaim(pass, "free", Season.tiers + Season.bonusCap + 1, 999, Season.tiers, true, Season.bonusCap)
+	local okB2 = Mon.canClaim(pass, "free", Season.tiers + Season.bonusCap, 999, Season.tiers, true, Season.bonusCap)
+	check("보완 5-2 반복 보너스 상한 20(61칸 = bonus_cap · 60칸 = 받음)", Season.bonusCap == 20 and not okB and whyB == "bonus_cap" and okB2)
+	-- 보완 1-4 칸 ↔ 날짜(매일 · 주 4일): 1일차 = 월요일 · 평일 120 · 주말 240 · 일요일 주간 500
+	local function dayOf(days)
+		local exp, out = 0, {}
+		for d = 1, 56 do
+			local wd = (d - 1) % 7
+			if days[wd] then exp += (wd >= 5) and 240 or 120 end
+			if wd == 6 then exp += 500 end
+			for t = 1, 80 do
+				if not out[t] and exp >= t * Season.expPerTier then out[t] = d end
+			end
+		end
+		return out
+	end
+	local daily = dayOf({ [0] = true, [1] = true, [2] = true, [3] = true, [4] = true, [5] = true, [6] = true })
+	local four = dayOf({ [1] = true, [3] = true, [5] = true, [6] = true })
+	local line = {}
+	for _, t in ipairs({ 1, 5, 10, 20, 30, 40, 60 }) do
+		table.insert(line, ("%d칸 매일 %s · 주4 %s"):format(t, tostring(daily[t]), tostring(four[t])))
+	end
+	check("보완 1-4 매일 40칸 30 ~ 32일 · 주 4일 56일 안 · 매일 반복 20회 56일 안", daily[40] >= 30 and daily[40] <= 32 and four[40] and four[40] <= 56 and daily[60] and daily[60] <= 56, table.concat(line, " | "))
 end
 
 -- ══ 끝 ══

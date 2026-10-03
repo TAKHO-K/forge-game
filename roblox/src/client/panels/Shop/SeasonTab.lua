@@ -9,29 +9,34 @@ local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 local Layout = require(script.Parent.Layout)
 local CosmeticTab = require(script.Parent.CosmeticTab)
 local RewardDetail = require(script.Parent.Parent.Parent.ui.RewardDetail)
+local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
+local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit)
 
 local SeasonTab = {}
 
 local TIER_COL = 44 -- 칸 번호 열 폭
 local DAY = 86400
 
--- 보상 표 → 한 문장(키 하나 = 한 조합 - 조각 이어붙이기 대신 조합마다 템플릿). egg가 있으면 랜덤 표시.
+-- 보상 표 → 한 문장. 치장(테마 · 글라이더 · 세트)은 이름 · 그 밖은 재화마다 짧은 조각을 " · "로 잇는다(QUEUE-ALL9B 보완: 무료 줄 골드 · 강화석 · 소모품). egg가 있으면 랜덤 표시.
+local PARTS = { "gold", "enhanceStone", "highEnhanceStone", "gemDust", "protectDrop", "sparkleShard", "egg" }
 function SeasonTab.rewardText(reward)
 	if type(reward) ~= "table" then
 		return ""
 	end
-	if reward.cosmeticTheme then
+	if reward.cosmeticTheme and reward.gliderSkin then -- QUEUE-ALL9B 4-5 시즌 대표 세트(글라이더 + 트레일)
+		return Text.get("season.reward.set", { name = CosmeticTab.nameOf("gliderSkin", reward.gliderSkin) })
+	elseif reward.cosmeticTheme then
 		return Text.get("season.reward.theme", { name = CosmeticTab.nameOf("cosmeticTheme", reward.cosmeticTheme) })
 	elseif reward.gliderSkin then
 		return Text.get("season.reward.glider", { name = CosmeticTab.nameOf("gliderSkin", reward.gliderSkin) })
-	elseif reward.sparkleShard and reward.egg then
-		return Text.get("season.reward.shardEgg", { shard = tostring(reward.sparkleShard), egg = tostring(reward.egg) })
-	elseif reward.egg then
-		return Text.get("season.reward.egg", { egg = tostring(reward.egg) })
-	elseif reward.sparkleShard then
-		return Text.get("season.reward.shard", { shard = tostring(reward.sparkleShard) })
 	end
-	return ""
+	local parts = {}
+	for _, key in ipairs(PARTS) do
+		if reward[key] then
+			table.insert(parts, Text.get("season.reward.part." .. key, { n = NumberFormat.format(reward[key]) }))
+		end
+	end
+	return table.concat(parts, " · ")
 end
 
 -- 칸 하나의 버튼 상태: "claimed" | "ready" | "locked"(유료 줄 잠김) | "notReached"
@@ -114,7 +119,7 @@ end
 
 -- QUEUE-ALL9A 1-3: 40칸 뒤 반복 보너스 칸 - 도달 횟수 · 줄마다 다음 안 받은 칸(41 · 42 …) 하나씩 받기(서버가 다시 잰다)
 function SeasonTab.bonusState(season, rowName)
-	local reached = math.max(0, (season.reach or 0) - season.tiers)
+	local reached = math.max(0, math.min((season.reach or 0) - season.tiers, season.bonusCap or math.huge)) -- QUEUE-ALL9B 보완 5-2 상한
 	local claimed = rowName == "free" and season.claimedFree or season.claimedPaid
 	local nextTier, pending = nil, 0
 	for tier = season.tiers + 1, season.tiers + reached do
@@ -145,8 +150,9 @@ local function bonusRow(ctx, env, season)
 			end,
 		})
 	end
-	ctx.row({ name = "Bonus", title = Text.get("season.bonusTitle", { n = tostring(reached) }),
-		subtitle = Text.get("season.bonusSub", { per = tostring(season.expPerTier), free = tostring(season.bonus.free.sparkleShard or 0), paid = tostring(season.bonus.paid.sparkleShard or 0) }),
+	local capped = season.bonusCap and reached >= season.bonusCap -- QUEUE-ALL9B 보완 5-2
+	ctx.row({ name = "Bonus", title = Text.get("season.bonusTitle", { n = tostring(reached) .. (season.bonusCap and ("/" .. season.bonusCap) or "") }),
+		subtitle = capped and Text.get("season.bonusCapped") or Text.get("season.bonusSub", { per = tostring(season.expPerTier), free = SeasonTab.rewardText(season.bonus.free), paid = SeasonTab.rewardText(season.bonus.paid) }),
 		highlight = reached > 0, buttons = buttons })
 end
 
@@ -169,6 +175,53 @@ function SeasonTab.claimableCount(season)
 	return n
 end
 
+-- QUEUE-ALL9B 4-7 최종 보상 칸(40칸 유료 대표 3D 미리보기 · "주 4일이면 끝까지" · 가치 약 ×N). 화면 다듬기 = ALL9C.
+function SeasonTab.finalPreview(ctx, season)
+	local L = ctx.L
+	local reward = season.rows.paid[season.tiers] or season.rows.paid[tostring(season.tiers)]
+	local frame = Instance.new("Frame")
+	frame.Name = "FinalReward"
+	frame.LayoutOrder = ctx.nextOrder()
+	frame.Size = UDim2.new(0, L.rowW, 0, 96)
+	frame.BackgroundColor3 = Theme.colors.slot
+	frame.BackgroundTransparency = Theme.colors.slotTransparency
+	frame.Parent = ctx.scroll
+	Theme.corner(frame, Theme.corner.chip)
+	local view = Instance.new("ViewportFrame")
+	view.Name = "Preview"
+	view.BackgroundTransparency = 1
+	view.Size = UDim2.fromOffset(96, 96)
+	view.Parent = frame
+	local CosData = require(ReplicatedStorage.Shared.data.ArtV1CosmeticData)
+	local spec = type(reward) == "table" and reward.gliderSkin and CosData.gliders[reward.gliderSkin]
+	local src = spec and spec.mesh and ArtMeshKit.get(spec.mesh)
+	if src then
+		local model = src:Clone()
+		for _, d in ipairs(model:GetDescendants()) do
+			if d:IsA("BasePart") and spec.colors and spec.colors[d.Name] then
+				d.Color = spec.colors[d.Name]
+			end
+		end
+		model.Parent = view
+		local cf, size = model:GetBoundingBox()
+		local cam = Instance.new("Camera")
+		cam.CFrame = CFrame.lookAt(cf.Position + Vector3.new(size.Magnitude * 0.7, size.Magnitude * 0.3, size.Magnitude * 0.7), cf.Position)
+		cam.Parent = view
+		view.CurrentCamera = cam
+	end
+	local title = Theme.label(frame, Text.get("season.finalTitle", { reward = SeasonTab.rewardText(reward) }), "body", "gold")
+	title.Name = "Title"
+	title.Position = UDim2.fromOffset(104, 8)
+	title.Size = UDim2.new(1, -112, 0, 26)
+	title.TextWrapped = true
+	local value = season.value and season.value.multiple or 0
+	local sub = Theme.label(frame, Text.get("season.finalSub", { x = ("%.0f"):format(value) }), "caption", "textSecondary")
+	sub.Name = "Sub"
+	sub.Position = UDim2.fromOffset(104, 40)
+	sub.Size = UDim2.new(1, -112, 0, 48)
+	sub.TextWrapped = true
+end
+
 function SeasonTab.render(ctx, env)
 	local view = env.state.view
 	local season = view and view.season
@@ -187,12 +240,42 @@ function SeasonTab.render(ctx, env)
 		local time = Text.get("season.weekendTime", { h = tostring(math.floor(left / 3600)), m = tostring(math.floor(left % 3600 / 60)) })
 		ctx.line(Text.get("season.weekendOn", { time = time }), "gold", 1, "WeekendBoost")
 	end
+	SeasonTab.finalPreview(ctx, season) -- QUEUE-ALL9B 4-7 최종 보상 미리보기 · 주 4일 · 가치 약 ×N
 	if season.premium then
 		ctx.line(Text.get("season.premiumOn"), "success", 1, "PremiumOn")
 	else
-		local button = env.robuxButton("season_premium", "PremiumBuy")
-		ctx.row({ name = "Premium", title = Text.get("season.premiumTitle"), subtitle = Text.get("season.premiumSub"), highlight = true, buttons = { button } })
+		local key = season.premiumKey or "season_premium" -- QUEUE-ALL9B 4-4 할인 중 = 299 상품(정가 표시)
+		local button = env.robuxButton(key, "PremiumBuy")
+		local sub = Text.get("season.premiumSub")
+		if season.saleActive then
+			local full = view.products and view.products.season_premium
+			sub = Text.get("season.saleSub", { full = tostring(full and full.robux or 399) }) .. " · " .. sub
+		end
+		ctx.row({ name = "Premium", title = Text.get("season.premiumTitle"), subtitle = sub, highlight = true, buttons = { button } })
 	end
+	-- QUEUE-ALL9B 4-6 모두 받기(중간 구매 소급 포함 · 서버가 칸마다 다시 잰다)
+	local claimAll = {}
+	for _, rowName in ipairs({ "free", "paid" }) do
+		local n = 0
+		for tier = 1, season.tiers do
+			n += SeasonTab.cellState(season, rowName, tier) == "ready" and 1 or 0
+		end
+		table.insert(claimAll, { name = rowName == "free" and "ClaimAllFree" or "ClaimAllPaid", text = Text.get(rowName == "free" and "season.claimAllFree" or "season.claimAllPaid", { n = tostring(n) }),
+			kind = n > 0 and "primary" or "secondary", enabled = n > 0 and not env.busy(), onActivated = function()
+				env.send("seasonClaimAll", rowName)
+			end })
+	end
+	ctx.row({ name = "ClaimAll", title = Text.get("season.claimAllTitle"), buttons = claimAll })
+	-- QUEUE-ALL9B 4-8 칸 건너뛰기(시즌당 상한 · 40칸까지 · 방이 모자라면 버튼 끔 - 서버도 같은 판정)
+	local skipButtons = {}
+	for _, sk in ipairs({ { key = "pass_skip1", n = 1 }, { key = "pass_skip5", n = 5 } }) do
+		local b = env.robuxButton(sk.key, "Skip" .. sk.n)
+		if (season.skipRoom or 0) < sk.n then
+			b.enabled = false
+		end
+		table.insert(skipButtons, b)
+	end
+	ctx.row({ name = "Skip", title = Text.get("season.skipTitle"), subtitle = Text.get("season.skipSub", { room = tostring(season.skipRoom or 0) }), buttons = skipButtons })
 	ctx.line(Text.get("season.eggNote"), "gold", 1, "EggNote")
 	-- 열 제목(칸 | 무료 | 유료)
 	local L = ctx.L

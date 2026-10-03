@@ -96,6 +96,17 @@ local ok, err = pcall(function()
 	line("토큰 구매 연타(같은 상품 · 남은 토큰 0에서 다른 상품)", k1 == true and k2 ~= true and kw2 == "owned" and k3 ~= true and kw3 == "shards" and qs.currencies.sparkleShard == 0 and ms.cosmetics.themes.jelly == true and not ms.cosmetics.themes.frost,
 		("1회 %s · 2회 %s · 다른 %s · 남은 %d"):format(tostring(k1), tostring(kw2), tostring(kw3), qs.currencies.sparkleShard))
 
+	-- ⑧ QUEUE-ALL9B 4-6 일괄 받기 연타(같은 요청 두 번) → 두 번째 0칸 · 보상 한 번
+	local SP = MODS.SeasonPassService
+	SP.ensure(player)
+	local qs2 = PlayerProfile.getQuestState(player)
+	qs2.currencies.passExp = 3 * MODS.SeasonPassData.expPerTier
+	local gold0 = p.gold
+	local a1 = SP.claimAll(player, "free")
+	local goldMid = p.gold
+	local a2 = SP.claimAll(player, "free")
+	line("패스 일괄 받기 연타", a1 == 3 and a2 == 0 and p.gold == goldMid and goldMid > gold0, ("1회 %d칸 · 2회 %d칸 · 골드 +%d"):format(a1, a2, goldMid - gold0))
+
 	-- ⑥ 튕김 직전 수령 → 재접속: 받은 표시와 보상이 같은 프로필 한 번의 저장에 함께 들어간다(저장 전 튕김 = 둘 다 없음 - 복사 불가)
 	local snap = SaveSystem.migrate(MODS.SaveSystem.migrate({})) -- 저장 전 상태(재접속 때 읽는 값)
 	line("튕김 직전 수령 = 받은 표시 · 보상이 한 저장 단위(부분 저장 경로 없음)", snap.quests.attendance.claimed["1"] == nil)

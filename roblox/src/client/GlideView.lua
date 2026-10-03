@@ -200,11 +200,12 @@ function GlideView.show(character)
 		model.Name = "MV1Glider"
 		model:SetAttribute("GliderLook", look)
 		model.Parent = character
-		if look == "dragonWing" then
+		local shape = spec.base or look -- QUEUE-ALL9B 4: 색 변형(base = 바탕 모양)
+		if shape == "dragonWing" then
 			buildWings(model, root, spec, src)
-		elseif look == "cloudWhale" then
+		elseif shape == "cloudWhale" then
 			buildWhale(model, root, spec, src)
-		elseif look == "slimeParachute" then
+		elseif shape == "slimeParachute" then
 			buildParachute(model, root, spec)
 		end
 		AirMotion.hold(character, "glide", LOOK.poseLeanDeg)

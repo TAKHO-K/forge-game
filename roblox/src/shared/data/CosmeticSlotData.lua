@@ -39,7 +39,14 @@ return {
 		{ id = "frost", name = "서리꽃", looks = { dashTrail = "frost", jumpFx = "frost", glideTrail = "frost", footstep = "frost" } },
 		{ id = "jelly", name = "말랑 젤리", looks = { dashTrail = "jelly", jumpFx = "jelly", glideTrail = "jelly", footstep = "jelly" } }, -- QUEUE-ALL1 P6(07 문서 · 199)
 		{ id = "anvil", name = "망치와 모루", looks = { dashTrail = "anvil", jumpFx = "anvil", glideTrail = "anvil", footstep = "anvil" } }, -- QUEUE-ALL6 H #42 대시 금노랑 불꽃 · 점프 "깡!" 고리 · 활강 불씨 줄 · 발자국 망치 자국
-		{ id = "halloween", name = "할로윈 박쥐", looks = { dashTrail = "halloween", jumpFx = "halloween", glideTrail = "halloween", footstep = "halloween" }, seasonMonth = 10 }, -- QUEUE-ALL6 H #50 10월 한정 판매(산 사람은 계속) · 박쥐 떼 · 호박 발자국
+		{ id = "halloween", name = "할로윈 박쥐", looks = { dashTrail = "halloween", jumpFx = "halloween", glideTrail = "halloween", footstep = "halloween" }, seasonMonth = 10 },
+		-- QUEUE-ALL9B 4 시즌 패스 전용(passOnly - 상점 · 토큰 · 선물 X · 시즌 줄에서만) · 외형 = ArtV1CosmeticData 색 변형
+		{ id = "meadowStar", name = "초원 별빛", looks = { dashTrail = "meadowStar", jumpFx = "meadowStar", glideTrail = "meadowStar", footstep = "meadowStar" }, passOnly = true },
+		{ id = "violetStar", name = "보랏빛 별", looks = { dashTrail = "violetStar", jumpFx = "violetStar", glideTrail = "violetStar", footstep = "violetStar" }, passOnly = true },
+		{ id = "auroraFrost", name = "오로라 서리", looks = { dashTrail = "auroraFrost", jumpFx = "auroraFrost", glideTrail = "auroraFrost", footstep = "auroraFrost" }, passOnly = true },
+		{ id = "sodaJelly", name = "소다 젤리", looks = { dashTrail = "sodaJelly", jumpFx = "sodaJelly", glideTrail = "sodaJelly", footstep = "sodaJelly" }, passOnly = true },
+		{ id = "moonEmber", name = "달빛 불씨", looks = { dashTrail = "moonEmber", jumpFx = "moonEmber", glideTrail = "moonEmber", footstep = "moonEmber" }, passOnly = true },
+		{ id = "cloudWhaleTrail", name = "구름 고래 물결", looks = { dashTrail = "cloudWhaleTrail", jumpFx = "cloudWhaleTrail", glideTrail = "cloudWhaleTrail", footstep = "cloudWhaleTrail" }, seasonOnly = 1 }, -- QUEUE-ALL6 H #50 10월 한정 판매(산 사람은 계속) · 박쥐 떼 · 호박 발자국
 	},
 	-- 글라이더 스킨 상품 = 칸 하나(gliderSkin)만. 항목 모양 = { id, name, look }
 	gliderSkins = { -- QUEUE-B1 B2: 글라이더 스킨(칸 하나 · look = 에셋 자리)
@@ -49,5 +56,10 @@ return {
 		{ id = "dragonWing", name = "푸른 드래곤 날개", look = "dragonWing" }, -- 149 · 등에 T6 푸른 드래곤 날개(monsters/blue_dragon Wing_L · Wing_R 메시 재사용) · 천천히 날갯짓
 		{ id = "slimeParachute", name = "슬라임 낙하산", look = "slimeParachute" }, -- QUEUE-ALL6 H #55 말랑한 슬라임 덮개 + 줄(판정 · 속도 불변)
 		{ id = "cloudWhale", name = "구름 고래", look = "cloudWhale", seasonOnly = 1 }, -- 시즌 1 유료 줄 40칸 대표 · 작은 구름 고래를 타고 활강 + 물보라 궤적(extras/cloud_whale) · QUEUE-ALL1 R1(사용자): 시즌 1 한정 · 재판매 없음(상품 · 반짝 조각 · 선물 X) · 조급함 연출 금지(남은 시간 강조 · "곧 사라짐" 문구 없음)
+		-- QUEUE-ALL9B 4 시즌 패스 전용 글라이더(색 변형 - base 모양 그대로)
+		{ id = "mintParachute", name = "민트 낙하산", look = "mintParachute", passOnly = true },
+		{ id = "berryParachute", name = "베리 낙하산", look = "berryParachute", passOnly = true },
+		{ id = "jadeWing", name = "비취 날개", look = "jadeWing", passOnly = true },
+		{ id = "amethystWing", name = "자수정 날개", look = "amethystWing", passOnly = true },
 	},
 }

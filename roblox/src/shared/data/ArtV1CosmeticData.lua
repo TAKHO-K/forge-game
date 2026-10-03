@@ -4,7 +4,7 @@
 --   불씨 = 금노랑 불씨(색상 51 ~ 56° - 위험색 경계 밖) · 별빛 = 남색 → 보라 + 흰 별 · 서리꽃 = 옅은 청록 + 흰 결정.
 local C = Color3.fromRGB
 
-return {
+local D = {
 	themes = {
 		-- QUEUE-ALL6 H #42 망치와 모루: 대시 = 금노랑 불꽃 튐(위험색 경계 51° 위) · 점프 = "깡!" 고리(글자 = TextData cos.anvil.clang) · 활강 = 불씨 줄 · 발자국 = 망치 자국(shape hammer)
 		anvil = {
@@ -76,3 +76,30 @@ return {
 		crown = { color = C(250, 216, 92), gem = C(120, 190, 255), height = 0.45, width = 0.9 }, -- 펫 왕관: 머리 크기 비율(머리 파트 X 크기 × width)
 	},
 }
+
+-- QUEUE-ALL9B 4 시즌 패스 전용 치장 = 기존 모양의 색 변형(새 메시 없음). 변형 = 바탕을 깊게 복사한 뒤 색만 바꾼다(위 색 규칙 그대로 - 주황 · 빨강 · 흰+자홍 · 검정+금 안 씀).
+--   테마는 그리는 쪽이 이 표의 키로 찾는다(client/ArtV1Cosmetics) · 글라이더는 base = 바탕 모양 이름(client/GlideView가 base로 짓는다).
+local function variant(base, colors)
+	local out = table.clone(base)
+	for k, v in pairs(base) do
+		if type(v) == "table" then
+			out[k] = table.clone(v)
+		end
+	end
+	for k, v in pairs(colors) do
+		out[k] = v
+	end
+	return out
+end
+D.themes.meadowStar = variant(D.themes.starlight, { core = C(222, 255, 214), edge = C(96, 196, 120), particle = C(236, 255, 230) }) -- 무료 20칸: 초원 별빛
+D.themes.violetStar = variant(D.themes.starlight, { core = C(236, 220, 255), edge = C(150, 96, 230), particle = C(246, 236, 255) }) -- 유료 10칸: 보랏빛 별
+D.themes.auroraFrost = variant(D.themes.frost, { core = C(226, 255, 246), edge = C(110, 150, 236), particle = C(196, 236, 250) }) -- 유료 20칸(중간 대표): 오로라 서리
+D.themes.sodaJelly = variant(D.themes.jelly, { core = C(196, 236, 255), edge = C(90, 170, 236), particle = C(206, 240, 255) }) -- 유료 25칸: 소다 젤리
+D.themes.moonEmber = variant(D.themes.ember, { core = C(236, 242, 255), edge = C(170, 190, 236), particle = C(222, 232, 255) }) -- 유료 30칸: 달빛 불씨
+D.themes.cloudWhaleTrail = variant(D.themes.starlight, { core = C(240, 248, 255), edge = C(126, 186, 240), particle = C(236, 244, 252) }) -- 유료 40칸 고래 세트(구름 고래 글라이더와 한 쌍 · 시즌 1 한정)
+D.gliders.mintParachute = variant(D.gliders.slimeParachute, { base = "slimeParachute", color = C(150, 230, 210) }) -- 무료 40칸: 민트 낙하산
+D.gliders.berryParachute = variant(D.gliders.slimeParachute, { base = "slimeParachute", color = C(150, 124, 230) }) -- 유료 5칸: 베리 낙하산
+D.gliders.jadeWing = variant(D.gliders.dragonWing, { base = "dragonWing", color = C(80, 190, 140) }) -- 유료 15칸: 비취 날개
+D.gliders.amethystWing = variant(D.gliders.dragonWing, { base = "dragonWing", color = C(150, 100, 210) }) -- 유료 35칸: 자수정 날개
+
+return D

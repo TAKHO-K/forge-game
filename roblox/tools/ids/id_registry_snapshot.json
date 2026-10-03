@@ -10,16 +10,26 @@
  ],
  "cosmeticTheme": [
   "anvil",
+  "auroraFrost",
+  "cloudWhaleTrail",
   "ember",
   "frost",
   "halloween",
   "jelly",
-  "starlight"
+  "meadowStar",
+  "moonEmber",
+  "sodaJelly",
+  "starlight",
+  "violetStar"
  ],
  "gliderSkin": [
+  "amethystWing",
+  "berryParachute",
   "cloudWhale",
   "dragonWing",
+  "jadeWing",
   "kite",
+  "mintParachute",
   "petal",
   "slimeParachute"
  ],

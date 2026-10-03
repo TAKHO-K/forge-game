@@ -175,7 +175,7 @@ local ok, err = pcall(function()
 	qs.currencies.sparkleShard = bundlePrice + 5
 	local tb1 = MS.buyWithTokens(player, "bundle_blacksmith")
 	local tb2, wtb2 = MS.buyWithTokens(player, "bundle_blacksmith")
-	check(("토큰 묶음(499R$급 %d): 부족 거부 · 구매 = 3종 지급 · 연타 = owned · 남은 5"):format(bundlePrice), bundlePrice == 800 and not tb0 and wtb0 == "shards" and tb1 and not tb2 and wtb2 == "owned"
+	check(("토큰 묶음(499R$급 %d): 부족 거부 · 구매 = 3종 지급 · 연타 = owned · 남은 5"):format(bundlePrice), bundlePrice == Data.tokenPricing.premiumTokens and not tb0 and wtb0 == "shards" and tb1 and not tb2 and wtb2 == "owned"
 		and s.cosmetics.themes.anvil and s.cosmetics.gliderSkins.slimeParachute and s.cosmetics.items.goldenHammer and qs.currencies.sparkleShard == 5, ("토큰 %d"):format(qs.currencies.sparkleShard))
 	qs.currencies.sparkleShard = 5000
 	local tp, wtp = MS.buyWithTokens(player, "season_premium")
@@ -187,8 +187,8 @@ local ok, err = pcall(function()
 	for _, r in ipairs({ 49, 99, 149, 199, 399, 499 }) do
 		table.insert(prices, ("%d→%d"):format(r, Mon.tokenPriceForRobux(Data, r)))
 	end
-	check("토큰가 = 로벅스 비례(10 단위)", Mon.tokenPriceForRobux(Data, 49) == 80 and Mon.tokenPriceForRobux(Data, 99) == 160 and Mon.tokenPriceForRobux(Data, 149) == 240
-		and Mon.tokenPriceForRobux(Data, 199) == 320 and Mon.tokenPriceForRobux(Data, 499) == 800, table.concat(prices, " "))
+	check("토큰가 = 로벅스 비례(10 단위 · 499급 700)", Mon.tokenPriceForRobux(Data, 49) == 70 and Mon.tokenPriceForRobux(Data, 99) == 140 and Mon.tokenPriceForRobux(Data, 149) == 210
+		and Mon.tokenPriceForRobux(Data, 199) == 280 and Mon.tokenPriceForRobux(Data, 499) == 700, table.concat(prices, " "))
 
 	-- ⑤ 조각 출처: 나무 정거장 1회 · 순간이동 도착 제외
 	local before = qs.currencies.sparkleShard
@@ -254,11 +254,59 @@ local ok, err = pcall(function()
 	local b2 = SP.claim(player, "free", 42)
 	local b3, why3b = SP.claim(player, "free", 43)
 	local b4, why4b = SP.claim(player, "free", 41)
-	check("보너스 칸: 41 · 42 O(조각 +2씩) · 43 not_reached · 41 다시 claimed · 받음 키 문자열", b1 and b2 and not b3 and why3b == "not_reached" and not b4 and why4b == "claimed"
-		and qs.currencies.sparkleShard == shard0 + 4 and s.seasonPass.claimedFree["41"] == true, ("%s · %s"):format(tostring(why3b), tostring(why4b)))
+	check("보너스 칸: 41 · 42 O(무료 = 토큰 1씩 - QUEUE-ALL9B 보완 5-1) · 43 not_reached · 41 다시 claimed · 받음 키 문자열", b1 and b2 and not b3 and why3b == "not_reached" and not b4 and why4b == "claimed"
+		and qs.currencies.sparkleShard == shard0 + 2 * Season.bonus.free.sparkleShard and s.seasonPass.claimedFree["41"] == true, ("%s · %s"):format(tostring(why3b), tostring(why4b)))
 	local v = SP.view(player)
-	check("view: reach 42 · bonus 표 · weekend 표", v.reach == 42 and v.bonus.paid.sparkleShard == 4 and type(v.weekend.active) == "boolean" and v.tier == Season.tiers)
+	check("view: reach 42 · bonus 표 · weekend 표", v.reach == 42 and v.bonus.paid.sparkleShard == Season.bonus.paid.sparkleShard and v.bonusCap == Season.bonusCap and type(v.weekend.active) == "boolean" and v.tier == Season.tiers)
 
+	-- QUEUE-ALL9B 4-6 중간 구매 소급: 유료 줄 일괄 받기(도달 40 + 보너스 2) · 다시 누르면 0
+	s.seasonPass.premium = true
+	s.seasonPass.claimedPaid = {}
+	local got1 = SP.claimAll(player, "paid")
+	local got2, why2 = SP.claimAll(player, "paid")
+	check("4-6 유료 줄 일괄 받기 = 도달 칸 전부(40 + 보너스 2) · 다시 = 0", got1 == Season.tiers + 2 and got2 == 0 and s.seasonPass.claimedPaid["40"] == true and s.seasonPass.claimedPaid["42"] == true,
+		("%d · %d(%s)"):format(got1, got2, tostring(why2)))
+	-- QUEUE-ALL9B 4-8 칸 건너뛰기: 영수증 → 칸 + 건너뛴 칸 표시 · 무료 줄 성장 재화 → 토큰 · 상한 넘는 영수증 = 토큰 환산 · 저장 실패 = 되돌림
+	qs.currencies.passExp = 3 * Season.expPerTier + 10
+	s.seasonPass.claimedFree, s.seasonPass.skipBought, s.seasonPass.skipTiers = {}, 0, {}
+	Data.products.pass_skip5.productId, Data.products.pass_skip1.productId = 9105, 9101
+	MS.validProducts.pass_skip5, MS.validProducts.pass_skip1 = true, true
+	local rs = MS.processReceipt({ PlayerId = 77, ProductId = 9105, PurchaseId = "P-SKIP5", CurrencySpent = 99 }, deps)
+	local gold0 = p.gold
+	local shardS = qs.currencies.sparkleShard
+	local c4 = SP.claim(player, "free", 4) -- 건너뛴 칸(4 ~ 8)
+	check("4-8 건너뛰기 5칸: 도달 3 → 8 · 4 ~ 8칸 표시 · 4칸 무료(골드 + 강화석) = 토큰 1 · 골드 그대로", tostring(rs):find("PurchaseGranted") ~= nil and s.seasonPass.skipBought == 5
+		and s.seasonPass.skipTiers["4"] and s.seasonPass.skipTiers["8"] and not s.seasonPass.skipTiers["3"] and c4 and p.gold == gold0 and qs.currencies.sparkleShard == shardS + 1, ("산 칸 %d"):format(s.seasonPass.skipBought))
+	local eggs0 = #PlayerProfile.getEggs(player)
+	local c5, w5 = SP.claim(player, "free", 5) -- 알 + 골드 → 토큰 3
+	check("4-8 건너뛴 5칸(알 + 골드) = 토큰 3 · 알 안 늚(유료 랜덤 0)", c5 and qs.currencies.sparkleShard == shardS + 4 and #PlayerProfile.getEggs(player) == eggs0,
+		("%s · 토큰 +%d · 알 %d → %d"):format(tostring(w5), qs.currencies.sparkleShard - shardS, eggs0, #PlayerProfile.getEggs(player)))
+	s.seasonPass.skipBought = Season.skip.capPerSeason - 2
+	local shardO = qs.currencies.sparkleShard
+	local okPrompt, whyPrompt = MS.promptProduct(player, "pass_skip5")
+	local ro = MS.processReceipt({ PlayerId = 77, ProductId = 9105, PurchaseId = "P-SKIPOVER", CurrencySpent = 99 }, deps)
+	check("4-8 상한(남은 2칸)에 5칸: 프롬프트 거부 skip_cap · 영수증 = 토큰 환산(칸 안 오름)", not okPrompt and whyPrompt == "skip_cap" and tostring(ro):find("PurchaseGranted") ~= nil
+		and qs.currencies.sparkleShard == shardO + Data.tokenPrice(99) and s.seasonPass.skipBought == Season.skip.capPerSeason - 2)
+	local exp1 = qs.currencies.passExp
+	saveResult = false
+	MS.processReceipt({ PlayerId = 77, ProductId = 9101, PurchaseId = "P-SKIPFAIL", CurrencySpent = 25 }, deps)
+	saveResult = true
+	check("4-8 저장 실패 = 칸 · 산 칸 되돌림(재시도가 다시 준다)", qs.currencies.passExp == exp1 and s.seasonPass.skipBought == Season.skip.capPerSeason - 2)
+	-- QUEUE-ALL9B 4-4 할인: 꺼짐 = 정가만 · 켜짐 = 299만 프롬프트
+	Data.products.season_premium_sale.productId = 9106
+	MS.validProducts.season_premium_sale = true
+	s.seasonPass.premium = false
+	local okSale, whySale = MS.promptProduct(player, "season_premium_sale")
+	Season.saleActive = true
+	local okFull, whyFull = MS.promptProduct(player, "season_premium")
+	local okSale2 = MS.promptProduct(player, "season_premium_sale")
+	Season.saleActive = false
+	check("4-4 할인 꺼짐 = 299 거부 · 켜짐 = 399 거부 · 299 열림", not okSale and whySale == "not_active" and not okFull and whyFull == "not_active" and okSale2)
+	Data.products.pass_skip5.productId, Data.products.pass_skip1.productId, Data.products.season_premium_sale.productId = 0, 0, 0
+	-- 시즌 경계: 건너뛰기 기록 초기화
+	s.seasonPass.season = s.seasonPass.season - 1
+	SP.ensure(player)
+	check("시즌 경계: 산 칸 · 건너뛴 칸 표시 · 받음 초기화", s.seasonPass.skipBought == 0 and next(s.seasonPass.skipTiers) == nil and next(s.seasonPass.claimedFree) == nil)
 	-- ⑦ 선물함: 온라인 바로 · 오프라인 대기열 → 접속 때 옮김 · 치장만 · 받기
 	local GS = MODS.GiftService
 	local r1 = GS.send(77, "gliderSkin", "kite", "알파 감사", "ops")

@@ -153,11 +153,14 @@ function Monetization.findCosmetic(cosmetics, kind, id)
 	return nil
 end
 
--- 시즌 패스 줄 규칙: 유료 줄 = 판매 금지 밖 + 치장 · 치장 재화만 · 알(랜덤) 없음 / 무료 줄 = 알 허용(무료 랜덤) · 판매 금지 종류도 무료 보상이라 막지 않는다(골드 등은 지금 없음).
+-- 시즌 패스 줄 규칙: 유료 줄 = 판매 금지 밖 + 치장 · 치장 재화만 · 알(랜덤) 없음 / 무료 줄 = 알 허용(무료 랜덤) · 성장 재화(골드 · 강화석 · 소모품 - QUEUE-ALL9B 보완: 모두가 받는 줄).
 local PAID_ROW_KINDS = { sparkleShard = true, cosmeticTheme = true, gliderSkin = true, cosmeticItem = true }
 Monetization.PAID_ROW_KINDS = PAID_ROW_KINDS -- 리뷰 중요 2: 서버가 유료 줄을 지급할 때도 같은 표로 막는다
-local FREE_ROW_KINDS = { sparkleShard = true, cosmeticTheme = true, gliderSkin = true, cosmeticItem = true, egg = true }
--- 한 칸 보상의 줄 규칙(QUEUE-ALL9A 1-3: 40칸 표 · 보너스 칸이 같은 검사)
+local FREE_ROW_KINDS = { sparkleShard = true, cosmeticTheme = true, gliderSkin = true, cosmeticItem = true, egg = true,
+	gold = true, enhanceStone = true, highEnhanceStone = true, gemDust = true, protectDrop = true }
+Monetization.FREE_ROW_KINDS = FREE_ROW_KINDS
+local COSMETIC = { cosmeticTheme = true, gliderSkin = true, cosmeticItem = true }
+-- 한 칸 보상의 줄 규칙(40칸 표 · 시즌 대표 · 보너스 칸이 같은 검사)
 local function checkRowReward(reasons, data, cosmetics, rowName, reward, label)
 	for _, grant in ipairs(Monetization.rewardToGrants(reward)) do
 		if rowName == "paid" then
@@ -172,30 +175,42 @@ local function checkRowReward(reasons, data, cosmetics, rowName, reward, label)
 		elseif not FREE_ROW_KINDS[grant.kind] then
 			table.insert(reasons, ("%s: 무료 줄 모르는 종류 %s"):format(label, grant.kind))
 		end
-		if (grant.kind == "cosmeticTheme" or grant.kind == "gliderSkin") and not Monetization.findCosmetic(cosmetics, grant.kind, grant.id) then
-			table.insert(reasons, ("%s: 없는 치장 %s"):format(label, tostring(grant.id)))
+		if COSMETIC[grant.kind] then
+			if not Monetization.findCosmetic(cosmetics, grant.kind, grant.id) then
+				table.insert(reasons, ("%s: 없는 치장 %s"):format(label, tostring(grant.id)))
+			elseif not Monetization.tokenBlocked(cosmetics, grant.kind, grant.id) then
+				table.insert(reasons, ("%s: 패스 치장 %s가 패스 전용(passOnly · seasonOnly)이 아님 - 상점에서도 팔린다"):format(label, tostring(grant.id))) -- QUEUE-ALL9B 4-3
+			end
+		end
+		if grant.kind == "gold" and (type(grant.amount) ~= "number" or grant.amount % 100 ~= 0) then
+			table.insert(reasons, ("%s: 골드 %s - 끝 두 자리 00 아님"):format(label, tostring(grant.amount))) -- QUEUE-ALL9B 보완 6-3
 		end
 	end
 end
+-- 반환: ok, 이유 목록, 경고 목록(QUEUE-ALL9B 4-5: 다음 시즌 대표 보상 미정 = 경고)
 function Monetization.checkSeasonPass(data, season, cosmetics)
-	local reasons = {}
-	for tier = 1, season.tiers do
-		for _, rowName in ipairs({ "free", "paid" }) do
-			local reward = season.rows[rowName][tier]
-			for _, e in ipairs(season.seasonLimited or {}) do -- QUEUE-ALL1 R1: 한정 칸의 그 시즌 보상도 같은 규칙으로 본다
-				if e.row == rowName and e.tier == tier then
-					for _, grant in ipairs(Monetization.rewardToGrants(e.reward)) do
-						if (grant.kind == "cosmeticTheme" or grant.kind == "gliderSkin") and not Monetization.findCosmetic(cosmetics, grant.kind, grant.id) then
-							table.insert(reasons, ("%s %d칸(시즌 %d 한정): 없는 치장 %s"):format(rowName, tier, e.season, tostring(grant.id)))
-						end
-					end
+	local reasons, warnings = {}, {}
+	if season.seasonSlots then -- QUEUE-ALL9B 4-5 시즌 대표 틀
+		for _, n in ipairs({ 1, 2 }) do
+			local limited = season.seasonLimited and season.seasonLimited[n]
+			for slot in pairs(season.seasonSlots) do
+				if not (limited and limited[slot]) then
+					table.insert(n == 1 and reasons or warnings, ("%d시즌 대표 보상 결정 필요(%s)"):format(n, slot))
 				end
 			end
-			if type(reward) ~= "table" then
-				table.insert(reasons, ("%s %d칸: 보상 없음"):format(rowName, tier))
-				continue
+		end
+	end
+	for _, n in ipairs({ 1, 2 }) do
+		local rows = season.rowsFor and season.rowsFor(n) or season.rows
+		for tier = 1, season.tiers do
+			for _, rowName in ipairs({ "free", "paid" }) do
+				local reward = rows[rowName][tier]
+				if type(reward) ~= "table" then
+					table.insert(reasons, ("%s %d칸: 보상 없음"):format(rowName, tier))
+					continue
+				end
+				checkRowReward(reasons, data, cosmetics, rowName, reward, ("시즌 %d %s %d칸"):format(n, rowName, tier))
 			end
-			checkRowReward(reasons, data, cosmetics, rowName, reward, ("%s %d칸"):format(rowName, tier))
 		end
 	end
 	for _, rowName in ipairs({ "free", "paid" }) do -- QUEUE-ALL9A 1-3: 40칸 뒤 반복 보너스 칸도 같은 줄 규칙
@@ -207,7 +222,67 @@ function Monetization.checkSeasonPass(data, season, cosmetics)
 			end
 		end
 	end
-	return #reasons == 0, reasons
+	if season.value then -- QUEUE-ALL9B 4-2 가치 범위
+		local v = Monetization.passValue(data, season, cosmetics, 1)
+		if v.multiple < season.value.targetMin or v.multiple > season.value.targetMax or v.tokenShare > season.value.tokenShareMax then
+			table.insert(reasons, ("유료 줄 가치 ×%.2f · 토큰 %.0f%%(목표 ×%d ~ %d · 토큰 ≤ %.0f%%)"):format(v.multiple, v.tokenShare * 100, season.value.targetMin, season.value.targetMax, season.value.tokenShareMax * 100))
+		end
+	end
+	return #reasons == 0, reasons, warnings
+end
+
+-- QUEUE-ALL9B 4-1 유료 줄 가치(한 곳): Σ 치장 상당가(R$ - 같은 종류 상점가 · 40칸 대표 = 499급) + 유료 줄 토큰 × (499 ÷ 499급 토큰 가격). 반환 = 표(배수 = 가치 ÷ 유료 줄 가격)
+function Monetization.passValue(data, season, cosmetics, seasonNo)
+	local V = season.value
+	local rows = season.rowsFor and season.rowsFor(seasonNo or 1) or season.rows
+	local cos, tokens, items = 0, 0, {}
+	for tier = 1, season.tiers do
+		local reward = rows.paid[tier] or {}
+		tokens += reward.sparkleShard or 0
+		local rep = tier == season.tiers
+		local tierValue = 0
+		for _, g in ipairs(Monetization.rewardToGrants(reward)) do
+			if COSMETIC[g.kind] then
+				tierValue += g.kind == "cosmeticTheme" and V.theme or g.kind == "gliderSkin" and V.gliderSkin or V.item
+			end
+		end
+		if rep and tierValue > 0 then
+			tierValue = V.representative -- 대표(세트) = 499급 하나로 친다
+		end
+		if tierValue > 0 then
+			table.insert(items, { tier = tier, robux = tierValue })
+		end
+		cos += tierValue
+	end
+	local perToken = data.tokenPricing.premiumRobux / Monetization.tokenPriceForRobux(data, data.tokenPricing.premiumRobux)
+	local tokenRobux = tokens * perToken
+	local price = data.products.season_premium.robux
+	local total = cos + tokenRobux
+	return { cosmeticRobux = cos, tokens = tokens, tokenRobux = tokenRobux, total = total, price = price, multiple = total / price, tokenShare = tokenRobux / total, items = items }
+end
+
+-- QUEUE-ALL9B 4-8 · 보완 6-2: 건너뛰기로 얻은 칸의 무료 줄 보상 변환 - 알 → 토큰 skip.eggTokens · 성장 재화(골드 · 강화석 …) → 토큰 skip.growthTokens · 치장 · 토큰 = 그대로.
+function Monetization.skippedFreeReward(season, reward)
+	local out, extra, hasGrowth = {}, 0, false
+	for key, value in pairs(reward or {}) do
+		if key == "egg" then
+			extra += season.skip.eggTokens * value
+		elseif season.growthKinds[key] then
+			hasGrowth = true -- 성장 재화가 여러 개여도 칸당 한 번
+		else
+			out[key] = value
+		end
+	end
+	extra += hasGrowth and season.skip.growthTokens or 0
+	if extra > 0 then
+		out.sparkleShard = (out.sparkleShard or 0) + extra
+	end
+	return out
+end
+
+-- QUEUE-ALL9B 4-4: 지금 받는 시즌 유료 상품 키(할인 중 = season_premium_sale · 아니면 season_premium - 둘 다 같은 지급)
+function Monetization.activePremiumKey(season)
+	return season.saleActive and "season_premium_sale" or "season_premium"
 end
 
 -- 전체 카탈로그(서버 시작 때 1회 - 거부된 상품은 판매 목록에서 뺀다). 반환: ok, 이유 목록, 통과한 상품 key 집합
@@ -236,15 +311,17 @@ function Monetization.checkCatalog(data, cosmetics, season)
 			end
 		end
 	end
+	local warnings = {}
 	if season then
-		local ok, why = Monetization.checkSeasonPass(data, season, cosmetics)
+		local ok, why, warn = Monetization.checkSeasonPass(data, season, cosmetics)
 		if not ok then
 			for _, line in ipairs(why) do
 				table.insert(reasons, line)
 			end
 		end
+		warnings = warn or {}
 	end
-	return #reasons == 0, reasons, valid
+	return #reasons == 0, reasons, valid, warnings
 end
 
 function Monetization.productKeyById(data, productId)
@@ -327,9 +404,12 @@ function Monetization.seasonReach(exp, expPerTier)
 	return math.floor(math.max(exp, 0) / expPerTier)
 end
 -- 받을 수 있나: 도달 · 안 받음 · 유료 줄은 이번 시즌 유료. bonus = true면 tiers 뒤 칸(보너스)도 받는다(reachedTier = seasonReach - 상한 없음)
-function Monetization.canClaim(pass, rowName, tier, reachedTier, tiers, bonus)
+function Monetization.canClaim(pass, rowName, tier, reachedTier, tiers, bonus, bonusCap)
 	if type(tier) ~= "number" or tier ~= math.floor(tier) or tier < 1 or (tier > tiers and not bonus) then
 		return false, "bad_tier"
+	end
+	if bonusCap and tier > tiers + bonusCap then
+		return false, "bonus_cap" -- QUEUE-ALL9B 보완 5-2 반복 보너스 시즌당 상한
 	end
 	if rowName ~= "free" and rowName ~= "paid" then
 		return false, "bad_row"
