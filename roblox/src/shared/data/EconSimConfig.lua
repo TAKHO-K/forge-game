@@ -218,6 +218,19 @@ return {
 		rollHigh = { optionRoll = 1.0875, itemAxis = "attack" }, -- W3b 파트 0: 상위 굴림(장비 옵션 위력 · 상위 30%)
 		noItemOptions = { itemOptions = false }, -- W3b 파트 0: 옛 모형(장비 옵션 안 셈)
 	},
+	-- QUEUE-N1004 C-1 ALL10-P1 초월 계승 오버레이(server/EconSimAll10.lua) - [가정] 제안값(docs/design/all10-p1-proposal.md 추천안). 기본 꺼짐 · 게임 데이터 아님.
+	--   비용 단위 kills = 처치 환산(그때 처치당 골드 × 개수 - 지금 수련 · 강화 비용의 "몇 마리분"과 같은 꼴).
+	all10 = {
+		enabled = false,
+		weaponBase = 1.25, -- 초월 무기 +0 = 태초 +30 대비 공격 배수
+		transPerLevel = 0.05, transKills = 280000, transSub = 5, -- 초월 강화 0 → 20: 단계당 공격 +5%(무기 강화 줄 합연산) · 단계 비용 28만 처치 환산을 5칸으로 나눠 납입(칸마다 효과 1/5)
+		advPerLevel = 0.01, advK0 = 1840, advR = 1.03, advCapStart = 10000, advCapStep = 100, -- 고급 수련 51 ~ 100: 단계당 공격 +1% · 비용 1,840 × 1.03^(단계−51) · 상한 = 50 + (스테이지 − 10,000) ÷ 100
+		defUnlock = 12000, defLevels = 30, defK0 = 6000, defR = 1.05, -- 방어 수련(고급 수련 안): 개방 스테이지 · 단계 · 비용
+		gem = 1.08, -- 초월 보석 1개(계승 보상)
+		breakL = 1500, breakR = 2.4, -- 돌파(D3): 계승 뒤 1,500 스테이지 몹 HP 성장 × (1 − 1/2.4)
+		curveStart = 16000, curveKappa = 0.12, -- 전역 재조정: 16,000부터 몹 HP 성장률 +12%(스테이지당 ln1.02 몫)
+		cap = 25300,
+	},
 	modelTraining = true, -- QUEUE-10h Q6 G3: 수련 · 직업 능력 구매(강화가 쓰고 남은 골드 - EconSim.tryTrainWithGold)
 	trainingReserveEnhance = 1, -- 다음 강화 비용 × 이 배수는 남기고 산다(강화 우선)
 }
