@@ -1,7 +1,7 @@
 -- QUEUE-ALL9B A 출석 받기 연출(공통 하나 - 일일 접속 보상 창 · 신규 7일 출석 창 · 시즌 출석판 창이 같은 함수를 부른다 · §7).
---   서버가 확정한 지급 표(QuestClaimResult)로만 그린다 - 클라가 미리 보상을 그리지 않는다. 전체 약 1.5초(피로 금지):
+--   서버가 확정한 지급 표(QuestClaimResult)로만 그린다 - 클라가 미리 보상을 그리지 않는다. 전체 ≤ 1.0초(QUEUE-ALL9C 1-12 X5 - 옛 약 1.5초):
 --   ① 0 ~ 0.25초 받은 칸에 도장(✓) "쾅" - 칸이 1.08배로 커졌다 돌아옴(번쩍임 줄이기 = 칸 색만 초록으로)
---   ② 0.25초 ~ 보상 아이콘 + "+개수"가 칸 위로 떠오름 - 여러 개면 0.2초 간격
+--   ② 0.15초 ~ 보상 아이콘 + "+개수"가 칸 위로 떠오름(0.12초) - 여러 개면 0.04초 간격(옛 0.25초 · 0.2초 간격)
 --   ③ 떠오른 아이콘이 실제로 들어가는 곳으로 날아감(골드 · 토큰 · 강화석 … = 오른쪽 위 재화 칸 Cur_<id> · 알 = 알 칩 · 칭호 · 치장 = 상점 버튼) → 도착한 칸 한 번 반짝(번쩍임 줄이기 = 색만)
 --   ④ 다음 칸(내일)에 은은한 금 테 + "내일 보상" 꼬리표 + 남은 시간(서버 UTC 자정까지) · 목록이 길면 다음 칸이 보이게 자동 스크롤
 --   연출 중 화면을 한 번 더 누르면 ① ~ ④를 바로 끝 상태로(지급은 이미 서버가 끝냈다 - 표시만).
@@ -22,6 +22,14 @@ local CURRENCY = { gold = true, sparkleShard = true, enhanceStone = true, highEn
 local ORDER = { "gold", "sparkleShard", "enhanceStone", "highEnhanceStone", "gemDust", "egg", "title", "cosmeticItem", "passExp", "rebirthTicket" }
 
 local gui, rootFrame, active
+-- QUEUE-ALL9C 1-12 X5 시간(사용자 10-03): 아이콘 하나 = 떠오름 + 날아감 0.35 ~ 0.45초 · 간격 0.04초 · 전체 ≤ 1.0초 · 누르면 즉시 끝(재화 숫자는 바로 바뀌어 같이 끝난다 - 카운트업 없음)
+local T_START, T_RISE, T_FLY, T_GAP, T_MAX = 0.15, 0.12, 0.28, 0.04, 1.0
+AttendanceClaimFx.timing = { start = T_START, rise = T_RISE, fly = T_FLY, gap = T_GAP, max = T_MAX }
+-- n개 보상의 전체 길이(초) - 마지막 아이콘 도착 + 0.05 · 상한 T_MAX(간격을 줄여 맞춘다)
+function AttendanceClaimFx.totalSeconds(n)
+	local gap = n > 1 and math.min(T_GAP, (T_MAX - 0.05 - T_START - T_RISE - T_FLY) / (n - 1)) or 0
+	return math.min(T_MAX, T_START + math.max(0, n - 1) * gap + T_RISE + T_FLY + 0.05), gap
+end
 
 -- 연출 루트(전용 ScreenGui · 창 overlay 대역 위). 좌표 = 다른 창의 AbsolutePosition - 루트 AbsolutePosition(Fly 모듈과 같은 방식 - 인셋 차이 없음)
 local function ensureGui()
@@ -248,8 +256,9 @@ function AttendanceClaimFx.play(opts)
 		end
 	end
 	local from = cell and cell.Parent and (cell.AbsolutePosition + Vector2.new(cell.AbsoluteSize.X / 2, 0)) or (root.AbsolutePosition + root.AbsoluteSize / 2)
+	local total, gap = AttendanceClaimFx.totalSeconds(#keys)
 	for i, key in ipairs(keys) do
-		task.delay((0.25 + (i - 1) * 0.2) * k, function()
+		task.delay((T_START + (i - 1) * gap) * k, function()
 			if done then
 				return
 			end
@@ -281,10 +290,10 @@ function AttendanceClaimFx.play(opts)
 			label.Text = type(v) == "number" and ("+" .. NumberFormat.currency(v, Text.languageFor())) or ""
 			label.ZIndex = 4
 			label.Parent = pop
-			local rise = TweenService:Create(pop, T(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = rel(from - Vector2.new(0, 22)) })
+			local rise = TweenService:Create(pop, T(T_RISE, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = rel(from - Vector2.new(0, 22)) })
 			table.insert(tracks, rise)
 			rise:Play()
-			task.delay((0.35) * k, function()
+			task.delay(T_RISE * k, function()
 				if done then
 					return
 				end
@@ -292,14 +301,14 @@ function AttendanceClaimFx.play(opts)
 				if not to then -- 들어갈 칸이 화면에 없는 보상(패스 경험치 등) = 제자리에서 흐려짐
 					for _, d in ipairs(pop:GetDescendants()) do
 						if d:IsA("TextLabel") or d:IsA("ImageLabel") then
-							local fade = TweenService:Create(d, T(0.3), d:IsA("TextLabel") and { TextTransparency = 1, TextStrokeTransparency = 1 } or { ImageTransparency = 1 })
+							local fade = TweenService:Create(d, T(T_FLY), d:IsA("TextLabel") and { TextTransparency = 1, TextStrokeTransparency = 1 } or { ImageTransparency = 1 })
 							table.insert(tracks, fade)
 							fade:Play()
 						end
 					end
 					return
 				end
-				local fly = TweenService:Create(pop, T(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Position = rel(to + Vector2.new(0, 12)) })
+				local fly = TweenService:Create(pop, T(T_FLY, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Position = rel(to + Vector2.new(0, 12)) })
 				table.insert(tracks, fly)
 				fly.Completed:Connect(function(state)
 					if state == Enum.PlaybackState.Completed then
@@ -311,13 +320,8 @@ function AttendanceClaimFx.play(opts)
 			end)
 		end)
 	end
-	-- ④ + 끝(약 1.5초 - 보상이 많으면 0.2초씩 더)
-	task.delay((1.1 + math.max(0, #keys - 1) * 0.2) * k, function()
-		if not done then
-			settleNext()
-		end
-	end)
-	task.delay((1.5 + math.max(0, #keys - 1) * 0.2) * k, finish)
+	-- ④ + 끝(전체 ≤ 1.0초 - 마지막 아이콘 도착 뒤)
+	task.delay(total * k, finish)
 	return active
 end
 
