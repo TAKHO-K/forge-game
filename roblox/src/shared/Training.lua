@@ -25,7 +25,7 @@ end
 
 -- 계정 최고 스테이지가 허락하는 단계 상한(스테이지 연동). ability면 def.maxLevel과 둘 중 작은 쪽.
 function Training.capFor(def, bestStage)
-	local cap = math.floor(math.max(0, bestStage or 0) / TrainingData.stagesPerLevel)
+	local cap = math.floor(math.max(0, bestStage or 0) / (def and def.stagesPerLevel or TrainingData.stagesPerLevel)) -- QUEUE-ALL9B 2: 항목별 스테이지 간격(수련 = 20)
 	if def and def.maxLevel then
 		cap = math.min(cap, def.maxLevel)
 	end
@@ -34,7 +34,7 @@ end
 
 -- 다음 단계(level → level + 1) 가격(골드) - 몇 마리분 × GoldCost(계정 최고 스테이지)
 function Training.killsFor(def, level)
-	return def.baseKills * TrainingData.levelGrowth ^ (level or 0)
+	return def.baseKills * (def.levelGrowth or TrainingData.levelGrowth) ^ (level or 0) -- QUEUE-ALL9B 2: 항목별 증가율(수련 = 1.08)
 end
 
 function Training.costFor(def, level, bestStage)

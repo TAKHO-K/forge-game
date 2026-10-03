@@ -65,6 +65,20 @@ local ok, err = pcall(function()
 	check("v34 경험치 0", lv0 == 1, ("→ 레벨 %d"):format(lv0))
 	local lvB, rB = roundTrip(34, sample(need34, 126, 0))
 	check("v34 레벨 126 · 0(경계)", lvB == 126 and rB < 0.002, ("→ 레벨 %d · %.3f"):format(lvB, rB))
+	-- 6) QUEUE-ALL9B 2-4 v65: 공용 수련 최대 50단계(51 이상 = 50 · 나머지 · 직업 능력 그대로 · 멱등)
+	do
+		local d = SaveSystem.defaultProfile()
+		d.version = 64
+		d.training = { attack = 100, hp = 73, defense = 12 }
+		local cid = next(d.classes)
+		d.classes[cid].abilities = { gs_might = 50, bow_might = 50 }
+		local m = SaveSystem.migrate(d)
+		check("v64 → v65 수련 100/73/12 → 50/50/12", m.version >= 65 and m.training.attack == 50 and m.training.hp == 50 and m.training.defense == 12,
+			("→ %s/%s/%s"):format(tostring(m.training.attack), tostring(m.training.hp), tostring(m.training.defense)))
+		check("v65 직업 능력 그대로", m.classes[cid].abilities.gs_might == 50 and m.classes[cid].abilities.bow_might == 50)
+		local again = SaveSystem.migrate(m)
+		check("v65 이관 멱등(다시 돌려도 50/50/12)", again.training.attack == 50 and again.training.hp == 50 and again.training.defense == 12)
+	end
 	-- 5) 새 계정 빈 표
 	local okEmpty, m = pcall(SaveSystem.migrate, {})
 	check("migrate({})", okEmpty and type(m) == "table" and m.version == MODS.SaveConfig.saveVersion, okEmpty and ("v" .. tostring(m.version)) or tostring(m))

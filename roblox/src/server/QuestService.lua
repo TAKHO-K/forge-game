@@ -44,7 +44,7 @@ function QuestService.view(player)
 		local rows = {}
 		for _, def in ipairs(defs or {}) do
 			local level = tonumber(levels and levels[def.id]) or 0
-			table.insert(rows, { kind = kind, id = def.id, name = def.name, level = level, cap = Training.capFor(def, tv and tv.bestStage), cost = Training.costFor(def, level, tv and tv.bestStage), perLevel = def.perLevel })
+			table.insert(rows, { kind = kind, id = def.id, name = def.name, level = level, cap = Training.capFor(def, tv and tv.bestStage), maxLevel = def.maxLevel, cost = Training.costFor(def, level, tv and tv.bestStage), perLevel = def.perLevel }) -- QUEUE-ALL9B 2-4 maxLevel(현재 / 최대 표시 - 화면 ALL9C)
 		end
 		return rows
 	end

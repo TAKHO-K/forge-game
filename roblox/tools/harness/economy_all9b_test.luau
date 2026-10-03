@@ -70,5 +70,40 @@ do
 	check("1-4 스테이지 40 장비 16개(T1 일반 · 희귀 · 영웅 기대 섞임) 판매 전 → 후 ×3 이상", after >= before * 3, ("%.0f → %.0f골드"):format(before, after))
 end
 
+-- ══ 2 수련 50단계 ══
+do
+	local Training, TrainingData, GoldCost, MonsterData = MODS.Training, MODS.TrainingData, MODS.GoldCost, MODS.MonsterData
+	local ok, rows = true, {}
+	for _, def in ipairs(TrainingData.stats) do
+		ok = ok and def.maxLevel == 50 and Training.capFor(def, 1000) == 50 and Training.capFor(def, 999) == 49 and Training.capFor(def, 99999) == 50
+	end
+	check("2-1 공용 수련 최대 50단계 · 상한 = 최고 스테이지 ÷ 20(1,000 = 50)", ok)
+	local atk = Training.statDef("attack")
+	local rising = true
+	for L = 1, 49 do
+		rising = rising and Training.costFor(atk, L, 1000) > Training.costFor(atk, L - 1, 1000)
+	end
+	check("2-2 단계마다 가격이 오른다(스테이지 1,000 · 0 ~ 49)", rising)
+	-- 단계별 표(스테이지 1,000 가격 · 몇 마리분 · 누적 효과)
+	local k1 = GoldCost.cost(MonsterData.tier1.goldDrop, 1000, "training")
+	local acc = 0
+	for L = 0, 49 do
+		acc += Training.costFor(atk, L, 1000)
+		if (L + 1) % 10 == 0 then
+			table.insert(rows, ("%d단 누적 %s골드(%.0f마리분) · 공격 +%.2f%% 체력 +%.1f%% 방어 +%.1f%%"):format(L + 1, tostring(acc), acc / k1,
+				Training.bucketBonus({ attack = L + 1 }, {}, "bow", "attack") * 100, Training.bucketBonus({ hp = L + 1 }, {}, "bow", "hp") * 100, (Training.axisValues({ defense = L + 1 }, {}, "bow", "defensePercent") or { 0 })[1] * 100))
+		end
+	end
+	for _, line in ipairs(rows) do
+		print("[ALL9B] 2-2 표 " .. line)
+	end
+	local maxAtk = Training.bucketBonus({ attack = 50 }, {}, "bow", "attack")
+	local maxHp = Training.bucketBonus({ hp = 50 }, {}, "bow", "hp")
+	check("2-3 최대 효과 = 공격 +3.75% · 체력 +20% · 방어 +10%(상위 1% 관문이 정한 공격 상한)", math.abs(maxAtk - 0.0375) < 1e-9 and math.abs(maxHp - 0.2) < 1e-9
+		and math.abs(Training.axisValues({ defense = 50 }, {}, "bow", "defensePercent")[1] - 0.1) < 1e-9)
+	local gf = MODS.BossData.mechanics and MODS.BossData.mechanics.gimmickFail
+	check("2-3 보스 = 실력: 기믹 실패 피해 = 최대 체력 비율(체력 수련으로 버틸 수 없음)", gf ~= nil and gf.maxHpFraction < 1 and gf.firstMaxHpFraction < 1, gf and ("%.2f · %.2f"):format(gf.firstMaxHpFraction, gf.maxHpFraction) or "nil")
+end
+
 -- ══ 끝 ══
 print(("===ALL9B 끝 %d/%d"):format(pass, total))

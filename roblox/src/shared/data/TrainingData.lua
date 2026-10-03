@@ -8,10 +8,16 @@
 return {
 	stagesPerLevel = 10,
 	levelGrowth = 1.01,
+	-- QUEUE-ALL9B 2(사용자 "골드를 조금만 써도 끝까지 가고 상승 %도 낮다"): 공용 수련 = 항목마다 최대 50단계 · 단계 상한 = 계정 최고 스테이지 ÷ 20(스테이지 1,000에서 50까지 열림) ·
+	--   가격 = tier1 잡몹 32마리분 × 1.08^단계 × GoldCost(계정 최고 스테이지) - 단계가 오를수록 확실히 비싸다(0단계 ≈ 캐주얼 사냥 0.7분 · 39단계 ≈ 14분 · 49단계 ≈ 30분).
+	--   효과(합연산): 공격 0.075%/단계(최대 +3.75%) · 체력 0.4%/단계(최대 +20%) · 방어 0.2%/단계(최대 +10%).
+	--   근거 = EconSim(docs/phase/QUEUE-ALL9B-report.md 3절): 캐주얼 스테이지 1,000 ≈ 37 ~ 39단계 · 50단계 ≈ 스테이지 1,800 · 상위 1% 25,300 = 공격 +3.75%에서 2,242h(통과) ·
+	--   공격 +5%면 2,160h · +7.5%면 2,191h(하한 2,200 밖) - 공격 상한은 상위 1% 관문이 정한다(결정 필요). 체력 · 방어는 처치 속도에 안 걸려 크게 둘 수 있다.
+	--   보스 = 실력: 기믹 실패 피해는 최대 체력 비율(BossData.mechanics.gimmickFail 55 · 85% · 방어 무시)이라 체력 · 방어 수련으로 패턴을 버틸 수 없다.
 	stats = {
-		{ id = "attack", name = "공격 수련", bucket = "attack", perLevel = 0.000375, maxLevel = 100, baseKills = 30 },
-		{ id = "hp", name = "체력 수련", bucket = "hp", perLevel = 0.000375, maxLevel = 100, baseKills = 30 },
-		{ id = "defense", name = "방어 수련", axis = "defensePercent", perLevel = 0.000375, maxLevel = 100, baseKills = 30 },
+		{ id = "attack", name = "공격 수련", bucket = "attack", perLevel = 0.00075, maxLevel = 50, stagesPerLevel = 20, levelGrowth = 1.08, baseKills = 32 },
+		{ id = "hp", name = "체력 수련", bucket = "hp", perLevel = 0.004, maxLevel = 50, stagesPerLevel = 20, levelGrowth = 1.08, baseKills = 32 },
+		{ id = "defense", name = "방어 수련", axis = "defensePercent", perLevel = 0.002, maxLevel = 50, stagesPerLevel = 20, levelGrowth = 1.08, baseKills = 32 },
 	},
 	-- 직업 고유 능력: 직업 DPS 최저 대비 ≤ 1.32 유지(K1 규칙) - 네 직업 모두 공격 · 체력 버킷은 같은 값, 직업 축만 다르다(속도 축은 상한 작게).
 	classAbilities = {

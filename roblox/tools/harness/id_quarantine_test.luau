@@ -117,7 +117,7 @@ local ok, err = pcall(function()
 	local v63 = SaveSystem.migrate({})
 	v63.version, v63.cosmetics.items = 63, nil
 	local m64 = SaveSystem.migrate(v63)
-	check("v63 표본 → v64: cosmetics.items 빈 표", m64.version == 64 and type(m64.cosmetics.items) == "table" and next(m64.cosmetics.items) == nil)
+	check("v63 표본 → v64: cosmetics.items 빈 표", m64.version >= 64 and type(m64.cosmetics.items) == "table" and next(m64.cosmetics.items) == nil)
 	local q = SaveSystem.migrate({})
 	q.cosmetics.items = { rocketPop = true, ghostItem = true }
 	q.cosmetics.equipped.killFx = "ghostItem"

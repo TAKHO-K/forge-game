@@ -1354,6 +1354,19 @@ local function migrate(data)
 		data.version = 64
 	end
 
+	if data.version < 65 then
+		-- QUEUE-ALL9B 2-4: 공용 수련 최대 100 → 50단계(TrainingData.stats maxLevel). 기존 단계는 유지 · 새 최대 안으로(51 이상 = 50). 직업 능력(classes[].abilities)은 그대로.
+		if type(data.training) == "table" then
+			for _, id in ipairs({ "attack", "hp", "defense" }) do
+				local v = tonumber(data.training[id])
+				if v and v > 50 then
+					data.training[id] = 50
+				end
+			end
+		end
+		data.version = 65
+	end
+
 	data.savedAt = data.savedAt or 0
 	SaveSystem.clampStageCap(data) -- S1 리뷰 7: 불러온 옛 값도 상한으로
 	return data

@@ -247,8 +247,8 @@ function V.runPure()
 		local Quest = require(ReplicatedStorage.Shared.Quest)
 		local QuestData = require(ReplicatedStorage.Shared.data.QuestData)
 		local atk = Training.statDef("attack")
-		check(("수련 상한 = 최고 스테이지 ÷ 10: 스테이지 95 → %d · 능력 상한 50: 스테이지 9,999 → %d"):format(Training.capFor(atk, 95), Training.capFor(Training.abilityDef("bow", "bow_might"), 9999)),
-			Training.capFor(atk, 95) == 9 and Training.capFor(Training.abilityDef("bow", "bow_might"), 9999) == 50)
+		check(("수련 상한 = 최고 스테이지 ÷ 20(QUEUE-ALL9B 2): 스테이지 195 → %d · 능력 상한 50: 스테이지 9,999 → %d"):format(Training.capFor(atk, 195), Training.capFor(Training.abilityDef("bow", "bow_might"), 9999)),
+			Training.capFor(atk, 195) == 9 and Training.capFor(Training.abilityDef("bow", "bow_might"), 9999) == 50)
 		check("수련 가격 단계마다 오름 · 스테이지 따라 오름", Training.costFor(atk, 5, 100) > Training.costFor(atk, 4, 100) and Training.costFor(atk, 5, 500) > Training.costFor(atk, 5, 100))
 		local bonus = Training.bucketBonus({ attack = 10, hp = 4 }, { gs_might = 5 }, "greatsword", "attack")
 		local want = 10 * atk.perLevel + 5 * Training.abilityDef("greatsword", "gs_might").perLevel
