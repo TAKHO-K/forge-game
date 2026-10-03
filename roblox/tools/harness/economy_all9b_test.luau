@@ -232,5 +232,24 @@ do
 	check("보완 1-4 매일 40칸 30 ~ 32일 · 주 4일 56일 안 · 매일 반복 20회 56일 안", daily[40] >= 30 and daily[40] <= 32 and four[40] and four[40] <= 56 and daily[60] and daily[60] <= 56, table.concat(line, " | "))
 end
 
+-- ══ R 재화 표시: 숫자 표기(R5 · R6) ══
+do
+	local NF = MODS.NumberFormat
+	local cases = {
+		{ 9850, "ko", "9,850" }, { 12000, "ko", "1.2만" }, { 3450000, "ko", "345만" }, { 120000000, "ko", "1.2억" }, { 999900000000, "ko", "9,999억" }, { 19999, "ko", "1.9만" },
+		{ 9850, "en", "9,850" }, { 12300, "en", "12.3K" }, { 3450000, "en", "3.45M" }, { 1200000000, "en", "1.2B" }, { 345000, "en", "345K" }, { 999999999999, "en", "999B" },
+	}
+	local bad, longest = {}, 0
+	for _, c in ipairs(cases) do
+		local got = NF.currency(c[1], c[2])
+		if got ~= c[3] then
+			table.insert(bad, ("%d %s = %s(기대 %s)"):format(c[1], c[2], got, c[3]))
+		end
+		longest = math.max(longest, utf8.len(got))
+	end
+	check("R5 재화 표기(1만 미만 쉼표 · ko 만/억 · en K/M/B · 버림)", #bad == 0, table.concat(bad, ", "))
+	check("R6 가장 긴 표기 ≤ 6글자(9,999억 · 999B) - 칸 폭 고정 시험값", longest <= 6, ("%d글자"):format(longest))
+end
+
 -- ══ 끝 ══
 print(("===ALL9B 끝 %d/%d"):format(pass, total))

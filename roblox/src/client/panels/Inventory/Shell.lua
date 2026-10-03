@@ -368,9 +368,22 @@ do
 	end
 end
 
+-- QUEUE-ALL9B R3 헤더 아래 재화 줄(모든 재화 · client/ui/CurrencyBar - 서버 Attribute만 · 판매 · 분해 · 강화 직후 바로 바뀐다 · 칸이 모자라면 두 줄)
+local CurrencyBar = require(script.Parent.Parent.Parent.ui.CurrencyBar)
+local currencyIds = table.clone(CurrencyBar.cfg.always)
+for _, id in ipairs(CurrencyBar.cfg.more) do
+	table.insert(currencyIds, id)
+end
+local currencyStrip = CurrencyBar.row(content, currencyIds, { name = "CurrencyStrip", gap = 14, itemHeight = 20, textSize = Theme.textSize("caption"), wrap = true,
+	size = UDim2.new(1, -28, 0, Layout.currencyH) })
+currencyStrip.Position = UDim2.new(0, 14, 0, HEADER_HEIGHT)
+currencyStrip:SetAttribute("HudSlot", "currencyBag")
+
 -- 헤더 · 탭 줄 배치가 배치(L)마다 바뀌는 크기(폰 = 터치 44)
 local function layoutHeader(L)
 	header.Size = UDim2.new(1, 0, 0, L.headerH)
+	currencyStrip.Position = UDim2.new(0, 14, 0, L.headerH)
+	currencyStrip.Size = UDim2.new(1, -28, 0, L.currencyH)
 	headerRight.Size = UDim2.new(0, 0, 0, L.pillH)
 	for _, pill in ipairs({ sortButton, cutoffButton, bulkSellButton }) do
 		pill.Size = UDim2.new(0, 0, 0, L.pillH)

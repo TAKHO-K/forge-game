@@ -20,6 +20,7 @@ Layout.wideWidth = 1100
 Layout.pad, Layout.colGap = 12, 10
 Layout.phoneLeftInset = 72 -- 폰 창의 왼쪽 여백: 메뉴바(hud/MenuBar, 오른쪽 끝 66)가 창 위에 그려지므로 그 오른쪽부터 시작한다(스크린샷 Play에서 겹침 발견)
 Layout.gridPad = 12 -- 가방 격자 좌우 여백(스크롤 막대 자리 포함)
+Layout.currencyH = 28 -- QUEUE-ALL9B R3 헤더 아래 재화 줄(모든 재화 한 줄 - 모자라면 줄이 넘쳐 두 줄 = 아이콘 18 · 글씨 13)
 
 -- 탭 id: 가방 필터(all · armor · gloves · shoes) · 보석(gem) · 폰 장비(gear) · 도감(codex - 스위치 뒤, Shell이 붙인다)
 Layout.filterTabs = { all = true, armor = true, gloves = true, shoes = true }
@@ -44,10 +45,11 @@ function Layout.compute(screenWidth, screenHeight)
 		L.winX = Layout.phoneLeftInset
 		L.winW, L.winH = screenWidth - Layout.phoneLeftInset - margin, screenHeight - 2 * margin
 		L.headerH, L.tabH = 52, 44
+		L.currencyH = Layout.currencyH -- QUEUE-ALL9B R3 헤더 아래 재화 줄
 		L.pillH, L.closeSize, L.actionH, L.tabButtonH = 44, 44, 44, 44
 		L.tabs = { "gear", "all", "armor", "gloves", "shoes", "gem" }
-		L.tabX, L.tabY, L.tabW = 0, L.headerH, L.winW
-		L.bodyTop = L.headerH + L.tabH
+		L.tabX, L.tabY, L.tabW = 0, L.headerH + L.currencyH, L.winW
+		L.bodyTop = L.headerH + L.currencyH + L.tabH
 		L.bodyH = L.winH - L.bodyTop -- 시트는 본문 위에 얹히지 않고 본문을 줄인다(S.sheetInset)
 		L.bodyX, L.bodyW = 0, L.winW
 		L.gearX, L.gearY, L.gearW, L.gearH = 0, L.bodyTop, L.winW, L.bodyH
@@ -58,13 +60,14 @@ function Layout.compute(screenWidth, screenHeight)
 	else
 		L.winW, L.winH = math.min(Layout.pcWidth, screenWidth - 2 * margin), math.min(Layout.pcHeight, screenHeight - 2 * margin)
 		L.headerH, L.tabH = 48, 36
+		L.currencyH = Layout.currencyH -- QUEUE-ALL9B R3
 		L.pillH, L.closeSize, L.actionH, L.tabButtonH = 30, 32, 44, 30
 		L.tabs = { "all", "armor", "gloves", "shoes", "gem" }
 		L.wide = L.winW >= Layout.wideWidth
 		local pad, gap = Layout.pad, Layout.colGap
 		local leftW = L.wide and 260 or 190
 		local rightW = L.wide and 360 or 290
-		local colTop = L.headerH + pad
+		local colTop = L.headerH + L.currencyH + pad
 		local colH = L.winH - colTop - pad
 		local midW = math.max(Layout.cellSize + 2 * Layout.gridPad, L.winW - 2 * pad - 2 * gap - leftW - rightW)
 		local midX = pad + leftW + gap

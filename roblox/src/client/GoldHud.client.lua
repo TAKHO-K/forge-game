@@ -55,35 +55,85 @@ local function createCoinIcon(sizePixels, glow)
 end
 
 -- 16-2: 단독 카운터 패널 대신 상단 칩 행의 첫 칩(LayoutOrder=1, StageUI.client.lua 3번 참고).
+-- QUEUE-ALL9B R2 재화 칸: 첫 칸 = 골드 + 꾸미기 토큰(client/ui/CurrencyBar - 서버 Attribute만) · 누르면 아래로 나머지 재화 서랍(같은 세로 스택 안이라 아래 칩이
+--   밀려 내려간다 - 겹침 없음) · 다시 누르거나 closeSeconds 동안 조작이 없으면 접힘. 묶음 = CurrencyStack(HudSlot "currency" - ALL9C 창 이동 · 저장 규칙 자리).
+local CurrencyBar = require(script.Parent.ui.CurrencyBar)
 local topChipsRow = playerGui:WaitForChild("TopChipsGui"):WaitForChild("TopChipsRow")
-local counter = HudChip.new(topChipsRow, 1)
+local stack = Instance.new("Frame")
+stack.Name = "CurrencyStack"
+stack.LayoutOrder = 1
+stack.BackgroundTransparency = 1
+stack.AutomaticSize = Enum.AutomaticSize.XY
+stack.Size = UDim2.new(0, 0, 0, 0)
+stack:SetAttribute("HudSlot", "currency")
+stack.Parent = topChipsRow
+local stackLayout = Instance.new("UIListLayout")
+stackLayout.FillDirection = Enum.FillDirection.Vertical
+stackLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+stackLayout.Padding = UDim.new(0, 4)
+stackLayout.SortOrder = Enum.SortOrder.LayoutOrder
+stackLayout.Parent = stack
+
+local counter = HudChip.new(stack, 1)
 counter.Name = "GoldChip"
-
-local counterCoin = createCoinIcon(7, true)
-counterCoin.LayoutOrder = 1
-counterCoin.Parent = counter
-
-local counterLabel = Instance.new("TextLabel")
-counterLabel.Name = "GoldLabel"
-counterLabel.LayoutOrder = 2
-counterLabel.BackgroundTransparency = 1
-counterLabel.AutomaticSize = Enum.AutomaticSize.X
-counterLabel.Size = UDim2.new(0, 0, 1, 0)
-counterLabel.TextXAlignment = Enum.TextXAlignment.Left
-counterLabel.Font = Enum.Font.GothamBold
-counterLabel.TextSize = 13
-counterLabel.TextColor3 = UIColors.textPrimary
-counterLabel.Text = "0"
-counterLabel.Parent = counter
-
-local function updateCounter()
-	local gold = player:GetAttribute("Gold") or 0
-	counterLabel.Text = NumberFormat.format(gold)
+local drawer -- 아래 서랍(펼침)
+local lastTouch = 0
+local SHORT_SCREEN = 420 -- 이보다 낮은 화면(폰 가로 · 작은 폰) = 서랍을 가로 한 줄로(세로로 펼치면 아래 칩 · 미니맵을 화면 밖으로 민다 - 겹침 대신 배치 변경)
+local function setOpen(open)
+	local list = drawer:FindFirstChild("List")
+	local layout = list and list:FindFirstChildOfClass("UIListLayout")
+	if open and layout then
+		local short = playerGui:WaitForChild("TopChipsGui").AbsoluteSize.Y < SHORT_SCREEN
+		layout.FillDirection = short and Enum.FillDirection.Horizontal or Enum.FillDirection.Vertical
+		layout.Padding = UDim.new(0, short and 10 or 2)
+	end
+	drawer.Visible = open
+	lastTouch = os.clock()
+	if open then
+		task.spawn(function()
+			while drawer.Visible do
+				task.wait(0.5)
+				if os.clock() - lastTouch >= CurrencyBar.cfg.closeSeconds then
+					drawer.Visible = false
+				end
+			end
+		end)
+	end
+end
+local function toggle()
+	setOpen(not drawer.Visible)
+end
+for i, id in ipairs(CurrencyBar.cfg.always) do
+	CurrencyBar.item(counter, id, { height = 26, textSize = 13, order = i, onActivated = toggle, gainSide = "left" })
 end
 
-player:GetAttributeChangedSignal("Gold"):Connect(updateCounter)
-updateCounter()
-
+drawer = Instance.new("Frame")
+drawer.Name = "CurrencyDrawer"
+drawer.LayoutOrder = 2
+drawer.Visible = false
+drawer.AutomaticSize = Enum.AutomaticSize.XY
+drawer.Size = UDim2.new(0, 0, 0, 0)
+drawer.BackgroundColor3 = UIColors.panel
+drawer.BackgroundTransparency = UIColors.panelTransparency
+drawer.Parent = stack
+do
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 12)
+	corner.Parent = drawer
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = UIColors.rim
+	stroke.Transparency = UIColors.rimTransparency
+	stroke.Parent = drawer
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft, pad.PaddingRight, pad.PaddingTop, pad.PaddingBottom = UDim.new(0, 12), UDim.new(0, 12), UDim.new(0, 6), UDim.new(0, 6)
+	pad.Parent = drawer
+end
+local list = CurrencyBar.row(drawer, CurrencyBar.cfg.more, { name = "List", vertical = true, gap = 2, itemHeight = 24, textSize = 13, size = UDim2.new(0, 0, 0, 0),
+	automaticSize = Enum.AutomaticSize.XY, align = Enum.HorizontalAlignment.Left, onActivated = toggle, gainSide = "left" })
+list.Name = "List"
+drawer.MouseMoved:Connect(function()
+	lastTouch = os.clock()
+end)
 local function getHead()
 	local character = player.Character
 	return character and character:FindFirstChild("Head")

@@ -150,4 +150,50 @@ function NumberFormat.format(value)
 	return text .. unitLabel(stepIndex)
 end
 
+-- QUEUE-ALL9B R5 재화 칸 표기(HUD 재화 칸 · 가방 재화 줄 한 곳): 1만 미만 = 쉼표(9,850) · 1만 이상 = ko 만 · 억 · 조 · 경(앞 숫자 10 미만 = 소수 한 자리 1.2만 · 10 이상 = 정수 쉼표 345만 · 9,999억) /
+--   en K · M · B · T(유효 숫자 셋 - 12.3K · 3.45M · 1.2B · 345K). 더 큰 값 = format(알파벳 단위)로 넘긴다. 버림(가진 것보다 크게 안 보이게). 정확한 값 = commas.
+local KO_UNITS = { { 1e16, "경" }, { 1e12, "조" }, { 1e8, "억" }, { 1e4, "만" } }
+local EN_UNITS = { { 1e12, "T" }, { 1e9, "B" }, { 1e6, "M" }, { 1e3, "K" } }
+local function trimZeros(text)
+	if text:find("%.") then
+		text = text:gsub("0+$", ""):gsub("%.$", "")
+	end
+	return text
+end
+function NumberFormat.currency(value, lang)
+	if value ~= value or value == math.huge or value == -math.huge then
+		return NumberFormat.format(value)
+	end
+	local n = math.floor(value)
+	if n < 10000 then
+		return withCommas(math.max(n, 0))
+	end
+	if lang == "ko" then
+		if n >= 1e20 then
+			return NumberFormat.format(n)
+		end
+		for _, u in ipairs(KO_UNITS) do
+			if n >= u[1] then
+				local scaled = n / u[1]
+				if scaled < 10 then
+					return trimZeros(("%.1f"):format(math.floor(scaled * 10) / 10)) .. u[2]
+				end
+				return withCommas(math.floor(scaled)) .. u[2]
+			end
+		end
+	end
+	if n >= 1e15 then
+		return NumberFormat.format(n)
+	end
+	for _, u in ipairs(EN_UNITS) do
+		if n >= u[1] then
+			local scaled = n / u[1]
+			local decimals = scaled < 10 and 2 or scaled < 100 and 1 or 0
+			local f = 10 ^ decimals
+			return trimZeros(("%." .. decimals .. "f"):format(math.floor(scaled * f) / f)) .. u[2]
+		end
+	end
+	return withCommas(n)
+end
+
 return NumberFormat
