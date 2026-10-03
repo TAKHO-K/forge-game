@@ -408,6 +408,11 @@ function Loot.getSellPrice(item)
 	return price
 end
 
+-- QUEUE-ALL9C 1-10 분해 결과(서버 PlayerProfile.dismantleItem · dismantleItemsUpTo가 가방에 넣는 보석 = 이 표 · 클라 "분해 시" 안내도 이 함수): 같은 등급 · 레벨 · 옵션 보석 1개(무작위 없음)
+function Loot.dismantleReward(item)
+	return { grade = item.grade, itemLevel = item.itemLevel, option = item.option }
+end
+
 -- QUEUE-ALL9C 1-9 등급 체크 일괄 판매 대상(서버 PlayerProfile.sellItemsByGrades · 클라 확인 창 개수/골드 합계가 같은 함수 - 둘이 어긋날 수 없게):
 --   잠금 X · 스킬 변형 X · 체크한 등급(gradeSet[등급] = true - 체크 목록 자체가 ArmorData.bulkSellGrades 안 = 전설 이상 없음). 착용 중 = 가방 밖(이 함수를 거치지 않음).
 function Loot.isBulkSellTarget(item, gradeSet)

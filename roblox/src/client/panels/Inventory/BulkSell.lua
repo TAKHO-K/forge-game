@@ -37,7 +37,7 @@ confirmOverlay.Parent = content
 local confirmBox = Instance.new("Frame")
 confirmBox.AnchorPoint = Vector2.new(0.5, 0.5)
 confirmBox.Position = UDim2.new(0.5, 0, 0.5, 0)
-confirmBox.Size = UDim2.new(0, 340, 0, 168) -- Q13: [분해한다] 버튼 자리만큼 넓힘
+confirmBox.Size = UDim2.new(0, 340, 0, 200) -- Q13: [분해한다] 버튼 자리만큼 넓힘 · QUEUE-ALL9C 1-10 분해 합계 줄만큼 높임
 confirmBox.BackgroundColor3 = UIColors.panel
 confirmBox.BackgroundTransparency = 0.05
 confirmBox.ZIndex = 21
@@ -87,6 +87,21 @@ confirmHighestLabel.TextSize = Theme.textSize("body")
 confirmHighestLabel.TextXAlignment = Enum.TextXAlignment.Left
 confirmHighestLabel.Text = ""
 confirmHighestLabel.Parent = confirmBox
+
+-- QUEUE-ALL9C 1-10 일괄 분해 합계(값 = 서버와 같은 Loot.isBulkDismantleTarget · dismantleReward · getSellPrice)
+local confirmDismantleSum = Instance.new("TextLabel")
+confirmDismantleSum.Name = "DismantleSum"
+confirmDismantleSum.Position = UDim2.new(0, 16, 0, 106)
+confirmDismantleSum.Size = UDim2.new(1, -32, 0, 34)
+confirmDismantleSum.BackgroundTransparency = 1
+confirmDismantleSum.ZIndex = 21
+confirmDismantleSum.Font = Enum.Font.Gotham
+confirmDismantleSum.TextSize = Theme.textSize("caption")
+confirmDismantleSum.TextWrapped = true
+confirmDismantleSum.TextXAlignment = Enum.TextXAlignment.Left
+confirmDismantleSum.TextColor3 = UIColors.textSecondary
+confirmDismantleSum.Text = ""
+confirmDismantleSum.Parent = confirmBox
 
 local confirmYes = Instance.new("TextButton")
 confirmYes.AnchorPoint = Vector2.new(1, 1)
@@ -140,12 +155,16 @@ confirmDismantleCorner.Parent = confirmDismantle
 local function dismantleCount()
 	local n = 0
 	local top = S.sellCheckedTop()
+	local byGrade, gold = {}, 0
 	for _, item in ipairs(S.inventory) do
 		if top and Loot.isBulkDismantleTarget(item, top) then
 			n += 1
+			local gem = Loot.dismantleReward(item) -- QUEUE-ALL9C 1-10 서버가 넣는 보석과 같은 표
+			byGrade[gem.grade] = (byGrade[gem.grade] or 0) + 1
+			gold += Loot.getSellPrice(item)
 		end
 	end
-	return n
+	return n, byGrade, gold
 end
 confirmDismantle.Activated:Connect(function()
 	confirmOverlay.Visible = false
@@ -178,8 +197,15 @@ local function openConfirm()
 	end
 	pendingKey, pendingCount = S.sellCheckedKey(), count
 	confirmText.Text = Text.get("gear.bulk.confirm", { count = ("%d"):format(count), gold = NumberFormat.currency(total, Text.languageFor()) })
-	local nd = dismantleCount()
+	local nd, byGrade, dismantleGold = dismantleCount()
 	confirmDismantle.Text = Text.get("gear.bulk.dismantle", { count = ("%d"):format(nd) }) -- Q13: 영웅 이상만 보석으로(태초 · 초월 제외)
+	local parts = {}
+	for _, id in ipairs(ArmorData.gradeOrder) do
+		if byGrade[id] then
+			table.insert(parts, ("%s %d"):format(ArmorData.grades[id].displayName, byGrade[id]))
+		end
+	end
+	confirmDismantleSum.Text = nd > 0 and Text.get("gear.reward.bulk", { count = ("%d"):format(nd), grades = table.concat(parts, " · "), gold = NumberFormat.currency(dismantleGold, Text.languageFor()) }) or ""
 	confirmDismantle.AutoButtonColor = nd > 0
 	confirmDismantle.TextTransparency = nd > 0 and 0 or 0.5
 	local visual = highestSoldGradeId and ItemVisualData.gradeVisuals[highestSoldGradeId]

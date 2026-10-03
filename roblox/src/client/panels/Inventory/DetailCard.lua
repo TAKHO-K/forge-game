@@ -171,7 +171,7 @@ function DetailCard.build(parent, S)
 	iconStroke.Thickness = 2
 	iconStroke.Parent = iconBox
 	local lineLabels = {}
-	for i = 1, 4 do
+	for i = 1, 5 do -- QUEUE-ALL9C 1-10: 5번째 = "분해 시 · 판매 시" 줄(4줄이면 잘렸다)
 		local l = label(topRow, "Line" .. i, i == 1 and "body" or "caption", "textPrimary")
 		l.Visible = false
 		lineLabels[i] = l

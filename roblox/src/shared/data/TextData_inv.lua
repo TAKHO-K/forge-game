@@ -16,6 +16,8 @@ return {
 		["gear.bulk.dismantle"] = "분해하기({count}개)",
 		["gear.bulk.changed"] = "가방이 바뀌었습니다. 다시 확인해 주세요.", -- QUEUE-ALL9A 2-2
 		["gear.bulk.highest"] = "대상에 포함된 최고 등급: {grade}",
+		["gear.reward.line"] = "분해 시: {grade} 보석(Lv {level} · 가루 {dust}) · 판매 시: {gold}골드", -- QUEUE-ALL9C 1-10(서버와 같은 Loot.dismantleReward · getSellPrice)
+		["gear.reward.bulk"] = "분해하기를 누르면: 보석 {count}개({grades}) · 같은 장비를 팔면 {gold}골드",
 		["gear.bag.sellGrades"] = "판매 등급: {grades}", -- QUEUE-ALL8 G1
 		["gear.bulk.excludeNote"] = "전설 이상 · 잠긴 · 착용 중 장비는 팔리지 않습니다",
 		["bag.sellHint.pc"] = "가방(G)에서 한 번에 팔 수 있어요", -- QUEUE-ALL8 G3 · G4(판매 = 가방)
@@ -102,6 +104,8 @@ return {
 		["gear.bulk.dismantle"] = "Salvage ({count} items)",
 		["gear.bulk.changed"] = "Your bag changed. Please check again.",
 		["gear.bulk.highest"] = "Highest grade: {grade}",
+		["gear.reward.line"] = "Salvage: {grade} gem (Lv {level} · {dust} dust) · Sell: {gold} Gold",
+		["gear.reward.bulk"] = "Salvage gives {count} gems ({grades}) · Selling them gives {gold} Gold",
 		["gear.bag.sellGrades"] = "Sell grades: {grades}",
 		["gear.bulk.excludeNote"] = "Legendary+, locked and worn gear is never sold",
 		["bag.sellHint.pc"] = "Sell many at once from your bag (G)",

@@ -1146,7 +1146,7 @@ function PlayerProfile.dismantleItem(player, index)
 	end
 
 	table.remove(profile.inventory, index)
-	table.insert(classState.gemInventory, { grade = item.grade, itemLevel = item.itemLevel, option = item.option })
+	table.insert(classState.gemInventory, Loot.dismantleReward(item)) -- QUEUE-ALL9C 1-10 안내와 같은 함수
 	InventorySync.push(player, profile)
 	GemSync.push(player)
 	return true, item.grade
@@ -1162,7 +1162,7 @@ function PlayerProfile.dismantleItemsUpTo(player, gradeId)
 	local remaining, n = {}, 0
 	for _, item in ipairs(profile.inventory) do
 		if Loot.isBulkDismantleTarget(item, gradeId) then
-			table.insert(classState.gemInventory, { grade = item.grade, itemLevel = item.itemLevel, option = item.option })
+			table.insert(classState.gemInventory, Loot.dismantleReward(item)) -- QUEUE-ALL9C 1-10 안내와 같은 함수
 			n += 1
 		else
 			table.insert(remaining, item)

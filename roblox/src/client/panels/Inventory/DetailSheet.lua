@@ -204,6 +204,9 @@ local function refreshBag(item)
 		table.insert(lines, line)
 	end
 	table.insert(lines, { text = sellable and Text.get("gear.detail.sellPrice", { price = NumberFormat.currency(Loot.getSellPrice(item), Text.languageFor()), quality = rollText(item) }) or Text.get("gear.detail.noSell", { quality = rollText(item) }), color = UIColors.textSecondary })
+	if sellable and S.isDismantleEligibleGrade(item.grade) then -- QUEUE-ALL9C 1-10: 분해 시 · 판매 시 나란히(분해 가능한 장비)
+		table.insert(lines, { text = ItemConfirm.rewardLine(item), color = UIColors.textSecondary })
+	end
 	card.set({
 		title = Text.get("inv.detail.inBag", { name = described.title }), -- P3b C1: 장착 여부(착용 칸은 "(착용 중)")
 		gradeId = item.grade, part = item.part or "armor", iconKey = iconKey(item),

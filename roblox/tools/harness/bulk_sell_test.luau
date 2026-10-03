@@ -153,6 +153,37 @@ local ok, err = pcall(function()
 	local r4 = { PlayerProfile.sellItemsByGrades(player, { "normal", "rare", "epic", "legendary" }, 1) }
 	check("전설 · 겹침 · 모르는 등급 · 네 개 = 거부(가방 75 그대로)", r1[1] == 0 and r2[1] == 0 and r3[1] == 0 and r4[1] == 0 and #p.inventory == 75,
 		("%s · %s · %s · %s"):format(tostring(r1[3]), tostring(r2[3]), tostring(r3[3]), tostring(r4[3])))
+
+	-- ④ QUEUE-ALL9C 1-10 분해 안내 = 서버가 실제로 넣는 보석(한 개 · 일괄)
+	do
+		local gems = p.classes[p.classId].gemInventory
+		p.inventory = { { grade = "epic", part = "armor", itemLevel = 37, dropStage = 200, tierIndex = 3, option = { stat = "crit", value = 5 } } }
+		local want = Loot.dismantleReward(p.inventory[1])
+		local before = #gems
+		PlayerProfile.dismantleItem(player, 1)
+		local got = gems[#gems]
+		local one = #gems == before + 1 and got.grade == want.grade and got.itemLevel == want.itemLevel and got.option == want.option
+		fill()
+		local expect, expGrades = 0, {}
+		for _, it in ipairs(p.inventory) do
+			if Loot.isBulkDismantleTarget(it, "legendary") then
+				expect += 1
+				local g = Loot.dismantleReward(it).grade
+				expGrades[g] = (expGrades[g] or 0) + 1
+			end
+		end
+		local b2 = #gems
+		local n = PlayerProfile.dismantleItemsUpTo(player, "legendary")
+		local gotGrades = {}
+		for i = b2 + 1, #gems do
+			gotGrades[gems[i].grade] = (gotGrades[gems[i].grade] or 0) + 1
+		end
+		local same = n == expect
+		for g, c in pairs(expGrades) do
+			same = same and gotGrades[g] == c
+		end
+		check("분해 안내(Loot.dismantleReward) = 서버 결과: 한 개(등급 · 레벨 · 옵션) · 일괄(개수 · 등급별)", one and same, ("한 개 %s · 일괄 %d = %d"):format(tostring(one), n, expect))
+	end
 end)
 if not ok then print("[BULK] 에러 " .. tostring(err)) end
 print(("[BULK] 끝 %d/%d"):format(pass, total))

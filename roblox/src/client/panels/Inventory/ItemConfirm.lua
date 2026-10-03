@@ -9,6 +9,7 @@ local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local ItemDescribe = require(ReplicatedStorage.Shared.ItemDescribe)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local GemCraft = require(ReplicatedStorage.Shared.GemCraft)
+local Loot = require(ReplicatedStorage.Shared.Loot)
 local Text = require(ReplicatedStorage.Shared.Text)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 
@@ -118,10 +119,21 @@ function ItemConfirm.create(content, player)
 			key = "gear.confirm.dismantleGem"
 			args.dust = ("%d"):format(GemCraft.dustYield(item))
 		end
-		self.ask(Text.get(key, args), visual and visual.color or UIColors.textPrimary, action) -- G1-1: 태초도 제 색
+		local message = Text.get(key, args)
+		if not isGem then -- QUEUE-ALL9C 1-10: 분해 · 판매 결과를 나란히(분해 가능한 장비 = 확인 창이 뜨는 장비)
+			message ..= "\n" .. ItemConfirm.rewardLine(item)
+		end
+		self.ask(message, visual and visual.color or UIColors.textPrimary, action) -- G1-1: 태초도 제 색
 	end
 
 	return self
+end
+
+-- QUEUE-ALL9C 1-10 "분해 시: 보석 · 판매 시: 골드" 한 줄(값 = 서버와 같은 Loot.dismantleReward · Loot.getSellPrice · GemCraft.dustYield)
+function ItemConfirm.rewardLine(item)
+	local gem = Loot.dismantleReward(item)
+	return Text.get("gear.reward.line", { grade = ArmorData.grades[gem.grade] and ArmorData.grades[gem.grade].displayName or gem.grade, level = ("%d"):format(gem.itemLevel or 1),
+		dust = ("%d"):format(GemCraft.dustYield(gem)), gold = NumberFormat.currency(Loot.getSellPrice(item), Text.languageFor()) })
 end
 
 return ItemConfirm
