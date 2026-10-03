@@ -1,9 +1,27 @@
--- 큰 골드 숫자 안전성 하네스(골드 점검 2): 저장 왕복 · 서버 골드 계산 · 화면 표기를 1e12 ~ 1e18 · 2^53 경계에서 확인한다(보고 전용 - 고치지 않는다).
+-- 큰 골드 숫자 안전성 하네스(골드 점검 2): 저장 왕복 · 서버 골드 계산 · 화면 표기를 1e12 ~ 1e18 · 2^53 경계에서 확인한다(보고 전용 - 고치지 않는다 · 정밀도 4건 = KNOWN 표).
 -- 실행: LUAU=<luau.exe> PRELUDE=server_prelude.luau EXTRA_SERVER=$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem) ECON_RES=res_big.txt python build_run.py bignum_test.luau
 --   결과 = %TEMP%/res_big.txt · "[BIG] ... O/X" 줄 + "[BIG] 끝 n/m"
 Random = { new = function(seed) math.randomseed(seed or 1); return { NextInteger = function(_, a, b) return math.random(a, b) end, NextNumber = function(_, a, b) a = a or 0; b = b or 1; return a + math.random() * (b - a) end } end }
 local pass, total = 0, 0
+-- QUEUE-ALL9C 0-2: 알려진 문제(이름 = check 라벨 그대로 고정 - 다른 X는 여기에 숨지 않는다). 사유 · 관련 결정. 고쳐져 O가 되면 "해결됨"으로 찍히니 표에서 뺀다.
+local KNOWN = {
+	["addGold 2^53 - 1 + 2 = 2^53 + 1 정확"] = "2^53 넘는 정수는 double로 정확히 못 담음(1 잃음) · ALL9B 결정 필요 8 → ALL9C 0-11 안전망 · 0-12 소모처 결정 뒤",
+	["addGold 1.09e18 보유에 처치당 9.6e11 × 1,000회 정확"] = "1e18 근처 ulp 128 - 처치 골드 반올림 누적(상대 오차 3e-11) · 같은 결정",
+	["trySpendGold 1.09e18 - 12,345 정확"] = "1e18 근처 ulp 128 - 작은 비용이 128 단위로 깎임 · 같은 결정",
+	["addGold 1e18 + 50 정확(작은 보상)"] = "1e18 근처 ulp 128 - 64 미만 보상 사라짐 · 같은 결정(0-11 사라지는 보상 목록)",
+}
+local knownHit, knownFixed = 0, {}
 local function check(label, ok, detail)
+	if KNOWN[label] then
+		if ok then
+			table.insert(knownFixed, label)
+			print(("[BIG] (알려진 문제 해결됨 - KNOWN 표에서 빼기) %s %s O"):format(label, detail or ""))
+		else
+			knownHit += 1
+			print(("[BIG] (알려진 문제) %s %s - %s"):format(label, detail or "", KNOWN[label]))
+		end
+		return
+	end
 	total += 1
 	if ok then pass += 1 end
 	print(("[BIG] %s %s %s"):format(label, detail or "", ok and "O" or "X"))
@@ -130,4 +148,4 @@ end)
 if not ok then
 	print("[BIG] 하네스 에러 " .. tostring(err))
 end
-print(("[BIG] 끝 %d/%d"):format(pass, total))
+print(("[BIG] 끝 %d/%d · 알려진 문제 %d%s"):format(pass, total, knownHit, #knownFixed > 0 and (" · 해결됨 " .. #knownFixed) or ""))
