@@ -6,6 +6,8 @@
 --   받기 = 보상 그림이 오른쪽 위 재화 칩으로 0.4초 날아간다(CodexV2/Fly - 서버가 받음을 확인한 표가 온 뒤).
 --   폰 판정 = 화면 크기(ScreenGui 폭 < 720 또는 높이 < 400 - COMMON §2 · Inventory/Layout과 같은 경계) · UIScale 축소 없음.
 --   Studio 점검: CodexPanel.debugEmptyPictureCount() = 모든 탭을 그려 그림 없는 칸 수(기대 0)를 센다.
+-- QUEUE-ALL9C 1-11(F3): 탭 줄 아래 꾸미기 토큰 진행 줄 = 지금 토큰 / 499급 토큰가(700 - Monetization.premiumTokenProgress · 상점과 같은 식) + "다음 499급 치장까지 n토큰"
+--   + [무료로 모으는 곳](퀘스트 창 - 일일 · 주간 · 출석 보상의 토큰) - 무료로도 모을 수 있다는 인식이 목적. 값 = Player Attribute SparkleShard(서버 지갑).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -21,6 +23,11 @@ local Info = require(script.Parent.CodexV2.Info)
 local Grid = require(script.Parent.CodexV2.Grid)
 local Detail = require(script.Parent.CodexV2.Detail)
 local Fly = require(script.Parent.CodexV2.Fly)
+local Gauge = require(script.Parent.Parent.ui.kit.Gauge)
+local Monetization = require(ReplicatedStorage.Shared.Monetization)
+local MonetizationData = require(ReplicatedStorage.Shared.data.MonetizationData)
+local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
+local Players = game:GetService("Players")
 
 local CodexPanel = {}
 CodexPanel.id = "codex"
@@ -28,6 +35,8 @@ CodexPanel.id = "codex"
 local PANEL_SIZE = Vector2.new(720, 480)
 local PAD = 8
 local ALL_W = 120
+local WHERE_W = 128 -- [무료로 모으는 곳]
+local NEED_W = 210 -- "다음 499급 치장까지 n토큰"
 local PHONE_W, PHONE_H = 720, 400 -- COMMON §2 폰 경계(panels/Inventory/Layout과 같은 값)
 
 local requestRemote = ReplicatedStorage:WaitForChild("CodexRequest")
@@ -224,7 +233,17 @@ local function relayout()
 	end
 	built.tabRow.CanvasSize = UDim2.fromOffset(#Info.tabs * (tw + 4), 0)
 	built.claimAll.root.Size = UDim2.fromOffset(ALL_W, S.claimH)
-	local bodyY = PAD + S.claimH + 6
+	local tokenH = phone and 44 or 30 -- QUEUE-ALL9C 1-11 토큰 진행 줄(폰 = 버튼 44)
+	local tokenY = PAD + S.claimH + 6
+	built.tokenBar.Position = UDim2.fromOffset(PAD, tokenY)
+	built.tokenBar.Size = UDim2.new(1, -PAD * 2, 0, tokenH)
+	local gaugeW = math.max(120, W - PAD * 2 - WHERE_W - NEED_W - 16)
+	built.tokenGauge.root.Size = UDim2.fromOffset(gaugeW, 22)
+	built.tokenGauge.root.Position = UDim2.new(0, 0, 0.5, -11)
+	built.tokenNeed.Position = UDim2.fromOffset(gaugeW + 8, 0)
+	built.tokenNeed.Size = UDim2.new(0, NEED_W, 1, 0)
+	built.tokenWhere.root.Size = UDim2.fromOffset(WHERE_W, tokenH)
+	local bodyY = tokenY + tokenH + 6
 	built.gridArea.Position = UDim2.fromOffset(PAD, bodyY)
 	built.gridArea.Size = UDim2.new(1, -(S.detailW + PAD * 3), 1, -(bodyY + PAD))
 	built.detail.root.Position = UDim2.new(1, -(S.detailW + PAD), 0, bodyY)
@@ -362,7 +381,23 @@ local function build()
 	gridArea.BackgroundTransparency = 1
 	gridArea.ClipsDescendants = true
 	gridArea.Parent = panel.content
-	built = { panel = panel, top = top, tabRow = tabRow, tabButtons = tabButtons, claimAll = all, gridArea = gridArea }
+	-- QUEUE-ALL9C 1-11 토큰 진행 줄
+	local tokenBar = Instance.new("Frame")
+	tokenBar.Name = "TokenProgress"
+	tokenBar.BackgroundTransparency = 1
+	tokenBar.Parent = panel.content
+	local tokenGauge = Gauge.build({ parent = tokenBar, height = 22, width = 200, trackColorName = "slot", fillColorName = "gold", value = 0, text = "" })
+	tokenGauge.root.Name = "TokenGauge"
+	local tokenNeed = Theme.label(tokenBar, "", "caption", "textSecondary")
+	tokenNeed.Name = "TokenNeed"
+	tokenNeed.TextYAlignment = Enum.TextYAlignment.Center
+	local tokenWhere = Button.build({ parent = tokenBar, name = "TokenWhere", kind = "secondary", text = Text.get("codex.token.where"), width = WHERE_W, height = 30,
+		position = UDim2.new(1, 0, 0, 0), anchorPoint = Vector2.new(1, 0), onActivated = function()
+			UIManager.close(CodexPanel.id)
+			require(script.Parent.Quests).open()
+		end })
+	built = { panel = panel, top = top, tabRow = tabRow, tabButtons = tabButtons, claimAll = all, gridArea = gridArea,
+		tokenBar = tokenBar, tokenGauge = tokenGauge, tokenNeed = tokenNeed, tokenWhere = tokenWhere }
 	built.detail = Detail.build(panel.content, S)
 	relayout()
 	panel.content:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
@@ -391,6 +426,7 @@ function CodexPanel.render()
 		return
 	end
 	built.panel.titleLabel.Text = Text.get("codex.v2.titleScore", { score = tostring(view.score), total = tostring(view.total) })
+	CodexPanel.renderTokens()
 	local anyClaim = false
 	for _, t in ipairs(Info.tabs) do
 		anyClaim = anyClaim or tabClaimable(t.id)
@@ -402,6 +438,19 @@ function CodexPanel.render()
 		renderTab(S.tab)
 	end
 	built.detail.show()
+end
+
+-- QUEUE-ALL9C 1-11 토큰 진행(상점 "다음 499급"과 같은 식 · 지갑 = SparkleShard)
+function CodexPanel.renderTokens()
+	if not built then
+		return
+	end
+	local have = Players.LocalPlayer:GetAttribute("SparkleShard") or 0
+	local p = Monetization.premiumTokenProgress(MonetizationData, have)
+	local lang = Text.languageFor()
+	built.tokenGauge.setValue(p.ratio, Text.get("codex.token.bar", { have = NumberFormat.commas(math.min(have, p.price)), price = NumberFormat.commas(p.price) }))
+	built.tokenNeed.Text = p.need > 0 and Text.get("codex.token.need", { n = NumberFormat.currency(p.need, lang) }) or Text.get("codex.token.ready")
+	built.tokenNeed.TextColor3 = p.need > 0 and Theme.colors.textSecondary or Theme.colors.success
 end
 
 function CodexPanel.open()
@@ -420,6 +469,7 @@ function CodexPanel.init()
 	if not built then
 		build()
 	end
+	Players.LocalPlayer:GetAttributeChangedSignal("SparkleShard"):Connect(CodexPanel.renderTokens) -- QUEUE-ALL9C 1-11
 	updateRemote.OnClientEvent:Connect(function(v)
 		local first = S.view == nil
 		S.view = v
