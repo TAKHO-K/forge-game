@@ -46,7 +46,7 @@ end
 -- 칸 하나 가격(골드) - 그 단계 비용 ÷ slots(확정 단계)
 function All10.transcendSlotCost(bestStage)
 	local d = All10Data.transcendEnhance
-	return scaledGold(d.levelKills / d.slots, bestStage, "transcend")
+	return scaledGold(d.levelKills * (d.sureCostFactor or 1) / d.slots, bestStage, "transcend")
 end
 
 -- 단계 상한: 계정 최고 스테이지 < extendStage = baseMaxLevel(+20) · 이상 = maxLevel(+25)

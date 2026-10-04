@@ -1187,6 +1187,24 @@ end
 -- 아이템이 생성 시점에 이미 가진 option·itemLevel을 그대로 보석으로 옮긴다.
 local DISMANTLE_MIN_GRADE_INDEX = ArmorData.dismantleMinGradeIndex -- G1-2: 데이터로(ArmorData - 영웅부터, 값 그대로)
 
+-- QUEUE-ALL9E1 ADD 2-3(B2 안전장치): 장비가 사라지는 경로마다 먼저 부른다 - 장비에 박힌 보석(item.gems)을 보석 가방으로 옮기고 표에서 뗀다(같은 동기 구간 · yield 없음 → 중간 실패 · 복제 없음).
+-- 지금은 방어구에 홈이 없어 늘 0개(무기 5홈은 장비 제거 경로 밖) · 보석 가방은 칸 제한이 없어 넘침 보관함이 필요 없다. 반환 = 옮긴 수.
+local function returnSocketedGems(classState, item)
+	if not classState or Gem.socketedCount(item) == 0 then
+		return 0
+	end
+	local n = 0
+	for _, gem in pairs(item.gems) do
+		if type(gem) == "table" then
+			table.insert(classState.gemInventory, gem)
+			n += 1
+		end
+	end
+	item.gems = nil
+	return n
+end
+PlayerProfile._returnSocketedGems = returnSocketedGems -- 하네스(all10_test B2)
+
 function PlayerProfile.dismantleItem(player, index)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
@@ -1209,6 +1227,7 @@ function PlayerProfile.dismantleItem(player, index)
 	end
 
 	table.remove(profile.inventory, index)
+	returnSocketedGems(classState, item) -- ADD 2-3
 	table.insert(classState.gemInventory, Loot.dismantleReward(item)) -- QUEUE-ALL9C 1-10 안내와 같은 함수
 	InventorySync.push(player, profile)
 	GemSync.push(player)
@@ -1225,6 +1244,7 @@ function PlayerProfile.dismantleItemsUpTo(player, gradeId)
 	local remaining, n = {}, 0
 	for _, item in ipairs(profile.inventory) do
 		if Loot.isBulkDismantleTarget(item, gradeId) then
+			returnSocketedGems(classState, item) -- ADD 2-3
 			table.insert(classState.gemInventory, Loot.dismantleReward(item)) -- QUEUE-ALL9C 1-10 안내와 같은 함수
 			n += 1
 		else
@@ -1923,6 +1943,9 @@ function PlayerProfile.autoProcessDrop(player, item)
 	if not classState or not setting or not setting.enabled or not Loot.isAutoProcessTarget(item, setting.maxGrade) then -- QUEUE-N1004 A-1: 판정 = 공용 함수(잠금 · 스킬 변형 · 보스 세트 · 태초 · 초월 제외)
 		return nil
 	end
+	if returnSocketedGems(classState, item) > 0 then -- ADD 2-3(바닥 드랍은 홈이 없어 늘 0)
+		GemSync.push(player)
+	end
 	local index = gradeIndex(item.grade)
 	local mode = type(profile.settings) == "table" and profile.settings.autoProcessMode or SettingsData.keys.autoProcessMode.default -- A-1 방식(설정 · 없는 키 = 기본 = 옛 동작)
 	if index >= DISMANTLE_MIN_GRADE_INDEX and mode ~= "sell" then
@@ -2307,6 +2330,7 @@ function PlayerProfile.inheritItem(player, part, bagIndex, keep)
 		return false, "no_gold"
 	end
 
+	returnSocketedGems(classState, a) -- ADD 2-3: 바뀌어 사라지는 A의 박힌 보석(B의 것은 결과 장비가 그대로 가진다)
 	local refund = Inherit.refund(a, b, keep)
 	local newItem = Inherit.resultItem(a, b, keep)
 	table.remove(profile.inventory, bagIndex)
@@ -2347,8 +2371,15 @@ function PlayerProfile.sellItem(player, index)
 		return false, "transcendent"
 	end
 
+	local classState = activeClassState(profile)
+	if Gem.socketedCount(item) > 0 and not classState then -- ADD 2-3: 박힌 보석을 돌려줄 곳이 없으면 팔지 않는다(소멸 금지)
+		return false, "no_class"
+	end
 	local price = Loot.getSellPrice(item)
 	table.remove(profile.inventory, index)
+	if returnSocketedGems(classState, item) > 0 then -- ADD 2-3
+		GemSync.push(player)
+	end
 	changeGold(player, profile, Sanitize.number(price, 0)) -- QUEUE-ALL9C 0-11 한 곳
 	Telemetry.economy(player, "gold", "source", price, "Shop") -- Q15 리뷰: 판매
 	InventorySync.push(player, profile)
@@ -2377,12 +2408,15 @@ function PlayerProfile.sellItemsBulkUpTo(player, gradeId)
 		return 0, 0
 	end
 
+	local classState = activeClassState(profile)
 	local remaining = {}
 	local totalGold = 0
 	local soldCount = 0
+	local returned = 0
 	for _, item in ipairs(profile.inventory) do
 		local itemGradeIndex = gradeIndex(item.grade)
-		if not item.locked and not item.skillVariant and itemGradeIndex and itemGradeIndex <= cutoffIndex then -- QUEUE-ALL1 01 A-2: 스킬 변형 장비 · 잠금 제외(착용 중 = 가방 밖)
+		if not item.locked and not item.skillVariant and itemGradeIndex and itemGradeIndex <= cutoffIndex and (classState or Gem.socketedCount(item) == 0) then -- QUEUE-ALL1 01 A-2: 스킬 변형 장비 · 잠금 제외(착용 중 = 가방 밖) · ADD 2-3 돌려줄 곳 없는 홈 장비 제외
+			returned += returnSocketedGems(classState, item) -- ADD 2-3
 			totalGold += Loot.getSellPrice(item)
 			soldCount += 1
 		else
@@ -2398,6 +2432,9 @@ function PlayerProfile.sellItemsBulkUpTo(player, gradeId)
 	changeGold(player, profile, Sanitize.number(totalGold, 0)) -- QUEUE-ALL9C 0-11 한 곳
 	Telemetry.economy(player, "gold", "source", totalGold, "Shop") -- Q15 리뷰: 일괄 판매
 	InventorySync.push(player, profile)
+	if returned > 0 then
+		GemSync.push(player)
+	end
 	return soldCount, totalGold
 end
 
@@ -2423,16 +2460,29 @@ function PlayerProfile.sellItemsByGrades(player, grades, expectedCount)
 		want[id] = true
 	end
 	local remaining, totalGold, soldCount = {}, 0, 0
+	local sold, socketed = {}, 0 -- ADD 2-3: 개수 확인을 통과한 뒤에만 보석을 옮긴다(거절이면 아무것도 안 바뀜)
 	for _, item in ipairs(profile.inventory) do
 		if Loot.isBulkSellTarget(item, want) then -- QUEUE-ALL9C 1-9 클라 확인 창과 같은 함수
 			totalGold += Loot.getSellPrice(item)
 			soldCount += 1
+			table.insert(sold, item)
+			socketed += Gem.socketedCount(item)
 		else
 			table.insert(remaining, item)
 		end
 	end
 	if soldCount == 0 or soldCount ~= expectedCount then
 		return 0, 0, soldCount == 0 and "none" or "count_mismatch"
+	end
+	local classState = activeClassState(profile)
+	if socketed > 0 and not classState then
+		return 0, 0, "no_class"
+	end
+	for _, item in ipairs(sold) do
+		returnSocketedGems(classState, item)
+	end
+	if socketed > 0 then
+		GemSync.push(player)
 	end
 	profile.inventory = remaining
 	changeGold(player, profile, Sanitize.number(totalGold, 0)) -- QUEUE-ALL9C 0-11 한 곳

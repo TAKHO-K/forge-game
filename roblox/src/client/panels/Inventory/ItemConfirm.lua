@@ -11,6 +11,7 @@ local ItemDescribe = require(ReplicatedStorage.Shared.ItemDescribe)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local GemCraft = require(ReplicatedStorage.Shared.GemCraft)
 local Loot = require(ReplicatedStorage.Shared.Loot)
+local Gem = require(ReplicatedStorage.Shared.Gem)
 local Text = require(ReplicatedStorage.Shared.Text)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 
@@ -123,6 +124,10 @@ function ItemConfirm.create(content, player)
 		local message = Text.get(key, args)
 		if not isGem then -- QUEUE-ALL9C 1-10: 분해 · 판매 결과를 나란히(분해 가능한 장비 = 확인 창이 뜨는 장비)
 			message ..= "\n" .. ItemConfirm.rewardLine(item)
+			local socketed = Gem.socketedCount(item) -- QUEUE-ALL9E1 ADD 2-3: 홈 있는 장비에서만 1줄(서버 반환과 같은 수)
+			if socketed > 0 then
+				message ..= "\n" .. Text.get("gear.confirm.socketReturn", { n = ("%d"):format(socketed) })
+			end
 		end
 		self.ask(message, visual and GradeColor.text(item.grade) or UIColors.textPrimary, action) -- G1-1: 태초도 제 색 · QUEUE-ALL9C 2-2
 	end

@@ -135,6 +135,19 @@ function Gem.allSlotsFilled(gems)
 	return true
 end
 
+-- QUEUE-ALL9E1 ADD 2-3(B2 안전장치): 장비 표(item.gems)에 박힌 보석 수 - 지금은 방어구에 홈이 없어 늘 0 · 홈이 생기면 판매 확인 창 줄(클라)과 반환(서버 PlayerProfile)이 같은 수를 쓴다
+function Gem.socketedCount(item)
+	local n = 0
+	if type(item) == "table" and type(item.gems) == "table" then
+		for _, gem in pairs(item.gems) do
+			if type(gem) == "table" then
+				n += 1
+			end
+		end
+	end
+	return n
+end
+
 -- 옵션을 재굴림할 수 있는 등급인가(고대·태초뿐, GemData.optionPoolByGrade 참고) -
 -- GemServer가 리롤 요청을 받을 때 이 등급인지부터 확인한다(영웅~유물 슬롯은 재굴림 대상이
 -- 아예 아니다 - purchases.optionRerollTickets가 ancient/primordial 두 종류뿐인 이유와 같다).

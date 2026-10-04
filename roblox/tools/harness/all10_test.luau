@@ -373,6 +373,43 @@ local okT, errT = pcall(function()
 	local hasGemField = false
 	for _, item in ipairs(inv.inventory or {}) do if item.gems then hasGemField = true end end
 	check("B2 구조: 보석이 박히는 곳 = 무기 5홈뿐(가방 장비에 gems 칸 없음 · 판매/분해 함수 = 가방 번호) → 장비가 사라지며 보석이 사라지는 경로 0(조사 표 = 보고서)", not hasGemField and type(inv.classes.bow.weapon.gems) == "table" and #inv.classes.bow.weapon.gems == 5)
+	-- ADD 2-3(P3 결정): 경로는 없지만 장비 제거 공용 함수 안전장치 - 홈 있는 가짜 장비(gems 3개)가 사라지면 보석 반환 · 거절이면 변화 없음 · 연타 복제 0
+	do
+		local pS, profS, csS = fresh()
+		local function armor(grade) return { part = "armor", grade = grade, itemLevel = 50, dropStage = 300, tierIndex = 3, option = { id = "attackPercent", roll = 0.5 }, gems = { gemOf("rare"), gemOf("epic"), [4] = gemOf("legendary") } } end
+		local function plain(grade) return { part = "armor", grade = grade, itemLevel = 50, dropStage = 300, tierIndex = 3, option = { id = "attackPercent", roll = 0.5 } } end
+		local function gems() return #csS.gemInventory end
+		profS.inventory = { armor("epic"), plain("epic") }
+		local g0 = gems()
+		local sold = PP.sellItem(pS, 1)
+		local sellOk = type(sold) == "number" and gems() == g0 + 3 and #profS.inventory == 1 and profS.inventory[1].gems == nil
+		local again = PP.sellItem(pS, 1) -- 연타: 다음 칸(홈 없음) 판매 · 보석 그대로
+		local again2 = PP.sellItem(pS, 1) -- 빈 가방 = not_found
+		local tapOk = type(again) == "number" and again2 == false and gems() == g0 + 3
+		profS.inventory = { armor("epic") }
+		local g1 = gems()
+		local okD = PP.dismantleItem(pS, 1)
+		local disOk = okD and gems() == g1 + 3 + 1 -- 박힌 3 + 분해 보석 1
+		profS.inventory = { armor("epic"), armor("epic") }
+		local g2 = gems()
+		local nUp = PP.dismantleItemsUpTo(pS, "epic")
+		local upOk = nUp == 2 and gems() == g2 + 2 * 4
+		local bulkGrade = MODS.ArmorData.bulkSellGrades[1]
+		profS.inventory = { armor(bulkGrade), armor(bulkGrade) }
+		local g3 = gems()
+		local nBad, _, why = PP.sellItemsByGrades(pS, { bulkGrade }, 3) -- 개수 틀림 = 아무것도 안 바뀜(보석도)
+		local rejectOk = nBad == 0 and why == "count_mismatch" and gems() == g3 and #profS.inventory == 2 and Gem.socketedCount(profS.inventory[1]) == 3
+		local nGood = PP.sellItemsByGrades(pS, { bulkGrade }, 2)
+		local nAgain = PP.sellItemsByGrades(pS, { bulkGrade }, 2) -- 같은 요청 두 번 = none
+		local byOk = nGood == 2 and nAgain == 0 and gems() == g3 + 6 and #profS.inventory == 0
+		profS.inventory = { armor(bulkGrade) }
+		local g4 = gems()
+		local nUpTo = PP.sellItemsBulkUpTo(pS, bulkGrade)
+		local bulkOk = nUpTo == 1 and gems() == g4 + 3
+		check("ADD 2-3 B2 안전장치: 홈 있는 장비 판매 · 연타 · 분해 · 일괄 분해 · 등급 판매(개수 틀림 거절 = 변화 0 · 중복 요청 0) · 일괄 판매 → 박힌 보석 전부 반환 · 복제 0 · 홈 없는 장비 = 0개",
+			sellOk and tapOk and disOk and upOk and rejectOk and byOk and bulkOk and Gem.socketedCount(plain("epic")) == 0,
+			("%s %s %s %s %s %s %s"):format(tostring(sellOk), tostring(tapOk), tostring(disOk), tostring(upOk), tostring(rejectOk), tostring(byOk), tostring(bulkOk)))
+	end
 	-- ② 초월 강화: 칸 10개 = +1 · 칸 가격 · 골드 부족 = 변화 없음 · +20 = max
 	local gold0 = prof.gold
 	local slotCost = All10.transcendSlotCost(PP.getAccountBestStage(pl))

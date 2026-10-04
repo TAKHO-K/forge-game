@@ -103,6 +103,7 @@ return {
 		["gear.confirm.cancel"] = "취소",
 		["gear.confirm.sell"] = "{name}({grade})를 판매하시겠습니까? 되돌릴 수 없습니다.",
 		["gear.confirm.dismantle"] = "{name}({grade})를 분해하시겠습니까? 되돌릴 수 없습니다.",
+		["gear.confirm.socketReturn"] = "박힌 보석 {n}개는 보석함으로 돌아갑니다.", -- QUEUE-ALL9E1 ADD 2-3: 홈 있는 장비에서만(Gem.socketedCount > 0)
 		["gear.confirm.sellGem"] = "{name}({grade})를 판매하시겠습니까? 골드 {gold}를 얻습니다. 되돌릴 수 없습니다.",
 		["gear.confirm.dismantleGem"] = "{name}({grade})를 분해하시겠습니까? 가루 {dust}를 얻습니다. 되돌릴 수 없습니다.",
 	},
@@ -201,6 +202,7 @@ return {
 		["gear.confirm.cancel"] = "No",
 		["gear.confirm.sell"] = "Sell {name} ({grade})? This can't be undone.",
 		["gear.confirm.dismantle"] = "Salvage {name} ({grade})? This can't be undone.",
+		["gear.confirm.socketReturn"] = "{n} socketed gem(s) will return to your gem bag.",
 		["gear.confirm.sellGem"] = "Sell {name} ({grade}) for {gold} Gold? No undo.",
 		["gear.confirm.dismantleGem"] = "Salvage {name} ({grade}) for {dust} Gem Dust? No undo.",
 	},
