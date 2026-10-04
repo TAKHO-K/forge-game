@@ -223,13 +223,16 @@ function TranscendView.build(parent, width, pad, footerHeight, buttonY, resultY,
 				local o = pick.open[i]
 				local gemName = o.gemGrade and Text.name(require(ReplicatedStorage.Shared.data.ArmorData).grades[o.gemGrade] and require(ReplicatedStorage.Shared.data.ArmorData).grades[o.gemGrade].displayName or o.gemGrade) or Text.get("transcend.inherit.slotEmpty")
 				Confirm.ask({ title = Text.get("transcend.inherit.slotPickTitle"), body = Text.get("transcend.inherit.slotPick", { slot = tostring(o.slot), gem = gemName }),
-					primaryText = Text.get("transcend.inherit.slotThis"), secondaryText = Text.get("transcend.inherit.slotNext"), parentId = panelId }, function(yes)
+					primaryText = Text.get("transcend.inherit.slotThis"), secondaryText = Text.get(i < #pick.open and "transcend.inherit.slotNext" or "transcend.inherit.cancel"), parentId = panelId }, function(yes)
+					if not yes and i >= #pick.open then
+						return -- 리뷰: 마지막 홈에서 보조 · X = 취소(옛 = 처음으로 돌아가 창이 끝없이 다시 떴다)
+					end
 					task.delay(0.5, function()
 						if yes then
 							chosen = o.slot
 							finalConfirm()
 						else
-							ask(i % #pick.open + 1)
+							ask(i + 1)
 						end
 					end)
 				end)

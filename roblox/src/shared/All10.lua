@@ -226,7 +226,8 @@ function All10.referenceBuild(stage, inheritStage)
 	local tLevel = d.transcendEnhance.baseMaxLevel * math.clamp(((stage or 0) - inheritStage) / span, 0, 1)
 	local ref = d.monsterCurve.refTranscend
 	if ref then -- QUEUE-ALL9E1 0-6: 중앙값 실제 궤적(스테이지 → 단계 · 직선 보간 · 끝 = 마지막 값)
-		local s = stage or 0
+		-- 리뷰: 중앙값보다 늦게 계승한 사람(두 번째 직업 · 늦은 계승)은 그만큼 미룬 궤적(+0에서 기준 +15 빌드 몹을 만나는 벽 방지) · 일찍 계승 = 그대로(D10)
+		local s = (stage or 0) - math.max(0, (inheritStage or 0) - (d.monsterCurve.refInheritStage or 0))
 		tLevel = s <= ref[1][1] and ref[1][2] or ref[#ref][2]
 		for i = 2, s > ref[1][1] and #ref or 0 do
 			if s < ref[i][1] then

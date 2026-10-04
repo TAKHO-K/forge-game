@@ -305,6 +305,9 @@ function TranscendService.confirm(player, token, slotChoice)
 			CosmeticService.revokeItem(player, d.markItemId)
 		end
 		sync(player)
+		if typeof(player) == "Instance" then
+			require(script.Parent.GemSync).push(player) -- 리뷰: 홈 상태(초월 홈 · 새로 연 홈) 되돌림도 보석 탭에
+		end
 		return { ok = false, why = "save_failed" }
 	end
 	audit(player, "transcendInherit", ("%s 등급 %d +%d → 초월 +0 · 환생 %d · 스테이지 %d · 보석 %s"):format(tostring(profile.classId), fromGrade, fromLevel, classState.transcendInherit.rebirth, classState.transcendInherit.stage, table.concat(rewards, ",")))
@@ -322,6 +325,9 @@ function TranscendService.confirm(player, token, slotChoice)
 		player:SetAttribute("WeaponLevel", weapon.level) -- 0-2: +29에서 계승해도 +30 몫
 	end
 	sync(player)
+	if typeof(player) == "Instance" then
+		require(script.Parent.GemSync).push(player) -- 리뷰: 초월 홈 · 새 홈을 보석 탭에 바로(옛 = 다음 보석 동작 때까지 잠김 · 태초 테두리)
+	end
 	announceLocal(player)
 	return { ok = true, stage = classState.transcendInherit.stage, gems = rewards, titleId = d.titleId, mark = giveMark, unreborn = unreborn }
 end

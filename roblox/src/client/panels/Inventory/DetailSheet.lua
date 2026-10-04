@@ -282,7 +282,7 @@ local function refreshDetailBody()
 		local gem = gemState.gems[S.selectedValue]
 		card.set({
 			title = Text.get("gear.detail.slotTitle", { slot = ("%d"):format(S.selectedValue), name = ItemDescribe.gem(gem).title }), gradeId = gem.grade, part = "weapon",
-			lines = { { text = Text.get("gear.detail.slotLine", { grade = ArmorData.grades[Gem.gradeCapForSlot(S.selectedValue)].displayName, quality = rollText(gem) }), color = UIColors.textPrimary } },
+			lines = { { text = Text.get("gear.detail.slotLine", { grade = ArmorData.grades[Gem.gradeCapForSlot(S.selectedValue, S.gemState and S.gemState() and S.gemState().transcendSlots)].displayName, quality = rollText(gem) }), color = UIColors.textPrimary } },
 			option = gem, notes = ItemDescribe.gem(gem).note, gems = true,
 		})
 		craftButton.Visible = true -- P2.5b B: 장착 중 보석도 재련된다(해제 불필요) · 리롤 버튼은 보석 탭 행 자체에 있다(중복 방지)
