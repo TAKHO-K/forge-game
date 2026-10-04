@@ -118,6 +118,8 @@ function Monetization.tokenBlocked(cosmetics, kind, id)
 		return "board_only"
 	elseif entry.starterOnly then
 		return "starter_only" -- QUEUE-ALL9C 1-6 스타터 팩 전용(따로 · 토큰 · 선물로 안 판다)
+	elseif entry.earnedOnly then
+		return "earned_only" -- QUEUE-ALL9E1 0-2 업적 보상(+30 증표)
 	end
 	return nil
 end

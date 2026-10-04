@@ -761,6 +761,7 @@ return {
 	["shop.slot.recallFx"] = "Recall Effect",
 	["shop.slot.emote"] = "Emote",
 	["shop.slot.petAccessory"] = "Pet Accessory",
+	["shop.slot.weaponMark"] = "Weapon Mark", -- QUEUE-ALL9E1 0-2
 	["shop.cos.itemSection"] = "Accessories",
 	["shop.cos.noItem"] = "Buy an item for this slot to pick one",
 	["shop.cos.offSeason"] = "On sale in month {month}",

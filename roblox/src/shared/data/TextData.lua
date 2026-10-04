@@ -767,6 +767,7 @@ local TextData = {
 		["shop.slot.recallFx"] = "귀환 연출",
 		["shop.slot.emote"] = "이모트",
 		["shop.slot.petAccessory"] = "펫 꾸미기",
+		["shop.slot.weaponMark"] = "무기 증표", -- QUEUE-ALL9E1 0-2
 		["shop.cos.itemSection"] = "소품",
 		["shop.cos.noItem"] = "이 칸 소품을 사면 고를 수 있습니다",
 		["shop.cos.offSeason"] = "{month}월 한정 판매",

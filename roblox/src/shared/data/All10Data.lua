@@ -9,8 +9,13 @@ return {
 	killUnitScale = 1.76, -- 제안서 마리분(EconSim) → GoldCost 단위(tier1 잡몹)
 
 	-- 2-1 계승(D1 · D2): 태초(grade 6) 무기 +30 · 같은 직업 → 초월 무기(grade 7) +0
+	--   QUEUE-ALL9E1 0-2(P3-2 · 사용자 10-04): 조건 = 그 직업의 **현재 무기 +29 이상**(등급 무관 - 환생 0회 기본 무기 포함). 결과는 어디서 왔든 같은 초월 +0
+	--   (강화 줄 = resultLevel 몫 · 등급 줄 = 태초 × weaponMultiplier). +30에서 계승 = "+30 증표"(치장 소품 markItemId) · 그 직업 환생 0회 = 히든 칭호.
 	inherit = {
-		fromGrade = 6, toGrade = 7, requiredLevel = 30,
+		fromGrade = 6, toGrade = 7, requiredLevel = 29, -- fromGrade = 초월 등급 줄의 기준(태초) - 계승 조건에는 쓰지 않는다(P3-2)
+		resultLevel = 30, -- 계승 뒤 무기 강화 단계(+30 몫 그대로 - 초월 +0 = 태초 +30 × 1.25)
+		markLevel = 30, markItemId = "enhance30Mark", -- 계승 순간 +30이면 증표(치장 칸 weaponMark · 판매 · 토큰 · 선물 X)
+		unrebornTitleId = "unrebornTranscendent", -- 계승 순간 그 직업 환생 0회 = 칭호 "환생 없는 초월자"(히든 - 도감에서 얻기 전엔 ???)
 		weaponMultiplier = 1.25, -- 초월 +0 공격 = 태초 +30 공격 × 1.25(제안서 5절)
 		titleId = "transcendHeir", -- 칭호 "초월 계승자"
 		rewardGems = 1, -- 계승 보상 초월 보석 1개(D16 보존 규칙)

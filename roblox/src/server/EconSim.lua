@@ -697,11 +697,13 @@ local function doRebirth(state, profile, whatIf)
 	state.reclaimKills = 0
 	state.level = 1
 	state.exp = 0
-	state.weaponGrade = state.rebirth
+	if not state.transcend then -- QUEUE-ALL9E1 0-2: 환생 전 계승한 초월 무기는 환생해도 그대로(게임 PlayerProfile.rebirth와 같다)
+		state.weaponGrade = state.rebirth
+	end
 	local slot = state.rebirth
 	-- 환생 지급 보석(PlayerProfile.rebirth): 그 슬롯 상한 등급 · itemLevel = 환생 순간 레벨의 스테이지 척도(P2.5a 결정 9 - CharacterLevel.getStageForLevel) · 옵션 무작위.
 	tryPlaceGem(state, profile, slot, Gem.gradeCapForSlot(slot), CharacterLevel.getStageForLevel(levelAtRebirth), whatIf, true)
-	if state.rebirth == GemData.maxRebirthCount and Gem.allSlotsFilled(state.gems) then
+	if not state.transcend and state.rebirth == GemData.maxRebirthCount and Gem.allSlotsFilled(state.gems) then
 		state.weaponGrade = ArmorData.maxWeaponGradeIndex -- C5-7: 태초(6) - gradeOrder 끝은 초월
 	end
 end
@@ -897,12 +899,14 @@ local function tryInherit(state, profile, run)
 	if state.transcend or not All10.canInherit({ grade = state.weaponGrade, level = state.weaponLevel }) then
 		return
 	end
+	state.inheritFrom = { grade = state.weaponGrade, level = state.weaponLevel, rebirth = state.rebirth } -- QUEUE-ALL9E1 0-2(보고)
 	state.weaponGrade = All10Data.inherit.toGrade
+	state.weaponLevel = All10Data.inherit.resultLevel -- 0-2: +29 계승도 +30 몫(게임 confirm과 같다)
 	state.transcend = { level = 0, slot = 0 }
 	state.inheritStage = state.reach
 	state.gems[1] = EconSim.makeGem("attackPercent", "transcendent", state.reach, math.min((profile.gemRoll or 1) * (profile.optionRoll or 1), OptionData.rollMax))
 	if run then
-		run.inheritAt = { seconds = state.seconds, stage = state.reach }
+		run.inheritAt = { seconds = state.seconds, stage = state.reach, fromGrade = state.inheritFrom.grade, fromLevel = state.inheritFrom.level, rebirth = state.rebirth }
 	end
 end
 

@@ -30,7 +30,7 @@ Catalog.CHIPS = {
 }
 
 local function forSale(entry)
-	return not (entry.seasonOnly or entry.passOnly or entry.boardOnly or entry.starterOnly)
+	return not (entry.seasonOnly or entry.passOnly or entry.boardOnly or entry.starterOnly or entry.earnedOnly)
 end
 
 local function now()

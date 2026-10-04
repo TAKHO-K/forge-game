@@ -27,10 +27,15 @@ local function scaledGold(kills, bestStage, kind)
 end
 
 -- ── 2-1 계승 ──
--- 계승 가능한 무기인가(태초 +30). 같은 직업 조건은 무기가 직업별이라 자동(classes[직업].weapon).
+-- 계승 가능한 무기인가(QUEUE-ALL9E1 0-2: 등급 무관 +29 이상 · 이미 초월이면 아님). 같은 직업 조건은 무기가 직업별이라 자동(classes[직업].weapon).
 function All10.canInherit(weapon)
 	local d = All10Data.inherit
-	return All10.enabled() and type(weapon) == "table" and weapon.grade == d.fromGrade and (tonumber(weapon.level) or 0) >= d.requiredLevel
+	return All10.enabled() and type(weapon) == "table" and weapon.grade ~= d.toGrade and (tonumber(weapon.level) or 0) >= d.requiredLevel
+end
+
+-- 계승하면 "+30 증표"를 받는가(계승 순간 단계 ≥ markLevel)
+function All10.inheritGivesMark(weapon)
+	return type(weapon) == "table" and (tonumber(weapon.level) or 0) >= All10Data.inherit.markLevel
 end
 
 function All10.isTranscendWeapon(weapon)

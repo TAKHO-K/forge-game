@@ -7,6 +7,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Text = require(ReplicatedStorage.Shared.Text)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local ItemDescribe = require(ReplicatedStorage.Shared.ItemDescribe)
+local All10Data = require(ReplicatedStorage.Shared.data.All10Data)
+local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
 local Button = require(script.Parent.Parent.Parent.ui.kit.Button)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 local Confirm = require(script.Parent.Parent.Parent.ui.kit.Confirm)
@@ -16,6 +18,15 @@ local TranscendView = {}
 local player = Players.LocalPlayer
 local remote = ReplicatedStorage:WaitForChild("TranscendRequest")
 
+-- QUEUE-ALL9E1 0-2: +29 = 보통 강화 화면 + [초월 계승] 보조 버튼(+30 도전을 막지 않는다) · 그 버튼 = wantInherit · +30(최대) = 바로 계승 화면
+TranscendView.wantInherit = false
+
+-- 계승할 수 있는 무기인가(Attribute만 - 서버 All10.canInherit와 같은 조건)
+function TranscendView.canInheritNow()
+	return player:GetAttribute("All10On") == true and player:GetAttribute("TranscendLevel") == nil
+		and player:GetAttribute("WeaponGrade") ~= All10Data.inherit.toGrade and (player:GetAttribute("WeaponLevel") or 0) >= All10Data.inherit.requiredLevel
+end
+
 -- 지금 모드: nil(초월 아님 - 보통 강화) | "inherit" | "transcend" - Attribute로 바로 판정(서버 표를 기다리지 않는다)
 function TranscendView.mode()
 	if player:GetAttribute("All10On") ~= true then
@@ -24,7 +35,10 @@ function TranscendView.mode()
 	if player:GetAttribute("TranscendLevel") ~= nil then
 		return "transcend"
 	end
-	if player:GetAttribute("WeaponGrade") == 6 and (player:GetAttribute("WeaponLevel") or 0) >= 30 then
+	if not TranscendView.canInheritNow() then
+		TranscendView.wantInherit = false -- 리뷰: 다른 직업 · 계승 뒤에 남지 않게
+	end
+	if TranscendView.canInheritNow() and ((player:GetAttribute("WeaponLevel") or 0) >= EnhanceConfig.maxLevel or TranscendView.wantInherit) then
 		return "inherit"
 	end
 	return nil
@@ -44,7 +58,7 @@ local function pct(v)
 end
 
 function TranscendView.build(parent, width, pad, footerHeight, buttonY, resultY, panelId)
-	local refs = { view = nil, busy = false }
+	local refs = { view = nil, busy = false, pad = pad, buttonY = buttonY }
 	local innerWidth = width - pad * 2
 	local scroll = Instance.new("ScrollingFrame")
 	scroll.Name = "TranscendScroll"
@@ -145,7 +159,8 @@ function TranscendView.build(parent, width, pad, footerHeight, buttonY, resultY,
 			refs.result.TextColor3 = Theme.color("danger")
 			return
 		end
-		local args = { level = tostring(prep.fromLevel), mult = ("%.2f"):format(prep.weaponMultiplier), n = tostring(prep.rewardGems) }
+		local args = { level = tostring(prep.fromLevel), mult = ("%.2f"):format(prep.weaponMultiplier), n = tostring(prep.rewardGems),
+			mark = Text.get(prep.mark and "transcend.inherit.markYes" or "transcend.inherit.markNo") } -- 0-2: +29 = 증표 없음 안내
 		Confirm.ask({ title = Text.get("transcend.inherit.title"), body = Text.get("transcend.inherit.confirm1", args), primaryText = Text.get("transcend.inherit.next"),
 			secondaryText = Text.get("transcend.inherit.cancel"), parentId = panelId }, function(step1)
 			if not step1 then
@@ -160,6 +175,7 @@ function TranscendView.build(parent, width, pad, footerHeight, buttonY, resultY,
 					task.spawn(function()
 						local res = call("confirm", prep.token)
 						if res and res.ok then
+							TranscendView.wantInherit = false
 							refs.result.Text = Text.get("transcend.inherit.done")
 							refs.result.TextColor3 = Theme.color("success")
 							Toast.push("TC", { text = Text.get("transcend.inherit.done"), grade = "important", colorName = "gold" })
@@ -174,7 +190,7 @@ function TranscendView.build(parent, width, pad, footerHeight, buttonY, resultY,
 		end)
 	end
 
-	refs.button = Button.build({ parent = footer, name = "TranscendButton", kind = "primary", width = 220, text = "",
+	refs.button = Button.build({ parent = footer, name = "TranscendButton", kind = "primary", width = 200, text = "",
 		anchorPoint = Vector2.new(0.5, 0), position = UDim2.new(0.5, 0, 0, buttonY), onActivated = function()
 			local mode = TranscendView.mode()
 			if mode == "inherit" then
@@ -195,6 +211,15 @@ function TranscendView.build(parent, width, pad, footerHeight, buttonY, resultY,
 				end)
 			end
 		end })
+	-- 0-2: +29에서 계승 화면 → 보통 강화로(+30 도전) - 이 버튼이 보일 때 주 버튼은 오른쪽으로 비킨다(render)
+	refs.back = Button.build({ parent = footer, name = "TranscendBack", kind = "secondary", width = Button.minWidth, text = Text.get("transcend.inherit.back"),
+		position = UDim2.new(0, pad, 0, buttonY), onActivated = function()
+			TranscendView.wantInherit = false
+			if refs.onModeChanged then
+				refs.onModeChanged()
+			end
+		end })
+	refs.back.root.Visible = false
 	refs.call = call
 	return refs
 end
@@ -278,6 +303,10 @@ end
 function TranscendView.render(refs)
 	local mode = TranscendView.mode()
 	local v = refs.view
+	local canBack = mode == "inherit" and (player:GetAttribute("WeaponLevel") or 0) < EnhanceConfig.maxLevel
+	refs.back.root.Visible = canBack
+	refs.button.root.AnchorPoint = canBack and Vector2.new(1, 0) or Vector2.new(0.5, 0)
+	refs.button.root.Position = canBack and UDim2.new(1, -refs.pad, 0, refs.buttonY) or UDim2.new(0.5, 0, 0, refs.buttonY)
 	if not v then
 		task.spawn(function()
 			if refs.call("view") then
@@ -288,8 +317,9 @@ function TranscendView.render(refs)
 	end
 	if mode == "inherit" then
 		refs.title.Text = Text.get("transcend.inherit.title")
-		refs.body.Text = Text.get("transcend.inherit.body", { mult = ("%.2f"):format(1.25) })
-		refs.reward.Text = Text.get("transcend.inherit.reward", { n = "1" })
+		refs.body.Text = Text.get("transcend.inherit.body", { mult = ("%.2f"):format(v.inheritMult or All10Data.inherit.weaponMultiplier) })
+		refs.reward.Text = Text.get("transcend.inherit.reward", { n = tostring(v.rewardGems or All10Data.inherit.rewardGems) }) .. "\n"
+			.. Text.get(v.inheritMark and "transcend.inherit.markYes" or "transcend.inherit.markNo")
 		refs.reward.Visible, refs.bar.Visible, refs.slotsText.Visible, refs.note.Visible = true, false, false, false
 		refs.button.setText(Text.get("transcend.inherit.button"))
 		refs.button.setEnabled(true)

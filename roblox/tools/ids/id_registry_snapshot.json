@@ -2,12 +2,14 @@
  "cosmeticItem": [
   "balloonPop",
   "crystalBlade",
+  "enhance30Mark",
   "forgeBrazier",
   "goldenHammer",
   "highFive",
   "petCrown",
   "rocketPop",
-  "starCrown"
+  "starCrown",
+  "starterEdge"
  ],
  "cosmeticTheme": [
   "anvil",
@@ -21,6 +23,7 @@
   "moonEmber",
   "sodaJelly",
   "starlight",
+  "starterStar",
   "violetStar"
  ],
  "gliderSkin": [
@@ -141,7 +144,9 @@
   "primordialChosen",
   "seasonRegular",
   "secretKeeper",
+  "transcendHeir",
   "transcendentOne",
+  "unrebornTranscendent",
   "weeklyChampion"
  ]
 }

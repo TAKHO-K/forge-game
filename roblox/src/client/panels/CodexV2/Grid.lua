@@ -406,6 +406,12 @@ local function renderTitles(S, scroll)
 		local icon = ArtImage.label(f, "icons/reward/title", UDim2.fromOffset(32, 32), "")
 		icon.Name = "Icon"
 		icon.Position = UDim2.fromOffset(8, (ROW - 4 - 32) / 2)
+		if t.hidden then -- QUEUE-ALL9E1 0-2 히든 칭호(아직 못 얻음): "???"만 · 고르기 없음
+			icon.ImageTransparency = 0.6
+			label(f, "???", "body", Theme.colors.textSecondary, UDim2.fromOffset(48, 0), UDim2.new(1, -160, 1, 0), Enum.TextXAlignment.Left).Name = "Name"
+			y += ROW
+			continue
+		end
 		label(f, CodexRules.titleText(t.id, t.name), "body", t.grade and Info.gradeColor(t.grade) or Theme.colors.textPrimary, UDim2.fromOffset(48, 0), UDim2.new(1, -160, 1, 0), Enum.TextXAlignment.Left).Name = "Name"
 		local b = Button.build({ parent = f, kind = selected and "secondary" or "primary", text = selected and Text.get("codex.v2.usingTitle") or Text.get("codex.v2.useTitle"), width = 96, height = 44,
 			position = UDim2.new(1, -2, 0.5, 0), anchorPoint = Vector2.new(1, 0.5), onActivated = function()

@@ -99,6 +99,11 @@ local function refresh()
 	local transMode = TranscendView.mode() -- QUEUE-ALL10: 태초 +30 = 계승 모드 · 초월 무기 = 초월 강화 모드(강화 탭 본문을 바꿔 끼운다)
 	built.enhanceBody.Visible = built.tab == "enhance" and transMode == nil
 	built.transcendBody.Visible = built.tab == "enhance" and transMode ~= nil
+	local showEntry = transMode == nil and TranscendView.canInheritNow() -- QUEUE-ALL9E1 0-2 +29 보조 버튼(강화 버튼은 왼쪽으로)
+	local y = built.button.root.Position.Y
+	built.inheritEntry.root.Visible = showEntry
+	built.button.root.AnchorPoint = showEntry and Vector2.new(0, 0) or Vector2.new(0.5, 0)
+	built.button.root.Position = showEntry and UDim2.new(0, PAD, y.Scale, y.Offset) or UDim2.new(0.5, 0, y.Scale, y.Offset)
 	if built.tab == "enhance" and transMode then
 		built.panel.titleLabel.Text = transMode == "inherit" and Text.get("transcend.inherit.title") or Text.get("transcend.enh.title", { level = tostring(player:GetAttribute("TranscendLevel") or 0) })
 		TranscendView.render(built.transcend)
@@ -386,6 +391,14 @@ local function build()
 	refs.rebirth = RebirthView.build(refs.rebirthBody, panel.screenGui)
 	-- QUEUE-ALL10 2-7 초월 모드 본문(같은 고정 영역 배치)
 	refs.transcend = TranscendView.build(refs.transcendBody, width, PAD, footerHeight, buttonY, resultY, EnhancePanel.id)
+	refs.transcend.onModeChanged = refresh
+	-- QUEUE-ALL9E1 0-2: +29(계승 가능 · 아직 +30 아님) = 강화 버튼 옆 [초월 계승] 보조 버튼 → 계승 화면(거기 [+30 도전]으로 돌아옴)
+	refs.inheritEntry = Button.build({ parent = footer, name = "InheritEntry", kind = "secondary", width = Button.minWidth, text = Text.get("transcend.inherit.entry"),
+		anchorPoint = Vector2.new(1, 0), position = UDim2.new(1, -PAD, 0, buttonY), onActivated = function()
+			TranscendView.wantInherit = true
+			refresh()
+		end })
+	refs.inheritEntry.root.Visible = false
 
 	-- 연결(다시 지을 때 끊는다).
 	local function connect(connection)
@@ -395,7 +408,7 @@ local function build()
 		connect(player:GetAttributeChangedSignal(name):Connect(refresh))
 	end
 	connect(player:GetAttributeChangedSignal("RebirthCount"):Connect(refs.rebirth.update))
-	for _, name in ipairs({ "All10On", "TranscendLevel", "TranscendSlot", "TranscendGemCount", "WeaponGrade", "Gold" }) do -- QUEUE-ALL10: 초월 상태가 바뀌면 표를 다시 받는다
+	for _, name in ipairs({ "All10On", "TranscendLevel", "TranscendSlot", "TranscendGemCount", "WeaponGrade", "WeaponLevel", "Gold" }) do -- QUEUE-ALL9E1 0-2: WeaponLevel(+29 → +30 증표 안내) · QUEUE-ALL10: 초월 상태가 바뀌면 표를 다시 받는다
 		connect(player:GetAttributeChangedSignal(name):Connect(function()
 			if name ~= "Gold" then
 				refs.transcend.view = nil
@@ -404,6 +417,10 @@ local function build()
 		end))
 	end
 	connect(player:GetAttributeChangedSignal("CharacterLevel"):Connect(refs.rebirth.update))
+	connect(player:GetAttributeChangedSignal("ClassId"):Connect(function() -- QUEUE-ALL9E1 0-2 리뷰: 직업이 바뀌면 [초월 계승] 선택을 잊는다
+		TranscendView.wantInherit = false
+		refresh()
+	end))
 	connect(Controller.connectResult(function(data)
 		local text, colorName = resultLine(data)
 		refs.resultLabel.Text = text

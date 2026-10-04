@@ -118,6 +118,22 @@ function CosmeticService.grant(player, kind, id)
 	return true
 end
 
+-- 지급 되돌림(QUEUE-ALL9E1 0-2: 계승 저장 실패 때 이번에 준 증표만) - 장착 중이면 칸도 기본으로
+function CosmeticService.revokeItem(player, id)
+	local s = state(player)
+	if not s or type(s.cosmetics.items) ~= "table" or not s.cosmetics.items[id] then
+		return false
+	end
+	s.cosmetics.items[id] = nil
+	for slot, equipped in pairs(s.cosmetics.equipped) do
+		if equipped == id then
+			s.cosmetics.equipped[slot] = nil
+		end
+	end
+	CosmeticService.applyAttributes(player)
+	return true
+end
+
 -- 반짝 조각(꾸미기 토큰)으로 사기(옛 요청 buyShards - 치장 하나). QUEUE-ALL9B 3-5: 그 치장의 상품(theme_ · glider_ · item_ 키)으로 MonetizationService.buyWithTokens 한 곳에 맡긴다.
 local PRODUCT_PREFIX = { cosmeticTheme = "theme_", gliderSkin = "glider_", cosmeticItem = "item_" }
 function CosmeticService.buyWithShards(player, kind, id)

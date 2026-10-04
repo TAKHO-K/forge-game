@@ -17,9 +17,11 @@ return {
 		{ id = "recallFx", default = "none", hook = "client/CosmeticFx(RecallCastUntil)", unlock = "product" },
 		{ id = "emote", default = "none", hook = "client/CosmeticFx(EmoteEvent - 파티원 수락)", unlock = "product" },
 		{ id = "petAccessory", default = "none", hook = "client/PetView(펫 몸 틀 3종)", unlock = "product" },
+		-- QUEUE-ALL9E1 0-2: 무기 증표 칸(+30에서 초월 계승한 보상 - 무기 외형 · 이펙트 · 초월 무기에도). 상품 없음(earnedOnly).
+		{ id = "weaponMark", default = "none", hook = "client/WeaponVisual(증표 이펙트 - 등급 빛 · 초월 이펙트 위에 겹침)", unlock = "earned" },
 	},
 	-- QUEUE-ALL6 H 꾸미기 소품(칸 하나): { id, slot, name, look, seasonMonth? = 그 달(KST)에만 판매 }. 상점 = 치장 탭 안 "소품" 분류(칸별 묶음).
-	itemSlots = { "killFx", "weaponSkin", "enhanceFx", "recallFx", "emote", "petAccessory" },
+	itemSlots = { "killFx", "weaponSkin", "enhanceFx", "recallFx", "emote", "petAccessory", "weaponMark" },
 	items = {
 		{ id = "rocketPop", slot = "killFx", name = "로켓 반짝", look = "rocket" }, -- #24 하늘 멀리 "반짝" + 작은 별 터짐(실제 몹은 그 자리에서 죽음 · 날아가는 건 그림)
 		{ id = "balloonPop", slot = "killFx", name = "풍선 펑", look = "balloon" }, -- #26 부풀었다가 펑 + 색종이
@@ -30,6 +32,7 @@ return {
 		{ id = "highFive", slot = "emote", name = "하이파이브", look = "highFive" }, -- #86 파티원 둘 · 상대 수락
 		{ id = "petCrown", slot = "petAccessory", name = "펫 왕관", look = "crown" }, -- #75 펫 몸 3종(개 · 고양이 · 용)에 맞춤
 		{ id = "starCrown", slot = "petAccessory", name = "별빛 왕관", look = "starCrown", boardOnly = 1 }, -- QUEUE-ALL9B 5 시즌 출석판 32칸 전용(상점 · 토큰 · 선물 X · 시즌 번호)
+		{ id = "enhance30Mark", slot = "weaponMark", name = "+30 증표", look = "mark30", earnedOnly = "inherit30" }, -- QUEUE-ALL9E1 0-2: +30에서 초월 계승 보상(영구 · 판매 · 토큰 · 선물 X - TranscendService.confirm만 준다)
 	},
 	-- 트레일 세트 1개 = unlock "set" 칸 전부(4). 세트 항목 모양 = { id, name, looks = { dashTrail = …, jumpFx = …, glideTrail = …, footstep = … } }
 	setSlots = { "dashTrail", "jumpFx", "glideTrail", "footstep" },

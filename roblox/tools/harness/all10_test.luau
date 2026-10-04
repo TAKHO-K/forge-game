@@ -62,8 +62,9 @@ local ok, err = pcall(function()
 		and near(All10.defenseTakeMultiplier(10), 0.99 ^ 10) and near(All10.defenseTakeMultiplier(99), 0.99 ^ 30))
 	-- 진화 · 계승 판정
 	check("직업 특성 진화: 4,999 = 0 · 5,000 = +10 · 10,000 = +30", All10.evolutionCapBonus(4999) == 0 and All10.evolutionCapBonus(5000) == 10 and All10.evolutionCapBonus(10000) == 30)
-	check("계승 조건: 태초(6) +30 O · +29 X · 유물(5) +30 X · 초월(7) X", All10.canInherit({ grade = 6, level = 30 }) and not All10.canInherit({ grade = 6, level = 29 })
-		and not All10.canInherit({ grade = 5, level = 30 }) and not All10.canInherit({ grade = 7, level = 30, transcend = { level = 0, slot = 0 } }))
+	check("계승 조건(ALL9E1 0-2): 등급 무관 +29 이상 O(태초 +30 · +29 · 유물 +30 · 기본 무기(0) +29) · +28 X · 초월(7) X", All10.canInherit({ grade = 6, level = 30 }) and All10.canInherit({ grade = 6, level = 29 })
+		and All10.canInherit({ grade = 5, level = 30 }) and All10.canInherit({ grade = 0, level = 29 }) and not All10.canInherit({ grade = 6, level = 28 })
+		and not All10.canInherit({ grade = 7, level = 30, transcend = { level = 0, slot = 0 } }))
 	ATTR.All10Economy = nil
 end)
 if not ok then print("[A10] 에러 " .. tostring(err)) end
@@ -222,9 +223,33 @@ local okT, errT = pcall(function()
 	local t6 = TS.prepare(pl5)
 	local ok6 = TS.confirm(pl5, t6.token)
 	check("리뷰: 실패 되돌림 = 바꾼 칸만(대기 중 보석 교체 보존 · 번호 재사용 없음 → 재시도 TG2) · 계승 스테이지 = 계정 최고(14,000)", kept and ok6.ok and prof5.transcendGems.list[1].id == "TG2" and cs5.transcendInherit.stage == 14000)
-	local pl3 = fresh(6, 29)
-	local pl4 = fresh(5, 30)
-	check("조건 미달: 태초 +29 · 유물 +30 = not_ready", TS.prepare(pl3).why == "not_ready" and TS.prepare(pl4).why == "not_ready")
+	local pl3 = fresh(6, 28)
+	check("조건 미달: 태초 +28 = not_ready", TS.prepare(pl3).why == "not_ready")
+	-- ALL9E1 0-2: +30 계승 = 증표 · +29 = 증표 없음(확인 창 안내) · 결과는 같은 초월 +0 · 환생 0회 = 히든 칭호 · 환생 뒤에도 초월 유지 · 저장 실패 = 증표 · 칭호도 되돌림
+	local CS = MODS.CosmeticService
+	check("+30 계승 = 증표(enhance30Mark) 지급 · 환생 5회 = 히든 칭호 없음", CS.ownsItem(pl, A.inherit.markItemId) and not PP.hasTitle(pl, A.inherit.unrebornTitleId))
+	local pl7, prof7, cs7 = fresh(6, 29)
+	local pre7 = TS.prepare(pl7)
+	local r7 = TS.confirm(pl7, pre7.token)
+	local atk7 = PlayerCombat.getAttack(cs7.weapon, "bow", 100, 0, 0, 1, nil)
+	check("+29 계승: 확인 표 mark = false · 증표 없음 · 결과 무기 = +30 몫 초월 +0(공격 = +30 계승과 같음)", pre7.ok and pre7.mark == false and r7.ok and r7.mark == false
+		and not CS.ownsItem(pl7, A.inherit.markItemId) and cs7.weapon.level == 30 and cs7.transcendInherit.fromLevel == 29 and atk7 == atkAfter, ("×%.4f"):format(pre7.weaponMultiplier or -1))
+	local pl8, prof8, cs8 = fresh(0, 29)
+	cs8.rebirthCount = 0
+	cs8.weapon.slotUnlocked = { false, false, false, false, false }
+	cs8.weapon.gems = { false, false, false, false, false }
+	local pre8 = TS.prepare(pl8)
+	saveOk = false
+	local f8 = TS.confirm(pl8, pre8.token)
+	saveOk = true
+	local rb8 = not f8.ok and cs8.weapon.grade == 0 and cs8.weapon.level == 29 and not PP.hasTitle(pl8, A.inherit.unrebornTitleId) and not CS.ownsItem(pl8, A.inherit.markItemId)
+	local r8 = TS.confirm(pl8, TS.prepare(pl8).token)
+	check("기본 무기(0) +29 · 환생 0회: 배수 > 1.25(낮은 등급에서 오름) · 저장 실패 = 히든 칭호 되돌림 · 성공 = 히든 칭호 unrebornTranscendent · 기록 rebirth 0",
+		pre8.ok and pre8.unreborn and pre8.weaponMultiplier > 1.25 and rb8 and r8.ok and r8.unreborn and PP.hasTitle(pl8, A.inherit.unrebornTitleId) and cs8.transcendInherit.rebirth == 0, ("×%.3f"):format(pre8.weaponMultiplier or -1))
+	cs8.characterExp = 1e300
+	local rbOk = PP.rebirth(pl8)
+	check("환생 0회 계승 뒤 환생 = 초월(7) · 초월 강화 그대로(등급을 회차로 덮지 않음) · 1번 홈 지급 보석", rbOk and cs8.rebirthCount == 1 and cs8.weapon.grade == 7 and cs8.weapon.transcend ~= nil
+		and type(cs8.weapon.gems[1]) == "table" and cs8.weapon.gems[1].transcendGemId == nil)
 	-- ② 초월 강화: 칸 10개 = +1 · 칸 가격 · 골드 부족 = 변화 없음 · +20 = max
 	local gold0 = prof.gold
 	local slotCost = All10.transcendSlotCost(PP.getAccountBestStage(pl))

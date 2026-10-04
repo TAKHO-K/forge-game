@@ -105,6 +105,16 @@ local function viewOf(player, r)
 	table.sort(owned, function(a, b)
 		return a.name < b.name
 	end)
+	local hiddenIds = {} -- QUEUE-ALL9E1 0-2 히든 칭호: 얻기 전엔 이름 · 조건 없이 "???" 줄만(끝에 · id 순)
+	for id, t in pairs(TitleData.titles) do
+		if t.hidden and not PlayerProfile.hasTitle(player, id) then
+			table.insert(hiddenIds, id)
+		end
+	end
+	table.sort(hiddenIds)
+	for i in ipairs(hiddenIds) do
+		table.insert(owned, { id = "hidden" .. i, hidden = true }) -- 리뷰: 진짜 id는 보내지 않는다(이름 · 조건 추측 방지)
+	end
 	return { cells = cells, lines = lines, board = board, score = score, total = BUILT.totalScore, trans = r.trans, titles = owned, selected = r.title }
 end
 

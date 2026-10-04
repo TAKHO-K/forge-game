@@ -16,6 +16,7 @@ local All10 = require(ReplicatedStorage.Shared.All10)
 local All10Data = require(ReplicatedStorage.Shared.data.All10Data)
 local Option = require(ReplicatedStorage.Shared.Option)
 local Gem = require(ReplicatedStorage.Shared.Gem)
+local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 
 local TranscendService = {}
@@ -57,6 +58,11 @@ local function hasInherited(profile)
 	return false
 end
 TranscendService.hasInherited = hasInherited
+
+-- 계승 저장 대기 중인가(환생 등 다른 무기 변경이 끼어들지 않게 - QUEUE-ALL9E1 0-2 리뷰)
+function TranscendService.isBusy(player)
+	return busy[player] == true
+end
 
 local function audit(player, kind, detail)
 	local ok, AuditTrail = pcall(require, script.Parent.AuditTrail)
@@ -116,10 +122,16 @@ function TranscendService.preview(player)
 		return { ok = false, why = "disabled" }
 	end
 	local weapon = classState.weapon
+	local d = All10Data.inherit
+	-- 공격 배수 = 계승 뒤 ÷ 지금(QUEUE-ALL9E1 0-2: 등급 · 단계가 사람마다 달라 1.25 고정이 아니다 - 같은 PlayerCombat 식)
+	local after = { id = weapon.id, grade = d.toGrade, level = d.resultLevel, transcend = { level = 0, slot = 0 } }
+	local before = PlayerCombat.getAttack(weapon, profile.classId, 1, 0, 0, 1, nil)
 	return {
 		ok = All10.canInherit(weapon), why = not All10.canInherit(weapon) and (All10.isTranscendWeapon(weapon) and "already" or "not_ready") or nil,
-		classId = profile.classId, fromGrade = weapon.grade, fromLevel = weapon.level, toGrade = All10Data.inherit.toGrade,
-		weaponMultiplier = All10Data.inherit.weaponMultiplier, rewardGems = All10Data.inherit.rewardGems, titleId = All10Data.inherit.titleId,
+		classId = profile.classId, fromGrade = weapon.grade, fromLevel = weapon.level, toGrade = d.toGrade,
+		weaponMultiplier = before > 0 and PlayerCombat.getAttack(after, profile.classId, 1, 0, 0, 1, nil) / before or d.weaponMultiplier,
+		rewardGems = d.rewardGems, titleId = d.titleId,
+		mark = All10.inheritGivesMark(weapon), unreborn = (tonumber(classState.rebirthCount) or 0) == 0, -- 0-2: +30 증표 · 히든 칭호(확인 창 안내)
 		stage = classState.stageProgress.infiniteBest,
 	}
 end
@@ -155,18 +167,31 @@ function TranscendService.confirm(player, token)
 		return { ok = false, why = "in_boss" } -- 리뷰: 보스전 중 계승 = 거절(전투 중 즉시 강해짐 · 0-2 직업 고정과 같은 원칙)
 	end
 	-- 지급 전 상태(되돌림용) - 리뷰 높음: 무기 표 전체가 아니라 "이번에 바꾼 칸"만 기억한다(저장 대기 중 보석 교체 · 재련 등 다른 변경을 덮지 않게)
+	local d = All10Data.inherit
+	local CosmeticService = require(script.Parent.CosmeticService)
+	local giveMark = All10.inheritGivesMark(classState.weapon) -- 0-2: 계승 순간 +30 = 증표
+	local unreborn = (tonumber(classState.rebirthCount) or 0) == 0 -- 0-2: 계승 순간 그 직업 환생 0회 = 히든 칭호
 	local before = {
-		grade = classState.weapon.grade, transcend = classState.weapon.transcend, inherit = classState.transcendInherit,
-		hadTitle = PlayerProfile.hasTitle(player, All10Data.inherit.titleId),
+		grade = classState.weapon.grade, level = classState.weapon.level, transcend = classState.weapon.transcend, inherit = classState.transcendInherit,
+		hadTitle = PlayerProfile.hasTitle(player, d.titleId),
+		hadUnreborn = PlayerProfile.hasTitle(player, d.unrebornTitleId),
+		hadMark = CosmeticService.ownsItem(player, d.markItemId),
 	}
 	local weapon = classState.weapon
 	local fromGrade, fromLevel = weapon.grade, weapon.level
-	weapon.grade = All10Data.inherit.toGrade
+	weapon.grade = d.toGrade
+	weapon.level = d.resultLevel -- 0-2: 어디서 왔든 같은 초월 +0(강화 줄 +30 몫)
 	weapon.transcend = { level = 0, slot = 0 }
 	-- 계승 스테이지 = 계정 최고(리뷰: 진행 낮은 직업으로 계승해 돌파 기준을 낮추는 이득 방지 - 비용과 같은 기준)
-	classState.transcendInherit = { stage = math.max(1, math.floor(tonumber(PlayerProfile.getAccountBestStage(player)) or 1)), at = os.time(), fromGrade = fromGrade, fromLevel = fromLevel }
+	classState.transcendInherit = { stage = math.max(1, math.floor(tonumber(PlayerProfile.getAccountBestStage(player)) or 1)), at = os.time(), fromGrade = fromGrade, fromLevel = fromLevel, rebirth = tonumber(classState.rebirthCount) or 0 }
 	if not before.hadTitle then
-		PlayerProfile.grantTitle(player, All10Data.inherit.titleId)
+		PlayerProfile.grantTitle(player, d.titleId)
+	end
+	if unreborn and not before.hadUnreborn then
+		PlayerProfile.grantTitle(player, d.unrebornTitleId)
+	end
+	if giveMark and not before.hadMark then
+		CosmeticService.grant(player, "cosmeticItem", d.markItemId)
 	end
 	local rewards = {}
 	for _ = 1, All10Data.inherit.rewardGems do
@@ -184,6 +209,7 @@ function TranscendService.confirm(player, token)
 	if not (okSave and saved) then
 		-- 저장 실패 = 바꾼 칸만 되돌림(등급 · 초월 칸 · 기록 · 칭호 · 보상 보석 - 장착돼 있으면 홈도 비움) - 다음에 다시 시도
 		weapon.grade = before.grade
+		weapon.level = before.level
 		weapon.transcend = before.transcend
 		classState.transcendInherit = before.inherit
 		for _, id in ipairs(rewards) do
@@ -200,21 +226,34 @@ function TranscendService.confirm(player, token)
 			end
 		end
 		if not before.hadTitle then
-			PlayerProfile.revokeTitle(player, All10Data.inherit.titleId)
+			PlayerProfile.revokeTitle(player, d.titleId)
+		end
+		if unreborn and not before.hadUnreborn then
+			PlayerProfile.revokeTitle(player, d.unrebornTitleId)
+		end
+		if giveMark and not before.hadMark then
+			CosmeticService.revokeItem(player, d.markItemId)
 		end
 		sync(player)
 		return { ok = false, why = "save_failed" }
 	end
-	audit(player, "transcendInherit", ("%s 태초 +%d → 초월 +0 · 스테이지 %d · 보석 %s"):format(tostring(profile.classId), fromLevel, classState.transcendInherit.stage, table.concat(rewards, ",")))
+	audit(player, "transcendInherit", ("%s 등급 %d +%d → 초월 +0 · 환생 %d · 스테이지 %d · 보석 %s"):format(tostring(profile.classId), fromGrade, fromLevel, classState.transcendInherit.rebirth, classState.transcendInherit.stage, table.concat(rewards, ",")))
 	for _, id in ipairs(rewards) do
 		audit(player, "transcendGem", ("%s · 계승 보상"):format(id))
 	end
+	if giveMark and not before.hadMark then
+		audit(player, "inheritMark", ("%s · +%d 계승 증표"):format(d.markItemId, fromLevel))
+	end
+	if unreborn and not before.hadUnreborn then
+		audit(player, "unrebornTitle", ("%s · 환생 0회 계승"):format(d.unrebornTitleId))
+	end
 	if typeof(player) == "Instance" and profile.classId == entry.classId then -- 리뷰: 대기 중 직업을 바꿨으면 지금 직업 표시를 덮지 않는다
 		player:SetAttribute("WeaponGrade", weapon.grade)
+		player:SetAttribute("WeaponLevel", weapon.level) -- 0-2: +29에서 계승해도 +30 몫
 	end
 	sync(player)
 	announceLocal(player)
-	return { ok = true, stage = classState.transcendInherit.stage, gems = rewards, titleId = All10Data.inherit.titleId }
+	return { ok = true, stage = classState.transcendInherit.stage, gems = rewards, titleId = d.titleId, mark = giveMark, unreborn = unreborn }
 end
 
 -- ── ② 초월 강화(칸 1개 납입) ──
@@ -425,6 +464,7 @@ function TranscendService.view(player)
 	local best = PlayerProfile.getAccountBestStage(player)
 	local isT = All10.isTranscendWeapon(classState.weapon)
 	local t = isT and classState.weapon.transcend or nil
+	local pre = All10.canInherit(classState.weapon) and TranscendService.preview(player) or nil -- 0-2: 계승 화면 배수 · 증표 안내
 	local gems = {}
 	for _, gem in ipairs(profile.transcendGems.list) do
 		table.insert(gems, { id = gem.id, option = deepCopy(gem.option), itemLevel = gem.itemLevel, locked = gem.locked, socket = deepCopy(gem.socket) })
@@ -440,6 +480,7 @@ function TranscendService.view(player)
 		guardCost = profile.training.guard < All10Data.defenseTraining.maxLevel and All10.defenseCost(profile.training.guard, best) or nil,
 		guardPerLevel = All10Data.defenseTraining.perLevel, guardTake = All10.defenseTakeMultiplier(isT and profile.training.guard or 0),
 		gems = gems, bestStage = best, inheritStage = classState.transcendInherit and classState.transcendInherit.stage,
+		inheritMult = pre and pre.weaponMultiplier, inheritMark = pre and pre.mark, inheritFromLevel = pre and pre.fromLevel, rewardGems = All10Data.inherit.rewardGems,
 	}
 end
 

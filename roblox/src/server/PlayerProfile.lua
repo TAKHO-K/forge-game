@@ -1101,6 +1101,9 @@ function PlayerProfile.rebirth(player)
 	if classState.rebirthCount >= GemData.maxRebirthCount then
 		return false, "max_rebirth"
 	end
+	if require(script.Parent.TranscendService).isBusy(player) then
+		return false, "enhancing" -- QUEUE-ALL9E1 0-2 리뷰: 계승 저장 대기 중 환생 = 거절("강화 중" 문구 재사용)(실패 되돌림이 등급 · 회차를 어긋나게 하지 않게)
+	end
 
 	local requiredLevel = CharacterLevel.getRebirthRequiredLevel(classState.rebirthCount)
 	local currentLevel = CharacterLevel.getLevelFromExp(classState.characterExp)
@@ -1119,14 +1122,25 @@ function PlayerProfile.rebirth(player)
 	-- 성취 기록이라 파밍 위치가 낮아져도 내려가면 안 된다(setInfiniteStage와 같은 원칙).
 	classState.stageProgress.infinite = 1
 	-- 무기 등급 = 환생 회차(0~5가 1~5 등급 index와 그대로 대응, 20.38 [2] 표).
-	classState.weapon.grade = classState.rebirthCount
+	-- QUEUE-ALL9E1 0-2: 환생 전에 초월 계승한 무기(+29 · 등급 무관)는 환생해도 초월 그대로(등급을 회차로 덮지 않는다)
+	local transcended = All10.isTranscendWeapon(classState.weapon)
+	if not transcended then
+		classState.weapon.grade = classState.rebirthCount
+	end
 
 	-- 슬롯 k(=이번 회차)가 지금 열리고, 그 자리에 확정 보석 1개가 자동 지급된다(20.38 [2]
 	-- "슬롯이 열릴 때 그 등급의 보석 1개가 확정 지급된다", 23-4부터 등급은 그 슬롯의 상한).
 	local slot = classState.rebirthCount
 	-- P2.5a D(결정 9): 환생 지급 보석의 itemLevel = 환생 순간의 캐릭터 레벨을 스테이지 척도로 옮긴 값(CharacterLevel.getStageForLevel - 태초 보석(= 사냥 스테이지)과
 	-- 같은 척도, C10). 옛 값 25 × 회차.
-	classState.weapon.gems[slot] = Gem.buildGrantedGem(slot, profile.classId, CharacterLevel.getStageForLevel(currentLevel))
+	local granted = Gem.buildGrantedGem(slot, profile.classId, CharacterLevel.getStageForLevel(currentLevel))
+	local existing = classState.weapon.gems[slot]
+	if type(existing) == "table" and existing.transcendGemId then
+		-- 0-2: 그 홈에 이미 초월 보석 사본이 박혀 있으면(환생 0회 계승 뒤 장착 - 홈 해금 전엔 못 박으니 드묾) 지급 보석은 가방으로(초월 보석을 밀어내지 않는다)
+		table.insert(classState.gemInventory, { grade = granted.grade, optionId = granted.optionId, itemLevel = granted.itemLevel, option = granted.option })
+	else
+		classState.weapon.gems[slot] = granted
+	end
 
 	-- 23-4: 해금 상태를 저장 필드에 기록한다(GemData.slotUnlockRequiredRebirth 주석 참고) -
 	-- 매번 rebirthCount에서 다시 계산하지 않는다. 지금 조건은 여전히 1:1(slot i = 환생
@@ -1143,10 +1157,11 @@ function PlayerProfile.rebirth(player)
 	-- 순간 이 조건이 항상 같이 성립한다(PlayerProfile.equipGem은 "교체"만 하지 슬롯을
 	-- 비우지 않으므로, 나중에 다시 빈 슬롯이 생길 방법이 없다) - 그 우연한 정합성을
 	-- 20.38 [2]가 이미 기록해 뒀다.
-	if classState.rebirthCount == GemData.maxRebirthCount and Gem.allSlotsFilled(classState.weapon.gems) then
+	if not transcended and classState.rebirthCount == GemData.maxRebirthCount and Gem.allSlotsFilled(classState.weapon.gems) then
 		classState.weapon.grade = ArmorData.maxWeaponGradeIndex -- Q4: 하드코딩 6 → 데이터(태초)
 	end
-	require(script.Parent.CodexService).noteClass(player, profile.classId, classState.weapon.grade) -- QUEUE-ALL1 P5 도감 직업 줄(환생으로 오른 등급만)
+	-- QUEUE-ALL9E1 0-2 리뷰: 초월 무기로 환생하면 등급(7)이 아니라 회차까지만 적는다(거치지 않은 희귀 ~ 태초 칸이 한꺼번에 완료되던 것)
+	require(script.Parent.CodexService).noteClass(player, profile.classId, transcended and math.min(classState.rebirthCount, classState.weapon.grade) or classState.weapon.grade) -- QUEUE-ALL1 P5 도감 직업 줄(환생으로 오른 등급만)
 
 	-- 레벨·무기 등급·보석 슬롯 Attribute를 한 번에 맞춘다(setClassId와 같은 지점 - 과거
 	-- InventorySync.push를 빠뜨렸던 버그와 같은 종류의 실수를 막는다). 장비(갑옷/장갑/
