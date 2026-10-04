@@ -1293,7 +1293,12 @@ local function stepLevel(state, profile, run, rng, whatIf)
 	while need > 0 do
 		local killsToLevel = math.max(1, math.ceil(need / expPerKill - 1e-9))
 		local killsToCheck = math.max(1, math.ceil((checkSeconds - state.sinceCheck) / perKillSeconds - 1e-9))
-		local batch = math.min(killsToLevel, killsToCheck)
+		-- QUEUE-ALL9E1 LOOK3 A②: 초월 +1 ~ +5 칸은 골드가 칸 가격에 닿는 즉시 납입(점검 간격을 기다리지 않음)
+		local killsToSlot = math.huge
+		if state.transcend and All10.enabled() and state.transcend.level < All10Data.transcendEnhance.sureUntil then
+			killsToSlot = math.max(1, math.ceil((All10.transcendSlotCost(state.reach) - state.gold) / (goldPerKill + sellPerKill) - 1e-9))
+		end
+		local batch = math.min(killsToLevel, killsToCheck, killsToSlot)
 		local batchSeconds = batch * perKillSeconds
 		if seconds + batchSeconds > EconSimConfig.stallLevelHours * 3600 and batch == killsToLevel then
 			return ("레벨 %d → %d 한 번에 %.3g시간 - 사냥 스테이지 %d(tier%d · 처치 %.2f초 · %.3g마리)가 레벨보다 %d칸 낮다. 사냥 스테이지를 막는 것: %s(방어구 %s · itemLevel %s)"):format(
@@ -1327,6 +1332,13 @@ local function stepLevel(state, profile, run, rng, whatIf)
 		end
 		state.pendingKills += batch
 		state.sinceCheck += batchSeconds
+		if batch == killsToSlot and state.sinceCheck < checkSeconds - 1e-9 then
+			local before = state.transcend.level * 100 + state.transcend.slot + state.training.advanced * 10000
+			tryAll10Spend(state, run, profile)
+			if state.transcend.level * 100 + state.transcend.slot + state.training.advanced * 10000 ~= before then
+				refresh()
+			end
+		end
 		if state.sinceCheck >= checkSeconds - 1e-9 then
 			local armorBefore, modeBefore, weaponBefore = state.gear.armor, state.gearMode, state.weaponLevel
 			local changed, anyChange = checkBag(state, profile, hunt.tier, hunt.stage, state.pendingKills, whatIf, hunt.killSeconds)
