@@ -1,5 +1,6 @@
 -- QUEUE-UI UI-0 하네스(순수): 토큰 · 좌표 표 규칙 · 아이콘 표 · 화면 배율 · 직업 데이터 → 화면 모양 · 신직업 = 데이터 추가만으로 메뉴 · 카드 · 직업 선택에 나타남.
 -- 실행: LUAU=<luau.exe> EXTRA_SERVER=SlotSave ECON_RES=res_uiv2.txt python build_run.py ui_v2_test.luau
+Color3.fromHex = Color3.fromHex or function() return Color3.new(0, 0, 0) end -- UI2-3: MenuBootData(first) 읽기용 스텁
 local pass, total = 0, 0
 local function check(label, ok, detail)
 	total += 1
@@ -135,6 +136,29 @@ local okRun, err = pcall(function()
 	local k2 = kb:keyBegan()
 	local k3 = kb:keyEnded()
 	check("UI2-2 확인 키 = 누름 모양 · 뗄 때 1번(반복 입력 무시)", k1.paint == "pressed" and not k1.fire and not k2.fire and k3.fire == true)
+
+	-- UI2-3 키 아트 맞춤(first/MenuArtFit + MenuBootData.v2) - 비율별: 빈틈 0 · 얼굴이 이어하기 창 오른쪽 밖
+	local F, BD = MODS.MenuArtFit, MODS.MenuBootData
+	local V = BD.v2
+	local faceLeftArt = 800 / 1536 -- 전사 얼굴 왼쪽 끝(원본) · 마법사 얼굴 오른쪽 끝 = BD.v2.keepRight
+	local cases = {
+		{ "PC 16:9", 1920, 1080, V.fit.pc, 1012 / 1920 },
+		{ "좁은 창 4:3", 1440, 1080, V.fit.pc, 1012 / 1920 },
+		{ "Studio 1052×592", 1052, 592, V.fit.pc, 1012 / 1920 },
+		{ "폰 19.5:9", 844, 390, V.fit.phone, 482 / 800 },
+		{ "폰 800×360", 800, 360, V.fit.phone, 482 / 800 },
+	}
+	for _, c in ipairs(cases) do
+		local r = F.fit(c[2], c[3], BD.background.width / BD.background.height, V.focus, c[4].target, c[4].maxZoom, V.keepRight, c[4].mode)
+		local gap = (c[4].mode ~= "anchorRight" and r.x > 0.5) or r.y > 0.5 or r.x + r.w < c[2] - 0.5 or r.y + r.h < c[3] - 0.5 -- anchorRight = 왼쪽 남색 바탕(설계)
+		local faceLeft = (r.x + faceLeftArt * r.w) / c[2]
+		local mageRight = (r.x + V.keepRight * r.w) / c[2]
+		-- 창 오른쪽 끝 화면 비율: 루트 = 왼쪽 붙임 · 배율 min → 좁은 창(가로 기준 배율)에서 가장 크다 = 표 비율, 넓은 창은 더 작음
+		local base = c[4] == V.fit.phone and { 800, 360 } or { 1920, 1080 }
+		local s = math.min(c[2] / base[1], c[3] / base[2])
+		local winRight = c[5] * base[1] * s / c[2]
+		check(("UI2-3 키 아트 %s: 빈틈 0 · 전사 얼굴 왼쪽 %.2f > 창 끝 %.2f · 마법사 얼굴 끝 %.2f ≤ 1 · 세로 %.2f"):format(c[1], faceLeft, winRight, mageRight, r.focusScreen[2]), not gap and faceLeft > winRight and mageRight <= 1 and r.focusScreen[2] > 0.3 and r.focusScreen[2] < 0.6)
+	end
 
 	-- 3. 아이콘 표
 	local noFallback, noImage, oldMissing = {}, {}, {}

@@ -55,8 +55,8 @@ return {
 	classArt = {
 		greatsword = { legend = "ui/legends/class-warrior", face = "ui/legends/face-warrior", faceRect = { 173, 13, 314 } },
 		bow = { legend = "ui/legends/class-archer", face = "ui/legends/face-archer", faceRect = { 165, 5, 266 } },
-		healer = { legend = nil, face = nil }, -- 01 MISSING: class-healer-placeholder.png
-		dualblade = { legend = nil, face = nil }, -- 01 MISSING: class-rogue-placeholder.png
+		healer = { legend = nil, face = nil, placeholder = "ui/legends/class-healer-placeholder" }, -- 전설 그림 대기 = 자리표시 그림(01 v2 · "그림 곧 공개")
+		dualblade = { legend = nil, face = nil, placeholder = "ui/legends/class-rogue-placeholder" },
 	},
 	-- 공격 버튼 아이콘 = 지금 직업 무기 아이콘(무기 아이콘 키 = icons/weapons/<직업>_<등급> - client/ItemIcons.keyFor)
 	attackUsesWeaponIcon = true,

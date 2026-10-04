@@ -4,9 +4,12 @@
 --   Attribute BootClock = 이 스크립트 시작 os.clock()(접속 → 메뉴 표시 측정의 0점) · CoverClock = 가림막을 띄운 시각.
 local Players = game:GetService("Players")
 local ReplicatedFirst = game:GetService("ReplicatedFirst")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local bootClock = os.clock()
 local Data = require(script.Parent:WaitForChild("MenuBootData"))
+local MenuArtFit = require(script.Parent:WaitForChild("MenuArtFit"))
 
 local player = Players.LocalPlayer
 local gui = Instance.new("ScreenGui")
@@ -93,10 +96,14 @@ if bg and #bg.parts > 0 and bg.width > 0 and bg.height > 0 then
 	local function cover()
 		local w, h = gui.AbsoluteSize.X, gui.AbsoluteSize.Y
 		local aspect = bg.width / bg.height
-		if V2 then -- 화면 높이 꽉 · 오른쪽 끝에 붙임(넓은 화면 = 왼쪽 남는 곳은 남색 바탕)
-			art.AnchorPoint = Vector2.new(1, 0)
-			art.Position = UDim2.fromScale(1, 0)
-			art.Size = UDim2.fromOffset(math.ceil(h * V2.artAspect), h)
+		if V2 then -- QUEUE-UI2 UI2-3: 화면 꽉 덮기 + 초점(전사 얼굴)을 메뉴 반대쪽 목표에(MenuArtFit · 값 = MenuBootData.v2.fit)
+			local touch = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+			local fit = (touch or ReplicatedStorage:GetAttribute("ForceTouchLayout") == true) and V2.fit.phone or V2.fit.pc
+			local r = MenuArtFit.fit(w, h, aspect, V2.focus, fit.target, fit.maxZoom, V2.keepRight, fit.mode)
+			art.AnchorPoint = Vector2.new(0, 0)
+			art.Position = UDim2.fromOffset(math.floor(r.x), math.floor(r.y))
+			art.Size = UDim2.fromOffset(math.ceil(r.w) + 1, math.ceil(r.h) + 1)
+			gui:SetAttribute("KeyArtFocus", Vector2.new(r.focusScreen[1], r.focusScreen[2]))
 			return
 		end
 		local width = math.max(w, h * aspect)
@@ -110,6 +117,7 @@ if bg and #bg.parts > 0 and bg.width > 0 and bg.height > 0 then
 		g.Parent = artParts[1]
 	end
 	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(cover)
+	ReplicatedStorage:GetAttributeChangedSignal("ForceTouchLayout"):Connect(cover) -- Studio 폰 배치(속성이 늦게 복제될 수 있다)
 	task.defer(cover)
 end
 

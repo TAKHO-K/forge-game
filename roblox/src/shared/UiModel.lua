@@ -53,6 +53,7 @@ function UiModel.classInfo(classId)
 		legend = art.legend, -- ArtAssetIds 키(없으면 임시 실루엣)
 		face = art.face,
 		faceRect = art.faceRect,
+		placeholder = art.placeholder, -- 전설 그림 대기 중 자리표시 그림(UI2-3)
 		temp = art.legend == nil, -- "임시" 표시(그림 없음)
 	}
 end

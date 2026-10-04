@@ -760,7 +760,7 @@ function MainMenuV2.new(gui, deps)
 			c.setSelected(cid == id)
 		end
 		local info = UiModel.classInfo(id)
-		local img = image(info.legend)
+		local img = image(info.legend) or image(info.placeholder) -- UI2-3: 그림 대기 직업 = 자리표시 그림(01 v2) · 둘 다 없으면 원 실루엣
 		artImg.Image = img or ""
 		artImg.Visible = img ~= nil
 		silhouette.Visible = img == nil
