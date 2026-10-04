@@ -10,6 +10,8 @@ local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit)
 local WeaponRigSpec = require(ReplicatedStorage.Shared.data.WeaponRigSpec)
 local Wear = require(ReplicatedStorage.Shared.MeshMeta.armor_wear)
 local ArmorColors = require(script.Parent.ArmorColors)
+local ArtImportData = require(ReplicatedStorage.Shared.data.ArtImportData)
+local GearV3 = require(ReplicatedStorage.Shared.GearV3)
 
 local StageMascot = {}
 StageMascot.__index = StageMascot
@@ -199,19 +201,58 @@ end
 -- 방어구 v3(그 직업 · 기본 외형) - 조각 자리 = MeshMeta.armor_wear(offset · 회전 = 원본 메시 그대로 - 몸 파트가 refSize와 같은 크기)
 function StageMascot:attachArmor(classId)
 	local out = {}
+	local F = ArtImportData.armorFit
 	for _, part in ipairs(ARMOR_PARTS) do
 		local key = ("%s_%s_%s"):format(part, classId, Data.armorLook)
+		-- QUEUE-ALL9E1 1-1 장비 v3: 스위치 켬 + <부위>_<직업>_<단계>가 있으면 그것(게임 착용과 같은 색 · 문 부품 함수)
+		local stageKey = ("%s_%s_%s"):format(part, classId, GearV3.data.stageOfGrade[Data.armorGrade] or "s1")
+		local g3 = GearV3.enabled() and ArtMeshKit.get("armor/" .. stageKey) and Wear.pieces[stageKey] and true or false
+		if g3 then
+			key = stageKey
+		end
 		local src = ArtMeshKit.get("armor/" .. key)
 		local meta = Wear.pieces[key]
 		if src and meta then
+			-- 1-1 "장갑이 손보다 큼": 손 · 발 묶음은 게임 착용과 같은 규칙(파트 × (1 + handFootPad))으로 줄인다 - 나머지는 무대 파트 = refSize라 자리표 그대로
+			local groups = {}
 			for _, piece in ipairs(src:GetChildren()) do
 				local m = piece:IsA("BasePart") and meta[piece.Name]
-				if m and self.parts[m.attach] then
+				if m and self.parts[m.attach] and (not g3 or GearV3.visible(piece.Name, Data.armorGrade)) then
+					groups[m.attach] = groups[m.attach] or {}
+					table.insert(groups[m.attach], { piece = piece, m = m })
+				end
+			end
+			for body, list in pairs(groups) do
+				local s, mid = Vector3.one, Vector3.zero
+				if F.handFootParts[body] then
+					local lo, hi = Vector3.one * math.huge, -Vector3.one * math.huge
+					for _, g in ipairs(list) do
+						local R, h = g.piece.CFrame.Rotation, g.piece.Size / 2
+						local ext = Vector3.new(
+							math.abs(R.RightVector.X) * h.X + math.abs(R.UpVector.X) * h.Y + math.abs(R.LookVector.X) * h.Z,
+							math.abs(R.RightVector.Y) * h.X + math.abs(R.UpVector.Y) * h.Y + math.abs(R.LookVector.Y) * h.Z,
+							math.abs(R.RightVector.Z) * h.X + math.abs(R.UpVector.Z) * h.Y + math.abs(R.LookVector.Z) * h.Z)
+						local c = Vector3.new(g.m.offset[1], g.m.offset[2], g.m.offset[3])
+						lo, hi = lo:Min(c - ext), hi:Max(c + ext)
+					end
+					local size, target = hi - lo, self.parts[body].Size * (1 + F.handFootPad)
+					s = Vector3.new(math.min(1, target.X / math.max(size.X, 1e-3)), math.min(1, target.Y / math.max(size.Y, 1e-3)), math.min(1, target.Z / math.max(size.Z, 1e-3)))
+					mid = (lo + hi) / 2
+				end
+				for _, g in ipairs(list) do
+					local piece, m = g.piece, g.m
+					local R = piece.CFrame.Rotation
 					local p = piece:Clone()
-					local color, neon = ArmorColors.colorOfV3(piece.Name, Data.armorZone, Data.armorGrade)
+					p.Size = piece.Size * Vector3.new(
+						math.abs(R.RightVector.X) * s.X + math.abs(R.RightVector.Y) * s.Y + math.abs(R.RightVector.Z) * s.Z,
+						math.abs(R.UpVector.X) * s.X + math.abs(R.UpVector.Y) * s.Y + math.abs(R.UpVector.Z) * s.Z,
+						math.abs(R.LookVector.X) * s.X + math.abs(R.LookVector.Y) * s.Y + math.abs(R.LookVector.Z) * s.Z)
+					local color, neon = (g3 and GearV3.armorColor or ArmorColors.colorOfV3)(piece.Name, Data.armorZone, Data.armorGrade)
 					p.Color = color
 					p.Material = neon and Enum.Material.Neon or Enum.Material.SmoothPlastic
-					local a = attach(self, p, m.attach, CFrame.new(m.offset[1], m.offset[2], m.offset[3]) * piece.CFrame.Rotation, "armor")
+					local off = Vector3.new(m.offset[1], m.offset[2], m.offset[3])
+					local at = mid + (off - mid) * s
+					local a = attach(self, p, m.attach, CFrame.new(at) * R, "armor")
 					a.group = m.attach
 					table.insert(out, a)
 				end
@@ -232,7 +273,7 @@ function StageMascot:attachWeapon(classId)
 		return out
 	end
 	for _, spec in ipairs(rig.pieces) do
-		local model = ArtMeshKit.weaponModel(classId, "normal")
+		local model = ArtMeshKit.weaponModel(classId, "normal", { keepDropParts = true }) -- 1-1 "활 시위 없음": 무대엔 시위를 그리는 코드(WeaponVisual)가 없어 메시 시위를 남긴다
 		if model then
 			local grip = Vector3.zero
 			for _, d in ipairs(model:GetDescendants()) do

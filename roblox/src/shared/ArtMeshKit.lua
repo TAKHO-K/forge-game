@@ -207,7 +207,7 @@ local function hex(s)
 end
 
 -- 무기 교체 모델(복제본 - 호출 쪽이 Destroy). 파트 색 · 네온 = 메타 look · 부착점 = PrimaryPart(Blade 또는 첫 파트) 아래 Attachment.
-function ArtMeshKit.weaponModel(classId, gradeId)
+function ArtMeshKit.weaponModel(classId, gradeId, options) -- options.keepDropParts = 코드가 그리는 부분(활 시위)을 메시로 남김(무대 - 그리는 코드 없음)
 	if not Data.weaponClasses[classId] then
 		return nil
 	end
@@ -287,7 +287,7 @@ function ArtMeshKit.weaponModel(classId, gradeId)
 	-- A2-N4 P0-2: PrimaryPart가 있으면 피벗 = PrimaryPart.CFrame × PivotOffset이다 - 정규화(Y180)로 돈 파트 회전이 피벗에 남아 칼끝 · 날 · 시위 쪽이 180° 뒤집혔다(옛 WorldPivot 대입은 무시됨) → 피벗을 리그 원점으로 못 박는다
 	primary.PivotOffset = primary.CFrame:Inverse()
 	model.WorldPivot = CFrame.identity
-	for _, name in ipairs(Data.weaponDropParts[classId] or {}) do -- 코드가 그리는 부분(활 시위)은 메시에서 뺀다
+	for _, name in ipairs(not (options and options.keepDropParts) and Data.weaponDropParts[classId] or {}) do -- 코드가 그리는 부분(활 시위)은 메시에서 뺀다
 		for _, d in ipairs(model:GetChildren()) do
 			if d.Name == name or d.Name:sub(1, #name + 1) == name .. "_" then -- v3 = <이름>_<구역>
 				d:Destroy()
