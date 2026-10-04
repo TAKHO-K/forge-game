@@ -70,7 +70,8 @@ if not ok then print("[A10] 에러 " .. tostring(err)) end
 
 -- 1-1 저장 v70: 새 계정 · 옛 저장(v69) 이관 · 빈 값 · 큰 수 · NaN 방어 · 멱등 · 지우는 필드 없음
 local okS, errS = pcall(function()
-	local SaveSystem, SaveConfig, A = MODS.SaveSystem, MODS.SaveConfig, MODS.All10Data
+	local SaveSystem, SaveConfig, A, All10 = MODS.SaveSystem, MODS.SaveConfig, MODS.All10Data, MODS.All10
+	ATTR.All10Economy = true
 	local fresh = SaveSystem.migrate({})
 	check("v70 새 계정: training.advanced 50 · guard 0 · transcendGems 빈 목록 · 무기 transcend 없음 · 계승 기록 없음", SaveConfig.saveVersion == 70 and fresh.version == 70
 		and fresh.training.advanced == 50 and fresh.training.guard == 0 and type(fresh.transcendGems.list) == "table" and #fresh.transcendGems.list == 0 and fresh.transcendGems.seq == 0
@@ -83,21 +84,54 @@ local okS, errS = pcall(function()
 	check("v69 → v70: 빈 칸 채움 · 다른 값 그대로(골드 · 수련 공격) · 멱등", m.version == 70 and m.training.advanced == 50 and m.training.guard == 0 and type(m.transcendGems) == "table"
 		and m.gold == 12345 and m.training.attack == 0 and SaveSystem.migrate(m).training.advanced == 50)
 	local bad = SaveSystem.migrate({})
-	bad.training.advanced, bad.training.guard = 0 / 0, 1e300
+	bad.training.advanced, bad.training.guard = 0 / 0, "12"
 	bad.transcendGems = "망가짐"
 	bad.classes.bow.weapon.grade = 7
-	bad.classes.bow.weapon.transcend = { level = 1e300, slot = -5 }
-	bad.classes.dualblade.weapon.transcend = { level = math.huge, slot = 3 }
-	bad.classes.healer.weapon.transcend = { level = 0 / 0, slot = 99 }
-	bad.classes.greatsword.weapon.transcend = "x"
-	bad.classes.bow.transcendInherit = { stage = 0 / 0 }
-	bad.classes.healer.transcendInherit = { stage = 9500.7, at = -3 }
+	bad.classes.bow.weapon.transcend = { level = 1e300, slot = -5 } -- 큰 수 = SANE_MAX(계산은 All10이 maxLevel로 자름)
+	bad.classes.dualblade.weapon.grade = 7
+	bad.classes.dualblade.weapon.transcend = "x" -- 초월 무기인데 모양 틀림 → 보관 칸 + { 0, 0 }
+	bad.classes.healer.weapon.transcend = { level = 0 / 0, slot = math.huge }
+	bad.classes.greatsword.weapon.transcend = 5 -- 초월 무기 아님 + 모양 틀림 → 보관 칸 + 없음
+	bad.classes.bow.transcendInherit = { stage = 0 / 0, at = 5, fromGrade = 6, fromLevel = 30 }
+	bad.classes.bow.stageProgress.infiniteBest = 12345
+	bad.classes.healer.transcendInherit = "?"
 	local s = SaveSystem.migrate(bad)
 	local tb, th = s.classes.bow.weapon.transcend, s.classes.healer.weapon.transcend
-	check("손상 값 정리: NaN · inf → 기본 · 큰 수 → 상한 · 음수 → 0 · 모양 틀림 → 기본(지우는 다른 필드 없음)", s.training.advanced == 50 and s.training.guard == A.defenseTraining.maxLevel
-		and type(s.transcendGems.list) == "table" and tb.level == A.transcendEnhance.maxLevel and tb.slot == 0 and th.level == 0 and th.slot == A.transcendEnhance.slots - 1
-		and s.classes.dualblade.weapon.transcend.level == 0 and s.classes.greatsword.weapon.transcend == nil and s.classes.bow.transcendInherit == nil and s.classes.healer.transcendInherit.stage == 9500 and s.classes.healer.transcendInherit.at == 0
-		and SaveSystem.isValidProfile(s), ("adv %s guard %s bow %s/%s healer %s/%s"):format(tostring(s.training.advanced), tostring(s.training.guard), tostring(tb.level), tostring(tb.slot), tostring(th.level), tostring(th.slot)))
+	local q = 0
+	for _, e in ipairs(s.quarantine) do if e.kind == "all10" then q += 1 end end
+	check("손상 값 정리: NaN · inf → 기본 · 숫자 문자열 → 숫자 · 큰 수 보존(계산만 상한) · 모양 틀림 → 보관 칸 4 + 기본 · 계승 기록 다른 칸 보존 · 손상 stage = 지금 최고",
+		s.training.advanced == 50 and s.training.guard == 12 and type(s.transcendGems.list) == "table" and tb.level == 1e6 and tb.slot == 0
+		and All10.transcendEnhanceBonus(tb) == All10.transcendEnhanceBonus({ level = 20, slot = 0 }) and th.level == 0 and th.slot == 0
+		and s.classes.dualblade.weapon.transcend.level == 0 and s.classes.greatsword.weapon.transcend == nil and q == 4
+		and s.classes.bow.transcendInherit.stage == 12345 and s.classes.bow.transcendInherit.fromLevel == 30 and s.classes.healer.transcendInherit == nil and SaveSystem.isValidProfile(s),
+		("adv %s guard %s bow %s/%s 보관 %d"):format(tostring(s.training.advanced), tostring(s.training.guard), tostring(tb.level), tostring(tb.slot), q))
+	-- 정상 값 그대로 · 전체 멱등(두 번 이관해도 같은 표)
+	local good = SaveSystem.migrate({})
+	good.training.advanced, good.training.guard = 100, 30
+	good.classes.bow.weapon.grade = 7
+	good.classes.bow.weapon.transcend = { level = 7, slot = 4 }
+	good.classes.bow.transcendInherit = { stage = 9885, at = 1790000000, fromGrade = 6, fromLevel = 30 }
+	good.transcendGems = { list = { { id = "TG1", grade = "transcendent", locked = true } }, seq = 1 }
+	local g1 = SaveSystem.migrate(good)
+	local function dump(t, out, prefix)
+		out = out or {}
+		local keys = {}
+		for k in pairs(t) do table.insert(keys, tostring(k)) end
+		table.sort(keys)
+		for _, k in ipairs(keys) do
+			local v = t[k] ~= nil and t[k] or t[tonumber(k)]
+			if type(v) == "table" then dump(v, out, (prefix or "") .. k .. ".") elseif k ~= "at" then table.insert(out, (prefix or "") .. k .. "=" .. tostring(v)) end
+		end
+		return out
+	end
+	local before = table.concat(dump(g1), "|")
+	local g2 = SaveSystem.migrate(g1)
+	check("정상 값 보존(초월 7 · 칸 4 · 고급 100 · 방어 30 · 계승 기록 · 보석 1) · 전체 멱등(두 번째 이관 = 같은 표)", g1.classes.bow.weapon.transcend.level == 7 and g1.classes.bow.weapon.transcend.slot == 4
+		and g1.training.advanced == 100 and g1.training.guard == 30 and g1.classes.bow.transcendInherit.stage == 9885 and #g1.transcendGems.list == 1 and g1.transcendGems.seq == 1
+		and table.concat(dump(g2), "|") == before)
+	local seqFix = SaveSystem.migrate({})
+	seqFix.transcendGems = { list = { {}, {} }, seq = 0 }
+	check("보석 번호 < 개수 → 끌어올림(id 중복 방지)", SaveSystem.migrate(seqFix).transcendGems.seq == 2)
 end)
 if not okS then print("[A10] 에러 " .. tostring(errS)) end
 print(("[A10] 끝 %d/%d"):format(pass, total))

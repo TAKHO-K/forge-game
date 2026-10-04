@@ -11,6 +11,7 @@ local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local SettingsData = require(ReplicatedStorage.Shared.data.SettingsData) -- QUEUE-N1004 A-1 자동 정리 방식 기본값
 local SetBonus = require(ReplicatedStorage.Shared.SetBonus) -- Q5 BR2 세트
 local Training = require(ReplicatedStorage.Shared.Training) -- Q6 G3 수련 · 직업 능력
+local All10 = require(ReplicatedStorage.Shared.All10) -- QUEUE-ALL10 초월 계승
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local CharacterLevelConfig = require(ReplicatedStorage.Shared.data.CharacterLevelConfig) -- C5-1 dealGear.parts
@@ -765,7 +766,18 @@ function PlayerProfile.getMilestoneMultiplier(player)
 	if not classState then
 		return 1
 	end
-	return Milestone.attackMultiplier(classState.milestoneLevel or 0) + Training.bucketBonus(profile.training, classState.abilities, profile.classId, "attack") -- Q6 G3: 영구 버킷 합연산(수련 · 직업 능력)
+	local advanced = All10.isTranscendWeapon(classState.weapon) and All10.advancedBonus(profile.training.advanced) or 0 -- QUEUE-ALL10 2-3 고급 수련(초월 무기 직업만 · 같은 버킷 합연산)
+	return Milestone.attackMultiplier(classState.milestoneLevel or 0) + Training.bucketBonus(profile.training, classState.abilities, profile.classId, "attack") + advanced -- Q6 G3: 영구 버킷 합연산(수련 · 직업 능력)
+end
+
+-- QUEUE-ALL10 2-3 방어 수련: 받는 피해 배수(초월 무기 직업만 - 아니면 1) · 서버 피해(PlayerDamage) · UI가 같은 함수(All10.defenseTakeMultiplier)
+function PlayerProfile.getGuardTakeMultiplier(player)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState or not All10.isTranscendWeapon(classState.weapon) or type(profile.training) ~= "table" then
+		return 1
+	end
+	return All10.defenseTakeMultiplier(profile.training.guard)
 end
 
 -- 최대 체력 배율(버킷이 최대 체력 쪽일 때만 1이 아니다 - Milestone.maxHpMultiplier).
@@ -2819,6 +2831,7 @@ function PlayerProfile.snapshotForDevTools(player)
 		codex = profile.codex and deepCopy(profile.codex) or nil, -- QUEUE-ALL1 P5(v59)
 		weeklyChallenge = deepCopy(profile.weeklyChallenge), -- QUEUE-ALL1 P4(v58)
 		quarantine = deepCopy(profile.quarantine), -- QUEUE-ALL5 A3(v63): 새 저장 필드 = 백업 대상(COMMON §1)
+		transcendGems = deepCopy(profile.transcendGems), -- QUEUE-ALL10(v70): 새 저장 필드 = 백업 대상(무기 칸 사본은 classes 안 - 둘이 같이 되돌아간다)
 	}
 end
 
@@ -2868,6 +2881,7 @@ function PlayerProfile.restoreForDevTools(player, snapshot)
 	profile.codex = snapshot.codex and deepCopy(snapshot.codex) or profile.codex -- QUEUE-ALL1 P5(v59)
 	profile.weeklyChallenge = snapshot.weeklyChallenge and deepCopy(snapshot.weeklyChallenge) or profile.weeklyChallenge
 	profile.quarantine = snapshot.quarantine and deepCopy(snapshot.quarantine) or {} -- QUEUE-ALL5 A3(v63) · 리뷰: 이 필드 전 스냅숏 = 빈 칸(가방 복원과 겹쳐 두 벌이 되지 않게)
+	profile.transcendGems = snapshot.transcendGems and deepCopy(snapshot.transcendGems) or { list = {}, seq = 0 } -- QUEUE-ALL10(v70)
 	task.defer(function() -- 결정 9: 복원한 치장 · 패스를 Attribute로(늦은 require - 순환 방지)
 		if profiles[player] then
 			require(script.Parent.MonetizationService).reapplyAttributes(player)

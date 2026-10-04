@@ -371,43 +371,62 @@ local function normalizeKeySet(set)
 	return normalized
 end
 
--- QUEUE-ALL10 1-1: 초월 계승 저장 값 정리(매 로드 - 이관 뒤 손상 · 개발 명령 값도). 숫자 = 정수 · 범위 안 · NaN/inf → 기본. 지우는 필드 없음(모양이 틀린 값만 기본으로).
-local function int(v, lo, hi, default)
+-- QUEUE-ALL10 1-1: 초월 계승 저장 값 정리(매 로드 - 이관 뒤 손상 · 개발 명령 값도). 숫자 = 정수 · NaN/inf → 기본 · 음수 → 하한.
+--   리뷰 반영: 위쪽은 데이터 상한(maxLevel)으로 자르지 않는다(넉넉한 SANE_MAX만) - 상한을 올렸다 롤백해도 산 단계가 깎이지 않게. 상한은 계산할 때만(shared/All10이 clamp).
+--   모양이 틀린 값은 지우지 않고 보관 칸(quarantine - kind "all10")으로 옮긴 뒤 기본값을 넣는다(초월 무기 grade 7이면 transcend = { level = 0, slot = 0 }).
+local SANE_MAX = 1e6
+local function int(v, lo, default)
 	v = tonumber(v)
 	if v == nil or v ~= v or v == math.huge or v == -math.huge then
 		return default
 	end
-	return math.clamp(math.floor(v), lo, hi)
+	return math.clamp(math.floor(v), lo, SANE_MAX)
 end
 function SaveSystem.sanitizeAll10(data)
 	local A = require(ReplicatedStorage.Shared.data.All10Data)
+	data.quarantine = type(data.quarantine) == "table" and data.quarantine or {}
+	local function park(why, value, classId)
+		table.insert(data.quarantine, { kind = "all10", why = why, value = value, classId = classId, at = os.time() })
+	end
 	if type(data.training) == "table" then
-		data.training.advanced = int(data.training.advanced, A.advancedTraining.fromLevel - 1, A.advancedTraining.maxLevel, A.advancedTraining.fromLevel - 1)
-		data.training.guard = int(data.training.guard, 0, A.defenseTraining.maxLevel, 0)
+		data.training.advanced = int(data.training.advanced, A.advancedTraining.fromLevel - 1, A.advancedTraining.fromLevel - 1)
+		data.training.guard = int(data.training.guard, 0, 0)
 	end
 	if type(data.transcendGems) ~= "table" then
+		if data.transcendGems ~= nil then
+			park("transcendGems_shape", data.transcendGems)
+		end
 		data.transcendGems = { list = {}, seq = 0 }
 	end
 	local tg = data.transcendGems
-	tg.list = type(tg.list) == "table" and tg.list or {}
-	tg.seq = int(tg.seq, 0, 1e9, 0)
-	for _, classState in pairs(type(data.classes) == "table" and data.classes or {}) do
+	if type(tg.list) ~= "table" then
+		park("transcendGems_list_shape", tg.list)
+		tg.list = {}
+	end
+	tg.seq = math.max(int(tg.seq, 0, 0), #tg.list) -- id 중복 방지(번호 < 개수면 끌어올림)
+	for classId, classState in pairs(type(data.classes) == "table" and data.classes or {}) do
 		local weapon = type(classState) == "table" and classState.weapon
-		if type(weapon) == "table" and weapon.transcend ~= nil then
+		if type(weapon) == "table" and (weapon.transcend ~= nil or weapon.grade == A.inherit.toGrade) then
 			if type(weapon.transcend) ~= "table" then
-				weapon.transcend = nil
-			else
-				weapon.transcend.level = int(weapon.transcend.level, 0, A.transcendEnhance.maxLevel, 0)
-				weapon.transcend.slot = weapon.transcend.level >= A.transcendEnhance.maxLevel and 0 or int(weapon.transcend.slot, 0, A.transcendEnhance.slots - 1, 0)
+				if weapon.transcend ~= nil then
+					park("weapon_transcend_shape", weapon.transcend, classId)
+				end
+				weapon.transcend = weapon.grade == A.inherit.toGrade and { level = 0, slot = 0 } or nil -- 초월 무기면 기본 단계로(없던 값을 만들지 않는다 - grade 7이 아니면 그대로 없음)
+			end
+			if weapon.transcend then
+				weapon.transcend.level = int(weapon.transcend.level, 0, 0)
+				weapon.transcend.slot = int(weapon.transcend.slot, 0, 0)
 			end
 		end
 		local rec = type(classState) == "table" and classState.transcendInherit
 		if rec ~= nil then
-			if type(rec) ~= "table" or int(rec.stage, 0, 1e9, 0) <= 0 then
+			if type(rec) ~= "table" then
+				park("transcendInherit_shape", rec, classId)
 				classState.transcendInherit = nil
 			else
-				rec.stage = int(rec.stage, 1, 1e9, 1)
-				rec.at = int(rec.at, 0, 1e12, 0)
+				local best = type(classState.stageProgress) == "table" and tonumber(classState.stageProgress.infiniteBest) or 1
+				rec.stage = int(rec.stage, 1, math.max(1, math.floor(best or 1))) -- 손상 = 지금 최고 스테이지(돌파가 이미 끝난 쪽 - 이득 없음)
+				rec.at = int(rec.at, 0, 0)
 			end
 		end
 	end
