@@ -1,0 +1,17 @@
+{
+ "source": "menu_keyart_v2.png",
+ "width": 1536,
+ "height": 1024,
+ "parts": [
+  {
+   "file": "ui/menu_keyart_v2_L.png",
+   "x0": 0,
+   "x1": 770
+  },
+  {
+   "file": "ui/menu_keyart_v2_R.png",
+   "x0": 766,
+   "x1": 1536
+  }
+ ]
+}

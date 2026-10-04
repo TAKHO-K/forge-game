@@ -14,13 +14,13 @@ return {
 	--   parts = 좌우로 나눈 장(로블록스 이미지 한 변 1024 한도 - 큰 그림을 2장으로) · x0 ~ x1 = 원본 가로 픽셀 범위(가운데 몇 px 겹침 = 이음매 없음).
 	--   빈 parts = 하늘 그라데이션만.
 	fadeSeconds = 0.8,
-	-- BEGIN menu_bg.py(생성 - 손으로 고치지 않는다 · menu_keyart_v1.png)
+	-- BEGIN menu_bg.py(생성 - 손으로 고치지 않는다 · menu_keyart_v2.png)
 	background = {
 		width = 1536,
 		height = 1024,
 		parts = {
-			{ image = "rbxassetid://75056623653247", x0 = 0, x1 = 770 },
-			{ image = "rbxassetid://82966859918208", x0 = 766, x1 = 1536 },
+			{ image = "rbxassetid://90708952668878", x0 = 0, x1 = 770 },
+			{ image = "rbxassetid://129274403210371", x0 = 766, x1 = 1536 },
 		},
 	},
 	-- END menu_bg.py

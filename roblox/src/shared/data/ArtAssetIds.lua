@@ -1115,6 +1115,8 @@ return {
 	["ui/menu_key_R"] = { id = 79179646032267, kind = "Decal", image = 111740079079123, status = "Approved" },
 	["ui/menu_keyart_v1_L"] = { id = 111049944909788, kind = "Decal", image = 75056623653247, status = "Approved" },
 	["ui/menu_keyart_v1_R"] = { id = 132580520230344, kind = "Decal", image = 82966859918208, status = "Approved" },
+	["ui/menu_keyart_v2_L"] = { id = 72856913796131, kind = "Decal", image = 90708952668878, status = "Approved" },
+	["ui/menu_keyart_v2_R"] = { id = 106571649028543, kind = "Decal", image = 129274403210371, status = "Approved" },
 	["weapons/bow_ancient"] = { id = 91008731478084, kind = "Model", status = "Approved" },
 	["weapons/bow_epic"] = { id = 83178122944040, kind = "Model", status = "Approved" },
 	["weapons/bow_legendary"] = { id = 101525014852880, kind = "Model", status = "Approved" },

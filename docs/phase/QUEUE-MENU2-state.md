@@ -25,3 +25,8 @@
 6. .gitignore에 예외가 필요하면 menu_keyart_v2*만 추가. 커밋 1개(그림 · meta · 이미지 id 데이터) → 푸시(force 금지) · 삭제 파일 0개 확인.
 7. 참고: 손잡이 · 단검 두 곳은 나중에 고친 그림이 오면 menu_keyart_v3로 같은 과정 반복 예정.
 끝나면 원래 하던 순서대로 이어서.
+
+### 끼워 넣기 결과(menu_keyart_v2) - 완료
+- 절차 = docs/phase/all9c/menu-background.md 그대로(menu_bg.py → 좌우 2장 770×1024 · 가운데 2px씩 겹침 · upload.py Decal 72856913796131 · 106571649028543 Approved → 이미지 id 90708952668878 · 129274403210371 → menu_bg.py --gen menu_keyart_v2).
+- 바뀐 것 = MenuBootData.lua BEGIN/END 사이(이미지 id 2개 · 출처 이름)만 · ArtAssetIds · asset-ids.json에 v2 줄 추가(v1 줄 · 파일 · meta 그대로 - 되돌리기 = `menu_bg.py --gen menu_keyart_v1`).
+- 캡처: docs/phase/menu2/captures/menu_keyart_v2_pc_16x9.jpg(뷰포트 1052×592 - Studio 높이 상한 592라 1920×1080과 같은 16:9) · menu_keyart_v2_phone_800x360.jpg(800×361). 메뉴 묶음이 얼굴 4명 · 초월 대검을 가리지 않음(폰: 메뉴 오른쪽 끝 ≈ 34% · 전사 망토 끝 ≈ 37%) · 이음매 안 보임. .gitignore 변경 불필요(이미 추적 대상).

@@ -7378,6 +7378,20 @@
   "status": "Approved",
   "imageId": 82966859918208
  },
+ "ui/menu_keyart_v2_L.png": {
+  "sha256": "704e31c6ae8c04ba6d0180a8dbb9d97fc7925cdf3495013944685afe96d4f2e2",
+  "assetType": "Decal",
+  "assetId": 72856913796131,
+  "status": "Approved",
+  "imageId": 90708952668878
+ },
+ "ui/menu_keyart_v2_R.png": {
+  "sha256": "cd013b420bfa1939af67c205bedf82f3078f8bd47843371387e9426e6e56bcf2",
+  "assetType": "Decal",
+  "assetId": 106571649028543,
+  "status": "Approved",
+  "imageId": 129274403210371
+ },
  "weapons/bow_ancient.fbx": {
   "sha256": "742f05a890664cd259cc7dd622d39ba8216ae168234344937ed13b13b41f6853",
   "assetType": "Model",
