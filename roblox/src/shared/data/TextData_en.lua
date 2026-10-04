@@ -710,6 +710,7 @@ return {
 	["shop.reason.notNearStation"] = "Too far from the Forge",
 	["shop.reason.rejected"] = "Rejected ({reason})",
 	["shop.reason.shards"] = "Not enough Style Tokens",
+	["shop.reason.busy"] = "Processing a purchase. Please try again in a moment.",
 	["shop.reason.owned"] = "You already own this",
 	["shop.reason.notReady"] = "Coming soon",
 	["shop.reason.notOwned"] = "Buy it first to equip it",

@@ -40,7 +40,8 @@ local resultRemote = nil -- 결정 10: ShopResult(action, ok, why) - 창이 결�
 
 -- 보상 적용(상품 grants · 시즌 줄 · 선물 공통). reward = { cosmeticTheme = id, gliderSkin = id, sparkleShard = n, egg = n, seasonPremium = true }.
 --   판매 금지 종류는 source == "product"일 때 거부(시즌 무료 줄 알 · 조각은 무료 보상). 반환: ok, 요약 | 이유
-function MonetizationService.applyReward(player, reward, source)
+--   granted(선택 · QUEUE-ALL10 0-1 리뷰) = 이번 호출이 **실제로 새로 넣은 것** 목록을 채운다(영수증 되돌림이 그것만 지운다 - 처리 전에 없던 것 전부가 아니라).
+function MonetizationService.applyReward(player, reward, source, granted)
 	if type(reward) ~= "table" then
 		return false, "no_reward"
 	end
@@ -67,15 +68,24 @@ function MonetizationService.applyReward(player, reward, source)
 			if not got and why ~= "owned" then
 				return false, why
 			end
+			if got and granted then
+				table.insert(granted, { kind = grant.kind, id = grant.id })
+			end
 			table.insert(parts, ("%s %s%s"):format(grant.kind, grant.id, got and "" or "(이미 있음)"))
 		elseif grant.kind == "seasonPremium" then
 			local got, why = SeasonPassService.setPremium(player)
 			if not got and why ~= "owned" then
 				return false, why
 			end
+			if got and granted then
+				table.insert(granted, { kind = "seasonPremium" })
+			end
 			table.insert(parts, "시즌 유료 줄")
 		elseif grant.kind == "sparkleShard" or grant.kind == "egg" then
 			table.insert(parts, (require(script.Parent.QuestService).grant(player, { [grant.kind] = grant.amount }))) -- 괄호 = 요약 문자열 하나(grant는 지급 표도 돌려준다)
+			if granted and grant.kind == "sparkleShard" then
+				table.insert(granted, { kind = "sparkleShard", amount = grant.amount })
+			end
 		elseif grant.kind == "gold" and type(grant.amount) == "number" and grant.amount > 0 then -- QUEUE-ALL9B 보완 2-2 시즌 무료 줄 고정 골드(스테이지 배율 아님 · 상품 · 유료 줄은 위 검사가 막는다)
 			PlayerProfile.addGold(player, grant.amount)
 			table.insert(parts, require(ReplicatedStorage.Shared.Text).getFor(player, "srv.reward.gold", { n = ("%d"):format(grant.amount) }))
@@ -83,13 +93,19 @@ function MonetizationService.applyReward(player, reward, source)
 			table.insert(parts, (require(script.Parent.QuestService).grant(player, { [grant.kind] = grant.amount }))) -- 괄호 = 요약 문자열 하나(grant는 지급 표도 돌려준다)
 		elseif grant.kind == "bagSlots" and MonetizationData.bagSources[grant.id] then -- QUEUE-ALL9C 1-6 가방 칸 출처(출처별 한 번 - 이미 있으면 그대로 · 멱등)
 			local s = PlayerProfile.getMonetizationState(player)
+			if granted and not s.purchases.bagSources[grant.id] then
+				table.insert(granted, { kind = "bagSlots", id = grant.id })
+			end
 			s.purchases.bagSources[grant.id] = true
 			require(script.Parent.InventorySync).push(player, PlayerProfile.getProfile(player))
 			table.insert(parts, ("가방 출처 %s"):format(grant.id))
 		elseif grant.kind == "passTierSkip" then -- QUEUE-ALL9B 4-8 칸 건너뛰기(방 = 영수증 처리 전에 확인)
-			local got, why = SeasonPassService.applySkip(player, grant.amount)
+			local got, marked = SeasonPassService.applySkip(player, grant.amount)
 			if not got then
-				return false, why
+				return false, marked
+			end
+			if granted then
+				table.insert(granted, { kind = "passTierSkip", amount = grant.amount, marked = marked }) -- 리뷰 L1: 이 영수증이 표시한 칸만 되돌린다
 			end
 			table.insert(parts, ("시즌 패스 %d칸"):format(grant.amount))
 		else
@@ -99,50 +115,51 @@ function MonetizationService.applyReward(player, reward, source)
 	return true, table.concat(parts, " · ")
 end
 
--- QUEUE-ALL10 0-1: 영수증 처리 전 상태를 적어 두고 "이번 처리가 바꾼 것만" 되돌리는 함수를 돌려준다(저장 대기 중 들어온 다른 변경 · 다른 영수증은 건드리지 않는다).
---   되돌림 = 영수증 기록 · 치장 소유(장착 중이면 장착도) · 시즌 유료 줄 · 가방 출처 · 시즌 영수증 표시(promptSeason) · 칸 건너뛰기 · 토큰 환산. yield 없음(저장과 섞이지 않는다).
-function MonetizationService.captureUndo(player, product)
+-- QUEUE-ALL10 0-1: 영수증 처리 하나가 "실제로 새로 넣은 것"(granted - applyReward가 채운다)만 되돌리는 함수(저장 대기 중 들어온 다른 변경 · 다른 영수증은 건드리지 않는다).
+--   되돌림 = 영수증 기록 · 새 치장(장착 중이면 장착도) · 유료 줄 · 가방 출처 · 시즌 영수증 표시(promptSeason) · 이 영수증의 칸 건너뛰기 · 토큰 환산. yield 없음(저장과 섞이지 않는다).
+--   처리 중(busy)에는 같은 사람의 토큰 사용 · 시즌 줄 받기 · 선물 받기를 막는다(리뷰 H1 · M1: 되돌릴 수 없는 소비가 끼면 재시도와 합쳐 이중 지급).
+local busyPlayers = {} -- [Player] = 처리 중 영수증 수
+function MonetizationService.receiptBusy(player)
+	return (busyPlayers[player] or 0) > 0
+end
+function MonetizationService.captureUndo(player)
 	local s = PlayerProfile.getMonetizationState(player)
-	local had = {}
-	for i, grant in ipairs(product.grants) do
-		had[i] = MonetizationService.ownsAll(player, { grants = { grant } })
-	end
 	local promptSeason = s.seasonPass.promptSeason
-	return function(purchaseId, skipN, refund)
+	local granted = {}
+	return granted, function(purchaseId)
 		Monetization.forgetReceipt(s.purchases, purchaseId)
-		for i, grant in ipairs(product.grants) do
-			if not had[i] then
-				local bag = (grant.kind == "cosmeticTheme" and s.cosmetics.themes) or (grant.kind == "gliderSkin" and s.cosmetics.gliderSkins)
-					or (grant.kind == "cosmeticItem" and type(s.cosmetics.items) == "table" and s.cosmetics.items)
-				if bag then
-					bag[grant.id] = nil
-					for slot, id in pairs(s.cosmetics.equipped) do
-						if id == grant.id then
-							s.cosmetics.equipped[slot] = nil
-						end
+		for _, g in ipairs(granted) do
+			local bag = (g.kind == "cosmeticTheme" and s.cosmetics.themes) or (g.kind == "gliderSkin" and s.cosmetics.gliderSkins)
+				or (g.kind == "cosmeticItem" and type(s.cosmetics.items) == "table" and s.cosmetics.items)
+			if bag then
+				bag[g.id] = nil
+				for slot, id in pairs(s.cosmetics.equipped) do
+					if id == g.id then
+						s.cosmetics.equipped[slot] = nil
 					end
-				elseif grant.kind == "seasonPremium" then
-					s.seasonPass.premium = false
-				elseif grant.kind == "bagSlots" and s.purchases.bagSources[grant.id] then
-					s.purchases.bagSources[grant.id] = nil
-					require(script.Parent.InventorySync).push(player, PlayerProfile.getProfile(player))
+				end
+			elseif g.kind == "seasonPremium" then
+				s.seasonPass.premium = false
+			elseif g.kind == "bagSlots" then
+				s.purchases.bagSources[g.id] = nil
+				local profile = PlayerProfile.getProfile(player)
+				if profile then -- 리뷰 M3: 저장 대기 중 퇴장 = 프로필 없음(push가 nil을 인덱싱해 나머지 되돌림 · inFlight 해제가 끊겼다)
+					require(script.Parent.InventorySync).push(player, profile)
+				end
+			elseif g.kind == "passTierSkip" then
+				SeasonPassService.revertSkip(player, g.amount, g.marked)
+			elseif g.kind == "sparkleShard" then -- 조각 환산은 더하기라 멱등이 아니다(재시도 때 다시 준다 · 처리 중 소비는 busy가 막는다)
+				local quests = PlayerProfile.getQuestState(player)
+				if quests then
+					quests.currencies.sparkleShard = math.max(0, (quests.currencies.sparkleShard or 0) - g.amount)
+					if typeof(player) == "Instance" then
+						player:SetAttribute("SparkleShard", quests.currencies.sparkleShard) -- QUEUE-ALL6 C: 지갑 Attribute
+					end
 				end
 			end
 		end
 		s.seasonPass.promptSeason = promptSeason
-		if skipN > 0 then -- QUEUE-ALL9B 4-8 칸 건너뛰기는 더하기
-			SeasonPassService.revertSkip(player, skipN)
-		end
-		if refund > 0 then -- 조각 환산은 더하기라 멱등이 아니다(재시도 때 다시 준다)
-			local quests = PlayerProfile.getQuestState(player)
-			if quests then
-				quests.currencies.sparkleShard = math.max(0, (quests.currencies.sparkleShard or 0) - refund)
-				if typeof(player) == "Instance" then
-					player:SetAttribute("SparkleShard", quests.currencies.sparkleShard) -- QUEUE-ALL6 C: 지갑 Attribute
-				end
-			end
-		end
-		if typeof(player) == "Instance" then
+		if typeof(player) == "Instance" and player.Parent then
 			CosmeticService.applyAttributes(player)
 			MonetizationService.push(player)
 		end
@@ -186,7 +203,15 @@ function MonetizationService.processReceipt(receiptInfo, deps)
 		return Decision.NotProcessedYet
 	end
 	inFlight[purchaseId] = true -- QUEUE-ALL10 0-1: 기록 · 지급 · 저장 · 되돌림 전체가 한 처리(겹친 호출은 NotProcessedYet)
-	local undo = MonetizationService.captureUndo(player, product)
+	busyPlayers[player] = (busyPlayers[player] or 0) + 1
+	local function done()
+		inFlight[purchaseId] = nil
+		busyPlayers[player] = (busyPlayers[player] or 1) - 1
+		if busyPlayers[player] <= 0 then
+			busyPlayers[player] = nil
+		end
+	end
+	local granted, undo = MonetizationService.captureUndo(player)
 	Monetization.recordReceipt(s.purchases, purchaseId, os.time(), MonetizationData.receiptKeep)
 	local reward = {}
 	local refund = 0
@@ -212,10 +237,10 @@ function MonetizationService.processReceipt(receiptInfo, deps)
 	if hasPremium then
 		s.seasonPass.promptSeason = nil
 	end
-	local ok, summary = MonetizationService.applyReward(player, reward, refund > 0 and "refund" or "product")
+	local ok, summary = MonetizationService.applyReward(player, reward, refund > 0 and "refund" or "product", granted)
 	if not ok then
-		undo(purchaseId, 0, 0) -- 부분 지급 금지: 앞 grant가 들어갔어도 전부 되돌린다(칸 건너뛰기 · 환산은 단독 grant라 실패 = 안 들어감)
-		inFlight[purchaseId] = nil
+		undo(purchaseId) -- 부분 지급 금지: 앞 grant가 들어갔어도 전부 되돌린다
+		done()
 		log("grant_failed " .. tostring(summary))
 		return Decision.NotProcessedYet
 	end
@@ -227,12 +252,12 @@ function MonetizationService.processReceipt(receiptInfo, deps)
 	if not saved then
 		-- QUEUE-ALL10 0-1(AUDIT1 즉시-1): 저장 실패 = 영수증 기록과 이번 지급을 **둘 다** 지급 전으로 되돌리고 NotProcessedYet(옛 = 기록만 빼서
 		--   다음 자동저장이 "영수증 없는 지급"을 남기고, 재시도가 ownsAll → 토큰 환산을 또 줬다). 지급과 기록은 같은 프로필 표라 어느 저장에든 함께 들어간다.
-		undo(purchaseId, skipN > 0 and refund == 0 and skipN or 0, refund)
-		inFlight[purchaseId] = nil
+		undo(purchaseId)
+		done()
 		log("save_failed_retry")
 		return Decision.NotProcessedYet
 	end
-	inFlight[purchaseId] = nil
+	done()
 	require(script.Parent.Telemetry).custom(player, "Purchase_" .. key, 1)
 	require(script.Parent.AuditTrail).note(player, "purchase", ("%s · %s"):format(key, tostring(purchaseId))) -- QUEUE-ALL6 F3 감사
 	MonetizationService.push(player)
@@ -473,7 +498,9 @@ function MonetizationService.handle(player, action, a, b)
 		return false, "bad_action"
 	end
 	local ok, why = true, nil
-	if action == "buyShards" and type(a) == "string" and type(b) == "string" then
+	if MonetizationService.receiptBusy(player) and (action == "buyShards" or action == "buyTokens" or action == "seasonClaim" or action == "seasonClaimAll" or action == "giftClaim") then
+		ok, why = false, "busy" -- QUEUE-ALL10 0-1 리뷰 H1 · M1: 영수증 저장 대기 중(수 초)에는 되돌릴 수 없는 소비 · 받기를 막는다
+	elseif action == "buyShards" and type(a) == "string" and type(b) == "string" then
 		ok, why = CosmeticService.buyWithShards(player, a, b)
 	elseif action == "buyTokens" and type(a) == "string" then -- QUEUE-ALL9B 3-5 상품 키(묶음 포함)
 		ok, why = MonetizationService.buyWithTokens(player, a)

@@ -633,7 +633,7 @@ local ok3, err3 = pcall(function()
 		for k, v in pairs(a) do if b[k] ~= v then return false, k end end
 		return true
 	end
-	local PATTERNS = { "ok", "fail1", "fail2", "fail1_autosave", "fail1_rejoin", "fail1_autosave_rejoin", "fail1_crash_rejoin", "granted_recall_rejoin" }
+	local PATTERNS = { "ok", "fail1", "fail2", "fail1_autosave", "fail1_rejoin", "fail1_autosave_rejoin", "fail1_crash_rejoin", "granted_recall_rejoin", "fail1_yieldsave_crash_rejoin", "fail1_yieldsave_rejoin" }
 	local rows, allOk, n = {}, true, 0
 	for ki, key in ipairs(KEYS) do
 		for pi, pat in ipairs(PATTERNS) do
@@ -650,6 +650,7 @@ local ok3, err3 = pcall(function()
 			local stored = deep(PlayerProfile.getProfile(pl)) -- 구매 전 저장본
 			local fails = (pat == "ok" or pat == "granted_recall_rejoin") and 0 or (pat == "fail2" and 2 or 1)
 			local deps = { save = function(p2)
+				if fails > 0 and pat:find("yieldsave") then stored = deep(PlayerProfile.getProfile(p2)) end -- 리뷰 빈틈 ①: 저장 대기 중 자동저장이 지급 + 영수증을 실제로 쓰고 flush만 실패
 				if fails > 0 then fails -= 1; return false end
 				stored = deep(PlayerProfile.getProfile(p2)); return true
 			end }
@@ -680,7 +681,7 @@ local ok3, err3 = pcall(function()
 			if not (okS and storedOk) then table.insert(rows, ("%s/%s 틀림(%s) %s"):format(key, pat, tostring(badKey), table.concat(results, ","))) end
 		end
 	end
-	check(("ALL10 0-1 저장 실패 주입 %d경우(상품 6 × 실패 패턴 8: 정상 · 1회 · 2회 · 자동저장 끼어듦 · 재접속 · 자동저장+재접속 · 서버 죽음 재접속 · 지급 뒤 재호출) → 메모리 · 저장본 모두 지급 정확히 1회"):format(n),
+	check(("ALL10 0-1 저장 실패 주입 %d경우(상품 6 × 실패 패턴 10: 정상 · 1회 · 2회 · 자동저장 끼어듦 · 재접속 · 자동저장+재접속 · 서버 죽음 재접속 · 지급 뒤 재호출 · 대기 중 자동저장 후 죽음/퇴장) → 메모리 · 저장본 모두 지급 정확히 1회"):format(n),
 		allOk, table.concat(rows, " / "))
 	-- 부분 지급 금지: 묶음 두 번째 grant가 실패하면 첫 grant도 되돌림
 	local pl = load(2001, SaveSystem.migrate({}))
@@ -695,6 +696,63 @@ local ok3, err3 = pcall(function()
 	local s2 = PlayerProfile.getMonetizationState(pl2)
 	MS.processReceipt({ PlayerId = 2002, ProductId = 9501, PurchaseId = "Q-EQ", CurrencySpent = 199 }, { save = function() s2.cosmetics.equipped.trail = "frost"; return false end })
 	check("저장 대기 중 장착 → 실패 되돌림이 장착도 해제(소유 없는 장착 0)", not s2.cosmetics.themes.frost and s2.cosmetics.equipped.trail == nil)
+	-- 리뷰 H1: 환산 토큰 저장 대기 중 토큰 구매 = busy 거절 → 최종 토큰 = 환산 1회분
+	local pH = load(2003, SaveSystem.migrate({}))
+	local sH, qH = PlayerProfile.getMonetizationState(pH), PlayerProfile.getQuestState(pH)
+	sH.cosmetics.themes.anvil, sH.cosmetics.gliderSkins.slimeParachute, sH.cosmetics.items.goldenHammer = true, true, true
+	qH.currencies.sparkleShard = 0
+	local refundN = Mon.tokenPriceForRobux(Data, 499) or 0
+	local busyWhy
+	local failH = 1
+	local depsH = { save = function() if failH > 0 then failH -= 1; local _, w = MS.handle(pH, "buyTokens", "theme_jelly"); busyWhy = w; return false end return true end }
+	local rH = { PlayerId = 2003, ProductId = 9502, PurchaseId = "Q-H1", CurrencySpent = 499 }
+	MS.processReceipt(rH, depsH)
+	local dH = MS.processReceipt(rH, depsH)
+	check("리뷰 H1: 저장 대기 중 토큰 구매 = busy 거절 · 실패 → 재시도 뒤 토큰 = 환산 1회분 · 젤리 미지급", busyWhy == "busy" and tostring(dH):find("PurchaseGranted") ~= nil
+		and qH.currencies.sparkleShard == refundN and not sH.cosmetics.themes.jelly and not MS.receiptBusy(pH), ("%s · 토큰 %d/%d"):format(tostring(busyWhy), qH.currencies.sparkleShard, refundN))
+	-- 리뷰 M2: A(지난 시즌 유료 줄 = 환산) 저장 대기 중 B(할인 유료 줄) 지급 · 성공 → A 실패 되돌림이 B의 유료 줄을 끄지 않음
+	local pM = load(2004, SaveSystem.migrate({}))
+	local sM = PlayerProfile.getMonetizationState(pM)
+	Data.products.season_premium_sale.productId = 9506
+	MS.validProducts.season_premium_sale = true
+	sM.seasonPass.promptSeason = -5
+	local failM = 1
+	local depsM = { save = function()
+		if failM > 0 then failM -= 1
+			sM.seasonPass.promptSeason = nil
+			MS.processReceipt({ PlayerId = 2004, ProductId = 9506, PurchaseId = "Q-M2B", CurrencySpent = 299 }, { save = function() return true end })
+			return false
+		end
+		return true end }
+	MS.processReceipt({ PlayerId = 2004, ProductId = 9503, PurchaseId = "Q-M2A", CurrencySpent = 399 }, depsM)
+	check("리뷰 M2: 겹친 두 유료 줄 영수증 - A 되돌림 뒤에도 B 유료 줄 유지 · B 영수증 기록", sM.seasonPass.premium == true and Mon.hasReceipt(sM.purchases, "Q-M2B") and not Mon.hasReceipt(sM.purchases, "Q-M2A"))
+	Data.products.season_premium_sale.productId = 0
+	-- 리뷰 M3: 스타터 저장 대기 중 퇴장(프로필 없음) → 되돌림 오류 없음 · inFlight 풀림(같은 id 다시 = 처리됨)
+	local pS = load(2005, SaveSystem.migrate({}))
+	local origGP = PlayerProfile.getProfile
+	local leaving = false
+	PlayerProfile.getProfile = function(p2) if leaving and p2 == pS then return nil end return origGP(p2) end
+	local okM3 = pcall(MS.processReceipt, { PlayerId = 2005, ProductId = 9505, PurchaseId = "Q-M3", CurrencySpent = 199 }, { save = function() leaving = true; return false end })
+	leaving = false
+	PlayerProfile.getProfile = origGP
+	local dM3 = MS.processReceipt({ PlayerId = 2005, ProductId = 9505, PurchaseId = "Q-M3", CurrencySpent = 199 }, { save = function() return true end })
+	check("리뷰 M3: 저장 대기 중 퇴장 되돌림 = 오류 없음 · 재시도 Granted(inFlight 풀림)", okM3 and tostring(dM3):find("PurchaseGranted") ~= nil and not MS.receiptBusy(pS))
+	-- 리뷰 L1: 칸 건너뛰기 두 영수증 겹침 - A 실패 되돌림이 B의 칸 표시를 지우지 않음
+	local pK = load(2006, SaveSystem.migrate({}))
+	local sK = PlayerProfile.getMonetizationState(pK)
+	Data.products.pass_skip1.productId = 9507
+	MS.validProducts.pass_skip1 = true
+	local failK = 1
+	MS.processReceipt({ PlayerId = 2006, ProductId = 9504, PurchaseId = "Q-L1A", CurrencySpent = 99 }, { save = function()
+		if failK > 0 then failK -= 1
+			MS.processReceipt({ PlayerId = 2006, ProductId = 9507, PurchaseId = "Q-L1B", CurrencySpent = 25 }, { save = function() return true end })
+			return false
+		end
+		return true end })
+	local tiers = {}
+	for k in pairs(sK.seasonPass.skipTiers) do table.insert(tiers, k) end
+	check("리뷰 L1: 겹친 칸 건너뛰기 - A(5칸) 되돌림 뒤 B(1칸) 표시 1개 · skipBought 1", #tiers == 1 and tiers[1] == "6" and sK.seasonPass.skipBought == 1, table.concat(tiers, ","))
+	Data.products.pass_skip1.productId = 0
 	-- 게임패스: 소유 = Roblox 조회 값(bool) · 두 번 반영해도 가방 칸 한 번
 	local p3 = PlayerProfile.getProfile(pl2)
 	local s3 = PlayerProfile.getMonetizationState(pl2)

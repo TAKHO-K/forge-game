@@ -715,6 +715,7 @@ local TextData = {
 		["shop.reason.notNearStation"] = "강화대에서 너무 멀리 떨어졌습니다",
 		["shop.reason.rejected"] = "거절되었습니다({reason})",
 		["shop.reason.shards"] = "꾸미기 토큰이 모자랍니다", -- QUEUE-B1 결정 10: ShopResult 이유
+		["shop.reason.busy"] = "구매를 처리하고 있습니다. 잠시 뒤 다시 시도해 주세요.", -- QUEUE-ALL10 0-1
 		["shop.reason.owned"] = "이미 가지고 있습니다",
 		["shop.reason.notReady"] = "곧 열립니다",
 		["shop.reason.notOwned"] = "먼저 사야 장착할 수 있습니다",

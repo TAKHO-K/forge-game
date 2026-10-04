@@ -130,18 +130,20 @@ function SeasonPassService.applySkip(player, n)
 	lastSkipMarked[player] = marked -- 리뷰: 저장 대기 중 경험치가 늘어도 되돌리기가 이 칸들만 지운다
 	quests.currencies.passExp = exp + n * per
 	pass.skipBought += n
-	return true
+	return true, marked -- QUEUE-ALL10 0-1 리뷰 L1: 영수증 되돌림이 이 표시만 지운다(겹친 두 영수증)
 end
 -- 되돌리기(저장 실패 - 영수증 재시도가 다시 지급)
-function SeasonPassService.revertSkip(player, n)
+function SeasonPassService.revertSkip(player, n, markedArg)
 	local pass = SeasonPassService.ensure(player)
 	local quests = PlayerProfile.getQuestState(player)
 	if not pass or not quests then
 		return
 	end
 	local per = SeasonPassData.expPerTier
-	local marked = lastSkipMarked[player]
-	lastSkipMarked[player] = nil
+	local marked = markedArg or lastSkipMarked[player]
+	if lastSkipMarked[player] == marked then
+		lastSkipMarked[player] = nil
+	end
 	if marked then
 		for _, key in ipairs(marked) do
 			pass.skipTiers[key] = nil
