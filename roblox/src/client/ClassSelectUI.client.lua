@@ -89,7 +89,10 @@ stageHolder.Name = "StageHolder"
 stageHolder.BackgroundTransparency = 1
 stageHolder.ClipsDescendants = true
 stageHolder.Parent = panel
-local stage = ClassStage.new(stageHolder)
+-- QUEUE-MENU2 F(사용자 10-04 밤): 직업 선택 = 2D 전설 일러스트만 - 변신 연출(ClassStage) = 스위치 LegendData.transform(ClassSelectTransform) · 끄면 무대 대신 전설 재생기(LegendPlayer)
+local LegendData = require(game:GetService("ReplicatedStorage").Shared.data.LegendData)
+local stage = LegendData.transform and ClassStage.new(stageHolder) or { play = function() end, stop = function() end }
+local legend = not LegendData.transform and require(script.Parent.ui.LegendPlayer).new(stageHolder) or nil
 local buttonRow = Instance.new("Frame")
 buttonRow.Name = "StageButtons"
 buttonRow.BackgroundTransparency = 1
@@ -347,16 +350,27 @@ for i, info in ipairs(ClassData.comingSoon or {}) do
 end
 
 -- 무대 아래 버튼: [다시 보기] · [이 직업으로](지금 직업 = 누를 수 없음)
-Button.build({ parent = buttonRow, name = "ReplayButton", kind = "secondary", width = 110, text = Text.get("class.card.replay"),
+local replayRefs = Button.build({ parent = buttonRow, name = "ReplayButton", kind = "secondary", width = 110, text = Text.get("class.card.replay"),
 	position = UDim2.new(0, 0, 0, 0), onActivated = function()
 		if selectedId then
 			stage:play(selectedId)
 		end
 	end })
-local pickRefs = Button.build({ parent = buttonRow, name = "PickButton", kind = "primary", width = 160, text = Text.get("class.card.pick"),
+replayRefs.root.Visible = LegendData.transform -- 변신 다시 보기 = 변신 연출이 꺼지면 숨김
+local pickRefs -- (콜백 안에서 쓰므로 먼저 선언)
+pickRefs = Button.build({ parent = buttonRow, name = "PickButton", kind = "primary", width = 160, text = Text.get("class.card.pick"),
 	anchorPoint = Vector2.new(1, 0), position = UDim2.new(1, 0, 0, 0), onActivated = function()
 		if selectedId then
-			requestClassChange(ClassData.classes[selectedId])
+			local info = ClassData.classes[selectedId]
+			local current = player:GetAttribute("ClassId")
+			if legend and (current == nil or current == "") then -- QUEUE-MENU2 F: 확정 → 전설 액션 포즈(섬광) → 바로 진입(변신 연출 자리 비움)
+				pickRefs.setEnabled(false)
+				legend.confirm(selectedId, function()
+					requestClassChange(info)
+				end)
+				return
+			end
+			requestClassChange(info)
 		end
 	end })
 
@@ -384,6 +398,9 @@ select = function(id)
 	selectedId = id
 	refreshPick()
 	stage:play(id)
+	if legend then
+		legend.select(id)
+	end
 end
 
 -- 창 크기: 화면 안(여백 16) · 왼쪽 목록 LIST_W(좁으면 화면 40%) · 나머지 = 무대
@@ -416,6 +433,9 @@ end
 local function closeClassSelect()
 	panel.Visible = false
 	stage:stop()
+	if legend then
+		legend.stop()
+	end
 end
 panel:GetPropertyChangedSignal("Visible"):Connect(function()
 	if not panel.Visible then

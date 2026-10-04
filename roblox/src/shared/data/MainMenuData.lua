@@ -2,6 +2,7 @@
 --   메뉴에 있는 동안 아래 단계를 미리 불러오고, [이어하기] 등을 누를 때 남은 단계가 있으면 로딩 막대(최대 loadCapSeconds 뒤 입장 - 나머지는 배경에서 계속).
 --   steps 순서 = 막대 진행 순서(무게 = 막대에서 차지하는 몫). id별 할 일은 화면 코드의 STEP_RUNNERS 한 곳.
 return {
+	skipMenuOption = false, -- QUEUE-MENU2 C: "다음부터 메뉴 건너뛰기" 옵션(끔 = UI 숨김 · 저장값 skipMenu 무시 - 직업 선택이 메뉴의 새 캐릭터라 메뉴를 늘 보인다)
 	loadCapSeconds = 15,
 	steps = {
 		{ id = "profile", weight = 1 }, -- 저장 불러오기(ClassId Attribute가 생김 - 새 계정은 빈 글)

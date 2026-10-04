@@ -69,7 +69,7 @@ return {
 		["menu.tip.4"] = "강화는 +19까지 실패해도 내려가지 않습니다.",
 		-- QUEUE-ALL9C 2-4 직업 카드 · 변신
 		["class.card.title"] = "직업 고르기",
-		["class.card.hint"] = "친구와 레벨이 달라도 바로 같이 사냥할 수 있어요. 직업은 언제든 바꿀 수 있어요.",
+		["class.card.hint"] = "친구와 레벨이 달라도 바로 같이 사냥할 수 있어요. 캐릭터마다 직업이 정해지고, 다른 직업은 새 캐릭터로 시작해요.", -- QUEUE-MENU2 C: 캐릭터 = 직업 고정
 		["class.role.melee"] = "근접",
 		["class.role.ranged"] = "원거리",
 		["class.role.support"] = "지원",
@@ -154,7 +154,7 @@ return {
 		["menu.tip.3"] = "Party up for up to +20% EXP.",
 		["menu.tip.4"] = "Up to +19, a failed upgrade never drops.",
 		["class.card.title"] = "Choose a class",
-		["class.card.hint"] = "Hunt with friends at any level. Change class anytime.",
+		["class.card.hint"] = "Hunt with friends at any level. Each character has one class; start a new character for another.",
 		["class.role.melee"] = "Melee",
 		["class.role.ranged"] = "Ranged",
 		["class.role.support"] = "Support",

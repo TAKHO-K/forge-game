@@ -635,6 +635,7 @@ langNote.LayoutOrder = 5
 langNote.TextWrapped = true
 bindText(langNote, "menu.set.langNote")
 local skipBox = panelBox(settingsPage, rowHeight() + 8, 6)
+skipBox.Visible = Data.skipMenuOption == true -- QUEUE-MENU2 C: "메뉴 건너뛰기" 옵션 UI 제거(코드 · 저장 필드 skipMenu 남김 - 켬이던 유저도 메뉴 표시)
 local skipToggle = Toggle.build({ parent = skipBox, name = "SkipMenuToggle", text = Text.get("menu.set.skip"), value = player:GetAttribute("SkipMainMenu") == true,
 	width = menuWidth - 32, position = UDim2.new(0, 12, 0.5, -12), onChanged = function(v)
 		SettingSave("skipMenu", v)
@@ -930,7 +931,7 @@ local settingsWait = os.clock()
 while player:GetAttribute("SkipMainMenu") == nil and os.clock() - settingsWait < 3 do
 	task.wait(0.05)
 end
-if devSkip() or (player:GetAttribute("SkipMainMenu") == true and hasClass()) then
+if devSkip() or (Data.skipMenuOption == true and player:GetAttribute("SkipMainMenu") == true and hasClass()) then -- QUEUE-MENU2 C: 옵션을 끈 동안 저장값은 무시
 	enter("continue", true)
 	return
 end

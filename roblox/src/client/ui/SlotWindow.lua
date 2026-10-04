@@ -425,6 +425,8 @@ function SlotWindow.new(parent, opts)
 
 	function self.close()
 		isOpen = false
+		self.selected = nil -- 다시 열면 마지막 플레이 캐릭터가 선택(맨 위)
+		list.CanvasPosition = Vector2.zero
 		frame.Visible = false
 		self.mode = "slots"
 		self.confirmArchive = nil
