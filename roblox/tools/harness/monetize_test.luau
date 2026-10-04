@@ -773,6 +773,27 @@ local ok3, err3 = pcall(function()
 	check("ALL10 0-3 세트 패스만 = 색 · 배지 장착 O · hasPass(색 · 배지) O · 화면 owned · 패스 없음 = no_pass", not okNone and whyNone == "no_pass" and okC and okB
 		and MS.hasPass(pN, "nameplateColor") and MS.hasPass(pN, "nameplateBadge") and v.passes.nameplateColor.owned and v.passes.nameplateBadge.owned and not MS.hasPass(pN, "bagExpand"),
 		("%s · %s · %s"):format(tostring(whyNone), tostring(whyC), tostring(whyB)))
+	-- ALL10 0-4(결정 3): 마일스톤 +5는 유료 상한 밖 - 모든 조합에서 유료로 산 칸이 잘리는 경우 0 · 최대 80 · 옛 저장(잘려 보이던 계정)도 다음 로드에 80
+	local cut, rowsB = 0, {}
+	for _, ms in ipairs({ 20, 25 }) do
+		for _, passOn in ipairs({ false, true }) do
+			for _, starterOn in ipairs({ false, true }) do
+				local prof = SaveSystem.migrate({})
+				prof.inventorySlots = ms
+				prof.gamepasses.bagExpand = passOn or nil
+				prof.purchases.bagSources.starter = starterOn or nil
+				local want = 35 + (ms - 20) + (passOn and 20 or 0) + (starterOn and 20 or 0)
+				local got = MODS.InventorySync.capacity(prof)
+				if got ~= want then cut += 1 end
+				table.insert(rowsB, ("%d/%s/%s=%d"):format(ms, tostring(passOn), tostring(starterOn), got))
+			end
+		end
+	end
+	local old = SaveSystem.migrate({})
+	old.inventorySlots, old.gamepasses.bagExpand, old.purchases.bagSources.starter = 25, true, true
+	local reloaded = SaveSystem.migrate(deep(old))
+	check("ALL10 0-4 가방: 마일스톤 × 패스 × 스타터 8조합 잘림 0 · 전부 = 80 · 옛 저장 다시 로드 = 80 · 상한 표시 80", cut == 0 and MODS.InventorySync.capacity(reloaded) == 80
+		and MODS.InventorySync.maxCapacity(reloaded) == 80, table.concat(rowsB, " "))
 	for key in pairs(ids) do
 		if Data.products[key] then Data.products[key].productId = 0 end
 	end

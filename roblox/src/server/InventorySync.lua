@@ -49,7 +49,14 @@ function InventorySync.capacity(profile)
 		end
 	end
 	local total = (profile and profile.inventorySlots or 0) + math.max(0, (SaveConfig.bagBaseSlots or SaveConfig.defaultInventorySlots) - SaveConfig.defaultInventorySlots) + passBonus + sourceBonus
-	return math.min(total, math.max(MonetizationData.bagMaxSlots or total, profile and profile.inventorySlots or 0))
+	return math.min(total, InventorySync.maxCapacity(profile))
+end
+
+-- QUEUE-ALL10 0-4(결정 3 · AUDIT1 중간 5): 상한 = 유료 상한 bagMaxSlots(기본 35 + 패스 20 + 스타터 20 = 75) + 마일스톤 칸(저장값 inventorySlots − 옛 기준 20 - 상한 밖)
+--   = 최대 80. 옛 식은 마일스톤까지 75로 잘라 유료로 산 칸 5칸이 사라졌다. 칸 수는 저장하지 않고 매번 계산 → 잘려 있던 옛 계정도 다음 접속 때 그대로 복구된다.
+function InventorySync.maxCapacity(profile)
+	local milestone = math.max(0, (profile and profile.inventorySlots or 0) - SaveConfig.defaultInventorySlots)
+	return (MonetizationData.bagMaxSlots or math.huge) + milestone
 end
 
 -- 19-1: 장비는 이제 profile.classes[profile.classId] 아래에 있다. classId 미선택이면

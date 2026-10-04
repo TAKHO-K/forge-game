@@ -76,6 +76,7 @@ local D = {
 			"item_crystalBlade", "theme_halloween", "item_goldenHammer", "item_forgeBrazier", "theme_starlight", "glider_petal", "theme_ember", "glider_kite", "theme_frost" },
 	},
 	-- QUEUE-ALL9C 1-6 가방 칸 출처(출처별 한 번): 기본 SaveConfig.bagBaseSlots(35) + 가방 확장 패스 20 + 스타터 20 = 최대 75(bagMaxSlots - 검사)
+	--   QUEUE-ALL10 0-4(결정 3): 마일스톤 +5는 이 상한 밖(InventorySync.maxCapacity) → 전부 = 80
 	bagSources = { starter = { slots = 20 } },
 	bagMaxSlots = 75,
 	-- QUEUE-ALL9B 3-4 가격 등급(표시 · 검사용): premium = 499R$급 대표 치장. 상품의 tier가 여기 이름이면 robux가 이 값이어야 한다(checkCatalog).

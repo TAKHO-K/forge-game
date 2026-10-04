@@ -356,7 +356,7 @@ function MonetizationService.view(player)
 			owned = s.purchases.bagSources.starter == true,
 			visible = s.purchases.bagSources.starter ~= true and ((PlayerProfile.getAccountBestBossCleared(player) or 0) > 0 or (s.purchases.shopViews or 0) >= 2),
 		},
-		bag = { slots = require(script.Parent.InventorySync).capacity(PlayerProfile.getProfile(player)), max = MonetizationData.bagMaxSlots,
+		bag = { slots = require(script.Parent.InventorySync).capacity(PlayerProfile.getProfile(player)), max = require(script.Parent.InventorySync).maxCapacity(PlayerProfile.getProfile(player)), -- QUEUE-ALL10 0-4 마일스톤 칸은 상한 밖
 			pass = s.gamepasses.bagExpand == true, starter = s.purchases.bagSources.starter == true,
 			passSlots = MonetizationData.gamePasses.bagExpand.bonusSlots, starterSlots = MonetizationData.bagSources.starter.slots },
 	}
