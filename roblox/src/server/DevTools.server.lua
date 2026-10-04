@@ -3453,6 +3453,11 @@ local function verifyEnabled(blockId)
 	return false
 end
 if DevToolsConfig.verifyArmed then
+	-- 메인 메뉴 버그(10-05): 검증 무장만으로는 메뉴를 건너뛰지 않는다 → (나) 체인은 캐릭터가 있어야 해서 테스트 플래그를 같이 켠다(shared/MenuGate)
+	local MenuGate = require(ReplicatedStorage.Shared.MenuGate)
+	if not MenuGate.shouldSkip({ isStudio = true, now = os.time(), flagUntil = ReplicatedStorage:GetAttribute(MenuGate.flagName) }) then
+		warn(("[DevTools] 검증 무장인데 %s가 꺼져 있다 - 메인 메뉴에서 입장할 때까지 (나) 체인의 캐릭터가 없다(Edit: ReplicatedStorage:SetAttribute(\"%s\", os.time() + 1800))"):format(MenuGate.flagName, MenuGate.flagName))
+	end
 	print(("[DevTools] 자동 검증 모드: %s (현재 세션 블록: %s)"):format(
 		DevToolsConfig.verifyOnly and "필터(VerifyOnly Attribute)" or (DevToolsConfig.verify.regression and "회귀 전체(과거 블록 포함)" or "현재 세션 블록만"),
 		table.concat(DevToolsConfig.verify.current, " · ")))

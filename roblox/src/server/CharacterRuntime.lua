@@ -33,9 +33,14 @@ function CharacterRuntime.restore(player, classState, restorePosition)
 	require(script.Parent.UltimateService).set(player, tonumber(rt.ultGauge) or 0)
 	local pos = rt.lastPos
 	if restorePosition and type(pos) == "table" and tonumber(pos.x) and tonumber(pos.y) and tonumber(pos.z) then
+		local PlayerProfile = require(script.Parent.PlayerProfile)
+		local owner = PlayerProfile.getProfile(player) -- 메인 메뉴 버그(10-05): 접속 복원이 스폰(메뉴 입장)을 기다리는 동안 다른 캐릭터로 바꾸면 옛 자리로 보내지 않는다
 		task.spawn(function()
 			local character = player.Character or player.CharacterAdded:Wait()
 			if not character:WaitForChild("HumanoidRootPart", 10) or not player.Parent then
+				return
+			end
+			if owner and PlayerProfile.getProfile(player) ~= owner then
 				return
 			end
 			task.wait(0.5)

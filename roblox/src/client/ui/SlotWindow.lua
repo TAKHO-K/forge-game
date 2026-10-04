@@ -144,7 +144,7 @@ function SlotWindow.new(parent, opts)
 		if self.busy then
 			return
 		end
-		if self.selected == slot then
+		if self.armed == slot then -- 메인 메뉴 버그(10-05): 같은 카드를 두 번 눌러야 시작(미리 선택된 맨 위 카드도 한 번 누름 = 시작 아님)
 			self.busy = true
 			setStatus(Text.get("menu.slot.loading"))
 			local ok, why = opts.onPlay(slot)
@@ -155,6 +155,7 @@ function SlotWindow.new(parent, opts)
 			return
 		end
 		self.selected = slot
+		self.armed = slot
 		self.confirmArchive = nil
 		setStatus(Text.get("menu.slot.tapAgain"))
 		render()
@@ -399,7 +400,7 @@ function SlotWindow.new(parent, opts)
 			end
 			self.selected = best
 		end
-		setStatus(self.selected and Text.get("menu.slot.tapAgain") or "")
+		setStatus(self.armed and Text.get("menu.slot.tapAgain") or "")
 		render()
 		return true
 	end
@@ -426,6 +427,7 @@ function SlotWindow.new(parent, opts)
 	function self.close()
 		isOpen = false
 		self.selected = nil -- 다시 열면 마지막 플레이 캐릭터가 선택(맨 위)
+		self.armed = nil
 		list.CanvasPosition = Vector2.zero
 		frame.Visible = false
 		self.mode = "slots"

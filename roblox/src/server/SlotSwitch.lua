@@ -8,6 +8,10 @@ local SlotSave = require(script.Parent.SlotSave)
 local SlotSwitch = {}
 local busy = {} -- [Player] = true(전환 · 메뉴 이동 중 - 연타 · 중복 요청 1회)
 local lastAt = {} -- [Player] = os.clock() 마지막 전환(switchMinSeconds - UpdateAsync 예산)
+local heldAtJoin = {} -- [Player] = true(접속해 메뉴에 있고 아직 한 번도 스폰 안 함)
+game:GetService("Players").PlayerRemoving:Connect(function(player)
+	heldAtJoin[player] = nil
+end)
 
 -- 메뉴 이동 · 전환 금지 사유(nil = 됨): 보스전 · 토벌 · 주간 도전 · 잔류(보스방 안) · 계승 저장 대기
 function SlotSwitch.blockReason(player)
@@ -93,13 +97,7 @@ function SlotSwitch.switch(player, target)
 		return false, "full"
 	end
 	if target == sess.slot then -- 같은 캐릭터(메뉴에서 이어하기) = 월드에 다시 넣기만
-		if player:GetAttribute("InMainMenu") then
-			player:SetAttribute("InMainMenu", nil)
-			player:LoadCharacter()
-			local profile = require(script.Parent.PlayerProfile).getProfile(player)
-			local cs = profile and profile.classId and profile.classes[profile.classId]
-			require(script.Parent.CharacterRuntime).restore(player, cs, true)
-		end
+		SlotSwitch.enterWorld(player)
 		return true, "same"
 	end
 	local block = SlotSwitch.blockReason(player)
@@ -122,6 +120,7 @@ function SlotSwitch.switch(player, target)
 		cleanup(player)
 		require(script.Parent.PlayerProfile).clear(player)
 		player:SetAttribute("InMainMenu", nil)
+		heldAtJoin[player] = nil
 		require(script.Parent.ProfileBoot).apply(player, profile, nil, { switch = true }) -- 새 프로필을 먼저(스폰 처리기가 빈 프로필을 보지 않게)
 		player:LoadCharacter()
 		local cs = profile.classId and profile.classes[profile.classId]
@@ -134,6 +133,29 @@ function SlotSwitch.switch(player, target)
 	end
 	print(("[SlotSwitch] 전환: %s → 칸 %s"):format(player.Name, tostring(target)))
 	return true, "switched"
+end
+
+-- 메인 메뉴 버그(10-05): 접속 = 메뉴에서 시작(캐릭터를 월드에 두지 않는다 - SlotServer가 CharacterAutoLoads를 끄고 여기로).
+function SlotSwitch.holdAtJoin(player)
+	heldAtJoin[player] = true
+	player:SetAttribute("InMainMenu", true)
+end
+
+-- 메뉴 → 월드(이어하기 · 같은 칸 · 칸 창이 없는 옛 경로 · 테스트 건너뛰기): 메뉴에 있을 때만 스폰. 접속 직후 = 첫 로드(ProfileBoot)가 이미 쿨 · 위치 복원을 걸어 두었다(스폰을 기다림)
+function SlotSwitch.enterWorld(player)
+	if not player:GetAttribute("InMainMenu") then
+		return false, "in_world"
+	end
+	player:SetAttribute("InMainMenu", nil)
+	local initial = heldAtJoin[player]
+	heldAtJoin[player] = nil
+	player:LoadCharacter()
+	if not initial then
+		local profile = require(script.Parent.PlayerProfile).getProfile(player)
+		local cs = profile and profile.classId and profile.classes[profile.classId]
+		require(script.Parent.CharacterRuntime).restore(player, cs, true)
+	end
+	return true, "entered"
 end
 
 -- 메인 메뉴로(설정 → [메인 메뉴로]): 저장 · 파티 해제 · 캐릭터 빼기

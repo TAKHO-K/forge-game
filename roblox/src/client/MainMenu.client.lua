@@ -6,7 +6,7 @@
 --   끈 기능(데이터 스위치 · 코드 남김): 장소 사진 교차 전환(backgroundCrossfade) · 좌우 등급 빛줄기(lights.enabled).
 --   설정 = 효과음 · 음악 · 그래픽 · 언어 · "다음부터 메뉴 건너뛰고 바로 시작"(SettingsData skipMenu - 직업이 있을 때만 건너뜀).
 --   측정(ALL9F 집계) = 입장 때 Remote MenuTiming 한 번: 접속 → 메뉴 표시 · 메뉴 → 플레이(ms) · 상한 발동 · 건너뜀.
---   Studio: VerifyArmedUntil(검증 Play) 또는 ReplicatedStorage Attribute DevSkipMainMenu = true면 바로 입장(검증 · 촬영 흐름을 막지 않는다) · 시험 훅 DevMenuStallStep(그 단계 안 끝냄 - 15초 상한) · 메뉴 Attribute DevBackground(교차 전환 장 고정).
+--   메뉴는 모든 접속에서 보인다(10-05 버그 수정) · 건너뛰기 = Studio 테스트 플래그 TestSkipMainMenuUntil(만료 시각 - shared/MenuGate)만 · 캐릭터는 입장 때 스폰(SlotRequest enterWorld) · 시험 훅 DevMenuStallStep(그 단계 안 끝냄 - 15초 상한) · 메뉴 Attribute DevBackground(교차 전환 장 고정).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ContentProvider = game:GetService("ContentProvider")
@@ -636,7 +636,7 @@ langNote.TextWrapped = true
 bindText(langNote, "menu.set.langNote")
 local skipBox = panelBox(settingsPage, rowHeight() + 8, 6)
 skipBox.Visible = Data.skipMenuOption == true -- QUEUE-MENU2 C: "메뉴 건너뛰기" 옵션 UI 제거(코드 · 저장 필드 skipMenu 남김 - 켬이던 유저도 메뉴 표시)
-local skipToggle = Toggle.build({ parent = skipBox, name = "SkipMenuToggle", text = Text.get("menu.set.skip"), value = player:GetAttribute("SkipMainMenu") == true,
+local skipToggle = Toggle.build({ parent = skipBox, name = "SkipMenuToggle", text = Text.get("menu.set.skip"), value = Data.skipMenuOption == true and player:GetAttribute("SkipMainMenu") == true,
 	width = menuWidth - 32, position = UDim2.new(0, 12, 0.5, -12), onChanged = function(v)
 		SettingSave("skipMenu", v)
 	end })
@@ -803,6 +803,14 @@ enter = function(mode, skipped)
 		timing:FireServer({ showMs = math.floor((menuShownClock - bootClock) * 1000), playMs = math.floor((playClock - pressClock) * 1000), capHit = capHit, skipped = skipped == true })
 	end
 	ContextActionService:UnbindAction(BLOCK_ACTION)
+	task.spawn(function() -- 메인 메뉴 버그(10-05): 접속 때 캐릭터를 월드에 두지 않는다 → 입장하는 지금 스폰(칸 play · new가 이미 스폰했으면 서버가 아무것도 안 함)
+		local remote = ReplicatedStorage:FindFirstChild("SlotRequest")
+		if remote then
+			pcall(function()
+				remote:InvokeServer("enterWorld")
+			end)
+		end
+	end)
 	if player:GetAttribute("CaptureMode") ~= true then
 		for coreType in pairs(hiddenCore) do
 			pcall(StarterGui.SetCoreGuiEnabled, StarterGui, coreType, true)
@@ -916,22 +924,16 @@ onEnterKey = function()
 end
 
 -- ── 메뉴 표시(저장 · 설정을 읽은 뒤) ─────────────────────────────
+-- 메인 메뉴 버그(10-05): 건너뛰기 = 테스트 플래그 TestSkipMainMenuUntil만(shared/MenuGate) - 옛 VerifyArmedUntil · DevSkipMainMenu · 저장값 skipMenu는 읽지 않는다
+local MenuGate = require(Shared.MenuGate)
 local function devSkip()
-	if not RunService:IsStudio() then
-		return false
-	end
-	local armed = ReplicatedStorage:GetAttribute("VerifyArmedUntil")
-	return ReplicatedStorage:GetAttribute("DevSkipMainMenu") == true or (type(armed) == "number" and armed > os.time())
+	return MenuGate.shouldSkip({ isStudio = RunService:IsStudio(), now = os.time(), flagUntil = ReplicatedStorage:GetAttribute(MenuGate.flagName) })
 end
 
 while not done.profile do
 	task.wait(0.05)
 end
-local settingsWait = os.clock()
-while player:GetAttribute("SkipMainMenu") == nil and os.clock() - settingsWait < 3 do
-	task.wait(0.05)
-end
-if devSkip() or (Data.skipMenuOption == true and player:GetAttribute("SkipMainMenu") == true and hasClass()) then -- QUEUE-MENU2 C: 옵션을 끈 동안 저장값은 무시
+if devSkip() then
 	enter("continue", true)
 	return
 end
