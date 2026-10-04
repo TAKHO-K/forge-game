@@ -417,6 +417,22 @@ function SaveSystem.sanitizeAll10(data)
 				weapon.transcend.level = int(weapon.transcend.level, 0, 0)
 				weapon.transcend.slot = int(weapon.transcend.slot, 0, 0)
 				weapon.transcend.fails = int(weapon.transcend.fails, 0, 0) -- QUEUE-ALL9E1 0-4(v71) 불씨
+				if weapon.transcendSlots ~= nil then -- QUEUE-ALL9E1-ADD B(v72) 초월 홈: 1 ~ 5번만 · 값 true만(모양 틀림 = 보관 칸 + 비움)
+					local ok = type(weapon.transcendSlots) == "table"
+					local clean = {}
+					for k, v in pairs(ok and weapon.transcendSlots or {}) do
+						local n = tonumber(k)
+						if n and n >= 1 and n <= 5 and n == math.floor(n) and v == true then
+							clean[n] = true
+						else
+							ok = false
+						end
+					end
+					if not ok then
+						park("weapon_transcendSlots_shape", weapon.transcendSlots, classId)
+					end
+					weapon.transcendSlots = clean
+				end
 			end
 		end
 		local rec = type(classState) == "table" and classState.transcendInherit
@@ -1506,6 +1522,22 @@ local function migrate(data)
 			end
 		end
 		data.version = 71
+	end
+	if data.version < 72 then
+		-- QUEUE-ALL9E1-ADD B: 무기 초월 홈(weapon.transcendSlots = { [slot] = true } · 계승 때 생김). 옛 계승 무기 = 태초 상한 홈 중 열린 홈 → 초월 홈(B1과 같은 규칙) · 그 밖 = 없음.
+		for _, classState in pairs(type(data.classes) == "table" and data.classes or {}) do
+			local w = type(classState) == "table" and classState.weapon
+			if type(w) == "table" and w.grade == 7 and type(w.transcend) == "table" and w.transcendSlots == nil and type(w.slotUnlocked) == "table" then
+				local set = {}
+				for slot, cap in ipairs(GemData.slotGradeCap) do
+					if cap == "primordial" and w.slotUnlocked[slot] == true then
+						set[slot] = true
+					end
+				end
+				w.transcendSlots = set
+			end
+		end
+		data.version = 72
 	end
 
 	data.savedAt = data.savedAt or 0

@@ -175,6 +175,30 @@ function All10.evolutionCapBonus(bestStage)
 	return n * d.capBonusPerStep
 end
 
+-- ── QUEUE-ALL9E1-ADD 결정 7: 계승 뒤 골드 순서(안내 · 시뮬 같은 함수) ──
+-- s = { t = 초월 단계, tCap, adv = 고급 수련 단계, advCap, guard = 방어 수련, guardOn, guardMax, last = 직전 ④ 단계 구매 종류 } → "transcend" | "advanced" | "guard" | nil
+function All10.nextSpend(s)
+	local o = All10Data.spendOrder
+	local canT, canA = s.t < s.tCap, s.adv < s.advCap
+	local canG = s.guardOn and s.guard < (s.guardMax or All10Data.defenseTraining.maxLevel)
+	if canT and s.t < o.sureTo then
+		return "transcend"
+	elseif canA and s.adv < o.advancedTo then
+		return "advanced"
+	elseif canG and s.guard < o.guardTo then
+		return "guard"
+	elseif canT and canA then
+		return s.last == "transcend" and "advanced" or "transcend"
+	elseif canT then
+		return "transcend"
+	elseif canA then
+		return "advanced"
+	elseif canG then
+		return "guard"
+	end
+	return nil
+end
+
 -- ── 2-6 몹 곡선(D3 · D11) ──
 -- 전역 재조정(HP): 16,000부터 1.02^(kappa · (s − 16,000))
 function All10.hpCurveFactor(stage)
@@ -200,6 +224,18 @@ function All10.referenceBuild(stage, inheritStage)
 	local adv = All10.advancedCap(stage, true)
 	local span = math.max(1, d.monsterCurve.refEndStage - inheritStage)
 	local tLevel = d.transcendEnhance.baseMaxLevel * math.clamp(((stage or 0) - inheritStage) / span, 0, 1)
+	local ref = d.monsterCurve.refTranscend
+	if ref then -- QUEUE-ALL9E1 0-6: 중앙값 실제 궤적(스테이지 → 단계 · 직선 보간 · 끝 = 마지막 값)
+		local s = stage or 0
+		tLevel = s <= ref[1][1] and ref[1][2] or ref[#ref][2]
+		for i = 2, s > ref[1][1] and #ref or 0 do
+			if s < ref[i][1] then
+				local a, b = ref[i - 1], ref[i]
+				tLevel = a[2] + (b[2] - a[2]) * (s - a[1]) / (b[1] - a[1])
+				break
+			end
+		end
+	end
 	return d.inherit.weaponMultiplier * (1 + d.advancedTraining.perLevel * (adv - (d.advancedTraining.fromLevel - 1))) * All10.transcendMultiplierAt(tLevel) -- QUEUE-ALL9E1 0-4: 초월 강화 배수 = 게임과 같은 꼴(+6부터 곱)
 end
 

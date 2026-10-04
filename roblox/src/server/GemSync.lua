@@ -42,6 +42,13 @@ local function snapshot(player)
 		-- 23-4: 클라이언트가 매번 rebirthCount에서 잠금 여부를 다시 계산하지 않고 저장된
 		-- 값을 그대로 받는다(Gem.isSlotUnlocked, GemData.slotUnlockRequiredRebirth 주석 참고).
 		slotUnlocked = weapon.slotUnlocked,
+		transcendSlots = (function() -- QUEUE-ALL9E1-ADD B: 초월 홈(상한 · 테두리 - 클라 판정이 서버와 같은 인자) · 5칸 배열(띄엄 숫자 키는 Remote에서 깨진다)
+			local t = {}
+			for s = 1, 5 do
+				t[s] = type(weapon.transcendSlots) == "table" and weapon.transcendSlots[s] == true
+			end
+			return t
+		end)(),
 		gemInventory = PlayerProfile.getGemInventory(player),
 		rerollTickets = PlayerProfile.getOptionRerollTickets(player),
 		-- 보석칸 상한(gemSlots)은 아직 없다 = 이 키가 없으면 "상한 없음"(nil). 상한이 정해지면 InventorySync의 slots처럼 여기에 실어 보낸다 - 클라는 S.gemState().gemSlots로 읽는다.

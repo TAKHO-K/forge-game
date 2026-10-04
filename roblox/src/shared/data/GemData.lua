@@ -20,6 +20,9 @@ return {
 	-- 해금 조건은 나중에 설계한다(지시 원문). 지금은 태초에 못 미치는 임시값만 오름차순으로
 	-- 채워 뒀다 - 나중에 이 표의 값만 올리면 되고 코드(Gem.lua)는 손댈 필요가 없다.
 	slotGradeCap = { "primordial", "epic", "legendary", "relic", "ancient" },
+	-- QUEUE-ALL9E1-ADD B: 초월 홈(무기별 weapon.transcendSlots) 상한 = 이 등급. 계승 = 태초 상한 홈 전부 → 초월 홈(B1) · 환생 0회 계승자 = 고른 홈 1개(없으면 1번 홈을 새로 연다 - B3).
+	transcendSlotGrade = "transcendent",
+	transcendRim = { 216, 185, 110 }, -- 초월 홈 1px 바깥 선(금빛 균열 #D8B96E - 흑요석 #202127 테두리가 어두운 패널에서 안 보여서 · B6)
 
 	-- 슬롯이 열리는 데 필요한 환생 횟수(현재는 slot i = 환생 i회, 기존 동작 그대로 유지 -
 	-- "구조만 만들고 조건은 나중에 설계"라는 지시를 "지금 있는 값을 유지"로 해석했다. 전부

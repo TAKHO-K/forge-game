@@ -188,7 +188,7 @@ local function slotMark(slot)
 	if not gradeId then
 		return nil
 	end
-	return Gem.socketBlockReason(currentGemState.slotUnlocked, slot, gradeId) and "blocked" or "ok"
+	return Gem.socketBlockReason(currentGemState.slotUnlocked, slot, gradeId, currentGemState.transcendSlots) and "blocked" or "ok"
 end
 
 local function paintSlots()
@@ -200,6 +200,7 @@ local function paintSlots()
 			unlocked = Gem.isSlotUnlocked(currentGemState.slotUnlocked, slot),
 			filled = filled,
 			gemGrade = filled and gem.grade or nil,
+			capGrade = Gem.gradeCapForSlot(slot, currentGemState.transcendSlots), -- QUEUE-ALL9E1-ADD B6 테두리 = 홈 등급
 			mark = slotMark(slot),
 			selected = kind == "gemSlot" and value == slot,
 		})
@@ -213,7 +214,7 @@ local function paintCells()
 		local gem = currentGemState.gemInventory[index]
 		local mark
 		if armed and gem then
-			mark = Gem.socketBlockReason(currentGemState.slotUnlocked, armed, gem.grade) and "blocked" or "ok"
+			mark = Gem.socketBlockReason(currentGemState.slotUnlocked, armed, gem.grade, currentGemState.transcendSlots) and "blocked" or "ok"
 		end
 		return mark, selected == index, index > seenCount
 	end)
@@ -494,7 +495,7 @@ updateGemTab = function()
 	for slot = 1, Gem.slotCount do
 		local ui = slotRows[slot]
 		local unlocked = Gem.isSlotUnlocked(currentGemState.slotUnlocked, slot)
-		local capGradeId = Gem.gradeCapForSlot(slot)
+		local capGradeId = Gem.gradeCapForSlot(slot, currentGemState.transcendSlots) -- QUEUE-ALL9E1-ADD B: 초월 홈
 		local capInfo = ArmorData.grades[capGradeId]
 
 		if not unlocked then

@@ -121,7 +121,7 @@ function GemActions.create(deps)
 		if not gem then
 			return "not_found"
 		end
-		return Gem.socketBlockReason(state.slotUnlocked, slot, gem.grade)
+		return Gem.socketBlockReason(state.slotUnlocked, slot, gem.grade, state.transcendSlots)
 	end
 
 	-- 자동 장착 대상(가장 낮은 상한의 열린 홈). 반환: slot 또는 nil + 이유.
@@ -131,7 +131,7 @@ function GemActions.create(deps)
 		if not gem then
 			return nil, "not_found"
 		end
-		return Gem.autoSlot(state.slotUnlocked, state.gems, gem.grade)
+		return Gem.autoSlot(state.slotUnlocked, state.gems, gem.grade, state.transcendSlots)
 	end
 
 	-- 자동 장착이 밀어낼 보석 미리보기 글(S20d - PC 호버 툴팁 · 폰 [장착] 버튼 위 한 줄). 교체가 없으면(빈 홈으로 들어가거나 대상 홈이 없다) nil. 밀려난 보석은 보석칸으로 돌아온다(서버 규칙 그대로).
@@ -141,7 +141,7 @@ function GemActions.create(deps)
 		if not gem then
 			return nil
 		end
-		local replaced, slot = Gem.replacePreview(state.slotUnlocked, state.gems, gem.grade)
+		local replaced, slot = Gem.replacePreview(state.slotUnlocked, state.gems, gem.grade, state.transcendSlots)
 		if not replaced then
 			return nil
 		end

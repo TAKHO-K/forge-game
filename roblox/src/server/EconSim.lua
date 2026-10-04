@@ -923,7 +923,7 @@ local function tryInherit(state, profile, run)
 end
 
 -- 계승 뒤 골드: 가장 싼 것부터(초월 강화 칸 · 고급 수련 · 방어 수련 - 게임과 같은 가격 · 상한 함수 shared/All10)
-local function tryAll10Spend(state, run)
+local function tryAll10Spend(state, run, profile)
 	if not state.transcend or not All10.enabled() then
 		return
 	end
@@ -948,8 +948,17 @@ local function tryAll10Spend(state, run)
 				best, bestCost = "guard", c
 			end
 		end
+		if profile and profile.all10Order then -- QUEUE-ALL9E1-ADD 결정 7: 정해진 순서(그 항목을 살 골드가 모일 때까지 기다린다 - 화면 안내와 같은 함수)
+			best = All10.nextSpend({ t = state.transcend.level, tCap = All10.transcendCap(state.reach), adv = state.training.advanced, advCap = All10.advancedCap(state.reach, true),
+				guard = state.training.guard, guardOn = All10.defenseUnlocked(state.reach, true), guardMax = d.defenseTraining.maxLevel, last = state.lastAll10Buy })
+			bestCost = best == "transcend" and (All10.transcendBand(nextLevel) and All10.transcendAttemptCost(nextLevel, state.reach) or All10.transcendSlotCost(state.reach))
+				or best == "advanced" and All10.advancedCost(state.training.advanced, state.reach) or best == "guard" and All10.defenseCost(state.training.guard, state.reach) or nil
+		end
 		if not best or state.gold < bestCost then
 			return
+		end
+		if best == "transcend" or best == "advanced" then
+			state.lastAll10Buy = best
 		end
 		state.gold -= bestCost
 		state.spend[best] += bestCost
@@ -1333,7 +1342,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 			tryTrainWithGold(state) -- Q6
 			local transBefore = state.transcend and (state.transcend.level * 100 + state.transcend.slot + state.training.advanced * 10000) or -1
 			tryInherit(state, profile, run) -- QUEUE-ALL10
-			tryAll10Spend(state, run)
+			tryAll10Spend(state, run, profile)
 			local transChanged = (state.transcend and (state.transcend.level * 100 + state.transcend.slot + state.training.advanced * 10000) or -1) ~= transBefore
 			-- 아무것도 안 바뀐 점검이면 사냥 선택 · 보스 판정이 그대로라 다시 계산하지 않는다(긴 레벨에서 점검 수백 번 - 계산 시간).
 			if anyChange or state.gearMode ~= modeBefore or state.weaponLevel ~= weaponBefore or transChanged then
@@ -1345,7 +1354,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 	tryEnhanceWithGold(state, profile, rng)
 	tryTrainWithGold(state) -- Q6
 	tryInherit(state, profile, run) -- QUEUE-ALL10
-	tryAll10Spend(state, run)
+	tryAll10Spend(state, run, profile)
 	local levelBefore = state.level
 	state.level += 1
 	state.reclaimKills += kills

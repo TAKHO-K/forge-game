@@ -159,21 +159,24 @@ function TranscendView.build(parent, width, pad, footerHeight, buttonY, resultY,
 			refs.result.TextColor3 = Theme.color("danger")
 			return
 		end
+		local pick = prep.slotPick -- QUEUE-ALL9E1-ADD B3: 환생 0회 = 초월 홈 고르기 · 홈 없음 = 새 홈 / 환생 1회 이상 = 태초 홈 자동 전환(B1)
+		local slotLine = Text.get(pick == nil and "transcend.inherit.slotAuto" or pick.new and "transcend.inherit.slotNew" or "transcend.inherit.slotPickTitle")
 		local args = { level = tostring(prep.fromLevel), mult = ("%.2f"):format(prep.weaponMultiplier), n = tostring(prep.rewardGems),
-			mark = Text.get(prep.mark and "transcend.inherit.markYes" or "transcend.inherit.markNo") } -- 0-2: +29 = 증표 없음 안내
+			mark = Text.get(prep.mark and "transcend.inherit.markYes" or "transcend.inherit.markNo") .. "\n" .. slotLine } -- 0-2: +29 = 증표 없음 안내
 		Confirm.ask({ title = Text.get("transcend.inherit.title"), body = Text.get("transcend.inherit.confirm1", args), primaryText = Text.get("transcend.inherit.next"),
 			secondaryText = Text.get("transcend.inherit.cancel"), parentId = panelId }, function(step1)
 			if not step1 then
 				return
 			end
-			task.delay(0.5, function() -- 첫 확인 창의 닫힘 트윈이 끝난 뒤(트윈 중 open 실패 = 조용히 취소되던 것 - Play 실측)
+			local chosen = nil
+			local function finalConfirm()
 				Confirm.ask({ title = Text.get("transcend.inherit.confirm2Title"), body = Text.get("transcend.inherit.confirm2"), primaryText = Text.get("transcend.inherit.do"),
 					secondaryText = Text.get("transcend.inherit.cancel"), danger = true, parentId = panelId }, function(step2)
 					if not step2 then
 						return
 					end
 					task.spawn(function()
-						local res = call("confirm", prep.token)
+						local res = call("confirm", chosen and { token = prep.token, slot = chosen } or prep.token)
 						if res and res.ok then
 							TranscendView.wantInherit = false
 							refs.result.Text = Text.get("transcend.inherit.done")
@@ -186,6 +189,29 @@ function TranscendView.build(parent, width, pad, footerHeight, buttonY, resultY,
 						TranscendView.render(refs)
 					end)
 				end)
+			end
+			-- B3: 열린 홈이 있는 환생 0회 = 홈마다 [이 홈으로] / [다음 홈](끝이면 처음으로) · 고른 뒤 마지막 확인(되돌릴 수 없음)
+			local function ask(i)
+				local o = pick.open[i]
+				local gemName = o.gemGrade and Text.name(require(ReplicatedStorage.Shared.data.ArmorData).grades[o.gemGrade] and require(ReplicatedStorage.Shared.data.ArmorData).grades[o.gemGrade].displayName or o.gemGrade) or Text.get("transcend.inherit.slotEmpty")
+				Confirm.ask({ title = Text.get("transcend.inherit.slotPickTitle"), body = Text.get("transcend.inherit.slotPick", { slot = tostring(o.slot), gem = gemName }),
+					primaryText = Text.get("transcend.inherit.slotThis"), secondaryText = Text.get("transcend.inherit.slotNext"), parentId = panelId }, function(yes)
+					task.delay(0.5, function()
+						if yes then
+							chosen = o.slot
+							finalConfirm()
+						else
+							ask(i % #pick.open + 1)
+						end
+					end)
+				end)
+			end
+			task.delay(0.5, function() -- 첫 확인 창의 닫힘 트윈이 끝난 뒤(트윈 중 open 실패 = 조용히 취소되던 것 - Play 실측)
+				if pick and pick.open then
+					ask(1)
+				else
+					finalConfirm()
+				end
 			end)
 		end)
 	end

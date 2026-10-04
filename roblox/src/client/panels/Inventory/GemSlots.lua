@@ -8,6 +8,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local Gem = require(ReplicatedStorage.Shared.Gem)
+local GemData = require(ReplicatedStorage.Shared.data.GemData)
+local GradeColor = require(ReplicatedStorage.Shared.GradeColor)
 local HudIcons = require(script.Parent.Parent.Parent.HudIcons)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 local GemActions = require(script.Parent.GemActions)
@@ -134,8 +136,33 @@ function GemSlots.create(parent)
 
 	function self.paint(slot, view)
 		local chip = chips[slot]
-		local capColor = GemActions.gradeColor(Gem.gradeCapForSlot(slot))
+		local capGrade = view.capGrade or Gem.gradeCapForSlot(slot)
+		local capColor = GemActions.gradeColor(capGrade)
 		chip.button.BackgroundColor3 = UIColors.slot
+		-- QUEUE-ALL9E1-ADD B6: 초월 홈 = 테두리 초월 흑요석(어두운 패널에서 사라지므로 1px 밝은 금 바깥 선 - GemData.transcendRim)
+		local isT = capGrade == GemData.transcendSlotGrade
+		if isT and not chip.tRim then
+			local rim = Instance.new("Frame")
+			rim.Name = "TranscendRim"
+			rim.BackgroundTransparency = 1
+			rim.AnchorPoint = Vector2.new(0.5, 0.5)
+			rim.Position = UDim2.fromScale(0.5, 0.5)
+			rim.Size = UDim2.new(1, 4, 1, 4)
+			rim.ZIndex = chip.button.ZIndex
+			local corner = chip.button:FindFirstChildOfClass("UICorner")
+			if corner then
+				corner:Clone().Parent = rim
+			end
+			local s = Instance.new("UIStroke")
+			s.Thickness = 1
+			s.Color = Color3.fromRGB(GemData.transcendRim[1], GemData.transcendRim[2], GemData.transcendRim[3])
+			s.Parent = rim
+			rim.Parent = chip.button
+			chip.tRim = rim
+		end
+		if chip.tRim then
+			chip.tRim.Visible = isT and view.unlocked == true
+		end
 		if not view.unlocked then
 			chip.well.Visible = false
 			chip.dot.Visible = false
@@ -155,9 +182,9 @@ function GemSlots.create(parent)
 			if view.filled then
 				local color = GemActions.gradeColor(view.gemGrade)
 				chip.dot.BackgroundColor3 = color
-				chip.stroke.Color = color
+				chip.stroke.Color = GradeColor.of(capGrade) -- QUEUE-ALL9E1-ADD B4 · B6: 테두리 = 홈 등급 8색(박힌 보석 색은 점으로 - 홈 등급이 오르면 테두리만 바뀐다)
 			else
-				chip.stroke.Color = capColor
+				chip.stroke.Color = GradeColor.of(capGrade)
 				chip.stroke.Transparency = 0.25
 			end
 		end

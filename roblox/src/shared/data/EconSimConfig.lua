@@ -82,6 +82,7 @@ return {
 			targetKillSeconds = 1.8, minSurviveHits = 5, dpsEfficiency = 0.7, moveOverheadSeconds = 1.5, earlyTargetKillSeconds = nil,
 			bossDpsEfficiency = 0.6, bossKillLimitSeconds = 120, bossAttemptsPerClear = 2.0, bossOverheadSeconds = 30,
 			partySize = 1, partyExpBonus = false,
+			all10Order = true, -- QUEUE-ALL9E1-ADD 결정 7: 계승 뒤 골드 순서(All10.nextSpend)
 			enhanceTarget = 30, useProtection = false, rebirth = true, -- QUEUE-ALL9C 0-3: 게임에 강화 상한 규칙이 없다(골드만) - 옛 18(P2.5a ×30/25)은 남는 골드를 안 써 "처음부터 잉여"로 잡혔다
 			gearCheckMinutes = 60, gemReroll = false, gemRoll = 1.0,
 			tutorial = true, -- P3d G-d(사용자 결정): 견습 7단계를 무한 모드 앞에 돈다(EconSim.tutorialPhase) - 캐주얼 스테이지 20 도달 시간에 견습이 들어간다
@@ -91,6 +92,7 @@ return {
 			targetKillSeconds = 1.35, minSurviveHits = 4, dpsEfficiency = 0.85, moveOverheadSeconds = 1.0, earlyTargetKillSeconds = 0.8, gemCritSlots = { 1 },
 			bossDpsEfficiency = 0.75, bossKillLimitSeconds = 90, bossAttemptsPerClear = 1.5, bossOverheadSeconds = 20,
 			partySize = 1, partyExpBonus = false,
+			all10Order = true, -- QUEUE-ALL9E1-ADD 결정 7
 			enhanceTarget = 30, useProtection = false, rebirth = true, -- QUEUE-ALL9C 0-3: 옛 24
 			gearCheckMinutes = 20, gemReroll = true, gemRoll = 1.0,
 		},

@@ -16,6 +16,7 @@ local All10 = require(ReplicatedStorage.Shared.All10)
 local All10Data = require(ReplicatedStorage.Shared.data.All10Data)
 local Option = require(ReplicatedStorage.Shared.Option)
 local Gem = require(ReplicatedStorage.Shared.Gem)
+local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 
@@ -100,6 +101,36 @@ local function newGem(player, profile, source)
 	return gem
 end
 
+-- QUEUE-ALL9E1-ADD B1 · B3: 계승 때 초월 홈이 될 홈 - 반환: 홈 목록 { [slot] = true } · 새로 열 홈(nil = 없음) · 이유(nil = 가능)
+--   환생 1회 이상 = 태초 상한 홈(GemData.slotGradeCap == 태초) 중 열린 홈 전부(B1 - 박힌 보석 그대로).
+--   환생 0회 = 고른 홈 1개(choice = 열린 홈 번호 - 서버 검증 · 클라 값 신뢰 안 함) · 열린 홈이 없으면 1번 홈을 새로 연다(B3 - choice 무시).
+function TranscendService.transcendSlotsFor(classState, choice)
+	local weapon = classState.weapon
+	local open = {}
+	for s = 1, Gem.slotCount do
+		if Gem.isSlotUnlocked(weapon.slotUnlocked, s) then
+			table.insert(open, s)
+		end
+	end
+	if (tonumber(classState.rebirthCount) or 0) > 0 then
+		local set = {}
+		for _, s in ipairs(open) do
+			if GemData.slotGradeCap[s] == "primordial" then
+				set[s] = true
+			end
+		end
+		return set, nil, nil
+	end
+	if #open == 0 then
+		return { [1] = true }, 1, nil
+	end
+	local c = type(choice) == "number" and choice == math.floor(choice) and choice or nil
+	if not c or not table.find(open, c) then
+		return nil, nil, "bad_slot"
+	end
+	return { [c] = true }, nil, nil
+end
+
 local function findGem(profile, gemId)
 	for i, gem in ipairs(profile.transcendGems.list) do
 		if gem.id == gemId then
@@ -122,6 +153,21 @@ local function announceLocal(player)
 end
 
 -- ── ① 계승 ──
+-- B3 화면 표: nil = 고를 것 없음(환생 1회 이상 - B1 자동) · { open = { 열린 홈 번호 · 박힌 보석 등급 } } · { new = 1 }(새 홈)
+function TranscendService.slotPickInfo(classState)
+	if (tonumber(classState.rebirthCount) or 0) > 0 then
+		return nil
+	end
+	local open = {}
+	for s = 1, Gem.slotCount do
+		if Gem.isSlotUnlocked(classState.weapon.slotUnlocked, s) then
+			local g = classState.weapon.gems[s]
+			table.insert(open, { slot = s, gemGrade = type(g) == "table" and g.grade or nil })
+		end
+	end
+	return #open > 0 and { open = open } or { new = 1 }
+end
+
 function TranscendService.preview(player)
 	local profile, classState = stateOf(player)
 	if not classState then
@@ -142,6 +188,7 @@ function TranscendService.preview(player)
 		rewardGems = d.rewardGems, titleId = d.titleId,
 		mark = All10.inheritGivesMark(weapon), unreborn = (tonumber(classState.rebirthCount) or 0) == 0, -- 0-2: +30 증표 · 히든 칭호(확인 창 안내)
 		stage = classState.stageProgress.infiniteBest,
+		slotPick = TranscendService.slotPickInfo(classState), -- QUEUE-ALL9E1-ADD B3: 환생 0회 = 고를 홈(열린 홈 목록 · 없으면 새 홈)
 	}
 end
 
@@ -156,7 +203,7 @@ function TranscendService.prepare(player)
 	return view
 end
 
-function TranscendService.confirm(player, token)
+function TranscendService.confirm(player, token, slotChoice)
 	local entry = tokens[player]
 	tokens[player] = nil -- 한 번 쓰면 끝(같은 토큰 재전송 = 거절)
 	if busy[player] then
@@ -175,6 +222,11 @@ function TranscendService.confirm(player, token)
 	if require(script.Parent.BossEncounter).classChangeBlocked(player) then
 		return { ok = false, why = "in_boss" } -- 리뷰: 보스전 중 계승 = 거절(전투 중 즉시 강해짐 · 0-2 직업 고정과 같은 원칙)
 	end
+	local tSlots, openSlot, slotWhy = TranscendService.transcendSlotsFor(classState, slotChoice) -- QUEUE-ALL9E1-ADD B1 · B3(바꾸기 전에 검증)
+	if slotWhy then
+		tokens[player] = entry -- 잘못된 홈 선택 = 토큰은 그대로(다시 고르게)
+		return { ok = false, why = slotWhy }
+	end
 	-- 지급 전 상태(되돌림용) - 리뷰 높음: 무기 표 전체가 아니라 "이번에 바꾼 칸"만 기억한다(저장 대기 중 보석 교체 · 재련 등 다른 변경을 덮지 않게)
 	local d = All10Data.inherit
 	local CosmeticService = require(script.Parent.CosmeticService)
@@ -182,6 +234,7 @@ function TranscendService.confirm(player, token)
 	local unreborn = (tonumber(classState.rebirthCount) or 0) == 0 -- 0-2: 계승 순간 그 직업 환생 0회 = 히든 칭호
 	local before = {
 		grade = classState.weapon.grade, level = classState.weapon.level, transcend = classState.weapon.transcend, inherit = classState.transcendInherit,
+		transcendSlots = classState.weapon.transcendSlots, openedSlot = openSlot and classState.weapon.slotUnlocked[openSlot],
 		hadTitle = PlayerProfile.hasTitle(player, d.titleId),
 		hadUnreborn = PlayerProfile.hasTitle(player, d.unrebornTitleId),
 		hadMark = CosmeticService.ownsItem(player, d.markItemId),
@@ -191,6 +244,10 @@ function TranscendService.confirm(player, token)
 	weapon.grade = d.toGrade
 	weapon.level = d.resultLevel -- 0-2: 어디서 왔든 같은 초월 +0(강화 줄 +30 몫)
 	weapon.transcend = { level = 0, slot = 0, fails = 0 }
+	weapon.transcendSlots = tSlots -- B1 · B3: 초월 홈(박힌 보석은 그대로 - 상한 · 테두리만)
+	if openSlot then
+		weapon.slotUnlocked[openSlot] = true -- B3: 홈이 하나도 없던 환생 0회 = 새 홈 1개
+	end
 	-- 계승 스테이지 = 계정 최고(리뷰: 진행 낮은 직업으로 계승해 돌파 기준을 낮추는 이득 방지 - 비용과 같은 기준)
 	classState.transcendInherit = { stage = math.max(1, math.floor(tonumber(PlayerProfile.getAccountBestStage(player)) or 1)), at = os.time(), fromGrade = fromGrade, fromLevel = fromLevel, rebirth = tonumber(classState.rebirthCount) or 0 }
 	if not before.hadTitle then
@@ -220,6 +277,10 @@ function TranscendService.confirm(player, token)
 		weapon.grade = before.grade
 		weapon.level = before.level
 		weapon.transcend = before.transcend
+		weapon.transcendSlots = before.transcendSlots
+		if openSlot then
+			weapon.slotUnlocked[openSlot] = before.openedSlot
+		end
 		classState.transcendInherit = before.inherit
 		for _, id in ipairs(rewards) do
 			local gem, index = findGem(profile, id)
@@ -403,8 +464,14 @@ function TranscendService.equipGem(player, gemId)
 	if gem.socket then
 		return { ok = false, why = "socketed" }
 	end
-	local slot = TranscendService.GEM_SLOT
 	local weapon = classState.weapon
+	local slot = TranscendService.GEM_SLOT
+	for s = 1, Gem.slotCount do -- QUEUE-ALL9E1-ADD B: 초월 홈 중 가장 앞(환생 0회 계승자 = 고른 홈)
+		if type(weapon.transcendSlots) == "table" and weapon.transcendSlots[s] then
+			slot = s
+			break
+		end
+	end
 	if not Gem.isSlotUnlocked(weapon.slotUnlocked, slot) then
 		return { ok = false, why = "slot_locked" }
 	end
@@ -540,7 +607,11 @@ function TranscendService.handle(player, action, a)
 	elseif action == "prepare" then
 		result = TranscendService.prepare(player)
 	elseif action == "confirm" then
-		result = TranscendService.confirm(player, a)
+		local tok, slotChoice = a, nil
+		if type(a) == "table" then -- QUEUE-ALL9E1-ADD B3: { token, slot }
+			tok, slotChoice = a.token, tonumber(a.slot)
+		end
+		result = TranscendService.confirm(player, tok, slotChoice)
 	elseif action == "enhance" then
 		result = TranscendService.payEnhance(player)
 	elseif action == "advanced" then

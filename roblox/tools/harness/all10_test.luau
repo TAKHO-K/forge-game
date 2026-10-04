@@ -35,7 +35,7 @@ local ok, err = pcall(function()
 	-- 돌파 계수 = 기준 빌드 × (1,500 구간 1/2.4) - 진행 속도 ∝ 상대 힘이라 기준 빌드인 사람은 구간 안 2.4배 · 뒤 정상
 	local S0 = 10000
 	local ref0, ref750, ref1500 = All10.referenceBuild(10000, S0), All10.referenceBuild(10750, S0), All10.referenceBuild(11500, S0)
-	local wantRef750 = Data.inherit.weaponMultiplier * (1 + Data.advancedTraining.perLevel * 7) * All10.transcendMultiplierAt(Data.transcendEnhance.baseMaxLevel * 750 / (mc.refEndStage - S0))
+	local wantRef750 = Data.inherit.weaponMultiplier * (1 + Data.advancedTraining.perLevel * 7) * All10.transcendMultiplierAt(mc.refTranscend and mc.refTranscend[1][2] or Data.transcendEnhance.baseMaxLevel * 750 / (mc.refEndStage - S0)) -- QUEUE-ALL9E1 0-6: 중앙값 궤적 표(10,750 = 첫 점 앞 = 0단계)
 	check("기준 빌드: 계승 지점 = ×1.25 · 10,750 = 1.25 × (1 + 고급 7%) × (1 + 초월 기대치) · 스테이지에 단조 증가", near(ref0, Data.inherit.weaponMultiplier) and near(ref750, wantRef750, 1e-12) and ref1500 > ref750, ("%.4f · %.4f"):format(ref0, ref750))
 	check("돌파 계수: 구간 안 = 기준 빌드 ÷ 2.4 · 1,500부터 = 기준 빌드(정상 복귀) · 계승 전 · 계승 안 함 = 기준 빌드/1", near(All10.breakFactor(10750, S0), ref750 / mc.breakRatio, 1e-12)
 		and near(All10.breakFactor(11500, S0), ref1500, 1e-12) and near(All10.breakFactor(9000, S0), All10.referenceBuild(9000, S0) / mc.breakRatio, 1e-12) and All10.breakFactor(12000, nil) == 1)
@@ -107,7 +107,7 @@ local okS, errS = pcall(function()
 	local SaveSystem, SaveConfig, A, All10 = MODS.SaveSystem, MODS.SaveConfig, MODS.All10Data, MODS.All10
 	ATTR.All10Economy = true
 	local fresh = SaveSystem.migrate({})
-	check("v70 새 계정: training.advanced 50 · guard 0 · transcendGems 빈 목록 · 무기 transcend 없음 · 계승 기록 없음", SaveConfig.saveVersion == 71 and fresh.version == 71
+	check("v70 새 계정: training.advanced 50 · guard 0 · transcendGems 빈 목록 · 무기 transcend 없음 · 계승 기록 없음", SaveConfig.saveVersion == 72 and fresh.version == 72
 		and fresh.training.advanced == 50 and fresh.training.guard == 0 and type(fresh.transcendGems.list) == "table" and #fresh.transcendGems.list == 0 and fresh.transcendGems.seq == 0
 		and fresh.classes.bow.weapon.transcend == nil and fresh.classes.bow.transcendInherit == nil)
 	local old = SaveSystem.migrate({})
@@ -115,7 +115,7 @@ local okS, errS = pcall(function()
 	old.training.advanced, old.training.guard, old.transcendGems = nil, nil, nil
 	old.gold = 12345
 	local m = SaveSystem.migrate(old)
-	check("v69 → v71: 빈 칸 채움 · 다른 값 그대로(골드 · 수련 공격) · 멱등", m.version == 71 and m.training.advanced == 50 and m.training.guard == 0 and type(m.transcendGems) == "table"
+	check("v69 → v72: 빈 칸 채움 · 다른 값 그대로(골드 · 수련 공격) · 멱등", m.version == 72 and m.training.advanced == 50 and m.training.guard == 0 and type(m.transcendGems) == "table"
 		and m.gold == 12345 and m.training.attack == 0 and SaveSystem.migrate(m).training.advanced == 50)
 	local bad = SaveSystem.migrate({})
 	bad.training.advanced, bad.training.guard = 0 / 0, "12"
@@ -283,6 +283,96 @@ local okT, errT = pcall(function()
 	local rbOk = PP.rebirth(pl8)
 	check("환생 0회 계승 뒤 환생 = 초월(7) · 초월 강화 그대로(등급을 회차로 덮지 않음) · 1번 홈 지급 보석", rbOk and cs8.rebirthCount == 1 and cs8.weapon.grade == 7 and cs8.weapon.transcend ~= nil
 		and type(cs8.weapon.gems[1]) == "table" and cs8.weapon.gems[1].transcendGemId == nil)
+	-- ══ QUEUE-ALL9E1-ADD 블록 B 홈(소켓) 규칙 ══
+	local Gem, GemData = MODS.Gem, MODS.GemData
+	local function gemOf(grade, lv) return { grade = grade, itemLevel = lv or 50, option = { id = "attackPercent", roll = 0.5 } } end
+	-- B1 환생 계승: 태초 상한 홈(1번) → 초월 홈 · 박힌 보석 3개(1 · 2 · 3) 그대로
+	local pB1, prB1, csB1 = fresh(6, 30)
+	csB1.weapon.gems = { gemOf("primordial"), gemOf("epic"), gemOf("legendary"), false, false }
+	local g1, g2, g3 = csB1.weapon.gems[1], csB1.weapon.gems[2], csB1.weapon.gems[3]
+	local rB1 = TS.confirm(pB1, TS.prepare(pB1).token)
+	check("B1 환생 계승: 태초 홈(1번) → 초월 홈 · 박힌 보석 3개 그대로(같은 표) · 2 ~ 5번 상한 그대로", rB1.ok and csB1.weapon.transcendSlots[1] == true and csB1.weapon.transcendSlots[2] == nil
+		and csB1.weapon.gems[1] == g1 and csB1.weapon.gems[2] == g2 and csB1.weapon.gems[3] == g3
+		and Gem.gradeCapForSlot(1, csB1.weapon.transcendSlots) == "transcendent" and Gem.gradeCapForSlot(2, csB1.weapon.transcendSlots) == "epic")
+	-- B3 환생 0회 · 홈 0개 → 새 초월 홈 1개(1번)
+	local pB3, prB3, csB3 = fresh(0, 29)
+	csB3.rebirthCount = 0
+	csB3.weapon.slotUnlocked = { false, false, false, false, false }
+	csB3.weapon.gems = { false, false, false, false, false }
+	local preB3 = TS.prepare(pB3)
+	local rB3 = TS.confirm(pB3, preB3.token, 4) -- 홈이 없으면 고른 값은 무시(새 홈 1번)
+	check("B3 환생 0회 · 홈 0개: 확인 표 slotPick.new · 새 홈 1번 열림 · 초월 홈 = 1번만", preB3.slotPick and preB3.slotPick.new == 1 and rB3.ok and csB3.weapon.slotUnlocked[1] == true
+		and csB3.weapon.slotUnlocked[2] == false and csB3.weapon.transcendSlots[1] == true and next(csB3.weapon.transcendSlots, 1) == nil)
+	-- B3 환생 0회 · 홈 2개 → 두 번째 고름 · 잘못된 값(닫힌 홈 · 소수 · 문자 · 없음) 거부 · 토큰 유지
+	local pB3b, prB3b, csB3b = fresh(0, 29)
+	csB3b.rebirthCount = 0
+	csB3b.weapon.slotUnlocked = { true, true, false, false, false }
+	csB3b.weapon.gems = { gemOf("primordial"), gemOf("epic"), false, false, false }
+	local preB3b = TS.prepare(pB3b)
+	local bad1 = TS.confirm(pB3b, preB3b.token, 3)
+	local bad2 = TS.confirm(pB3b, preB3b.token, 1.5)
+	local bad3 = TS.handle(pB3b, "confirm", { token = preB3b.token, slot = "x" })
+	local bad4 = TS.confirm(pB3b, preB3b.token, nil)
+	local untouched = csB3b.weapon.grade == 0 and csB3b.weapon.transcendSlots == nil and csB3b.weapon.transcend == nil
+	local okB3b = TS.handle(pB3b, "confirm", { token = preB3b.token, slot = 2 })
+	check("B3 환생 0회 · 홈 2개: 고를 목록 = 1 · 2 · 닫힌 3 · 1.5 · 'x' · 없음 = bad_slot(무기 그대로 · 토큰 유지) · 2번 고름 = 초월 홈 2번 · 보석 그대로",
+		#preB3b.slotPick.open == 2 and bad1.why == "bad_slot" and bad2.why == "bad_slot" and bad3.why == "bad_slot" and bad4.why == "bad_slot" and untouched
+		and okB3b.ok and csB3b.weapon.transcendSlots[2] == true and csB3b.weapon.transcendSlots[1] == nil and csB3b.weapon.gems[2].grade == "epic", tostring(okB3b.why))
+	-- 초월 보석 장착 = 초월 홈(고른 2번) · 초월 홈 상한 = 태초 보석도 들어감 · 일반 홈 상한 그대로
+	local gidB = prB3b.transcendGems.list[1].id
+	csB3b.weapon.slotUnlocked[2] = true
+	local eqB = TS.equipGem(pB3b, gidB)
+	check("B4 초월 보석 → 초월 홈(2번) · 원래 영웅 보석 → 보석칸(사라지지 않음) · canSocket: 초월 홈 = 태초 · 초월 O / 1번(태초 상한) 초월 X", eqB.ok and eqB.slot == 2
+		and csB3b.weapon.gems[2].transcendGemId == gidB and Gem.canSocket("primordial", 2, csB3b.weapon.transcendSlots) and Gem.canSocket("transcendent", 2, csB3b.weapon.transcendSlots)
+		and not Gem.canSocket("transcendent", 1, csB3b.weapon.transcendSlots) and csB3b.gemInventory[#csB3b.gemInventory].grade == "epic")
+	-- B2 저장 실패 되돌림: 초월 홈 · 새로 연 홈도 원래대로
+	local pBf, prBf, csBf = fresh(0, 29)
+	csBf.rebirthCount = 0
+	csBf.weapon.slotUnlocked = { false, false, false, false, false }
+	csBf.weapon.gems = { false, false, false, false, false }
+	saveOk = false
+	local fBf = TS.confirm(pBf, TS.prepare(pBf).token)
+	saveOk = true
+	check("B 저장 실패 = 초월 홈 · 새로 연 홈까지 되돌림(무기 0 · +29 · 홈 닫힘)", not fBf.ok and csBf.weapon.transcendSlots == nil and csBf.weapon.slotUnlocked[1] == false and csBf.weapon.grade == 0 and csBf.weapon.level == 29)
+	-- B5 박힌 보석 강화(재련 = 박힌 채 itemLevel만 오름 · 뺐다 넣기 없음) · 효과 즉시 다시 계산(서버 공격 % 합 = 화면 같은 함수)
+	local pB5, prB5, csB5 = fresh(6, 30)
+	csB5.weapon.gems[2] = gemOf("epic", 10)
+	local before5 = PP.getAttackPercentBonus and PP.getAttackPercentBonus(pB5) or nil
+	table.insert(csB5.gemInventory, gemOf("epic", 400))
+	prB5.gemDust = 1e12
+	local ok5 = PP.refineGem(pB5, "slot", 2, #csB5.gemInventory)
+	local after5 = PP.getAttackPercentBonus and PP.getAttackPercentBonus(pB5) or nil
+	check("B5 박힌 보석 재련 = 박힌 채 itemLevel 10 → 400 · 같은 표(뺐다 넣기 없음) · 공격 % 합 즉시 증가", ok5 and csB5.weapon.gems[2].itemLevel == 400 and csB5.weapon.gems[2].grade == "epic"
+		and (before5 == nil or after5 > before5), ("%s → %s"):format(tostring(before5), tostring(after5)))
+	-- B7 v70 · v71 저장 읽기: 옛 계승 무기 = 태초 상한 열린 홈 → 초월 홈 · 계승 안 한 무기 = 없음 · 멱등 · 손상 값 정리
+	local old = SaveSystem.migrate({})
+	old.version = 70
+	old.classes.bow.weapon.grade, old.classes.bow.weapon.transcend = 7, { level = 3, slot = 2 }
+	old.classes.bow.weapon.slotUnlocked = { true, true, false, false, false }
+	old.classes.healer.weapon.slotUnlocked = { true, false, false, false, false }
+	local m7 = SaveSystem.migrate(old)
+	local m7b = SaveSystem.migrate(m7)
+	local bad7 = SaveSystem.migrate({})
+	bad7.classes.bow.weapon.grade, bad7.classes.bow.weapon.transcend = 7, { level = 1, slot = 0 }
+	bad7.classes.bow.weapon.transcendSlots = { ["2"] = true, [9] = true, x = 1 }
+	local s7 = SaveSystem.migrate(bad7)
+	check("B7 v70 → v72: 옛 계승 무기 초월 홈 = {1}(태초 상한 · 열림) · 다른 직업 없음 · fails 0 · 멱등 · 손상 {'2', 9, x} → {2} + 보관 칸", m7.version == 72 and m7.classes.bow.weapon.transcendSlots[1] == true
+		and m7.classes.bow.weapon.transcendSlots[2] == nil and m7.classes.healer.weapon.transcendSlots == nil and m7.classes.bow.weapon.transcend.fails == 0 and m7b.classes.bow.weapon.transcendSlots[1] == true
+		and s7.classes.bow.weapon.transcendSlots[2] == true and s7.classes.bow.weapon.transcendSlots[9] == nil and SaveSystem.isValidProfile(s7))
+	-- 홈 판정 서버 = 화면: 서버 표(띄엄 키) vs GemSync 5칸 배열이 같은 결과(5홈 × 8등급)
+	local same = true
+	local map, arr = { [2] = true }, { false, true, false, false, false }
+	for s = 1, 5 do
+		for _, gid in ipairs(MODS.ArmorData.gradeOrder) do
+			same = same and Gem.canSocket(gid, s, map) == Gem.canSocket(gid, s, arr) and Gem.socketBlockReason({ true, true, true, true, true }, s, gid, map) == Gem.socketBlockReason({ true, true, true, true, true }, s, gid, arr)
+		end
+	end
+	check("B 홈 판정 서버(저장 모양) = 화면(GemSync 5칸 배열) - 5홈 × 8등급 · 상한 이하만 · 초월 홈 없으면 옛 규칙 그대로", same and Gem.canSocket("legendary", 2, nil) == false and Gem.canSocket("primordial", 1, nil))
+	-- B2 장비가 사라지는 경로 조사(구조 증명): 보석은 무기 5홈에만 · 가방 장비(방어구)에는 홈 칸이 없다 · 판매 · 분해 · 일괄 · 자동 정리는 가방 칸 번호만 받는다(무기는 대상 아님)
+	local inv = SaveSystem.migrate({})
+	local hasGemField = false
+	for _, item in ipairs(inv.inventory or {}) do if item.gems then hasGemField = true end end
+	check("B2 구조: 보석이 박히는 곳 = 무기 5홈뿐(가방 장비에 gems 칸 없음 · 판매/분해 함수 = 가방 번호) → 장비가 사라지며 보석이 사라지는 경로 0(조사 표 = 보고서)", not hasGemField and type(inv.classes.bow.weapon.gems) == "table" and #inv.classes.bow.weapon.gems == 5)
 	-- ② 초월 강화: 칸 10개 = +1 · 칸 가격 · 골드 부족 = 변화 없음 · +20 = max
 	local gold0 = prof.gold
 	local slotCost = All10.transcendSlotCost(PP.getAccountBestStage(pl))

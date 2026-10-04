@@ -16,7 +16,12 @@ Gem.slotCount = #GemData.slotGradeCap -- 5
 -- 슬롯 i가 받아들이는 최고 등급(23-4, GemData.slotGradeCap 주석 참고) - 더 이상 "그 슬롯의
 -- 유일한 등급"이 아니라 상한이다. 이 상한 자체가 그 슬롯에 열릴 때 확정 지급되는 보석의
 -- 등급이기도 하다(Gem.buildGrantedGem).
-function Gem.gradeCapForSlot(slot)
+-- QUEUE-ALL9E1-ADD B1 · B3 · B4: transcendSlots(선택 · 무기별 weapon.transcendSlots = { [slot] = true }) = 초월 홈 - 상한이 초월(박힌 보석은 그대로 · 테두리 색만 바뀜).
+--   이 인자를 받는 판정(canSocket · socketBlockReason · autoSlot · replacePreview)은 서버 · 클라 화면이 같은 값을 넘긴다(GemSync 스냅샷 transcendSlots).
+function Gem.gradeCapForSlot(slot, transcendSlots)
+	if type(transcendSlots) == "table" and transcendSlots[slot] == true then
+		return GemData.transcendSlotGrade
+	end
 	return GemData.slotGradeCap[slot]
 end
 
@@ -38,8 +43,8 @@ end
 
 -- 보석 gradeId가 slot에 꽂힐 수 있는가 - "그 이하 등급은 전부 가능, 더 높은 등급은 불가"
 -- (23-4 지시 그대로, ArmorData.gradeOrder의 순서를 그대로 비교 기준으로 쓴다).
-function Gem.canSocket(gemGradeId, slot)
-	local capIndex = armorGradeIndex(Gem.gradeCapForSlot(slot))
+function Gem.canSocket(gemGradeId, slot, transcendSlots)
+	local capIndex = armorGradeIndex(Gem.gradeCapForSlot(slot, transcendSlots))
 	local gemIndex = armorGradeIndex(gemGradeId)
 	return capIndex ~= nil and gemIndex ~= nil and gemIndex <= capIndex
 end
@@ -59,11 +64,11 @@ end
 
 -- S20c: 보석 gradeId를 slot에 끼울 수 없는 이유(nil = 끼울 수 있다). PlayerProfile.equipGem과 같은 순서(해금 → 등급 상한)라 클라가 미리 보여 주는 판정이 서버와 갈리지 않는다.
 -- 서버 규칙은 그대로이고(equipGem이 다시 검증한다) 이 함수는 그 규칙을 읽기만 한다.
-function Gem.socketBlockReason(slotUnlocked, slot, gradeId)
+function Gem.socketBlockReason(slotUnlocked, slot, gradeId, transcendSlots)
 	if not Gem.isSlotUnlocked(slotUnlocked, slot) then
 		return "slot_locked"
 	end
-	if not Gem.canSocket(gradeId, slot) then
+	if not Gem.canSocket(gradeId, slot, transcendSlots) then
 		return "grade_too_high"
 	end
 	return nil
@@ -71,14 +76,14 @@ end
 
 -- S20c: 자동 장착 대상 = 끼울 수 있는 열린 홈 중 등급 상한이 가장 낮은 홈(상한이 같으면 번호가 작은 쪽). 빈 홈이 있으면 그 중에서 먼저 고른다(지금 규칙에서는 홈이 열리면 바로 채워져
 -- 빈 홈이 없다 - 옛 개발 계정만 예외). 반환: slot, 또는 nil + 이유("no_slot_open" = 열린 홈이 없다 · "grade_too_high" = 열린 홈 중 이 등급을 받는 곳이 없다).
-function Gem.autoSlot(slotUnlocked, gems, gradeId)
+function Gem.autoSlot(slotUnlocked, gems, gradeId, transcendSlots)
 	local bestSlot, bestKey
 	local anyOpen = false
 	for slot = 1, Gem.slotCount do
 		if Gem.isSlotUnlocked(slotUnlocked, slot) then
 			anyOpen = true
-			if Gem.canSocket(gradeId, slot) then
-				local key = (Gem.isFilled(gems, slot) and 1000 or 0) + armorGradeIndex(Gem.gradeCapForSlot(slot)) * 10 + slot
+			if Gem.canSocket(gradeId, slot, transcendSlots) then
+				local key = (Gem.isFilled(gems, slot) and 1000 or 0) + armorGradeIndex(Gem.gradeCapForSlot(slot, transcendSlots)) * 10 + slot
 				if not bestKey or key < bestKey then
 					bestSlot, bestKey = slot, key
 				end
@@ -93,8 +98,8 @@ end
 
 -- S20d: 자동 장착으로 밀려날 보석 미리보기. 자동 장착 대상 홈(Gem.autoSlot)이 이미 차 있으면 그 보석 - 서버 규칙상 장착은 항상 "교체"라 밀려난 보석은 보석칸으로 돌아온다(사라지지 않는다).
 -- 반환: 밀려날 보석 표(gems[slot]), slot. 빈 홈으로 들어가거나(교체 없음) 대상 홈이 없으면 nil.
-function Gem.replacePreview(slotUnlocked, gems, gradeId)
-	local slot = Gem.autoSlot(slotUnlocked, gems, gradeId)
+function Gem.replacePreview(slotUnlocked, gems, gradeId, transcendSlots)
+	local slot = Gem.autoSlot(slotUnlocked, gems, gradeId, transcendSlots)
 	if slot and Gem.isFilled(gems, slot) then
 		return gems[slot], slot
 	end

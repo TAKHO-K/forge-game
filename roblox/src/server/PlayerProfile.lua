@@ -1398,7 +1398,7 @@ function PlayerProfile.equipGem(player, slot, gemInventoryIndex)
 	if not pending then
 		return false, "not_found"
 	end
-	if not Gem.canSocket(pending.grade, slot) then
+	if not Gem.canSocket(pending.grade, slot, classState.weapon.transcendSlots) then -- QUEUE-ALL9E1-ADD B: 초월 홈 상한
 		return false, "grade_too_high"
 	end
 
