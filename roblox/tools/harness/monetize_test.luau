@@ -571,4 +571,140 @@ local ok2, err2 = pcall(function()
 	end
 end)
 if not ok2 then print("[MON] 에러 " .. tostring(err2)) end
+-- QUEUE-ALL10 0-1(AUDIT1 즉시-1): 영수증 저장 실패 주입 × 상품 종류 → 최종 지급 정확히 1회(같은 서버 재시도 · 자동저장 끼어듦 · 다른 서버 재접속)
+--   "DataStore" = stored(성공한 저장의 깊은 사본) · 다른 서버 = stored를 새 가짜 Player에 로드(같은 UserId) · 자동저장 = 실패 사이에 성공하는 저장(옛 결함: 영수증 없는 지급이 남음)
+local ok3, err3 = pcall(function()
+	local SaveSystem, PlayerProfile, QuestService = MODS.SaveSystem, MODS.PlayerProfile, MODS.QuestService
+	local Data, Mon, MS = MODS.MonetizationData, MODS.Monetization, MODS.MonetizationService
+	local SeasonData = MODS.SeasonPassData
+	local function deep(t)
+		if type(t) ~= "table" then return t end
+		local o = {}
+		for k, v in pairs(t) do o[k] = deep(v) end
+		return o
+	end
+	local function makePlayer(uid)
+		local at = {}
+		return setmetatable({ Name = "Buyer" .. uid, UserId = uid, Parent = true }, { __index = function(_, k)
+			if k == "SetAttribute" then return function(_, n, v) at[n] = v end end
+			if k == "GetAttribute" then return function(_, n) return at[n] end end
+			if k == "FindFirstChild" or k == "WaitForChild" or k == "FindFirstChildOfClass" then return function() return nil end end
+			if k == "IsA" then return function() return false end end
+			if k == "GetAttributeChangedSignal" then return function() return { Connect = function() end } end end
+			return nil
+		end })
+	end
+	local function load(uid, prof)
+		local pl = makePlayer(uid)
+		PLAYERS[uid] = pl
+		PlayerProfile.init(pl, prof)
+		QuestService.onLoaded(pl)
+		return pl
+	end
+	local KEYS = { "theme_frost", "bundle_blacksmith", "bundle_owned", "season_premium", "pass_skip5", "starter_pack" }
+	local ids = { theme_frost = 9501, bundle_blacksmith = 9502, bundle_owned = 9502, season_premium = 9503, pass_skip5 = 9504, starter_pack = 9505 }
+	for key, id in pairs(ids) do
+		if Data.products[key] then
+			Data.products[key].productId = id
+			MS.validProducts[key] = true
+		end
+	end
+	-- 지급 결과 요약(비교용): 치장 소유 · 유료 줄 · 가방 출처 · 토큰 · 건너뛴 칸 · 영수증
+	local function snap(pl)
+		local s, q = PlayerProfile.getMonetizationState(pl), PlayerProfile.getQuestState(pl)
+		return { frost = s.cosmetics.themes.frost == true, anvil = s.cosmetics.themes.anvil == true, slime = s.cosmetics.gliderSkins.slimeParachute == true,
+			hammer = s.cosmetics.items.goldenHammer == true, premium = s.seasonPass.premium == true, starter = s.purchases.bagSources.starter == true,
+			edge = s.cosmetics.items.starterEdge == true, star = s.cosmetics.themes.starterStar == true, shard = q.currencies.sparkleShard or 0,
+			skip = s.seasonPass.skipBought or 0, exp = q.currencies.passExp or 0, receipts = #s.purchases.receipts }
+	end
+	local per = SeasonData.expPerTier
+	local function expected(key, b)
+		local e = table.clone(b)
+		if key == "theme_frost" then e.frost = true
+		elseif key == "bundle_blacksmith" then e.anvil, e.slime, e.hammer = true, true, true
+		elseif key == "bundle_owned" then e.shard = b.shard + (Mon.tokenPriceForRobux(Data, Data.products.bundle_blacksmith.robux) or 0)
+		elseif key == "season_premium" then e.premium = true
+		elseif key == "pass_skip5" then e.skip, e.exp = b.skip + 5, b.exp + 5 * per
+		elseif key == "starter_pack" then e.starter, e.edge, e.star = true, true, true end
+		e.receipts = b.receipts + 1
+		return e
+	end
+	local function same(a, b)
+		for k, v in pairs(a) do if b[k] ~= v then return false, k end end
+		return true
+	end
+	local PATTERNS = { "ok", "fail1", "fail2", "fail1_autosave", "fail1_rejoin", "fail1_autosave_rejoin", "fail1_crash_rejoin", "granted_recall_rejoin" }
+	local rows, allOk, n = {}, true, 0
+	for ki, key in ipairs(KEYS) do
+		for pi, pat in ipairs(PATTERNS) do
+			n += 1
+			local uid = 1000 + ki * 100 + pi
+			local prof = SaveSystem.migrate({})
+			prof.tutorial = prof.tutorial or {}
+			prof.tutorial.completed = true
+			local pl = load(uid, prof)
+			PlayerProfile.setClassId(pl, "bow")
+			local s = PlayerProfile.getMonetizationState(pl)
+			if key == "bundle_blacksmith" then s.cosmetics.themes.anvil = true end -- 1개만 가진 묶음 = 나머지 2개 지급(환산 아님)
+			if key == "bundle_owned" then s.cosmetics.themes.anvil, s.cosmetics.gliderSkins.slimeParachute, s.cosmetics.items.goldenHammer = true, true, true end
+			local stored = deep(PlayerProfile.getProfile(pl)) -- 구매 전 저장본
+			local fails = (pat == "ok" or pat == "granted_recall_rejoin") and 0 or (pat == "fail2" and 2 or 1)
+			local deps = { save = function(p2)
+				if fails > 0 then fails -= 1; return false end
+				stored = deep(PlayerProfile.getProfile(p2)); return true
+			end }
+			local before = snap(pl)
+			local receipt = { PlayerId = uid, ProductId = ids[key], PurchaseId = "Q-" .. uid, CurrencySpent = Data.products[key == "bundle_owned" and "bundle_blacksmith" or key].robux }
+			local results = {}
+			for attempt = 1, 6 do
+				local d = tostring(MS.processReceipt(receipt, deps))
+				table.insert(results, d:match("%.(%w+)$") or d)
+				local granted = d:find("PurchaseGranted") ~= nil
+				if pat:find("autosave") and not granted then stored = deep(PlayerProfile.getProfile(PLAYERS[uid])) end -- 실패 사이 자동저장(성공)
+				if pat:find("rejoin") and attempt == 1 then
+					if pat:find("crash") then -- 서버가 저장 없이 죽음 → 마지막 성공 저장본으로 다른 서버
+						load(uid, deep(stored))
+					else -- 퇴장 저장(성공) 뒤 다른 서버
+						stored = deep(PlayerProfile.getProfile(PLAYERS[uid]))
+						load(uid, deep(stored))
+					end
+				elseif granted and attempt >= 2 then
+					break
+				end
+			end
+			local final = snap(PLAYERS[uid])
+			local exp = expected(key, before)
+			local okS, badKey = same(exp, final)
+			local storedOk = same(exp, snap(load(uid, deep(stored)))) -- 마지막 저장본도 정확히 1회(재접속 뒤 상태)
+			allOk = allOk and okS and storedOk
+			if not (okS and storedOk) then table.insert(rows, ("%s/%s 틀림(%s) %s"):format(key, pat, tostring(badKey), table.concat(results, ","))) end
+		end
+	end
+	check(("ALL10 0-1 저장 실패 주입 %d경우(상품 6 × 실패 패턴 8: 정상 · 1회 · 2회 · 자동저장 끼어듦 · 재접속 · 자동저장+재접속 · 서버 죽음 재접속 · 지급 뒤 재호출) → 메모리 · 저장본 모두 지급 정확히 1회"):format(n),
+		allOk, table.concat(rows, " / "))
+	-- 부분 지급 금지: 묶음 두 번째 grant가 실패하면 첫 grant도 되돌림
+	local pl = load(2001, SaveSystem.migrate({}))
+	local origGrant = MODS.CosmeticService.grant
+	MODS.CosmeticService.grant = function(p2, kind, id) if kind == "gliderSkin" then return false, "boom" end return origGrant(p2, kind, id) end
+	local d = MS.processReceipt({ PlayerId = 2001, ProductId = 9502, PurchaseId = "Q-PART", CurrencySpent = 499 }, { save = function() return true end })
+	MODS.CosmeticService.grant = origGrant
+	local s = PlayerProfile.getMonetizationState(pl)
+	check("묶음 중간 grant 실패 → 앞 grant(모루)도 되돌림 · 영수증 없음 · NotProcessedYet", tostring(d):find("NotProcessedYet") ~= nil and not s.cosmetics.themes.anvil and not Mon.hasReceipt(s.purchases, "Q-PART"))
+	-- 저장 대기 중 장착한 새 치장 → 되돌림 때 장착도 풀림
+	local pl2 = load(2002, SaveSystem.migrate({}))
+	local s2 = PlayerProfile.getMonetizationState(pl2)
+	MS.processReceipt({ PlayerId = 2002, ProductId = 9501, PurchaseId = "Q-EQ", CurrencySpent = 199 }, { save = function() s2.cosmetics.equipped.trail = "frost"; return false end })
+	check("저장 대기 중 장착 → 실패 되돌림이 장착도 해제(소유 없는 장착 0)", not s2.cosmetics.themes.frost and s2.cosmetics.equipped.trail == nil)
+	-- 게임패스: 소유 = Roblox 조회 값(bool) · 두 번 반영해도 가방 칸 한 번
+	local p3 = PlayerProfile.getProfile(pl2)
+	local s3 = PlayerProfile.getMonetizationState(pl2)
+	s3.gamepasses.bagExpand = true
+	local c1 = MODS.InventorySync.capacity(p3)
+	s3.gamepasses.bagExpand = true
+	check("게임패스(가방 확장) 두 번 반영 = 칸 +20 한 번(소유 표시 bool · 영수증 없음)", c1 == MODS.InventorySync.capacity(p3) and c1 == 55, tostring(c1))
+	for key in pairs(ids) do
+		if Data.products[key] then Data.products[key].productId = 0 end
+	end
+end)
+if not ok3 then print("[MON] 에러 " .. tostring(err3)) end
 print(("[MON] 끝 %d/%d"):format(pass, total))

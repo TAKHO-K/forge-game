@@ -1,6 +1,6 @@
 -- QUEUE-B1 B2 수익화 서버(P4c 골격). 가격 · 상품 ID = shared/data/MonetizationData(자리값 0 = 준비 중) · 규칙 = shared/Monetization · 설계 = docs/design/monetization-p4c.md.
 --   ① 구매 처리: MarketplaceService.ProcessReceipt(이 게임의 유일한 콜백) - 구매 ID 기록(profile.purchases.receipts)으로 중복 지급 방지 → 지급 → **저장 성공을 확인한 뒤에만**
---      PurchaseGranted(실패 = 기록 · 지급 되돌림 없이 NotProcessedYet → Roblox가 다음 접속 · 재시도 때 다시 부른다 - 지급은 멱등이라 두 번 불러도 같다). 구매 기록 = purchases.log.
+--      PurchaseGranted(실패 = 기록과 이번 지급을 둘 다 되돌리고 NotProcessedYet → Roblox가 다음 접속 · 재시도 때 다시 부른다 - QUEUE-ALL10 0-1 captureUndo). 구매 기록 = purchases.log.
 --      **상품 grant는 멱등 종류만**(allowedKinds - 치장 소유 · 유료 줄 켜기). 수량형(조각 · 알)을 상품에 넣으려면 저장 실패 때 되돌림이 먼저 필요하다(리뷰).
 --   ② 판매 금지 목록: 서버 시작 때 Monetization.checkCatalog - 걸린 상품은 판매 목록에서 빠지고(구매 프롬프트 거부) 로그에 남는다.
 --   ③ 유료 랜덤: PolicyService ArePaidRandomItemsRestricted를 접속 때 캐시(조회 실패 = 제한) - paidRandom 상품은 제한 대상에게 프롬프트 자체를 막는다(지금 paidRandom 0개).
@@ -99,6 +99,56 @@ function MonetizationService.applyReward(player, reward, source)
 	return true, table.concat(parts, " · ")
 end
 
+-- QUEUE-ALL10 0-1: 영수증 처리 전 상태를 적어 두고 "이번 처리가 바꾼 것만" 되돌리는 함수를 돌려준다(저장 대기 중 들어온 다른 변경 · 다른 영수증은 건드리지 않는다).
+--   되돌림 = 영수증 기록 · 치장 소유(장착 중이면 장착도) · 시즌 유료 줄 · 가방 출처 · 시즌 영수증 표시(promptSeason) · 칸 건너뛰기 · 토큰 환산. yield 없음(저장과 섞이지 않는다).
+function MonetizationService.captureUndo(player, product)
+	local s = PlayerProfile.getMonetizationState(player)
+	local had = {}
+	for i, grant in ipairs(product.grants) do
+		had[i] = MonetizationService.ownsAll(player, { grants = { grant } })
+	end
+	local promptSeason = s.seasonPass.promptSeason
+	return function(purchaseId, skipN, refund)
+		Monetization.forgetReceipt(s.purchases, purchaseId)
+		for i, grant in ipairs(product.grants) do
+			if not had[i] then
+				local bag = (grant.kind == "cosmeticTheme" and s.cosmetics.themes) or (grant.kind == "gliderSkin" and s.cosmetics.gliderSkins)
+					or (grant.kind == "cosmeticItem" and type(s.cosmetics.items) == "table" and s.cosmetics.items)
+				if bag then
+					bag[grant.id] = nil
+					for slot, id in pairs(s.cosmetics.equipped) do
+						if id == grant.id then
+							s.cosmetics.equipped[slot] = nil
+						end
+					end
+				elseif grant.kind == "seasonPremium" then
+					s.seasonPass.premium = false
+				elseif grant.kind == "bagSlots" and s.purchases.bagSources[grant.id] then
+					s.purchases.bagSources[grant.id] = nil
+					require(script.Parent.InventorySync).push(player, PlayerProfile.getProfile(player))
+				end
+			end
+		end
+		s.seasonPass.promptSeason = promptSeason
+		if skipN > 0 then -- QUEUE-ALL9B 4-8 칸 건너뛰기는 더하기
+			SeasonPassService.revertSkip(player, skipN)
+		end
+		if refund > 0 then -- 조각 환산은 더하기라 멱등이 아니다(재시도 때 다시 준다)
+			local quests = PlayerProfile.getQuestState(player)
+			if quests then
+				quests.currencies.sparkleShard = math.max(0, (quests.currencies.sparkleShard or 0) - refund)
+				if typeof(player) == "Instance" then
+					player:SetAttribute("SparkleShard", quests.currencies.sparkleShard) -- QUEUE-ALL6 C: 지갑 Attribute
+				end
+			end
+		end
+		if typeof(player) == "Instance" then
+			CosmeticService.applyAttributes(player)
+			MonetizationService.push(player)
+		end
+	end
+end
+
 -- ── ① 구매 처리 ──
 -- 반환 = Enum.ProductPurchaseDecision. deps(검증 · 하네스) = { save = function(player) → 저장 성공 bool }
 function MonetizationService.processReceipt(receiptInfo, deps)
@@ -135,6 +185,8 @@ function MonetizationService.processReceipt(receiptInfo, deps)
 		log("paid_random_restricted")
 		return Decision.NotProcessedYet
 	end
+	inFlight[purchaseId] = true -- QUEUE-ALL10 0-1: 기록 · 지급 · 저장 · 되돌림 전체가 한 처리(겹친 호출은 NotProcessedYet)
+	local undo = MonetizationService.captureUndo(player, product)
 	Monetization.recordReceipt(s.purchases, purchaseId, os.time(), MonetizationData.receiptKeep)
 	local reward = {}
 	local refund = 0
@@ -162,35 +214,25 @@ function MonetizationService.processReceipt(receiptInfo, deps)
 	end
 	local ok, summary = MonetizationService.applyReward(player, reward, refund > 0 and "refund" or "product")
 	if not ok then
-		Monetization.forgetReceipt(s.purchases, purchaseId)
+		undo(purchaseId, 0, 0) -- 부분 지급 금지: 앞 grant가 들어갔어도 전부 되돌린다(칸 건너뛰기 · 환산은 단독 grant라 실패 = 안 들어감)
+		inFlight[purchaseId] = nil
 		log("grant_failed " .. tostring(summary))
 		return Decision.NotProcessedYet
 	end
 	log("granted " .. tostring(summary))
-	inFlight[purchaseId] = true
 	local okSave, saved = pcall(deps and deps.save or function(p)
 		return require(script.Parent.ImmediateSave).flush(p)
 	end, player)
-	inFlight[purchaseId] = nil
 	saved = okSave and saved
 	if not saved then
-		-- 저장 실패: 기록을 빼고 NotProcessedYet → 다음 재시도가 다시 지급(멱등 - 치장 소유 · 유료 줄은 켜진 채라 같은 결과) · 그때 저장되면 Granted
-		Monetization.forgetReceipt(s.purchases, purchaseId)
-		if skipN > 0 and refund == 0 then -- QUEUE-ALL9B 4-8 칸 건너뛰기도 더하기 - 되돌린다
-			SeasonPassService.revertSkip(player, skipN)
-		end
-		if refund > 0 then -- 조각 환산은 더하기라 멱등이 아니다 - 되돌린다(재시도 때 다시 준다)
-			local quests = PlayerProfile.getQuestState(player)
-			if quests then
-				quests.currencies.sparkleShard = math.max(0, (quests.currencies.sparkleShard or 0) - refund)
-				if typeof(player) == "Instance" then
-					player:SetAttribute("SparkleShard", quests.currencies.sparkleShard) -- QUEUE-ALL6 C: 지갑 Attribute
-				end
-			end
-		end
+		-- QUEUE-ALL10 0-1(AUDIT1 즉시-1): 저장 실패 = 영수증 기록과 이번 지급을 **둘 다** 지급 전으로 되돌리고 NotProcessedYet(옛 = 기록만 빼서
+		--   다음 자동저장이 "영수증 없는 지급"을 남기고, 재시도가 ownsAll → 토큰 환산을 또 줬다). 지급과 기록은 같은 프로필 표라 어느 저장에든 함께 들어간다.
+		undo(purchaseId, skipN > 0 and refund == 0 and skipN or 0, refund)
+		inFlight[purchaseId] = nil
 		log("save_failed_retry")
 		return Decision.NotProcessedYet
 	end
+	inFlight[purchaseId] = nil
 	require(script.Parent.Telemetry).custom(player, "Purchase_" .. key, 1)
 	require(script.Parent.AuditTrail).note(player, "purchase", ("%s · %s"):format(key, tostring(purchaseId))) -- QUEUE-ALL6 F3 감사
 	MonetizationService.push(player)
