@@ -26,9 +26,10 @@ return {
 	groupRewardEnabled = false,
 	-- 허브 업데이트 게시판(새 소식 + 지금 유효한 코드 - 만료 지난 코드는 안 보인다)
 	nextUpdateKey = "update.board.next", -- QUEUE-ALL9E1-ADD C: 소식 "다음 업데이트" 한 줄(날짜 약속 없음 - 업데이트 때 이 키의 문구만 바꾼다)
+	-- id = 소식 번호(새 소식 = 지금 가장 큰 id + 1 · 바꾸지 않는다) → 메인 메뉴 [소식] 빨간 점 = 가장 큰 id > 계정 설정 lastSeenNewsId(QUEUE-UI1F-1)
 	news = { -- 글 = TextData textKey(ko/en)
-		{ date = "2026-10-01", textKey = "update.board.news1" },
-		{ date = "2026-10-01", textKey = "update.board.news2" },
+		{ id = 2, date = "2026-10-01", textKey = "update.board.news1" },
+		{ id = 1, date = "2026-10-01", textKey = "update.board.news2" },
 	},
 	text = { ok = "코드 보상: %s", bad = "없는 코드예요", expired = "기한이 지난 코드예요", used = "이미 받은 코드예요", slow = "조금 뒤에 다시 입력해 주세요" }, -- 게시판 제목 · 코드 머리글 = TextData update.board.*
 }

@@ -158,6 +158,35 @@ function SlotSave.summarize(character, now, prev)
 	}
 end
 
+-- QUEUE-UI1F-1 "총 0시간": 옛 계정 플레이 시간(audit.playSeconds - 계정 하나)은 이관 때 어느 캐릭터에도 안 들어갔다(v74 = 직업 칸 0).
+--   → 지금 직업 캐릭터(이관 첫 캐릭터) 한 곳에만 더한다. 캐릭터 표시 legacyPlayAdded = 두 번 더하지 않음(계정 저장이 실패해도 안전).
+function SlotSave.addLegacyPlay(data, legacySeconds)
+	local cs = type(data) == "table" and data.classState
+	if type(cs) ~= "table" or cs.legacyPlayAdded == true then
+		return false
+	end
+	cs.playSeconds = (tonumber(cs.playSeconds) or 0) + math.max(0, math.floor(tonumber(legacySeconds) or 0))
+	cs.legacyPlayAdded = true
+	return true
+end
+
+-- 이미 이관된 계정(이 수정 전): 이관 첫 캐릭터 = 이관 시각에 만든 캐릭터 중 번호가 가장 작은 것(칸 · 보관함)
+function SlotSave.legacyPlayTarget(account)
+	local at = type(account) == "table" and type(account.legacy) == "table" and account.legacy.migratedAt
+	if not at then
+		return nil
+	end
+	local best = nil
+	for _, list in ipairs({ account.slots or {}, account.archive or {} }) do
+		for _, s in pairs(list) do
+			if type(s) == "table" and s.createdAt == at and type(s.charId) == "number" and (best == nil or s.charId < best) then
+				best = s.charId
+			end
+		end
+	end
+	return best
+end
+
 -- 새 계정 기록(캐릭터 없음)
 function SlotSave.newAccount(shared, now)
 	local slots = {}
@@ -194,8 +223,10 @@ function SlotSave.splitLegacy(profile, defaults, now)
 				end
 			end
 			data.nested = {}
+		elseif i == 1 then
+			SlotSave.addLegacyPlay(data, type(profile.audit) == "table" and profile.audit.playSeconds)
 		end
-		local ch = { charId = account.nextCharId, classId = classId, data = data }
+		local ch ={ charId = account.nextCharId, classId = classId, data = data }
 		account.nextCharId += 1
 		characters[i] = ch
 		made[classId] = ch

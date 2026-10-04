@@ -224,6 +224,7 @@ local function main()
 	legacy.gemDust = 77
 	legacy.inventory = { item(1), item(2), item(3) }
 	legacy.training.attack = 10
+	legacy.audit = { lambda = 0, primordialRolls = 0, playSeconds = 7200 } -- QUEUE-UI1F-1 옛 계정 플레이 시간
 	local T1, T2 = nil, nil
 	for id in pairs(MODS.TitleData.titles) do
 		if not T1 then T1 = id elseif not T2 then T2 = id end
@@ -256,6 +257,7 @@ local function main()
 	local tg1, tg2 = raw("Char_501_1").data.transcendGems.list, raw("Char_501_2").data.transcendGems.list
 	check("SLOT", "이관: 초월 보석 = 박힌 직업으로(활 1 · 안 박힌 것 대검 1)", #tg1 == 1 and tg1[1].id == "TG2" and #tg2 == 1 and tg2[1].id == "TG1")
 	check("SLOT", "계정 키에 캐릭터 필드 없음(골드 · 가방 · 직업 칸)", acct.shared.gold == nil and acct.shared.inventory == nil and acct.shared.classes == nil and acct.shared.titles ~= nil)
+	check("SLOT", "이관: 옛 플레이 시간(계정 7200초) = 지금 직업 캐릭터만 · 칸 요약에도(UI1F-1 총 0시간)", (tonumber(prof.classes.greatsword.playSeconds) or 0) >= 7200 and (tonumber(raw("Char_501_2").data.classState.playSeconds) or 0) == 0 and (tonumber(acct.slots[1].playSeconds) or 0) >= 7200 and (tonumber(acct.slots[2].playSeconds) or 0) == 0)
 	check("SLOT", "캐릭터 키 이름 ≤ 50자", #("Char_" .. tostring(9999999999) .. "_" .. tostring(99)) <= 50 and #("Acct_" .. tostring(9999999999)) <= 50)
 
 	-- ═══ 2. 저장 · 분리 ═══
@@ -432,6 +434,67 @@ local function main()
 	SaveA.saveProfile(pn, fresh)
 	check("SLOT", "새 계정: 첫 직업 = 칸 1", raw("Acct_777").slots[1] and raw("Acct_777").slots[1].classId == "healer" and raw("Char_777_1") ~= nil)
 	check("SLOT", "새 계정: 옛 키 안 만듦", raw("Player_777") == nil)
+
+	-- ═══ 등록된 새 저장 필드(SlotSaveData.addedFields): 분리 → 합치기 왕복 = 범위대로 · 값 그대로 ═══
+	for _, f in ipairs(SlotSaveData.addedFields) do
+		local prof0 = SaveA.defaultProfile()
+		prof0.classId = "greatsword"
+		local function setPath(t, path, v)
+			for i = 1, #path - 1 do
+				local k = path[i] == "*" and "greatsword" or path[i]
+				t[k] = t[k] or {}
+				t = t[k]
+			end
+			t[path[#path]] = v
+		end
+		local function getPath(t, path)
+			for i = 1, #path do
+				if type(t) ~= "table" then return nil end
+				t = t[path[i] == "*" and "greatsword" or path[i]]
+			end
+			return t
+		end
+		setPath(prof0, f.path, f.sample)
+		local sh = SlotSave.extractShared(prof0)
+		local chd = SlotSave.extractCharacter(prof0, "greatsword")
+		local inAcct = getPath(sh, f.path) ~= nil
+		local charPath = table.clone(f.path)
+		local inChar
+		if charPath[1] == "classes" then
+			table.remove(charPath, 1)
+			table.remove(charPath, 1)
+			inChar = getPath(chd.classState, charPath) ~= nil
+		else
+			inChar = getPath(chd, charPath) ~= nil
+		end
+		local back = SlotSave.compose(SaveA.defaultProfile(), sh, { charId = 1, classId = "greatsword", data = chd })
+		local scopeOk = (f.scope == "account" and inAcct and not inChar) or (f.scope == "character" and inChar and not inAcct)
+		check("SLOT", ("등록 필드 %s = %s · 왕복 값 그대로"):format(table.concat(f.path, "."), f.scope), scopeOk and getPath(back, f.path) == f.sample, tostring(inAcct) .. "/" .. tostring(inChar))
+	end
+
+	-- ═══ 8. 이 수정 전에 이관된 계정(UI1F-1): 옛 플레이 시간을 이관 첫 캐릭터로 한 번만 ═══
+	local old = deepCopy(raw("Acct_501"))
+	for _, s in ipairs(old.slots) do
+		if s then s.playSeconds = 0 end
+	end
+	DS.data[STORE .. "/Acct_502"] = old
+	for _, sl in ipairs({ old.slots[1], old.slots[2] }) do
+		local n = sl.charId
+		local c = deepCopy(raw("Char_501_" .. n))
+		c.data.classState.playSeconds = 0
+		c.data.classState.legacyPlayAdded = nil
+		DS.data[STORE .. "/Char_502_" .. n] = c
+	end
+	local p2 = mkPlayer(502)
+	local pr2 = SaveA.loadSlotProfile(p2, 1)
+	local first = pr2 and tonumber(pr2.classes.greatsword.playSeconds) or 0
+	check("SLOT", "옛 이관 계정: 첫 캐릭터에 옛 시간 더함", first >= 7200 and first < 7200 + 600, tostring(first))
+	SaveA.saveProfile(p2, pr2)
+	local pr3 = SaveA.loadSlotProfile(p2, 1)
+	local again = pr3 and tonumber(pr3.classes.greatsword.playSeconds) or 0
+	check("SLOT", "옛 이관 계정: 저장 뒤 메뉴 요약 = 옛 시간 · 다시 접속 = 두 번 안 더함", again >= first and again < first + 600 and raw("Acct_502").slots[1].playSeconds >= 7200 and raw("Acct_502").slots[1].playSeconds < 7200 * 2, tostring(again))
+	local pb2 = SaveA.loadSlotProfile(p2, 2)
+	check("SLOT", "옛 이관 계정: 다른 캐릭터(활) = 그대로 0", pb2 and (tonumber(pb2.classes.bow.playSeconds) or 0) < 600)
 end
 
 task.spawn(function()

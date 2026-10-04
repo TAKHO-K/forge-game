@@ -23,6 +23,7 @@ return {
 			slotWindowSlide = 40, -- 펼침: X −40 → 0
 			slotList = { x = 19, y = 91, w = 542, selectedH = 153, cardH = 128, emptyH = 92, lockedH = 76, gap = 10 }, -- 창 안 좌표
 			slotClose = { 521, 15, 44, 44 }, -- 창 안
+			slotCloseRing = true, -- 닫기 원 흰 테두리(PC = 빨강 X 원 · 01 spec)
 			slotMore = { 479, 17, 44, 44 }, -- 카드 안(오른쪽 위)
 			slotFace = { 18, 16, 96, 96 }, -- 카드 안
 			slotWeapon = { 374, 16, 88, 88 }, -- 카드 안
@@ -59,7 +60,8 @@ return {
 			slotWindow = { 12, 60, 470, 290 },
 			slotWindowSlide = 0, -- 폰 = 메뉴 숨김 → 같은 자리
 			slotList = { x = 10, y = 61, w = 450, selectedH = 100, cardH = 84, emptyH = 52, lockedH = 44, gap = 6 },
-			slotClose = { 6, 4, 44, 44 }, -- 폰 = 왼쪽 위 [<] 메뉴로
+			slotClose = { 8, 2, 44, 44 }, -- 폰 = 왼쪽 위 [<] 메뉴로 · 창 머리(48) 안쪽 세로 가운데(UI1F-1: 옛 { 6, 4 } + 흰 테두리 3 = 50 → 머리 밖으로 튀어나옴)
+			slotCloseRing = false, -- 폰 [<] = 테두리 없음(테두리는 원 밖으로 3 그려져 머리 48을 넘는다)
 			slotMore = { 398, 28, 44, 44 },
 			slotFace = { 10, 12, 56, 56 },
 			slotWeapon = { 330, 12, 56, 56 },
@@ -68,13 +70,13 @@ return {
 			confirm = { 220, 70, 360, 220 },
 			confirmCancel = { 20, 154, 155, 48 },
 			confirmOk = { 185, 154, 155, 48 },
-			classBack = { 150, 6, 44, 44 },
-			classList = { x = 12, y = 62, w = 150, h = 52, gap = 6 },
+			classBack = { 20, 62, 44, 44 }, -- UI1F-1: 왼쪽 위 = 이어하기 창 머리 [<]와 같은 자리(창 12 + 8 · 60 + 2) · 로블록스 버튼(0 ~ 52) 아래
+			classList = { x = 12, y = 114, w = 150, h = 52, gap = 6 }, -- [<] 아래(62 + 44 + 8) · 4직업 = 340까지
 			classArt = { 172, 52, 247, 300 },
 			classArtSilhouette = { 200, 70, 190, 240 },
 			classInfo = { 430, 12, 358, 260 },
 			classInfoBrowse = { 430, 62, 358, 212 }, -- 구경 모드(목업 phone_07 - 띠 아래)
-			classBackBrowse = { 154, 4, 44, 44 },
+			classBackBrowse = { 20, 62, 44, 44 }, -- 구경 모드도 같은 자리(띠 = 150부터)
 			classStart = { 430, 284, 358, 56 },
 			browseBand = { 150, 0, 650, 54 },
 		},

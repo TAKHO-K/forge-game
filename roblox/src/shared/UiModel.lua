@@ -123,4 +123,16 @@ function UiModel.josaRo(name)
 	return (jong == 0 or jong == 8) and "로" or "으로"
 end
 
+-- QUEUE-UI1F-1 소식 빨간 점: 가장 큰 소식 id · 본 id(설정 lastSeenNewsId - 옛 저장 = nil = 0)보다 크면 점
+function UiModel.newsLatestId(news)
+	local best = 0
+	for _, n in ipairs(news or {}) do
+		best = math.max(best, tonumber(n.id) or 0)
+	end
+	return best
+end
+function UiModel.newsDot(news, seenId)
+	return UiModel.newsLatestId(news) > (tonumber(seenId) or 0)
+end
+
 return UiModel

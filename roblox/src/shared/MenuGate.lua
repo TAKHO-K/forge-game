@@ -13,4 +13,12 @@ function MenuGate.shouldSkip(env)
 	return type(env.flagUntil) == "number" and env.flagUntil > (env.now or 0)
 end
 
+-- QUEUE-UI1F-1: 실서버(Studio 아님)에 플래그 값이 남아 있으면 무시 + 서버 로그 경고 1줄(퍼블리시 전 정리 - launch-checklist 8) → 경고 문장 | nil
+function MenuGate.liveWarning(env)
+	if env.isStudio or env.flagUntil == nil then
+		return nil
+	end
+	return ("[MenuGate] 실서버에 %s 값(%s)이 있다 - 무시함(메뉴는 그대로 뜬다) · Studio에서 지우고 다시 퍼블리시"):format(MenuGate.flagName, tostring(env.flagUntil))
+end
+
 return MenuGate

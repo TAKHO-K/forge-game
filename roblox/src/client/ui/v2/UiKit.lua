@@ -211,7 +211,9 @@ function UiKit.closeButton(props)
 	b.BackgroundColor3 = UiKit.color(props.colorToken or "warning")
 	UiKit.place(b, props.rect)
 	corner(b, Tokens.close.size)
-	stroke(b, "text.primary", Tokens.stroke.close)
+	if props.ring ~= false then
+		stroke(b, "text.primary", Tokens.stroke.close)
+	end
 	UiKit.icon(b, props.icon or "close", math.floor(props.rect[3] * 0.5), { center = true, color = "text.primary" })
 	local s = Instance.new("UIScale")
 	s.Parent = b

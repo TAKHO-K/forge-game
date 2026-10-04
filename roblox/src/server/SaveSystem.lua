@@ -2410,6 +2410,11 @@ function SaveSystem.loadSlotProfile(player, wantSlot)
 			charSavedAt = account.savedAt or 0
 		end
 	end
+	if character and SlotSave.legacyPlayTarget(account) == character.charId then -- QUEUE-UI1F-1: 이 수정 전에 이관된 계정 - 옛 플레이 시간을 이관 첫 캐릭터로(한 번)
+		if SlotSave.addLegacyPlay(character.data, type(account.shared) == "table" and type(account.shared.audit) == "table" and account.shared.audit.playSeconds) and summary then
+			summary.playSeconds = character.data.classState.playSeconds -- 메뉴 카드 = 다음 저장 전에도 바로
+		end
+	end
 	local composed = SlotSave.compose(defaultProfile(), account.shared, character)
 	composed.version = math.min(tonumber(account.version) or SaveConfig.saveVersion, charVersion)
 	composed.savedAt = tonumber(account.savedAt) or 0

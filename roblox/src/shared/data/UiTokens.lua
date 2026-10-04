@@ -58,4 +58,5 @@ return {
 	tweenSeconds = 0.25,
 	iconSlot = { pc = 88, phone = 56 }, -- 무기 · 아이콘 칸
 	tendencyBlocks = 5, -- 성향 막대 칸 수
+	newsDot = { pc = 14, phone = 12, inset = 8 }, -- QUEUE-UI1F-1 [소식] 안 읽은 점(지름 · 버튼 오른쪽 위에서 안쪽)
 }

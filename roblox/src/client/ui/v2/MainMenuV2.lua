@@ -13,6 +13,7 @@ local SlotSaveData = require(Shared.data.SlotSaveData)
 local GameInfoData = require(Shared.data.GameInfoData)
 local UIColors = require(Shared.data.UIColors)
 local ArtAssetIds = require(Shared.data.ArtAssetIds)
+local SocialRewardData = require(Shared.data.SocialRewardData)
 local UiModel = require(Shared.UiModel)
 local Text = require(Shared.Text)
 local UiRoot = require(script.Parent.UiRoot)
@@ -127,8 +128,26 @@ function MainMenuV2.new(gui, deps)
 		deps.showOldPage("SettingsPage")
 	end })
 	local newsBtn = UiKit.button({ parent = menu, kind = "secondary", name = "MenuNews", text = Text.get("menu.news"), align = phone and Enum.TextXAlignment.Center or nil, onActivated = function()
+		deps.settingSave("lastSeenNewsId", UiModel.newsLatestId(SocialRewardData.news)) -- QUEUE-UI1F-1: 열면 본 것으로(점 끔)
 		deps.showOldPage("NewsPage")
 	end })
+	-- QUEUE-UI1F-1 소식 빨간 점(가장 큰 소식 id > 계정 설정 lastSeenNewsId) - 버튼 오른쪽 위
+	local newsDot = Instance.new("Frame")
+	newsDot.Name = "NewsDot"
+	newsDot.BackgroundColor3 = UiKit.color("warning")
+	newsDot.AnchorPoint = Vector2.new(0.5, 0.5)
+	newsDot.Position = UDim2.new(1, -Tokens.newsDot.inset, 0, Tokens.newsDot.inset)
+	local dotPx = phone and Tokens.newsDot.phone or Tokens.newsDot.pc
+	newsDot.Size = UDim2.fromOffset(dotPx, dotPx)
+	newsDot.ZIndex = 3
+	UiKit.corner(newsDot, dotPx)
+	UiKit.stroke(newsDot, "bg.deep", 2)
+	newsDot.Parent = newsBtn.root
+	local function refreshNewsDot()
+		newsDot.Visible = UiModel.newsDot(SocialRewardData.news, player:GetAttribute("LastSeenNewsId"))
+	end
+	player:GetAttributeChangedSignal("LastSeenNewsId"):Connect(refreshNewsDot)
+	refreshNewsDot()
 	table.insert(texts, function()
 		title.Text = gameName()
 		titleSub.Text = Text.get("menu.v2.titleSub")
@@ -309,7 +328,7 @@ function MainMenuV2.new(gui, deps)
 		win.sub.Size = UDim2.new(0, 0, 1, 0)
 		win.sub.LayoutOrder = 2
 	end
-	local closeBtn = UiKit.closeButton({ parent = win.root, rect = L.slotClose, name = "Close", icon = phone and "back" or "close", colorToken = phone and "panel.slot" or "warning", onActivated = function()
+	local closeBtn = UiKit.closeButton({ parent = win.root, rect = L.slotClose, name = "Close", icon = phone and "back" or "close", colorToken = phone and "panel.slot" or "warning", ring = L.slotCloseRing, onActivated = function()
 		self.closeSlots()
 	end })
 	closeBtn.ZIndex = 12

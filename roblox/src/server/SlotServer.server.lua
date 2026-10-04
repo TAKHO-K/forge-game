@@ -7,6 +7,20 @@ local SlotSwitch = require(script.Parent.SlotSwitch)
 -- 메인 메뉴 버그(10-05): 접속 즉시 캐릭터를 월드에 스폰하지 않는다 → 메뉴에서 입장(SlotRequest enterWorld · play · new)할 때 스폰. 자동 스폰을 끈 대신 쓰러짐 뒤 부활은 여기서(Players.RespawnTime 뒤).
 local Players = game:GetService("Players")
 Players.CharacterAutoLoads = false
+do -- QUEUE-UI1F-1: 테스트 플래그 TestSkipMainMenuUntil은 Studio에서만 인정 - 실서버에 남아 있으면 경고 1줄(클라 MenuGate.shouldSkip도 isStudio로 막는다)
+	local RunService = game:GetService("RunService")
+	local MenuGate = require(ReplicatedStorage.Shared.MenuGate)
+	local warned = false
+	local function check()
+		local msg = not warned and MenuGate.liveWarning({ isStudio = RunService:IsStudio(), flagUntil = ReplicatedStorage:GetAttribute(MenuGate.flagName) })
+		if msg then
+			warned = true
+			warn(msg)
+		end
+	end
+	ReplicatedStorage:GetAttributeChangedSignal(MenuGate.flagName):Connect(check)
+	check()
+end
 local function onJoin(player)
 	SlotSwitch.holdAtJoin(player)
 	player.CharacterAdded:Connect(function(character)

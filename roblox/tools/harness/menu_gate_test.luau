@@ -15,6 +15,10 @@ local okRun, err = pcall(function()
 	check("플래그 켬(Studio · 만료 전) = 건너뜀", G.shouldSkip({ isStudio = true, now = 1000, flagUntil = 1001 }) == true)
 	check("라이브 서버 = 플래그가 있어도 메뉴 표시", G.shouldSkip({ isStudio = false, now = 1000, flagUntil = 99999 }) == false)
 	check("옛 값(true · 문자열)은 플래그가 아님 = 메뉴 표시", G.shouldSkip({ isStudio = true, now = 1000, flagUntil = true }) == false and G.shouldSkip({ isStudio = true, now = 1000, flagUntil = "9999" }) == false)
+	check("UI1F-1 실서버 + 플래그 값 = 경고 문장(이름 포함)", type(G.liveWarning({ isStudio = false, flagUntil = 99999 })) == "string" and G.liveWarning({ isStudio = false, flagUntil = 99999 }):find(G.flagName, 1, true) ~= nil)
+	check("UI1F-1 실서버 + 옛 값(true) = 경고 · 메뉴 표시", G.liveWarning({ isStudio = false, flagUntil = true }) ~= nil and G.shouldSkip({ isStudio = false, now = 1, flagUntil = true }) == false)
+	check("UI1F-1 실서버 + 플래그 없음 = 경고 없음", G.liveWarning({ isStudio = false, flagUntil = nil }) == nil)
+	check("UI1F-1 Studio + 플래그 = 경고 없음(테스트 정상 사용)", G.liveWarning({ isStudio = true, flagUntil = 99999 }) == nil)
 	local skips = 0
 	for now = 1, 200 do
 		if G.shouldSkip({ isStudio = now % 2 == 0, now = now, flagUntil = nil }) then

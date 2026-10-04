@@ -61,7 +61,32 @@ local okRun, err = pcall(function()
 	check("폰 메뉴 버튼 높이 44 이상 · 카드 줄 44 이상", pm.menu.items.h >= 44 and pm.menu.main.h >= 44 and pm.slotList.lockedH >= 44 and pm.slotList.emptyH >= 44 and pm.classList.h >= 44)
 	check("왼쪽 위 로블록스 버튼 자리 비움(PC 132×60 · 폰 140×52) - 메뉴 · 제목이 안 겹침",
 		L.mainMenu.pc.menu.x >= 132 - 36 and L.mainMenu.pc.title[2] >= 60 and pm.title[2] >= 52 and pm.slotWindow[2] >= 52)
+	-- UI1F-1 폰 뒤로 버튼 2곳
+	local ring = pm.slotCloseRing ~= false and T.stroke.close or 0
+	check("UI1F-1 폰 이어하기 [<] = 창 머리(48) 안(테두리 포함)", pm.slotClose[2] - ring >= 0 and pm.slotClose[2] + pm.slotClose[4] + ring <= T.windowHead.phone and pm.slotClose[1] - ring >= 0, ("%d..%d"):format(pm.slotClose[2] - ring, pm.slotClose[2] + pm.slotClose[4] + ring))
+	check("UI1F-1 폰 직업 선택 [<] = 이어하기 [<]와 같은 화면 자리 · 로블록스 버튼 아래 · 목록이 그 아래",
+		pm.classBack[1] == pm.slotWindow[1] + pm.slotClose[1] and pm.classBack[2] == pm.slotWindow[2] + pm.slotClose[2] and pm.classBack[2] >= 52
+		and pm.classBackBrowse[1] == pm.classBack[1] and pm.classList.y >= pm.classBack[2] + pm.classBack[4]
+		and pm.classList.y + #M.classList() * (pm.classList.h + pm.classList.gap) - pm.classList.gap <= T.base.phone.h)
 	check("이어하기 창 오른쪽 끝 = PC 1012 · 폰 482(얼굴 · 대검 안 가림 - 01 spec)", L.mainMenu.pc.slotWindow[1] + L.mainMenu.pc.slotWindow[3] <= 1012 and pm.slotWindow[1] + pm.slotWindow[3] <= 482)
+
+	-- UI1F-1 소식 빨간 점
+	local news = MODS.SocialRewardData.news
+	local ids, dup = {}, false
+	for _, n in ipairs(news) do
+		if type(n.id) ~= "number" or ids[n.id] then dup = true end
+		ids[n.id or -1] = true
+	end
+	check("UI1F-1 소식 = 항목마다 다른 숫자 id", not dup)
+	local latest = M.newsLatestId(news)
+	check("UI1F-1 새 소식(본 id < 최신) = 점", M.newsDot(news, latest - 1) == true)
+	check("UI1F-1 소식 창 연 뒤(본 id = 최신) = 점 없음", M.newsDot(news, latest) == false)
+	check("UI1F-1 옛 저장(설정 키 없음 = nil) = 점", M.newsDot(news, nil) == true)
+	local news2 = table.clone(news)
+	table.insert(news2, 1, { id = latest + 1, date = "2026-10-06", textKey = "x" })
+	check("UI1F-1 소식 추가(id + 1) = 본 사람도 다시 점", M.newsDot(news2, latest) == true)
+	local SD = MODS.SettingsData
+	check("UI1F-1 설정 lastSeenNewsId = 계정 설정 · 순서 등록 · 기본 0", SD.keys.lastSeenNewsId and SD.keys.lastSeenNewsId.default == 0 and table.find(SD.order, "lastSeenNewsId") ~= nil)
 
 	-- 3. 아이콘 표
 	local noFallback = {}

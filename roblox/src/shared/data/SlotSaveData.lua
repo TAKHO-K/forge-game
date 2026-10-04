@@ -29,5 +29,11 @@ return {
 	-- 이관(옛 단일 프로필 → 캐릭터): 공유였던 재화 · 수련 = 지금 직업 캐릭터 하나에(복제 방지 - 사용자 10-05 "수련 모든 캐릭터 복사 금지") · 다른 직업 캐릭터 = 그 직업 고유 데이터만
 	--   예전 값 { training = true }(수련 모든 캐릭터 복사) - 되살리면 힘 복제
 	copyToAllOnMigrate = {},
+	-- 새 저장 필드 등록(QUEUE-UI1F · 규칙 = 추가만): path = 프로필 경로("*" = 아무 직업 칸) · scope = account(계정 키) | character(캐릭터 키).
+	--   하네스 slot_save가 등록된 필드마다 "분리 → 합치기" 왕복에서 값이 그 범위로 가고 그대로 돌아오는지 본다(등록 없이 더한 필드 = 범위를 아무도 확인 안 함).
+	addedFields = {
+		{ path = { "settings", "lastSeenNewsId" }, scope = "account", sample = 7, note = "UI1F-1 소식 빨간 점(본 소식 id)" },
+		{ path = { "classes", "*", "legacyPlayAdded" }, scope = "character", sample = true, note = "UI1F-1 옛 계정 플레이 시간을 이관 첫 캐릭터에 더함(한 번)" },
+	},
 	-- 진행이 없는 직업 칸은 캐릭터로 만들지 않는다: 경험치 0 · 최고 스테이지 ≤ 1 · 환생 0 · 무기 +0 · 등급 0 · 착용 장비 없음 · 보석 없음
 }
