@@ -24,6 +24,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
+local MonsterStats = require(ReplicatedStorage.Shared.MonsterStats) -- QUEUE-N1004 C-4 몹 체력 · 공격 한 곳
 local MonsterPrefixData = require(ReplicatedStorage.Shared.data.MonsterPrefixData)
 local TreasureChestConfig = require(ReplicatedStorage.Shared.data.TreasureChestConfig)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig) -- C1 도움 참여 반경
@@ -418,7 +419,7 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer, 
 	entry.lastDamagedAt = os.clock() -- M1-2: 스폰 지점 정리 보류(맞는 중인 공유 몬스터는 치우지 않는다 - SpawnSites)
 	local prefixHpMultiplier = entry.prefix and entry.prefix.hpMultiplier or 1
 	-- C1: 기준 스테이지 HP로 환산(옛 = 때린 사람 스테이지 HP - 낮은 스테이지 피해가 높은 몹으로 샜다). 첫 타격 · 타격 수(G1-2 리뷰 2 k 상한)도 MobShare가 쌓는다.
-	local effectiveMaxHp = InfiniteStage.getTrashHp(entry.data.hp, mobRef) * prefixHpMultiplier -- C4-1 잡몹 구간 배율
+	local effectiveMaxHp = MonsterStats.trashHp(entry.data.hp, mobRef) * prefixHpMultiplier -- C4-1 잡몹 구간 배율 · QUEUE-N1004 C-4 공용 함수
 	local ratioDealt = effectiveMaxHp > 0 and (damage / effectiveMaxHp) or 0
 	return MobShare.applyRatio(entry, attackerPlayer, ratioDealt, os.clock()), damage
 end
@@ -619,7 +620,7 @@ function MonsterState.getAttackFor(model, targetStage)
 	if entry.data.isBoss then
 		return entry.data.attack
 	end
-	return InfiniteStage.getTrashAttack(entry.data.attack, targetStage) -- C5-3 잡몹 공격 구간 배율
+	return MonsterStats.trashAttack(entry.data.attack, targetStage) -- C5-3 잡몹 공격 구간 배율 · QUEUE-N1004 C-4 공용 함수
 end
 
 function MonsterState.getGoldDropFor(model, stage)

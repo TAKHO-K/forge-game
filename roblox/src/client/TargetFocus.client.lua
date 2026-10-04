@@ -26,6 +26,14 @@ local TreasureChestConfig = require(ReplicatedStorage.Shared.data.TreasureChestC
 local WorldLabelStyle = require(ReplicatedStorage.Shared.WorldLabelStyle)
 local ArtImage = require(script.Parent.ui.ArtImage)
 local HudIcons = require(script.Parent.HudIcons)
+local MonsterStats = require(ReplicatedStorage.Shared.MonsterStats) -- QUEUE-N1004 C-4 몹 정보
+local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
+local MonsterPrefixData = require(ReplicatedStorage.Shared.data.MonsterPrefixData)
+local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
+local prefixById = {}
+for _, prefix in ipairs(MonsterPrefixData.prefixes) do
+	prefixById[prefix.id] = prefix
+end
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -47,6 +55,8 @@ local GHOST_DELAY, GHOST_SECONDS = 0.35, 0.45
 local PLATE_W, PLATE_H = 176, 46
 local STACK_MAX = 3 -- 겹친 이름표를 위로 올리는 최대 칸
 local NAME_SIZE = 16
+local STATS_SIZE = 12 -- QUEUE-N1004 C-4 대상 몹 정보 줄
+local STATS_H = 16
 local PILL_COLOR, PILL_ALPHA = Color3.fromRGB(10, 12, 18), 0.62 -- 알파(1 - 투명도)
 local EDGE_COLOR, EDGE_ALPHA = Color3.new(0, 0, 0), 0.55
 local TARGET_EDGE_COLOR = Color3.new(1, 1, 1)
@@ -126,7 +136,7 @@ local function newSlot(i)
 	WorldLabelStyle.setupNameplateBillboard(gui, nil)
 	gui.Parent = playerGui
 
-	local root = frame(gui, "Root", UDim2.fromOffset(PLATE_W, PLATE_H), UDim2.fromScale(0.5, 0.5), Vector2.new(0.5, 0.5))
+	local root = frame(gui, "Root", UDim2.fromOffset(PLATE_W, PLATE_H), UDim2.fromScale(0.5, 0), Vector2.new(0.5, 0)) -- QUEUE-N1004 C-4: 위 기준(대상 정보 줄이 보이면 빌보드가 아래로 STATS_H만큼 길어진다 - 빌보드 밖은 잘림)
 	root.BackgroundTransparency = 1
 	local scale = Instance.new("UIScale")
 	scale.Parent = root
@@ -220,9 +230,22 @@ local function newSlot(i)
 		dots[d] = dot
 	end
 
+	-- QUEUE-N1004 C-4 몹 정보: 내 대상일 때만 알약 아래 한 줄 "체력 · 공격"(shared/MonsterStats - 서버 판정 · 시뮬과 같은 함수 · 보는 사람 스테이지 기준 C1)
+	local stats = Instance.new("TextLabel")
+	stats.Name = "Stats"
+	stats.BackgroundTransparency = 1
+	stats.AnchorPoint = Vector2.new(0.5, 0)
+	stats.Position = UDim2.new(0.5, 0, 1, 1)
+	stats.Size = UDim2.new(1, 40, 0, 15)
+	stats.ZIndex = 3
+	stats.Visible = false
+	WorldLabelStyle.styleNameplateText(stats, STATS_SIZE)
+	stats.TextColor3 = Color3.fromHex(LEVEL_HEX) -- 레벨 글자와 같은 옅은 회색(이름보다 한 단계 약하게)
+	stats.Parent = root
+
 	return {
 		gui = gui, scale = scale, pill = pill, edge = edge, icon = icon, diamond = diamond, chest = chest, lock = lock, label = label,
-		ghost = ghost, fill = fill, dots = dots, fades = fades, alpha = -1, scaleNow = -1, textKey = nil, targetLook = nil,
+		ghost = ghost, fill = fill, dots = dots, fades = fades, alpha = -1, scaleNow = -1, textKey = nil, targetLook = nil, stats = stats, statsKey = nil,
 	}
 end
 
@@ -525,6 +548,18 @@ local function refresh()
 		-- 글: "Lv.n 이름"(레벨 = 옅은 회색 · 이름 = 흰색 또는 희귀 색)
 		local nameText = c.rec.name.Text
 		local key = nameText .. "|" .. stage
+		-- QUEUE-N1004 C-4 대상 몹 정보 줄(잡몹만 - 보스는 화면 보스바)
+		local species = (c.isTarget or (RunService:IsStudio() and ReplicatedStorage:GetAttribute("DevMobStatsAll") == true)) and c.model:GetAttribute("MobSpecies") -- Studio 촬영 스위치(DevMobStatsAll = 대상 아닌 몹도 · 라이브 무관)
+		local base = species and MonsterData.species[species] or nil
+		slot.stats.Visible = base ~= nil
+		if base then
+			local statsKey = species .. "|" .. tostring(c.model:GetAttribute("MobPrefix")) .. "|" .. stage
+			if slot.statsKey ~= statsKey then
+				slot.statsKey = statsKey
+				local st = MonsterStats.trash(base, stage, prefixById[c.model:GetAttribute("MobPrefix")])
+				slot.stats.Text = Text.get("nameplate.mob.stats", { hp = NumberFormat.format(st.hp), attack = NumberFormat.format(st.attack) })
+			end
+		end
 		if slot.textKey ~= key then
 			slot.textKey = key
 			slot.label.Text = ('<font color="#%s">%s</font> %s'):format(LEVEL_HEX, escape(Text.get("nameplate.mob.level", { level = tostring(stage) })), escape(Text.name(nameText)))
@@ -533,10 +568,12 @@ local function refresh()
 		local camDist = (c.rec.head.Position - cam.CFrame.Position).Magnitude
 		local t = math.clamp((camDist - CAM_NEAR) / (CAM_FAR - CAM_NEAR), 0, 1)
 		local s = (1 + (SCALE_FAR - 1) * t) * (c.isTarget and TARGET_SCALE or 1)
-		if math.abs(slot.scaleNow - s) > 0.02 then
+		local statsOn = slot.stats.Visible
+		if math.abs(slot.scaleNow - s) > 0.02 or slot.statsOn ~= statsOn then
 			slot.scaleNow = s
+			slot.statsOn = statsOn
 			slot.scale.Scale = s
-			slot.gui.Size = UDim2.fromOffset(PLATE_W * s, PLATE_H * s)
+			slot.gui.Size = UDim2.fromOffset(PLATE_W * s, (PLATE_H + (statsOn and STATS_H or 0)) * s)
 		end
 		local alpha = 1
 		if not c.isTarget and c.dist > FADE_FROM_STUDS then

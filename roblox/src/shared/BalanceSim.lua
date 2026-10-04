@@ -49,6 +49,7 @@ local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
+local MonsterStats = require(ReplicatedStorage.Shared.MonsterStats) -- QUEUE-N1004 C-4 몹 체력 · 공격 한 곳
 local Gem = require(ReplicatedStorage.Shared.Gem)
 local Option = require(ReplicatedStorage.Shared.Option)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
@@ -204,14 +205,14 @@ end
 -- 기본값 tier1 - CombatConfig.damageReductionAlpha 앵커가 쓰는 것과 같은 관례.
 function BalanceSim.getMonsterAttack(stage, tierKey)
 	local tierData = MonsterData[tierKey or "tier1"]
-	return InfiniteStage.getTrashAttack(tierData.attack, stage) -- C5-3 잡몹 공격 구간 배율(생존 앵커 1,000 · 5,000 · 20,000은 표 밖 = 1)
+	return MonsterStats.trashAttack(tierData.attack, stage) -- QUEUE-N1004 C-4 공용 함수 · C5-3 잡몹 공격 구간 배율(생존 앵커 1,000 · 5,000 · 20,000은 표 밖 = 1)
 end
 
 -- tier 몬스터 1마리의 스테이지 적용 최대 HP(MonsterState.applyDamage가 "attackerStage 기준
 -- 유효 최대체력"으로 쓰는 것과 같은 값 - InfiniteStage.getMonsterHp 재사용).
 function BalanceSim.getMonsterHp(stage, tierKey)
 	local tierData = MonsterData[tierKey or "tier1"]
-	return InfiniteStage.getTrashHp(tierData.hp, stage) -- C4-1 잡몹 구간 배율
+	return MonsterStats.trashHp(tierData.hp, stage) -- QUEUE-N1004 C-4 공용 함수 · C4-1 잡몹 구간 배율
 end
 
 -- 스킬 없는 순수 평타만의 durationSeconds초 총딜 - 평균 배율 근사(19-3a 원본 그대로). 빠른

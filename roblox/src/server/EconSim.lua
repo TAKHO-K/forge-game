@@ -32,6 +32,7 @@ local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
+local MonsterStats = require(ReplicatedStorage.Shared.MonsterStats) -- QUEUE-N1004 C-4 몹 체력 · 공격 한 곳
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local BalanceSim = require(ReplicatedStorage.Shared.BalanceSim)
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
@@ -331,7 +332,7 @@ EconSim.tierData = tierData
 -- G1-3: 레벨차 계수(주는 피해)가 있으면 그 스테이지의 실효 HP = HP ÷ 계수(게임 MonsterState.applyDamage와 같은 함수). HP ÷ 계수는 스테이지에 단조 증가.
 -- C2: 전투 공식 배율(전투력 ÷ 권장 - 게임 MonsterState.applyDamage와 같은 함수 · 꺼져 있으면 1)도 나눈다. 배율은 스테이지에 단조 감소라 단조성 유지.
 local function effectiveMonsterHp(loadout, baseHp, stage)
-	local hp = InfiniteStage.getTrashHp(baseHp, stage) -- C4-1 잡몹 구간 배율
+	local hp = MonsterStats.trashHp(baseHp, stage) -- C4-1 잡몹 구간 배율 · QUEUE-N1004 C-4 공용 함수
 	return hp / CharacterLevel.levelGapDealMultiplier(loadout.level, stage) / CombatFormula.dealMultiplier(CombatFormula.offensePower(loadout), stage, baseHp)
 		/ CombatFormula.gearLagMultiplier(loadout.dealItemLevelBest, stage) -- C5-1 뒤처짐 신호(게임 MonsterState.applyDamage와 같은 함수)
 end
@@ -359,8 +360,8 @@ function EconSim.highestStageBySurvive(loadout, tierIndex, minHits, maxStage)
 	local attackBase = tierData(tierIndex).attack
 	local newbie = PlayerCombat.getNewbieDamageMultiplier(maxStage + 1) -- P2.5c 신규 보호: 게임과 같이 최고 스테이지(= reach = maxStage + 1) 기준
 	local function ok(stage)
-		return BalanceSim.getSurviveHits(loadout, InfiniteStage.getTrashAttack(attackBase, stage), newbie * CharacterLevel.levelGapTakeMultiplier(loadout.level, stage)
-			* CombatFormula.takeMultiplier(loadout.defense, stage, InfiniteStage.getTrashAttack(attackBase, stage))) >= minHits -- C5-3 잡몹 공격 구간 배율(게임 MonsterState.getMonsterAttack과 같다) -- G1-3: 받는 피해 계수 · C2 받는 피해 배율
+		return BalanceSim.getSurviveHits(loadout, MonsterStats.trashAttack(attackBase, stage), newbie * CharacterLevel.levelGapTakeMultiplier(loadout.level, stage)
+			* CombatFormula.takeMultiplier(loadout.defense, stage, MonsterStats.trashAttack(attackBase, stage))) >= minHits -- C5-3 잡몹 공격 구간 배율(게임 MonsterState.getMonsterAttack과 같다) -- G1-3: 받는 피해 계수 · C2 받는 피해 배율
 	end
 	if not ok(1) then
 		return 1

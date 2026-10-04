@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
+local MonsterStats = require(ReplicatedStorage.Shared.MonsterStats) -- QUEUE-N1004 C-4
 local InfiniteStageConfig = require(ReplicatedStorage.Shared.data.InfiniteStageConfig)
 local PartyConfig = require(ReplicatedStorage.Shared.data.PartyConfig)
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
@@ -14,7 +15,6 @@ local BalanceSim = require(ReplicatedStorage.Shared.BalanceSim)
 local BalanceAnchorConfig = require(ReplicatedStorage.Shared.data.BalanceAnchorConfig)
 local Loot = require(ReplicatedStorage.Shared.Loot)
 local BossSkillMath = require(ReplicatedStorage.Shared.BossSkillMath)
-local BossCurveData = require(ReplicatedStorage.Shared.data.BossCurveData) -- C4 파트 0-2 보스 공격 완화
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 
 local BossRules = {}
@@ -264,12 +264,11 @@ function BossRules.applyEarlyRelief(data, stage)
 end
 
 function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMultiplierExtra, partySize, densityExtra)
-	local trashHp = InfiniteStage.getMonsterHp(trashBase.hpUnscaled or trashBase.hp, stage) -- C3-3: 보스 = 잡몹 tier 비 압축 전 HP(보스 처치 시간 불변)
-	local trashAttack = InfiniteStage.getMonsterAttack(trashBase.attack, stage)
+	-- QUEUE-N1004 C-4: 보스 HP · 공격 = shared/MonsterStats 한 곳(C3-3 압축 전 HP · C4 파트 0-2 공격 완화 - 값 그대로)
 	local trashGold = InfiniteStage.getGoldReward(trashBase.goldDropUnscaled or trashBase.goldDrop, stage) -- C3-3
 	local trashExp = InfiniteStage.getExpReward(trashBase.bossExpReward or trashBase.expReward, stage) -- C3-3 리뷰 3: 보스 경험치 = 압축 전 기준(MonsterData.bossExpReward)
 
-	local attack = trashAttack * boss.attackMultiplier * InfiniteStage.interpBand(BossCurveData.attackEase, stage) -- C4 파트 0-2
+	local attack = MonsterStats.bossAttack(trashBase, stage, boss) -- C4 파트 0-2
 
 	return {
 		id = boss.id,
@@ -285,7 +284,7 @@ function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMu
 		-- hpMultiplierExtra(23-1) - 견습 전용 보정(TutorialData.bossHpScale × 대여 무기 배율).
 		-- 무한 모드는 항상 1이라(buildInstanceData 호출) 기존 계산과 완전히 같다.
 		-- partySizeHpMultiplier(24-1) - 입장 인원 N의 N^p(위 partyHpExponent 주석). 솔로는 1.
-		hp = trashHp * boss.hpMultiplier * hpMultiplierExtra * BossRules.partySizeHpMultiplier(partySize),
+		hp = MonsterStats.bossHp(trashBase, stage, boss, hpMultiplierExtra, BossRules.partySizeHpMultiplier(partySize)),
 		partySize = partySize or 1,
 		partyHpMultiplier = BossRules.partySizeHpMultiplier(partySize),
 		attack = attack,

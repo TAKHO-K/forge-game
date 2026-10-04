@@ -477,6 +477,10 @@ function MonsterSpawner.spawn(data, position, zoneKey, forcedVariant)
 	end
 
 	local model = buildModel(data, position, variant)
+	if not data.isBoss and data.speciesId then -- QUEUE-N1004 C-4 몹 정보(표시 전용): 클라 TargetFocus가 shared/MonsterStats로 체력 · 공격을 계산한다(서버 판정 MonsterState와 같은 함수 · 판정은 이 값을 안 읽는다)
+		model:SetAttribute("MobSpecies", data.speciesId)
+		model:SetAttribute("MobPrefix", variant.prefix and variant.prefix.id or nil)
+	end
 	model.Parent = Workspace
 	MonsterState.init(model, data, position, zoneKey, variant)
 	MonsterSpawner.updateHpLabel(model)

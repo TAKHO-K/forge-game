@@ -60,6 +60,7 @@ return {
 	["party.tab.board"] = "Find Party",
 	-- QUEUE-ALL3 Q8 이름표
 	["nameplate.mob.level"] = "Lv.{level}",
+	["nameplate.mob.stats"] = "HP {hp} · ATK {attack}",
 	["party.inviteTop"] = "Invite a friend · Both get rewards",
 	["party.invitePrompt"] = "Boss down! Invite a friend, both win (P)",
 	["party.board.posted"] = "Posted - others can join with Quick Join",

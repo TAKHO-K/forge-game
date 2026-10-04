@@ -65,6 +65,7 @@ local TextData = {
 		["party.tab.board"] = "파티 찾기",
 		-- QUEUE-ALL3 Q8 이름표
 		["nameplate.mob.level"] = "Lv.{level}", -- 몬스터 이름표의 레벨 = 내 스테이지(C1 - 잡몹 세기는 보는 사람 스테이지를 따른다)
+		["nameplate.mob.stats"] = "체력 {hp} · 공격 {attack}", -- QUEUE-N1004 C-4 내 대상 몹 정보(shared/MonsterStats)
 		["party.inviteTop"] = "친구 초대 · 둘 다 보상",
 		["party.invitePrompt"] = "첫 보스 처치! 친구를 초대하면 둘 다 보상을 받아요 (P)",
 		["party.board.posted"] = "모집을 올렸습니다 - 다른 사람이 빠른 참가로 들어옵니다",
