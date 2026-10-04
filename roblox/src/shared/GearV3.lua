@@ -46,22 +46,41 @@ local function rank(grade)
 	return table.find(ArmorData.gradeOrder, grade) or 1
 end
 
--- 방어구 구역 색(8등급 × 6세트): Body = 등급 메인 · Trim = 밝은 · Inner = 어두운(태초 = 자홍 에나멜 · 초월 = 흑요석 그늘) · Attach = 세트 색1 · Gem · Emblem = 세트 색2
---   CoreGem = 등급 보석 · Float · Crack = Neon. 같은 계열 = 부착물 밝게 · 초월 + 모래 = 금 대신 모래(예약 조합 검정 + 금 = 초월 본체만). → (Color3, 네온 여부)
-function GearV3.armorColor(pieceName, setZone, grade)
+-- 방어구 구역 색(8등급 × 6세트 · LOOK2 10-04 밤 - gear-art-v3.md 3-1절): → (Color3, 네온 여부)
+--   주 판금 에나멜(가슴 · 어깨 · 허리 아래 판 · 허벅지/무릎 판의 Body) = 등급 메인 × 밝기 보정 · Band(장갑 · 신발 커프 띠) = 등급 메인(태초 = 자홍 포인트)
+--   Trim · 팔/정강이 커프(Bracer · Greave Body) = 등급대 금속(강철 · 금 · 백금 · 흑금) · Inner = 가죽(벨트 · 장갑 · 장화) / 천(가슴 안쪽 - 직업 색)
+--   Attach = 세트 색1 · Gem · Emblem = 세트 색2(같은 계열 = 밝게 · 초월 + 모래 = 금 대신 모래) · CoreGem = 등급 보석 · Float · Crack = Neon
+local PLATE = { Chest = true, Shoulder = true, Tasset = true, Thigh = true, Knee = true }
+local CUFF = { Bracer = true, Greave = true }
+local LEATHER = { Belt = true, Glove = true, Boot = true }
+
+function GearV3.clothColor(classId)
+	local L = GearV3Data.look2
+	return rgb(L.cloth[GearV3Data.baseLayer[classId] or "navy"] or L.cloth.navy)
+end
+
+function GearV3.armorColor(pieceName, setZone, grade, classId)
 	local zone = GearV3.zone(pieceName)
+	local kind = pieceName:match("^(%a+)")
 	local gv = ItemVisualData.gradeVisuals[grade] or ItemVisualData.gradeVisuals.normal
 	local set = GearV3Data.sets[setZone] or GearV3Data.sets.tier1
 	local bright = GearV3Data.sameFamily[tostring(grade) .. "_" .. tostring(setZone)] or 1
+	local L = GearV3Data.look2
+	local metal = rgb(L.trimMetal[grade] or L.trimMetal.normal)
 	if zone == "Body" then
-		return gv.color, false
-	elseif zone == "Trim" then
-		return grade == "primordial" and gv.dark or gv.light, false -- 1-2 Play: 태초 "어두운" 칸 = 강조 자홍(2절) → 넓은 면(Inner) 대신 가는 테두리에만(자홍 에나멜)
-	elseif zone == "Inner" then
-		if grade == "transcendent" then
-			return scale(gv.color, 0.75), false
+		if CUFF[kind] then
+			return metal, false
 		end
-		return grade == "primordial" and gv.light or gv.dark, false -- 태초 = 은빛 #D5D9E2(장갑 · 신발 전체가 자홍이 되던 것)
+		return scale(gv.color, PLATE[kind] and (L.brightness[grade] or 1) or 1), false
+	elseif zone == "Band" then
+		return grade == "primordial" and gv.dark or gv.color, false
+	elseif zone == "Trim" then
+		return metal, false
+	elseif zone == "Inner" then
+		if LEATHER[kind] then
+			return rgb(L.leather), false
+		end
+		return GearV3.clothColor(classId), false
 	elseif zone == "Attach" then
 		return scale(rgb(set.color1), bright), false
 	elseif zone == "Gem" or zone == "Emblem" then
@@ -95,6 +114,11 @@ function GearV3.weaponColor(pieceName, grade)
 		local s, t = rgb(W.steel), W.bodyTint
 		return Color3.new(s.R + (gv.color.R - s.R) * t, s.G + (gv.color.G - s.G) * t, s.B + (gv.color.B - s.B) * t), false
 	elseif zone == "Trim" then
+		local kind = pieceName:match("^(%a+)")
+		if kind == "Guard" or kind == "Pommel" then -- LOOK2: 가드 · 손잡이 끝 = 등급대 금속(강철 · 금 · 백금 · 흑금) · 홈 · 룬 · 날개 = 등급색
+			local L = GearV3Data.look2
+			return rgb(L.trimMetal[grade] or L.trimMetal.normal), false
+		end
 		return grade == "transcendent" and gv.light or gv.color, false
 	elseif zone == "Inner" then
 		return (grade == "primordial" or grade == "transcendent") and rgb(W.darkGrip) or gv.dark, false

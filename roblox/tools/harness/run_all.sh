@@ -31,7 +31,7 @@ run enhance_g res_g.txt "$(python deps.py PlayerProfile,PetService,QuestService,
 run bignum res_big.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem)" bignum_test.luau # QUEUE-ALL9B 큰 숫자 · ALL9C 0-2: 2^53 정밀도 4건 = "알려진 문제"(이름 고정 - 통과 수에서 빠짐)
 run bulk_sell res_bulk.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem,MonetizationService,InventorySync)" bulk_sell_test.luau # QUEUE-ALL9C 1-9 등급 체크 일괄 판매 75칸
 run stat_sheet res_sheet.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem)" stat_sheet_test.luau # QUEUE-ALL9C 1-2 상세 능력치 합계 = 전투 값 · 줄/출처 = StatSheetData
-run all10 res_all10.txt "$(python deps.py TranscendService,TranscendFirsts,PlayerProfile,PetService,QuestService,SaveSystem)" all10_test.luau # QUEUE-ALL10 초월 계승(스위치 끔 = 지금 게임 · 저장 v70 · 계승 · 초월 강화 · 수련 · 보석 · 몹 곡선)
+run all10 res_all10.txt "$(python deps.py TranscendService,TranscendFirsts,PlayerProfile,PetService,QuestService,SaveSystem,BaseLayer)" all10_test.luau # QUEUE-ALL10 초월 계승(스위치 끔 = 지금 게임 · 저장 v70 · 계승 · 초월 강화 · 수련 · 보석 · 몹 곡선)
 EXTRA_FILES=client/ArmorColors.lua,shared/MeshMeta/armor_wear.lua run gear_v3 res_gear.txt "" gear_v3_test.luau # QUEUE-ALL9E1 1-1 장비 v3 48조합 예약 색 · 문 부품 · 무기 색 · 메시 메타 60 + 문장 6 · 1인 MeshPart ≤ 24
 run monster_stats res_mstat.txt "" monster_stats_test.luau # QUEUE-N1004 C-4 몹 스탯 공용 함수 값 불변(골든 1,736값 · 31지점 · 오차 0)
 run ui_rules res_ui.txt "" ui_rules_test.luau # QUEUE-ALL9C 블록 1 화면 규칙(순위 상위 약 n% 등 순수 함수)

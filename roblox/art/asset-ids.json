@@ -5066,6 +5066,76 @@
   "status": "Approved",
   "imageId": 127730561493160
  },
+ "textures/gear_v3/base_cream_pants.png": {
+  "sha256": "cff65c376ef7ad31f2272d5b8fb7b244fde25f2a92414385f7c6ced1149ab1e0",
+  "assetType": "Decal",
+  "assetId": 111578757962366,
+  "status": "Approved",
+  "imageId": 138650151239610
+ },
+ "textures/gear_v3/base_cream_shirt.png": {
+  "sha256": "056f24bc6633cc7adee9090b0b309420e2424df40f89a2918579baf02bf75248",
+  "assetType": "Decal",
+  "assetId": 87608670638890,
+  "status": "Approved",
+  "imageId": 121603251113250
+ },
+ "textures/gear_v3/base_navy_pants.png": {
+  "sha256": "a45a6615ff86b0de565858c65fbf5842d500020095ba051b8ae89224b7d14164",
+  "assetType": "Decal",
+  "assetId": 116329515821794,
+  "status": "Approved",
+  "imageId": 116598702715821
+ },
+ "textures/gear_v3/base_navy_shirt.png": {
+  "sha256": "c74f0178ca7661e333b759545dbcb4c1127aee0bd7f9fe34862a8a52918e7644",
+  "assetType": "Decal",
+  "assetId": 101129953331759,
+  "status": "Approved",
+  "imageId": 134973797264472
+ },
+ "textures/gear_v3/sa_color_white.png": {
+  "sha256": "47c0b232b83e0aaf92d46f39b9066c67528fc4c31fc88bc50d7d8e2291137145",
+  "assetType": "Decal",
+  "assetId": 118257753511392,
+  "status": "Approved",
+  "imageId": 96969592753651
+ },
+ "textures/gear_v3/sa_metal_0.png": {
+  "sha256": "4a0945534329d26ce523a2f096e203aae59a9fffaec71895599fa3ef42d23f22",
+  "assetType": "Decal",
+  "assetId": 139826531342865,
+  "status": "Approved",
+  "imageId": 119522795675569
+ },
+ "textures/gear_v3/sa_metal_1.png": {
+  "sha256": "47c0b232b83e0aaf92d46f39b9066c67528fc4c31fc88bc50d7d8e2291137145",
+  "assetType": "Decal",
+  "assetId": 132976428769910,
+  "status": "Approved",
+  "imageId": 128471966622967
+ },
+ "textures/gear_v3/sa_rough_25.png": {
+  "sha256": "c945a688e3814a94fda53af3343ec5bb11e27d0d53fbe1b27f72ae4b9bc25fb8",
+  "assetType": "Decal",
+  "assetId": 84304304937590,
+  "status": "Approved",
+  "imageId": 139282493434346
+ },
+ "textures/gear_v3/sa_rough_50.png": {
+  "sha256": "e5cf79b95cd479128d2090938471d540929de4464fe75514c716ecedfcab9bbb",
+  "assetType": "Decal",
+  "assetId": 127185198012144,
+  "status": "Approved",
+  "imageId": 86093005535592
+ },
+ "textures/gear_v3/sa_rough_85.png": {
+  "sha256": "3928cdff2fd38322d73b9066e2b31fd9f6b73b74cf6aec542f0d92b27deff914",
+  "assetType": "Decal",
+  "assetId": 94125885230115,
+  "status": "Approved",
+  "imageId": 108717344439121
+ },
  "ui/menu_bg.png": {
   "sha256": "c5d2b635e1039ce278352b54f6910d6b1f137f1347241247494b42d0edb1e352",
   "assetType": "Decal",

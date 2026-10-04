@@ -76,6 +76,36 @@ local function build()
 	preview.frame.Position = UDim2.new(0.5, 0, 1, -6)
 	preview.frame.Size = UDim2.new(1.1, 0, 1, -6) -- Play E5: 1.6배 = 착용 칸 카드 밑으로 들어가 몸이 가려졌다 → 카드 사이 틈(76)까지
 	refs.preview = preview
+	-- QUEUE-ALL9E1 LOOK2 보정 2: "내 아바타 옷 보이기"(기본 끔 = 바닥층 누빔 옷 · 켬 = 본인 옷 + 갑옷 판 · 겹침 허용) - 서버가 캐릭터에 적용(모두에게 같게) · 직업별 저장
+	local clothes = Instance.new("TextButton")
+	clothes.Name = "OwnClothesToggle"
+	clothes.AnchorPoint = Vector2.new(0.5, 0)
+	clothes.Position = UDim2.new(0.5, 0, 0, 0)
+	clothes.Size = UDim2.new(1, 0, 0, math.max(Theme.buttonHeight, 28))
+	clothes.BackgroundColor3 = UIColors.slot
+	clothes.BackgroundTransparency = 0.2
+	clothes.AutoButtonColor = true
+	clothes.Font = Enum.Font.GothamBold
+	clothes.TextSize = Theme.textSize("caption")
+	clothes.TextColor3 = Theme.color("textPrimary")
+	clothes.TextWrapped = true
+	clothes.ZIndex = preview.frame.ZIndex + 2
+	clothes.Parent = figure
+	Instance.new("UICorner", clothes).CornerRadius = UDim.new(0, 8)
+	local function showClothes()
+		clothes.Text = Text.get(player:GetAttribute("ShowOwnClothes") == true and "inv.ownClothes.on" or "inv.ownClothes.off")
+	end
+	showClothes()
+	player:GetAttributeChangedSignal("ShowOwnClothes"):Connect(function()
+		showClothes()
+		task.delay(0.6, preview.refresh) -- 서버가 옷을 갈아입힌 뒤 미리보기 다시
+	end)
+	clothes.Activated:Connect(function()
+		local remote = ReplicatedStorage:FindFirstChild("OwnClothesToggle")
+		if remote then
+			remote:FireServer(player:GetAttribute("ShowOwnClothes") ~= true)
+		end
+	end)
 	local fallbacks = {} -- Play E5: 창이 캐릭터보다 먼저 지어지면 2D가 깔린 채 나중 3D가 위에 겹쳐 보였다 → 3D가 서면 숨김
 	local rawRefresh = preview.refresh
 	function preview.refresh()

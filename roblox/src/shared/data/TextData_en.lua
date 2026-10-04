@@ -9,6 +9,8 @@ return {
 	["inv.tab.gem"] = "Gem",
 	["inv.tab.gear"] = "Gear",
 	["inv.equipped.title"] = "Equipped",
+	["inv.ownClothes.on"] = "Show my avatar outfit: On",
+	["inv.ownClothes.off"] = "Show my avatar outfit: Off",
 	["inv.stat.attack"] = "Attack",
 	["inv.stat.defense"] = "Defense",
 	["inv.stat.maxHp"] = "Max HP",

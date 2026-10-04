@@ -107,7 +107,7 @@ local okS, errS = pcall(function()
 	local SaveSystem, SaveConfig, A, All10 = MODS.SaveSystem, MODS.SaveConfig, MODS.All10Data, MODS.All10
 	ATTR.All10Economy = true
 	local fresh = SaveSystem.migrate({})
-	check("v70 새 계정: training.advanced 50 · guard 0 · transcendGems 빈 목록 · 무기 transcend 없음 · 계승 기록 없음", SaveConfig.saveVersion == 72 and fresh.version == 72
+	check("v70 새 계정: training.advanced 50 · guard 0 · transcendGems 빈 목록 · 무기 transcend 없음 · 계승 기록 없음", SaveConfig.saveVersion >= 72 and fresh.version == SaveConfig.saveVersion
 		and fresh.training.advanced == 50 and fresh.training.guard == 0 and type(fresh.transcendGems.list) == "table" and #fresh.transcendGems.list == 0 and fresh.transcendGems.seq == 0
 		and fresh.classes.bow.weapon.transcend == nil and fresh.classes.bow.transcendInherit == nil)
 	local old = SaveSystem.migrate({})
@@ -115,7 +115,7 @@ local okS, errS = pcall(function()
 	old.training.advanced, old.training.guard, old.transcendGems = nil, nil, nil
 	old.gold = 12345
 	local m = SaveSystem.migrate(old)
-	check("v69 → v72: 빈 칸 채움 · 다른 값 그대로(골드 · 수련 공격) · 멱등", m.version == 72 and m.training.advanced == 50 and m.training.guard == 0 and type(m.transcendGems) == "table"
+	check("v69 → v72: 빈 칸 채움 · 다른 값 그대로(골드 · 수련 공격) · 멱등", m.version == SaveConfig.saveVersion and m.training.advanced == 50 and m.training.guard == 0 and type(m.transcendGems) == "table"
 		and m.gold == 12345 and m.training.attack == 0 and SaveSystem.migrate(m).training.advanced == 50)
 	local bad = SaveSystem.migrate({})
 	bad.training.advanced, bad.training.guard = 0 / 0, "12"
@@ -356,7 +356,7 @@ local okT, errT = pcall(function()
 	bad7.classes.bow.weapon.grade, bad7.classes.bow.weapon.transcend = 7, { level = 1, slot = 0 }
 	bad7.classes.bow.weapon.transcendSlots = { ["2"] = true, [9] = true, x = 1 }
 	local s7 = SaveSystem.migrate(bad7)
-	check("B7 v70 → v72: 옛 계승 무기 초월 홈 = {1}(태초 상한 · 열림) · 다른 직업 없음 · fails 0 · 멱등 · 손상 {'2', 9, x} → {2} + 보관 칸", m7.version == 72 and m7.classes.bow.weapon.transcendSlots[1] == true
+	check("B7 v70 → v72: 옛 계승 무기 초월 홈 = {1}(태초 상한 · 열림) · 다른 직업 없음 · fails 0 · 멱등 · 손상 {'2', 9, x} → {2} + 보관 칸", m7.version == MODS.SaveConfig.saveVersion and m7.classes.bow.weapon.transcendSlots[1] == true
 		and m7.classes.bow.weapon.transcendSlots[2] == nil and m7.classes.healer.weapon.transcendSlots == nil and m7.classes.bow.weapon.transcend.fails == 0 and m7b.classes.bow.weapon.transcendSlots[1] == true
 		and s7.classes.bow.weapon.transcendSlots[2] == true and s7.classes.bow.weapon.transcendSlots[9] == nil and SaveSystem.isValidProfile(s7))
 	-- 홈 판정 서버 = 화면: 서버 표(띄엄 키) vs GemSync 5칸 배열이 같은 결과(5홈 × 8등급)
@@ -373,6 +373,41 @@ local okT, errT = pcall(function()
 	local hasGemField = false
 	for _, item in ipairs(inv.inventory or {}) do if item.gems then hasGemField = true end end
 	check("B2 구조: 보석이 박히는 곳 = 무기 5홈뿐(가방 장비에 gems 칸 없음 · 판매/분해 함수 = 가방 번호) → 장비가 사라지며 보석이 사라지는 경로 0(조사 표 = 보고서)", not hasGemField and type(inv.classes.bow.weapon.gems) == "table" and #inv.classes.bow.weapon.gems == 5)
+	-- QUEUE-ALL9E1 LOOK2(v73): 내 아바타 옷 보이기 - 직업별 저장 · 기본 끔 · 연타 · 직업 전환 · 저장 왕복 · 옛 저장 이관 · 모양 틀림 = 보관 칸 · 바닥층 판정
+	do
+		local BL = MODS.BaseLayer
+		local pC, profC = fresh()
+		local d0 = SaveSystem.migrate({})
+		local defOk = d0.classes.bow.showOwnClothes == false and d0.classes.healer.showOwnClothes == false
+		local old = SaveSystem.migrate({})
+		old.version = 72
+		old.classes.bow.showOwnClothes = nil
+		local m72 = SaveSystem.migrate(old)
+		local bad = SaveSystem.migrate({})
+		bad.classes.bow.showOwnClothes = "yes"
+		local mb = SaveSystem.migrate(bad)
+		local parked = false
+		for _, q in ipairs(mb.quarantine or {}) do if q.why == "showOwnClothes_shape" then parked = true end end
+		local first = PP.getShowOwnClothes(pC)
+		for i = 1, 11 do PP.setShowOwnClothes(pC, i % 2 == 1) end -- 연타 11번 = 마지막 켬
+		local afterSpam = PP.getShowOwnClothes(pC)
+		profC.classId = "healer"
+		local healerOff = PP.getShowOwnClothes(pC) == false
+		profC.classId = "bow"
+		local bowKept = PP.getShowOwnClothes(pC) == true
+		local rt = SaveSystem.migrate(profC)
+		local rejectBad = PP.setShowOwnClothes(pC, "켬") == false and PP.getShowOwnClothes(pC) == true
+		local fakeP = { GetAttribute = function(_, k) return ({ ArmorLook_gloves = "tier2|epic" })[k] end }
+		local noneP = { GetAttribute = function() return nil end }
+		local decide = BL.wantBase(true, false) and not BL.wantBase(true, true) and not BL.wantBase(false, false) and BL.armorOn(fakeP) and not BL.armorOn(noneP)
+		local s1, p1 = BL.templates("greatsword")
+		local s2 = BL.templates("bow")
+		local tplOk = type(s1) == "string" and s1:find("^rbxassetid://%d+$") ~= nil and type(p1) == "string" and s2 ~= s1
+		check("LOOK2 v73 내 아바타 옷 보이기: 기본 끔 · v72 → v73 끔 · 모양 틀림 = 보관 칸 + 끔 · 연타 11번 = 마지막 값 · 직업별(치유사 끔 · 궁수 켬 유지) · 저장 왕복 유지 · 잘못된 값 거부 · 바닥층 판정(갑옷 + 끔만) · 직업 색 템플릿",
+			defOk and m72.version == MODS.SaveConfig.saveVersion and m72.classes.bow.showOwnClothes == false and mb.classes.bow.showOwnClothes == false and parked
+			and first == false and afterSpam == true and healerOff and bowKept and rt.classes.bow.showOwnClothes == true and rejectBad and decide and tplOk,
+			("%s %s %s %s %s %s %s %s %s %s"):format(tostring(defOk), tostring(m72.classes.bow.showOwnClothes), tostring(parked), tostring(afterSpam), tostring(healerOff), tostring(bowKept), tostring(rt.classes.bow.showOwnClothes), tostring(rejectBad), tostring(decide), tostring(tplOk)))
+	end
 	-- ADD 2-3(P3 결정): 경로는 없지만 장비 제거 공용 함수 안전장치 - 홈 있는 가짜 장비(gems 3개)가 사라지면 보석 반환 · 거절이면 변화 없음 · 연타 복제 0
 	do
 		local pS, profS, csS = fresh()

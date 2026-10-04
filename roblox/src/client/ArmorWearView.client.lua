@@ -160,7 +160,7 @@ local function build(owner, character)
 					-- 묶음 가운데는 둘레(X · Z)만 파트 가운데로 모으고 높이는 비율대로(어깨판은 어깨 위 · 벨트는 허리 아래 그대로)
 					local at = Vector3.new((off.X - mid.X) * s.X, off.Y * s.Y, (off.Z - mid.Z) * s.Z)
 					p.CFrame = body.CFrame * CFrame.new(at) * R
-					local color, neon = (g3 and ArmorColors.colorOfGearV3 or v3 and colorOfV3 or colorOf)(piece.Name, zone, grade)
+					local color, neon = (g3 and ArmorColors.colorOfGearV3 or v3 and colorOfV3 or colorOf)(piece.Name, zone, grade, classId)
 					p.Color = color
 					p.Material = neon and Enum.Material.Neon or Enum.Material.SmoothPlastic
 					p.Anchored, p.Massless = false, true

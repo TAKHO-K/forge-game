@@ -355,6 +355,24 @@ function PlayerProfile.getGold(player)
 	return profile and profile.gold
 end
 
+-- QUEUE-ALL9E1 LOOK2(v73): 갑옷 착용 중 내 아바타 옷 보이기 - 지금 직업(캐릭터)의 값 · 화면 = Player Attribute ShowOwnClothes(server/BaseLayer가 캐릭터에 적용)
+function PlayerProfile.getShowOwnClothes(player)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	return classState ~= nil and classState.showOwnClothes == true
+end
+
+function PlayerProfile.setShowOwnClothes(player, on)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState or type(on) ~= "boolean" then
+		return false
+	end
+	classState.showOwnClothes = on
+	player:SetAttribute("ShowOwnClothes", on)
+	return true
+end
+
 -- 서버만 호출한다(AttackServer의 몬스터 처치 판정 직후). 클라이언트가 보낸 값으로
 -- 골드를 늘리는 경로는 없다 - 이 함수가 유일한 증가 통로다.
 -- QUEUE-ALL9C 0-11: 골드 증감 한 곳(지급 · 차감 · 판매 · 운영 회수가 모두 여기로). delta가 NaN · inf이거나 결과가 유한하지 않으면 바꾸지 않는다 · 결과는 0 아래로 안 내려간다.

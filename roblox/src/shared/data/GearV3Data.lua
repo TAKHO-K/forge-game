@@ -30,6 +30,22 @@ return {
 	crack = { 216, 185, 110 }, -- 초월 균열 · 부유(초월) Neon(#D8B96E)
 	-- 무기(세트 없음 · shared/GearV3.weaponColor): 날 = 강철 #E8ECF4(옛 무기 메타 날 색)에 등급 메인 bodyTint만큼 · 태초 · 초월 손잡이 = 흑요석 그늘
 	weapon = { steel = { 232, 236, 244 }, bodyTint = 0.25, darkGrip = { 38, 36, 42 } },
+	-- QUEUE-ALL9E1 LOOK2(10-04 밤 · 설계 담당 결정 - gear-art-v3.md 3-1절): 등급색 = 주 판금 에나멜만(가슴 · 어깨 · 허리 아래 판 · 허벅지/무릎 판) · 테두리 · 리벳 · 버클 = 등급대 금속 ·
+	--   아래층(가죽 · 천) = 전 등급 공통 중립 · 장갑 · 신발 = 가죽 + 금속 커프(등급색 = 커프 띠 Band만) · 초월 = 흑요석 판 + 흑금 테 · 태초 = 백색 판 + 백금 테 + 자홍 띠
+	look2 = {
+		trimMetal = { -- 금속 테두리 · 커프 · 버클(Trim · 팔/정강이 커프)
+			normal = { 201, 206, 214 }, rare = { 201, 206, 214 }, epic = { 201, 206, 214 }, -- 강철 #C9CED6
+			legendary = { 226, 180, 90 }, relic = { 226, 180, 90 }, ancient = { 226, 180, 90 }, -- 금 #E2B45A
+			primordial = { 236, 236, 242 }, -- 백금(자홍 #E95BC8 = 커프 띠 · 받침 포인트)
+			transcendent = { 216, 185, 110 }, -- 흑금 #D8B96E
+		},
+		leather = { 90, 62, 43 }, -- 가죽 #5A3E2B(벨트 · 장갑 · 장화)
+		cloth = { navy = { 43, 53, 80 }, cream = { 232, 220, 192 } }, -- 천(진남색 #2B3550 · 크림 #E8DCC0) - 직업별 하나(baseLayer와 같은 색)
+		-- 등급별 에나멜 밝기 보정(4번 - 색상 유지 · 밝기만): Soft 조명 · 그늘 면이 아이콘보다 0.76 ~ 0.88배 어둡게 찍혔다(look1-survey 3절)
+		brightness = { normal = 1.06, rare = 1.12, epic = 1.12, legendary = 1.1, relic = 1.12, ancient = 1.15, primordial = 1.0, transcendent = 1.0 },
+	},
+	-- LOOK2 보정 1 바닥층(갑옷 착용 중 2D 옷 = 누빔 상의 + 바지 · 등급색 없음): 직업 → 색(textures/gear_v3/base_<색>_shirt|pants · ArtAssetIds image)
+	baseLayer = { greatsword = "navy", dualblade = "navy", bow = "cream", healer = "cream" },
 	-- 착용(6절) · 예산(7절): 하네스 · 메시 스크립트가 같은 값(artlib 쪽 숫자는 make_gear_v3.py가 이 표를 미러 - 바뀌면 둘 다)
 	budget = { armor = 1500, glovesPair = 500, shoesPair = 500, weapon = 800, float = 300, coreGem = 120, meshPartsPerPlayer = 24 },
 }

@@ -247,7 +247,7 @@ function StageMascot:attachArmor(classId)
 						math.abs(R.RightVector.X) * s.X + math.abs(R.RightVector.Y) * s.Y + math.abs(R.RightVector.Z) * s.Z,
 						math.abs(R.UpVector.X) * s.X + math.abs(R.UpVector.Y) * s.Y + math.abs(R.UpVector.Z) * s.Z,
 						math.abs(R.LookVector.X) * s.X + math.abs(R.LookVector.Y) * s.Y + math.abs(R.LookVector.Z) * s.Z)
-					local color, neon = (g3 and GearV3.armorColor or ArmorColors.colorOfV3)(piece.Name, Data.armorZone, Data.armorGrade)
+					local color, neon = (g3 and GearV3.armorColor or ArmorColors.colorOfV3)(piece.Name, Data.armorZone, Data.armorGrade, classId)
 					p.Color = color
 					p.Material = neon and Enum.Material.Neon or Enum.Material.SmoothPlastic
 					local off = Vector3.new(m.offset[1], m.offset[2], m.offset[3])

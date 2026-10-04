@@ -101,6 +101,8 @@ local function defaultClassState()
 		abilities = {}, -- QUEUE-10h Q6(v50): 직업 고유 능력 단계({ [능력 id] = 단계 } - TrainingData.classAbilities)
 		-- C5-2(v46) 되찾기 기준: 환생 순간 레벨의 회차 누적 최대(0 = 환생 전). 이 레벨 미만에서는 캐릭터 경험치 × reclaimDivisors[환생 횟수](CharacterLevel.getReclaimMultiplier).
 		reclaimLevel = 0,
+		-- QUEUE-ALL9E1 LOOK2(v73): 갑옷 착용 중 내 아바타 옷 보이기(true = 본인 2D · 레이어드 옷 + 갑옷 판 · false = 게임 바닥층 2D 옷 · 레이어드 숨김) - 직업(캐릭터)별 · MENU2 때 캐릭터 칸 키로 옮긴다
+		showOwnClothes = false,
 
 		-- ⚠ 29-5부터 **아무도 읽지 않는다**: 보스의 정체는 스테이지 번호만의 함수가 됐다(BossRules.bossIdForStage, PRD 20.80 [A]).
 		-- 필드는 지우지 않는다 - 옛 세이브가 검증(아래 type 검사)·이관을 그대로 통과하고, 되돌릴 일이 생겨도 데이터가 남아 있다.
@@ -405,6 +407,10 @@ function SaveSystem.sanitizeAll10(data)
 	end
 	tg.seq = math.max(int(tg.seq, 0, 0), #tg.list) -- id 중복 방지(번호 < 개수면 끌어올림)
 	for classId, classState in pairs(type(data.classes) == "table" and data.classes or {}) do
+		if type(classState) == "table" and classState.showOwnClothes ~= nil and type(classState.showOwnClothes) ~= "boolean" then -- QUEUE-ALL9E1 LOOK2(v73): 참/거짓만(모양 틀림 = 보관 칸 + 끔)
+			park("showOwnClothes_shape", classState.showOwnClothes, classId)
+			classState.showOwnClothes = false
+		end
 		local weapon = type(classState) == "table" and classState.weapon
 		if type(weapon) == "table" and (weapon.transcend ~= nil or weapon.grade == A.inherit.toGrade) then
 			if type(weapon.transcend) ~= "table" then
@@ -1538,6 +1544,15 @@ local function migrate(data)
 			end
 		end
 		data.version = 72
+	end
+	if data.version < 73 then
+		-- QUEUE-ALL9E1 LOOK2: 직업별 showOwnClothes(기본 끔 - 옛 직업 = false). 값 정리는 sanitizeAll10.
+		for _, classState in pairs(type(data.classes) == "table" and data.classes or {}) do
+			if type(classState) == "table" and classState.showOwnClothes == nil then
+				classState.showOwnClothes = false
+			end
+		end
+		data.version = 73
 	end
 
 	data.savedAt = data.savedAt or 0
