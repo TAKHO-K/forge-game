@@ -1711,6 +1711,18 @@
   "assetId": 89564742244284,
   "status": "Approved"
  },
+ "gear/pilot/B/pilotB_armor_greatsword_legendary_stoneplains.fbx": {
+  "sha256": "ed8e3c1da21b7af1354cb3ae424aeb5fa61bcef4806fb68cc07b110e0f0e2ad8",
+  "assetType": "Model",
+  "assetId": 112519281022928,
+  "status": "Approved"
+ },
+ "gear/pilot/B/pilotB_palette.png": {
+  "sha256": "f1e3718ad9257d2b6fa3ac6f7a5ce2f15b810ef41e0801cb68e91bde7d3fe7e2",
+  "assetType": "Decal",
+  "assetId": 123303430939958,
+  "status": "Approved"
+ },
  "icons/armor/armor_tier1_ancient.png": {
   "sha256": "3bb51036df52eddf19ea0817705434ac24e4fd04040ae522146f69785945376a",
   "assetType": "Decal",

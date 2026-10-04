@@ -286,6 +286,8 @@ return {
 	["fx/soft_glow"] = { id = 95819361311277, kind = "Decal", image = 105594125885210, status = "Approved" },
 	["gear/pilot/A/pilotA_armor_greatsword_legendary_stoneplains"] = { id = 96891752692714, kind = "Model", status = "Approved" },
 	["gear/pilot/A/pilotA_palette"] = { id = 89564742244284, kind = "Decal", status = "Approved" },
+	["gear/pilot/B/pilotB_armor_greatsword_legendary_stoneplains"] = { id = 112519281022928, kind = "Model", status = "Approved" },
+	["gear/pilot/B/pilotB_palette"] = { id = 123303430939958, kind = "Decal", status = "Approved" },
 	["icons/armor/armor_tier1_ancient"] = { id = 123419041939493, kind = "Decal", image = 86677813601405, status = "Approved" },
 	["icons/armor/armor_tier1_epic"] = { id = 85843749493195, kind = "Decal", image = 134576817896008, status = "Approved" },
 	["icons/armor/armor_tier1_legendary"] = { id = 126460466561416, kind = "Decal", image = 96601658403015, status = "Approved" },

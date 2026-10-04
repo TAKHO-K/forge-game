@@ -1,0 +1,163 @@
+{
+ "attach": "UpperTorso",
+ "refSize": [
+  2,
+  1.6,
+  1
+ ],
+ "tris": {
+  "Chest": 3899,
+  "Pauldron_L": 998,
+  "Pauldron_R": 1000
+ },
+ "total": 5897,
+ "pieces": {
+  "Chest": {
+   "offset": [
+    -0.0012,
+    -0.1252,
+    -0.001
+   ],
+   "size": [
+    2.4108,
+    2.1489,
+    2.0327
+   ]
+  },
+  "Pauldron_L": {
+   "offset": [
+    -1.5802,
+    0.3182,
+    -0.0014
+   ],
+   "size": [
+    1.6641,
+    1.3256,
+    1.8267
+   ]
+  },
+  "Pauldron_R": {
+   "offset": [
+    1.5804,
+    0.3272,
+    0.0006
+   ],
+   "size": [
+    1.6092,
+    1.3084,
+    1.774
+   ]
+  }
+ },
+ "log": {
+  "import_normals": {
+   "customNormals": false,
+   "flippedByRecalc": 41742
+  },
+  "raw_tris": 346322,
+  "view_fit": {
+   "iou": 0.878,
+   "yaw": 0,
+   "pitch": 39
+  },
+  "t_classify_s": 1.7,
+  "removed_inner_shell_tris": [
+   21026,
+   20716
+  ],
+  "relief_Chest": {
+   "moss": 29818,
+   "gold": 26753,
+   "leather": 70470,
+   "leather2": 79813
+  },
+  "relief_Pauldron_L": {
+   "moss": 39750,
+   "gold": 8726,
+   "leather": 0,
+   "leather2": 0
+  },
+  "relief_Pauldron_R": {
+   "moss": 40385,
+   "gold": 8865,
+   "leather": 0,
+   "leather2": 0
+  },
+  "fit": {
+   "front25": 0.247,
+   "back5": 0.327,
+   "side5": 0.39,
+   "scale": [
+    2.77,
+    2.347,
+    1.798
+   ]
+  },
+  "fit_Pauldron_L": {
+   "axis": [
+    -0.63,
+    -0.02,
+    -0.78
+   ],
+   "scale": [
+    3.97,
+    3.018,
+    1.711,
+    10.3
+   ]
+  },
+  "fit_Pauldron_R": {
+   "axis": [
+    0.63,
+    0.01,
+    -0.77
+   ],
+   "scale": [
+    4.01,
+    2.997,
+    1.711,
+    177.5
+   ]
+  },
+  "tris_before": {
+   "Chest": 206854,
+   "Pauldron_L": 48476,
+   "Pauldron_R": 49250
+  },
+  "hidden_faces_removed": {
+   "Chest": 16295,
+   "Pauldron_L": 3609,
+   "Pauldron_R": 3500
+  },
+  "t_reduce_s": 4.6,
+  "tris_after": {
+   "Chest": 3899,
+   "Pauldron_L": 998,
+   "Pauldron_R": 1000
+  },
+  "tris_total": 5897,
+  "check": {
+   "Chest": {
+    "tris": 3899,
+    "boundaryEdges": 1097,
+    "nonManifoldEdges": 0,
+    "flippedVsRecalc": 119,
+    "degenerate": 0
+   },
+   "Pauldron_L": {
+    "tris": 998,
+    "boundaryEdges": 306,
+    "nonManifoldEdges": 0,
+    "flippedVsRecalc": 38,
+    "degenerate": 0
+   },
+   "Pauldron_R": {
+    "tris": 1000,
+    "boundaryEdges": 282,
+    "nonManifoldEdges": 0,
+    "flippedVsRecalc": 13,
+    "degenerate": 0
+   }
+  }
+ }
+}
