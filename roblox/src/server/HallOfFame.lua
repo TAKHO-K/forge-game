@@ -159,7 +159,14 @@ function HallOfFame.addFirst(entry)
 	end
 	local row = { kind = "tFirst", level = entry.level, name = entry.name, at = entry.at, userId = entry.userId }
 	table.insert(firsts, row)
-	table.insert(entries, 1, row)
+	local at = 1 -- 리뷰: 최초 줄끼리는 높은 단계부터
+	while entries[at] and entries[at].kind == "tFirst" and entries[at].level > row.level do
+		at += 1
+	end
+	table.insert(entries, at, row)
+	while #entries > PrimordialData.recentKeep do
+		table.remove(entries)
+	end
 	if slab then
 		redraw()
 	end

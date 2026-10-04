@@ -327,13 +327,15 @@ function TranscendView.render(refs)
 	elseif mode == "transcend" then
 		local level, slot = v.level or 0, v.slot or 0
 		local maxed = level >= (v.maxLevel or 20)
-		local prob = v.nextChance ~= nil -- QUEUE-ALL9E1 0-4: +6 ~ 확률 단계(불씨 막대 = 천장 칸 수)
+		local prob = v.nextChance ~= nil or level >= All10Data.transcendEnhance.sureUntil -- QUEUE-ALL9E1 0-4: +6 ~ 확률 단계(불씨 막대 = 천장 칸 수) · 최대(+25)도 곱 배수 문구(리뷰)
 		refs.title.Text = Text.get("transcend.enh.title", { level = tostring(level) })
 		refs.reward.Visible, refs.bar.Visible, refs.slotsText.Visible, refs.note.Visible = false, not maxed, not maxed, true
 		if prob then
-			refs.body.Text = Text.get("transcend.enh.effectMult", { now = ("%.2f"):format(v.multNow or 1), next = ("%.2f"):format(v.multNext or 1) })
-			rebuildCells(refs, v.nextCeiling, v.fails or 0)
-			refs.slotsText.Text = Text.get("transcend.enh.chance", { chance = ("%d"):format(math.floor(v.nextChance * 100 + 0.5)), fails = tostring(v.fails or 0), ceiling = tostring(v.nextCeiling) })
+			refs.body.Text = Text.get("transcend.enh.effectMult", { now = ("%.2f"):format(v.multNow or 1), next = ("%.2f"):format(v.multNext or v.multNow or 1) })
+			if v.nextChance then
+				rebuildCells(refs, v.nextCeiling, v.fails or 0)
+				refs.slotsText.Text = Text.get("transcend.enh.chance", { chance = ("%d"):format(math.floor(v.nextChance * 100 + 0.5)), fails = tostring(v.fails or 0), ceiling = tostring(v.nextCeiling) })
+			end
 			refs.note.Text = Text.get("transcend.enh.noteProb")
 		else
 			refs.body.Text = Text.get("transcend.enh.effect", { now = pct((level + slot / v.slots) * v.perLevel), step = pct(v.perLevel / v.slots) })

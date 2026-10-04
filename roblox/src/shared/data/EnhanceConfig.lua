@@ -75,7 +75,7 @@ local config = {
 	},
 	-- QUEUE-ALL9E1 0-3(P3-3 · 사용자 10-04): 기능 스위치 ResetMinus4 - 켜면 초기화 도착점 = 시도 단계 − steps(+28 → +24 · 위 표는 범위만 쓴다). 끄면 위 고정 바닥.
 	--   하락(1단계) · 불씨 유지 · +26 이상 하락 없음 · 초기화 확률은 그대로.
-	resetMinus = { enabled = true, steps = 4 },
+	resetMinus = { enabled = true, steps = 4, exampleLevel = 28 }, -- exampleLevel = 문구 예시(+28 → +24)
 
 	-- 천장("불씨", PRD 20.72 [1-6] 3번). 모든 실패(유지 · 하락 · 초기화)가 게이지를 채운다: 실패 1회당
 	-- += round(시도한 단계의 성공률 × gainPerSuccessRate)(천분율 정수, weapon.enhanceGauge에 저장). 게이지 ≥ max면 다음 시도는 성공 100%,

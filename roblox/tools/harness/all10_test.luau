@@ -442,8 +442,8 @@ local okF, errF = pcall(function()
 	local wonA15again = TF.tryClaim(15, A1)
 	local wonB15 = TF.tryClaim(15, B1)
 	local rows = TF.readAll()
-	check("0-5 두 서버 동시 +10 → 먼저 커밋한 B만 · A = 짐(기록 B) · B 재시도 = 이김 · +15 A 이김 · A 재시도 이김 · B 짐 · 기록 2줄(높은 단계부터) · 키 = 시험 접두사 + epoch",
-		not wonA and recA and recA.userId == 1002 and wonB2 and wonA15 and wonA15again and not wonB15 and #rows == 2 and rows[1].level == 15 and rows[2].level == 10
+	check("0-5 두 서버 동시 +10 → 먼저 커밋한 B만 · A = 짐(기록 B) · B 다시(다른 직업) = 다시 최초 아님(리뷰) · +15 A 이김 · A 다시 = 아님 · B 짐 · 기록 2줄(높은 단계부터) · 키 = 시험 접두사 + epoch",
+		not wonA and recA and recA.userId == 1002 and not wonB2 and wonA15 and not wonA15again and not wonB15 and #rows == 2 and rows[1].level == 15 and rows[2].level == 10
 		and TF.keyFor(20) == "test_" .. MODS.All10Data.transcendFirsts.launchEpoch .. ":20", ("%s · %s"):format(tostring(recA and recA.userId), TF.keyFor(20)))
 	check("0-5 대상 단계 10 · 15 · 20만 · 개발 계정 제외 · 칭호 3종 데이터", TF.isFirstLevel(10) and TF.isFirstLevel(20) and not TF.isFirstLevel(11) and TF.excluded(11595243049) and not TF.excluded(1001)
 		and MODS.TitleData.titles.firstTranscend20 ~= nil and MODS.TitleData.titles.firstTranscend10 ~= nil)

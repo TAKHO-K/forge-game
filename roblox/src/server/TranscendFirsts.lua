@@ -47,27 +47,36 @@ function TranscendFirsts.excluded(userId)
 	return table.find(LeaderboardConfig.excludedUserIds or {}, userId) ~= nil
 end
 
--- 선점 시도: 반환 = 이겼나, 지금 기록(이긴 사람 표 | nil = 실패). 같은 사람이 다시 와도(재시도) 이긴 것으로 본다.
+-- 선점 시도: 반환 = 이겼나(★이번 호출이 실제로 썼을 때만 - 리뷰: 같은 사람이 다른 직업으로 같은 단계에 또 닿아도 다시 "최초"가 되지 않게), 지금 기록.
+--   DataStore 실패 = 3번까지 다시(점점 길게 - 리뷰: 한 번 실패로 진짜 최초가 기록 없이 지나가지 않게).
 function TranscendFirsts.tryClaim(level, entry)
-	local ok, result = pcall(function()
-		return store():UpdateAsync(TranscendFirsts.keyFor(level), function(current)
-			if type(current) == "table" and current.userId then
-				return nil -- 이미 누가 있다 = 쓰지 않음(UpdateAsync nil = 취소)
-			end
-			return entry
+	local ok, result
+	for attempt = 1, 3 do
+		ok, result = pcall(function()
+			return store():UpdateAsync(TranscendFirsts.keyFor(level), function(current)
+				if type(current) == "table" and current.userId then
+					return nil -- 이미 누가 있다 = 쓰지 않음(UpdateAsync nil = 취소 · 반환도 nil)
+				end
+				return entry
+			end)
 		end)
-	end)
+		if ok then
+			break
+		end
+		if not (TranscendFirsts.deps and TranscendFirsts.deps.store) then
+			task.wait(2 * attempt)
+		end
+	end
 	if not ok then
 		return false, nil
 	end
-	local record = result
-	if record == nil then -- 취소됨 = 이미 있던 값 읽기
-		local okGet, cur = pcall(function()
-			return store():GetAsync(TranscendFirsts.keyFor(level))
-		end)
-		record = okGet and cur or nil
+	if result ~= nil then
+		return true, result
 	end
-	return type(record) == "table" and record.userId == entry.userId, record
+	local okGet, cur = pcall(function() -- 취소됨 = 이미 있던 기록 읽기(보고용)
+		return store():GetAsync(TranscendFirsts.keyFor(level))
+	end)
+	return false, okGet and cur or nil
 end
 
 -- 기록 전부(명예의 전당) - { { level, userId, name, at } } 높은 단계부터 · 실패 = nil
@@ -118,6 +127,7 @@ function TranscendFirsts.onReached(player, level)
 			local titleId = D.titleIds[level]
 			if titleId then
 				require(script.Parent.PlayerProfile).grantTitle(player, titleId)
+				require(script.Parent.ImmediateSave).request(player) -- 리뷰: 이긴 칭호는 바로 저장 요청(나가거나 죽어도 다음 접속 때 reconcile이 다시 준다)
 			end
 			require(script.Parent.AuditTrail).note(player, "transcendFirst", ("전 서버 최초 초월 +%d · %s"):format(level, TranscendFirsts.keyFor(level)))
 			bannerAll(level, entry.name)
@@ -138,14 +148,34 @@ function TranscendFirsts.onReached(player, level)
 	return nil
 end
 
+-- 접속 때: 원본 기록의 주인인데 칭호가 없으면 다시 준다(이긴 직후 나감 · 서버 죽음 - 리뷰)
+function TranscendFirsts.reconcile(player)
+	local rows = TranscendFirsts.readAll()
+	local PlayerProfile = require(script.Parent.PlayerProfile)
+	for _, row in ipairs(rows or {}) do
+		local titleId = D.titleIds[row.level]
+		if row.userId == player.UserId and titleId and not PlayerProfile.hasTitle(player, titleId) then
+			PlayerProfile.grantTitle(player, titleId)
+			require(script.Parent.AuditTrail).note(player, "transcendFirst", ("칭호 복구 +%d"):format(row.level))
+		end
+	end
+end
+
 function TranscendFirsts.start()
+	Players.PlayerAdded:Connect(function(player)
+		task.delay(15, function() -- 프로필 로드 뒤
+			if player.Parent and require(script.Parent.PlayerProfile).getProfile(player) then
+				pcall(TranscendFirsts.reconcile, player)
+			end
+		end)
+	end)
 	task.spawn(function()
 		for attempt = 1, 6 do
 			local ok = pcall(function()
 				MessagingService:SubscribeAsync(topic, function(message)
 					local data = message and message.Data
 					if type(data) == "table" and data.jobId ~= game.JobId and tonumber(data.level) then
-						bannerAll(data.level, tostring(data.name))
+						bannerAll(data.level, tostring(data.name or "?"))
 						local okH, HallOfFame = pcall(require, script.Parent.HallOfFame)
 						if okH and HallOfFame.addFirst then
 							HallOfFame.addFirst({ level = data.level, name = data.name, at = os.time() })

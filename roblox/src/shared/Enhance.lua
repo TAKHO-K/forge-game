@@ -148,7 +148,7 @@ function Enhance.getResetFloorArgs()
 	local bands = EnhanceConfig.resetToByLevel
 	local first, last = bands[1], bands[#bands]
 	local args = { a1 = ("%d"):format(first.fromLevel), a2 = ("%d"):format(first.toLevel), t1 = ("%d"):format(first.resetTo), b1 = ("%d"):format(last.fromLevel), t2 = ("%d"):format(last.resetTo),
-		n = ("%d"):format(EnhanceConfig.resetMinus.steps), ex = ("%d"):format(28 - EnhanceConfig.resetMinus.steps) }
+		n = ("%d"):format(EnhanceConfig.resetMinus.steps), ex = ("%d"):format(EnhanceConfig.resetMinus.exampleLevel - EnhanceConfig.resetMinus.steps) }
 	args.floor = require(ReplicatedStorage.Shared.Text).get(Enhance.resetMinusOn() and "forge.enhance.floorMinus" or "forge.enhance.floorTable", args)
 	return args
 end

@@ -1545,6 +1545,19 @@ local function handleCommand(player, args)
 		ensureBackup(player)
 		applyEnhance(player, math.floor(tonumber(args[2])))
 		reply(player, "무기 강화 +" .. args[2] .. " 적용")
+	elseif sub == "transcend" and tonumber(args[2]) then
+		-- QUEUE-ALL9E1 0-4 확인 도구: /gg transcend <단계> [불씨] - 지금 직업 무기가 초월이면 초월 강화 단계 · 불씨를 덮는다(아니면 거절)
+		ensureBackup(player)
+		local profile = PlayerProfile.getProfile(player)
+		local cs = profile and profile.classes[profile.classId]
+		local t = cs and cs.weapon and cs.weapon.transcend
+		if type(t) == "table" then
+			t.level, t.slot, t.fails = math.clamp(math.floor(tonumber(args[2])), 0, 25), 0, math.max(0, math.floor(tonumber(args[3]) or 0))
+			PlayerProfile.syncTranscendAttributes(player)
+			reply(player, ("초월 강화 +%d · 불씨 %d"):format(t.level, t.fails))
+		else
+			reply(player, "초월 무기가 아니다(먼저 계승)")
+		end
 	elseif sub == "weapon" and args[2] then
 		ensureBackup(player)
 		if applyWeaponGrade(player, args[2]) then
