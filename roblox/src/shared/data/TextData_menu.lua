@@ -43,6 +43,7 @@ return {
 		["class.stat.atkSpeed"] = "속도",
 		["class.stat.rangeMultiplier"] = "사거리",
 		["class.card.pick"] = "이 직업으로",
+		["class.card.inBoss"] = "보스전 중에는 직업을 바꿀 수 없습니다.", -- QUEUE-ALL10 0-2(버튼 아래 이유 · 서버 거절 안내와 같은 문장)
 		["class.card.current"] = "지금 직업",
 		["class.card.soon"] = "곧 공개",
 		["class.soon.paladin"] = "뿅망치로 친구를 지키는 든든한 기사예요.",
@@ -91,6 +92,7 @@ return {
 		["class.stat.atkSpeed"] = "Speed",
 		["class.stat.rangeMultiplier"] = "Range",
 		["class.card.pick"] = "Pick",
+		["class.card.inBoss"] = "You can't change class during a boss fight.",
 		["class.card.current"] = "Current",
 		["class.card.soon"] = "Coming soon",
 		["class.soon.paladin"] = "A sturdy knight who guards friends.",

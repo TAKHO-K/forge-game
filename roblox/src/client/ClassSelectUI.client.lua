@@ -370,6 +370,9 @@ local function refreshPick()
 	if selectedId and selectedId == current then
 		pickRefs.setText(Text.get("class.card.current"))
 		pickRefs.setEnabled(false)
+	elseif player:GetAttribute("BossEncounterId") ~= nil then -- QUEUE-ALL10 0-2: 보스전 중(잔류 포함) = 누를 수 없음 + 이유(서버 거절 토스트는 이 창 뒤에 가린다)
+		pickRefs.setText(Text.get("class.card.pick"))
+		pickRefs.setEnabled(false, Text.get("class.card.inBoss"))
 	else
 		pickRefs.setText(Text.get("class.card.pick"))
 		pickRefs.setEnabled(selectedId ~= nil)
@@ -439,4 +442,7 @@ local function onClassIdChanged()
 end
 
 player:GetAttributeChangedSignal("ClassId"):Connect(onClassIdChanged)
+player:GetAttributeChangedSignal("BossEncounterId"):Connect(function() -- QUEUE-ALL10 0-2 보스전 입장 · 퇴장에 따라 버튼 다시 그림
+	refreshPick()
+end)
 onClassIdChanged()

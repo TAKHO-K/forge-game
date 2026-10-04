@@ -33,7 +33,7 @@ return {
 		["autoTidy.modeRow.dismantle"] = "자동 정리 방식: 분해(일반 · 희귀는 판매)",
 		["autoTidy.note"] = "줍는 순간 정리 · 잠금 · 보스 세트 · 전설 이상은 그대로",
 		["autoTidy.hint.title"] = "가방이 가득 찼어요",
-		["autoTidy.hint.body"] = "자동 정리를 켜면 희귀 이하 장비가 자동으로 정리돼요. 기준은 설정에서 바꿀 수 있어요.",
+		["autoTidy.hint.body"] = "자동 정리를 켜면 희귀 이하 장비가 자동으로 정리됩니다. 기준은 설정에서 바꿀 수 있습니다.",
 		["autoTidy.hint.on"] = "켜기",
 		["autoTidy.hint.later"] = "나중에",
 		["autoTidy.toast.gold"] = "자동 정리 {count}개 · +{gold}골드",
