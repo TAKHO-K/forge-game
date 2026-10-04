@@ -67,4 +67,37 @@ local ok, err = pcall(function()
 	ATTR.All10Economy = nil
 end)
 if not ok then print("[A10] 에러 " .. tostring(err)) end
+
+-- 1-1 저장 v70: 새 계정 · 옛 저장(v69) 이관 · 빈 값 · 큰 수 · NaN 방어 · 멱등 · 지우는 필드 없음
+local okS, errS = pcall(function()
+	local SaveSystem, SaveConfig, A = MODS.SaveSystem, MODS.SaveConfig, MODS.All10Data
+	local fresh = SaveSystem.migrate({})
+	check("v70 새 계정: training.advanced 50 · guard 0 · transcendGems 빈 목록 · 무기 transcend 없음 · 계승 기록 없음", SaveConfig.saveVersion == 70 and fresh.version == 70
+		and fresh.training.advanced == 50 and fresh.training.guard == 0 and type(fresh.transcendGems.list) == "table" and #fresh.transcendGems.list == 0 and fresh.transcendGems.seq == 0
+		and fresh.classes.bow.weapon.transcend == nil and fresh.classes.bow.transcendInherit == nil)
+	local old = SaveSystem.migrate({})
+	old.version = 69
+	old.training.advanced, old.training.guard, old.transcendGems = nil, nil, nil
+	old.gold = 12345
+	local m = SaveSystem.migrate(old)
+	check("v69 → v70: 빈 칸 채움 · 다른 값 그대로(골드 · 수련 공격) · 멱등", m.version == 70 and m.training.advanced == 50 and m.training.guard == 0 and type(m.transcendGems) == "table"
+		and m.gold == 12345 and m.training.attack == 0 and SaveSystem.migrate(m).training.advanced == 50)
+	local bad = SaveSystem.migrate({})
+	bad.training.advanced, bad.training.guard = 0 / 0, 1e300
+	bad.transcendGems = "망가짐"
+	bad.classes.bow.weapon.grade = 7
+	bad.classes.bow.weapon.transcend = { level = 1e300, slot = -5 }
+	bad.classes.dualblade.weapon.transcend = { level = math.huge, slot = 3 }
+	bad.classes.healer.weapon.transcend = { level = 0 / 0, slot = 99 }
+	bad.classes.greatsword.weapon.transcend = "x"
+	bad.classes.bow.transcendInherit = { stage = 0 / 0 }
+	bad.classes.healer.transcendInherit = { stage = 9500.7, at = -3 }
+	local s = SaveSystem.migrate(bad)
+	local tb, th = s.classes.bow.weapon.transcend, s.classes.healer.weapon.transcend
+	check("손상 값 정리: NaN · inf → 기본 · 큰 수 → 상한 · 음수 → 0 · 모양 틀림 → 기본(지우는 다른 필드 없음)", s.training.advanced == 50 and s.training.guard == A.defenseTraining.maxLevel
+		and type(s.transcendGems.list) == "table" and tb.level == A.transcendEnhance.maxLevel and tb.slot == 0 and th.level == 0 and th.slot == A.transcendEnhance.slots - 1
+		and s.classes.dualblade.weapon.transcend.level == 0 and s.classes.greatsword.weapon.transcend == nil and s.classes.bow.transcendInherit == nil and s.classes.healer.transcendInherit.stage == 9500 and s.classes.healer.transcendInherit.at == 0
+		and SaveSystem.isValidProfile(s), ("adv %s guard %s bow %s/%s healer %s/%s"):format(tostring(s.training.advanced), tostring(s.training.guard), tostring(tb.level), tostring(tb.slot), tostring(th.level), tostring(th.slot)))
+end)
+if not okS then print("[A10] 에러 " .. tostring(errS)) end
 print(("[A10] 끝 %d/%d"):format(pass, total))

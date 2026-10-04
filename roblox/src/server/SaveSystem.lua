@@ -290,7 +290,10 @@ local function defaultProfile()
 		-- M1-3(v41): 알 가방(부화 · 펫은 펫 단계) - { { zone = 구역 키, grade = "normal" | "good" | "rare", species = { 후보 id 2 }, nest = 둥지 id, at = unix 초 } } · 상한 NestData.eggCap.
 		eggs = {},
 		audit = { lambda = 0, primordialRolls = 0, playSeconds = 0 }, -- S1(v44): 획득 감사(AcquisitionAudit)
-		training = { attack = 0, hp = 0, defense = 0 }, -- QUEUE-10h Q6(v50): 공용 수련 단계(계정 - TrainingData.stats)
+		training = { attack = 0, hp = 0, defense = 0, advanced = 50, guard = 0 }, -- QUEUE-10h Q6(v50): 공용 수련 단계(계정 - TrainingData.stats) · QUEUE-ALL10(v70) advanced = 고급 수련 단계(50 = 아직 없음 ~ 100) · guard = 방어 수련(0 ~ 30) - 효과는 초월 무기 직업에만
+		-- QUEUE-ALL10(v70): 초월 보석(계정 귀속 · 기본 잠금 · 판매/분해 불가) - list = { { id = "TG<n>", grade = "transcendent", itemLevel, option = { id, roll }, locked = true, socket = nil | { classId, slot }, at, source } } · seq = 번호
+		--   무기 칸(weapon.gems[slot])에는 사본(transcendGemId = id)이 들어간다 - 진실 = 이 목록(추출 = 칸 비움 + socket = nil · 100% 보존).
+		transcendGems = { list = {}, seq = 0 },
 		quests = nil, -- QUEUE-10h Q6(v50): 퀘스트 상태(shared/Quest.newState - 로드 때 채움)
 		checkpoints = { found = {} }, -- QUEUE-ALL3 Q5(v61): 체크포인트 발견 id 목록(WorldMapData.checkpoints.list)
 		pets = nil, -- QUEUE-10h Q11(v52): 펫 상태(shared/Pet.newState - { list, equipped, hatchCount, hatching })
@@ -366,6 +369,48 @@ local function normalizeKeySet(set)
 		normalized[tostring(key)] = value
 	end
 	return normalized
+end
+
+-- QUEUE-ALL10 1-1: 초월 계승 저장 값 정리(매 로드 - 이관 뒤 손상 · 개발 명령 값도). 숫자 = 정수 · 범위 안 · NaN/inf → 기본. 지우는 필드 없음(모양이 틀린 값만 기본으로).
+local function int(v, lo, hi, default)
+	v = tonumber(v)
+	if v == nil or v ~= v or v == math.huge or v == -math.huge then
+		return default
+	end
+	return math.clamp(math.floor(v), lo, hi)
+end
+function SaveSystem.sanitizeAll10(data)
+	local A = require(ReplicatedStorage.Shared.data.All10Data)
+	if type(data.training) == "table" then
+		data.training.advanced = int(data.training.advanced, A.advancedTraining.fromLevel - 1, A.advancedTraining.maxLevel, A.advancedTraining.fromLevel - 1)
+		data.training.guard = int(data.training.guard, 0, A.defenseTraining.maxLevel, 0)
+	end
+	if type(data.transcendGems) ~= "table" then
+		data.transcendGems = { list = {}, seq = 0 }
+	end
+	local tg = data.transcendGems
+	tg.list = type(tg.list) == "table" and tg.list or {}
+	tg.seq = int(tg.seq, 0, 1e9, 0)
+	for _, classState in pairs(type(data.classes) == "table" and data.classes or {}) do
+		local weapon = type(classState) == "table" and classState.weapon
+		if type(weapon) == "table" and weapon.transcend ~= nil then
+			if type(weapon.transcend) ~= "table" then
+				weapon.transcend = nil
+			else
+				weapon.transcend.level = int(weapon.transcend.level, 0, A.transcendEnhance.maxLevel, 0)
+				weapon.transcend.slot = weapon.transcend.level >= A.transcendEnhance.maxLevel and 0 or int(weapon.transcend.slot, 0, A.transcendEnhance.slots - 1, 0)
+			end
+		end
+		local rec = type(classState) == "table" and classState.transcendInherit
+		if rec ~= nil then
+			if type(rec) ~= "table" or int(rec.stage, 0, 1e9, 0) <= 0 then
+				classState.transcendInherit = nil
+			else
+				rec.stage = int(rec.stage, 1, 1e9, 1)
+				rec.at = int(rec.at, 0, 1e12, 0)
+			end
+		end
+	end
 end
 
 -- data.version < SaveConfig.saveVersion일 때 순차 변환(웹 core/save.js와 같은 패턴).
@@ -1423,9 +1468,19 @@ local function migrate(data)
 		end
 		data.version = 69
 	end
+	if data.version < 70 then
+		-- QUEUE-ALL10 1-1: 초월 계승 자리(옛 계정 = 계승 없음 · 고급 수련 50 · 방어 수련 0 · 초월 보석 0개). 값 정리는 아래 sanitizeAll10(매 로드).
+		if type(data.training) == "table" then
+			data.training.advanced = data.training.advanced or 50
+			data.training.guard = data.training.guard or 0
+		end
+		data.transcendGems = type(data.transcendGems) == "table" and data.transcendGems or { list = {}, seq = 0 }
+		data.version = 70
+	end
 
 	data.savedAt = data.savedAt or 0
 	SaveSystem.clampStageCap(data) -- S1 리뷰 7: 불러온 옛 값도 상한으로
+	SaveSystem.sanitizeAll10(data) -- QUEUE-ALL10 1-1: 초월 계승 숫자(빈 값 · 큰 수 · NaN) 매 로드 정리
 	return data
 end
 
