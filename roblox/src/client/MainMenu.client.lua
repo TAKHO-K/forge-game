@@ -772,6 +772,14 @@ enter = function(mode, skipped)
 		lightLayer.Visible = false
 	end
 	local pressClock = os.clock()
+	task.spawn(function() -- 메인 메뉴 버그(10-05): 접속 때 캐릭터를 월드에 두지 않는다 → 입장하는 지금 스폰(로딩 막대 앞 - 캐릭터 · 주변 스트리밍 단계가 스폰을 기다린다)(칸 play · new가 이미 스폰했으면 서버가 아무것도 안 함)
+		local remote = ReplicatedStorage:FindFirstChild("SlotRequest")
+		if remote then
+			pcall(function()
+				remote:InvokeServer("enterWorld")
+			end)
+		end
+	end)
 	root.Visible = false
 	waitLabel.Visible = false
 	menuShownClock = menuShownClock or pressClock
@@ -803,14 +811,6 @@ enter = function(mode, skipped)
 		timing:FireServer({ showMs = math.floor((menuShownClock - bootClock) * 1000), playMs = math.floor((playClock - pressClock) * 1000), capHit = capHit, skipped = skipped == true })
 	end
 	ContextActionService:UnbindAction(BLOCK_ACTION)
-	task.spawn(function() -- 메인 메뉴 버그(10-05): 접속 때 캐릭터를 월드에 두지 않는다 → 입장하는 지금 스폰(칸 play · new가 이미 스폰했으면 서버가 아무것도 안 함)
-		local remote = ReplicatedStorage:FindFirstChild("SlotRequest")
-		if remote then
-			pcall(function()
-				remote:InvokeServer("enterWorld")
-			end)
-		end
-	end)
 	if player:GetAttribute("CaptureMode") ~= true then
 		for coreType in pairs(hiddenCore) do
 			pcall(StarterGui.SetCoreGuiEnabled, StarterGui, coreType, true)
