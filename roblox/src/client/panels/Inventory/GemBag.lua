@@ -99,7 +99,7 @@ function GemBag.create(parent, deps)
 			gemIcon.Name = "GemIcon"
 			gemIcon.AnchorPoint = Vector2.new(0.5, 0.5)
 			gemIcon.Position = UDim2.new(0.5, 0, 0.5, -8)
-			gemIcon.Size = UDim2.fromScale(0.42, 0.42)
+			gemIcon.Size = UDim2.fromScale(0.66, 0.66) -- UI2-5(03 v2): 칸의 66% = 보석 몸통(옛 0.42 등급색 원)
 			gemIcon.SizeConstraint = Enum.SizeConstraint.RelativeYY
 			gemIcon.BorderSizePixel = 0
 			gemIcon.Parent = cell

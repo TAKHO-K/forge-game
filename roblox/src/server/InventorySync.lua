@@ -72,6 +72,7 @@ function InventorySync.snapshot(profile)
 	return {
 		inventory = profile.inventory,
 		slots = InventorySync.capacity(profile), -- Q13: 실험 스위치 포함
+		bagPass = type(profile.gamepasses) == "table" and profile.gamepasses.bagExpand == true, -- QUEUE-UI2 UI2-5: 가방 끝 확장 안내 = 패스 없을 때만
 		armor = equipment.armor,
 		gloves = equipment.gloves,
 		shoes = equipment.shoes,

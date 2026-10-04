@@ -5,6 +5,7 @@ local UserInputService = game:GetService("UserInputService")
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 local Layout = require(script.Parent.Layout)
+local UIManager = require(script.Parent.Parent.Parent.UIManager) -- QUEUE-UI2 UI2-5: HUD v5 메뉴 열 자리(hudReserve)
 local GuiService = game:GetService("GuiService")
 
 -- 장비창 껍데기(S20b: InventoryUI 분할 - 화면 · 딤 · 창 · 헤더 · 탭 줄 + 배치 적용). 탭 본문(장비 · 가방 · 보석)과 상세는 다른 모듈이 R에 자기 프레임을 붙이고, 배치는 R.layouts에 함수를 등록해 Shell.applyLayout이 부른다.
@@ -142,7 +143,8 @@ local function positionWindow(L)
 	end
 	if userWindowPosition then
 		-- 뷰포트가 바뀌었을 수도 있으니(창 크기 조절) 매번 다시 화면 안으로 잘라 넣는다 - 지시 "드래그 가능 부분이 화면 밖으로는 나가지 않게".
-		local left = math.clamp(userWindowPosition.X, 0, math.max(0, L.screenW - L.winW))
+		local res = UIManager.hudReserve or { left = 0, right = 0 } -- UI2-5: 옮긴 자리도 HUD v5 메뉴 열 사이로
+		local left = math.clamp(userWindowPosition.X, res.left, math.max(res.left, L.screenW - L.winW - res.right))
 		local top = math.clamp(userWindowPosition.Y, 0, math.max(0, L.screenH - L.winH))
 		win.Position = UDim2.new(0, left, 0, top)
 		return
@@ -152,6 +154,11 @@ local function positionWindow(L)
 	left = math.max(left, CHAT_RIGHT_CLEARANCE)
 	left = math.min(left, L.screenW - L.winW - Layout.margin)
 	left = math.max(left, Layout.margin)
+	local res = UIManager.hudReserve -- UI2-5: HUD v5 메뉴 열 사이(가운데)
+	if res and (res.left > 0 or res.right > 0) then
+		local lo, hi = res.left + Layout.margin, L.screenW - res.right - Layout.margin - L.winW
+		left = math.clamp(math.floor((lo + hi) / 2), lo, math.max(lo, hi))
+	end
 	local top = math.max(Layout.margin, math.min(TOP_MARGIN, L.screenH - L.winH - Layout.margin))
 	win.Position = UDim2.new(0, left, 0, top)
 end
@@ -535,7 +542,7 @@ end
 -- 화면 크기에서 배치를 정해 전부에 적용한다. 화면 크기가 바뀔 때 · 창을 열 때 부른다. 반환: 배치 L.
 function R.applyLayout()
 	local size = screenSize()
-	local L = Layout.compute(size.X, size.Y, Theme.isMobile) -- 2-6: 터치 = 메뉴바 자리 뺌
+	local L = Layout.compute(size.X, size.Y, Theme.isMobile, UIManager.hudReserve) -- 2-6: 터치 = 메뉴바 자리 뺌 · UI2-5: HUD v5 메뉴 열 자리 뺌
 	local modeChanged = S.mode ~= L.mode
 	S.mode, R.layout = L.mode, L
 	positionWindow(L)

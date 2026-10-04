@@ -168,6 +168,10 @@ local function onStateChanged(state)
 	S.equippedShoes = state.shoes
 	S.newItems.update() -- 서버 스냅샷만 센다(점검이 넣는 가짜 가방은 세지 않는다)
 	-- 칸 수는 서버가 알린 값(slots - 프로필이 아직 없을 때의 첫 응답에는 없다). 바뀌면 격자 높이가 칸 수에서 나오므로 배치를 다시 한다.
+	if state.bagPass ~= nil and state.bagPass ~= S.bagPass then -- QUEUE-UI2 UI2-5 확장 안내(패스 없을 때만)
+		S.bagPass = state.bagPass
+		R.applyLayout()
+	end
 	if type(state.slots) == "number" and state.slots ~= S.bagSlots then
 		S.bagSlots = state.slots
 		R.applyLayout()

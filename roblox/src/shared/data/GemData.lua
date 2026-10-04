@@ -25,6 +25,12 @@ return {
 	-- QUEUE-ALL9E1 추가 항목 3(기능만 · 그림은 DESIGN-BACKLOG 7): 보석 아이콘 키(ArtAssetIds) = 종류(옵션 id)별 키가 있으면 그것 → 등급 키 → 없으면 임시 아이콘(등급색 원). 그리는 곳 = client/ItemIcons.gem 한 곳
 	iconKeyByKind = "icons/gems/%s_%s", -- (등급, 옵션 id)
 	iconKeyByGrade = "icons/gems/%s", -- (등급)
+	-- QUEUE-UI2 UI2-5(03 v2 "보석 아이콘 = 2겹"): 몸통(등급) + 문양(종류) - ArtAssetIds 키. 문양 = 옵션 id → 이름(직업 특화 스킬 옵션 = class) · 위 한 장 키는 그대로(없으면 이 2겹이 먼저)
+	iconBodyByGrade = { epic = "ui/ds/gem-body-hero", legendary = "ui/ds/gem-body-legend", relic = "ui/ds/gem-body-relic", ancient = "ui/ds/gem-body-ancient", primordial = "ui/ds/gem-body-primal", transcendent = "ui/ds/gem-body-transcend" },
+	iconMarkByOption = { attackPercent = "power", speedPercent = "haste", crit = "crit", maxHpPercent = "vitality", defensePercent = "guard", expGain = "growth", healingPower = "regen", lifesteal = "leech" },
+	iconMarkClassPrefix = "skill_", -- 이 접두사 옵션(직업 스킬 보석) = 문양 class
+	iconMarkKey = "ui/ds/gem-mark-%s",
+	iconLayer = { body = 1, mark = 0.45 }, -- 몸통 = 받는 자리(holder) 꽉 - 칸의 66%는 부르는 쪽 holder 크기(GemBag 0.66) · 문양 = 몸통의 45%(오른쪽 아래 모서리 · AnchorPoint (1, 1))
 	transcendRim = { 216, 185, 110 }, -- 초월 홈 1px 바깥 선(금빛 균열 #D8B96E - 흑요석 #202127 테두리가 어두운 패널에서 안 보여서 · B6)
 
 	-- 슬롯이 열리는 데 필요한 환생 횟수(현재는 slot i = 환생 i회, 기존 동작 그대로 유지 -

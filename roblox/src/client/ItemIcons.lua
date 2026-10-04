@@ -143,10 +143,55 @@ function ItemIcons.gemKey(gem)
 	return "temp:" .. tostring(gem.grade), false
 end
 
+-- QUEUE-UI2 UI2-5: 2겹 키(몸통 = 등급 · 문양 = 종류) → body, mark(없으면 nil)
+function ItemIcons.gemLayerKeys(gem)
+	local body = GemData.iconBodyByGrade and GemData.iconBodyByGrade[tostring(gem.grade)]
+	local kind = type(gem.option) == "table" and gem.option.id or nil
+	local markName = kind and (GemData.iconMarkByOption[kind] or (tostring(kind):sub(1, #GemData.iconMarkClassPrefix) == GemData.iconMarkClassPrefix and "class" or nil))
+	local mark = markName and GemData.iconMarkKey:format(markName) or nil
+	local function has(k)
+		return k and ArtAssetIds[k] and ArtAssetIds[k].image and k or nil
+	end
+	return has(body), has(mark)
+end
+
 function ItemIcons.gem(holder, gem, tempColor)
 	local old = holder:FindFirstChild("GemArt")
 	if old then
 		old:Destroy()
+	end
+	local oldMark = holder:FindFirstChild("GemMark")
+	if oldMark then
+		oldMark:Destroy()
+	end
+	local body, mark = ItemIcons.gemLayerKeys(gem)
+	if body then -- 2겹(03 v2): 몸통 + 문양(오른쪽 아래 모서리에 걸침)
+		holder:SetAttribute("GemIconKey", body .. (mark and ("+" .. mark) or ""))
+		holder.BackgroundTransparency = 1
+		local L = GemData.iconLayer
+		local img = Instance.new("ImageLabel")
+		img.Name = "GemArt"
+		img.BackgroundTransparency = 1
+		img.AnchorPoint = Vector2.new(0.5, 0.5)
+		img.Position = UDim2.fromScale(0.5, 0.5)
+		img.Size = UDim2.fromScale(L.body, L.body) -- 칸 = holder → 몸통 66%
+		img.Image = "rbxassetid://" .. tostring(ArtAssetIds[body].image)
+		img.ScaleType = Enum.ScaleType.Fit
+		img.ZIndex = holder.ZIndex
+		img.Parent = holder
+		if mark then
+			local m = Instance.new("ImageLabel")
+			m.Name = "GemMark"
+			m.BackgroundTransparency = 1
+			m.AnchorPoint = Vector2.new(1, 1)
+			m.Position = UDim2.fromScale(1.06, 1.06) -- 몸통 오른쪽 아래 모서리에 살짝 걸침
+			m.Size = UDim2.fromScale(L.mark, L.mark)
+			m.Image = "rbxassetid://" .. tostring(ArtAssetIds[mark].image)
+			m.ScaleType = Enum.ScaleType.Fit
+			m.ZIndex = holder.ZIndex + 1
+			m.Parent = img
+		end
+		return body
 	end
 	local key, hasArt = ItemIcons.gemKey(gem)
 	holder:SetAttribute("GemIconKey", key)

@@ -426,15 +426,40 @@ function R.layoutBag(L)
 		end
 	end
 	local rows = math.max(math.ceil(math.max(shown, 1) / cols), 1)
-	local gridWidth = cols * CELL_SIZE + (cols - 1) * CELL_GAP
-	local gridHeight = rows * CELL_SIZE + (rows - 1) * CELL_GAP
+	local cell, gap = L.cellSize or CELL_SIZE, L.cellGap or CELL_GAP -- UI2-5: PC 88 · 10 / 폰 78 · 8(Layout)
+	local gridWidth = cols * cell + (cols - 1) * gap
+	local gridHeight = rows * cell + (rows - 1) * gap
+	refs.gridLayout.CellSize = UDim2.fromOffset(cell, cell)
+	refs.gridLayout.CellPadding = UDim2.fromOffset(gap, gap)
 	refs.gridLayout.FillDirectionMaxCells = cols
 	grid.Position = UDim2.new(0, math.max(GRID_PAD, math.floor((L.bagW - gridWidth) / 2)), 0, 8)
 	grid.Size = UDim2.new(0, gridWidth, 0, gridHeight)
 	local footH = phone and 44 or 30
 	refs.foot.Position = UDim2.new(0, grid.Position.X.Offset, 0, 8 + gridHeight + FOOT_GAP)
 	refs.foot.Size = UDim2.new(1, -(grid.Position.X.Offset + GRID_PAD), 0, footH)
-	scroll.CanvasSize = UDim2.new(0, 0, 0, 8 + gridHeight + FOOT_GAP + footH + 12)
+	-- UI2-5(03 v2): 목록 끝 작은 글자 버튼 "가방 칸 +20 · 가방 확장 패스 ›" = 패스 없을 때만(잠긴 칸 줄 · 압박 표시 없음) → 상점 편의 탭
+	local hint = refs.passHint
+	if not hint then
+		hint = Instance.new("TextButton")
+		hint.Name = "BagPassHint"
+		hint.AutoButtonColor = false
+		hint.BackgroundTransparency = 1
+		hint.Font = Theme.font
+		hint.TextColor3 = UIColors.textSecondary
+		hint.TextXAlignment = Enum.TextXAlignment.Left
+		hint.Text = Text.get("inv.bag.passHint", { n = tostring(require(ReplicatedStorage.Shared.data.MonetizationData).gamePasses.bagExpand.bonusSlots) })
+		hint.Parent = scroll
+		hint.Activated:Connect(function()
+			require(script.Parent.Parent.Shop).openFromHud("convenience")
+		end)
+		refs.passHint = hint
+	end
+	local showHint = S.bagPass == false
+	hint.Visible = showHint
+	hint.TextSize = Theme.textSize("caption")
+	hint.Position = UDim2.new(0, grid.Position.X.Offset, 0, 8 + gridHeight + FOOT_GAP + footH + 6)
+	hint.Size = UDim2.new(1, -(grid.Position.X.Offset + GRID_PAD), 0, phone and 44 or 28)
+	scroll.CanvasSize = UDim2.new(0, 0, 0, 8 + gridHeight + FOOT_GAP + footH + 12 + (showHint and ((phone and 44 or 28) + 6) or 0))
 end
 table.insert(R.layouts, R.layoutBag)
 end

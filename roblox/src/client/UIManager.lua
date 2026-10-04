@@ -34,6 +34,7 @@ UIManager.safeMargin = 8
 -- QUEUE-ALL6 A3: 폰에서 창(window · station)이 열리면 왼쪽 메뉴가 1열로 접히고, 창 왼쪽 끝은 이 값(px - 메뉴 오른쪽 끝 + 간격) 오른쪽으로 민다.
 --   hud/MenuBar가 relayout 때 채운다(PC · 메뉴 숨김 = 0 → X는 손대지 않음). 그래도 화면 폭이 모자라면 창 폭을 줄인다(본문은 창 안 배치가 받는다).
 UIManager.leftReserve = 0
+UIManager.hudReserve = { left = 0, right = 0 } -- QUEUE-UI2 UI2-5: HUD v5 PC 메뉴 열 자리(화면 px - hud/HudMenuV2가 정함) → 큰 창(가방 1600)이 열 아래로 안 들어가게
 
 local windows = {} -- id -> config(register가 받은 것 그대로)
 local fitStates = setmetatable({}, { __mode = "k" }) -- frame -> { baseMaxY = 패널이 원래 정한 높이 상한, baseMaxX = 폭 상한, position = 내가 마지막에 넣은 Position, shift = 그때 민 px(세로), shiftX = 가로 }

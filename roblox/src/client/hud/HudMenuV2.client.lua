@@ -1,6 +1,7 @@
 -- QUEUE-UI2 UI2-4 HUD v5 메뉴(02_hud/v5 spec): PC 왼쪽 "내 캐릭터 관리"(가방 · 성장 · 수련 · 지도 · 더보기) + 오른쪽 "진행 · 보상"(구역 · 퀘스트 · 보상 · 상점) + 귀환(둥근 판) ·
 --   폰 위 줄(가방 · 보상 · 더보기) + 더보기(자주 쓰는 것 + 나머지 4열). 항목 = HudData · 좌표 = UiLayoutData.hud · 키 칩 = PanelRegistry(창 키 · 행동 키) · 버튼 = UiKit(판 B · 둥근 판 · 손맛).
 --   스위치 HudData.menuV5 = false → 옛 hud/MenuBar(그 스크립트가 같은 스위치를 본다). 보스전(BossEncounterId) = 오른쪽 열 숨김 · 왼쪽 작게 · 반투명 · 이름표 없음.
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -287,7 +288,6 @@ end
 
 -- ── 배치(보스전 · 숨김 항목 = 앞으로 당김) ──
 -- PC 오른쪽 열 시작 = max(spec 248, 메인 퀘스트 칸 아래 + 12) · 화면 아래 끝(− 24)까지 안 들어가면 간격 → 칸 크기 순서로 줄임(이름표는 간격이 좁으면 숨김)
-local GuiService = game:GetService("GuiService")
 local function fitRight(spec, n)
 	local s = math.max(rightRoot.scale.Scale, 0.01)
 	local top = spec.y
@@ -314,6 +314,17 @@ local function placeColumn(col, boss)
 		spec = L.leftBoss
 	end
 	local labelsFit = true
+	if col == columns.left then -- 로블록스 위쪽 버튼 줄(CoreGui · 화면 px 고정 - 우리 배율로 안 줄어듦) 아래에서 시작 · 아래 끝 안(작은 창)
+		local s = math.max(leftRoot.scale.Scale, 0.01)
+		local insetBase = math.ceil((GuiService:GetGuiInset().Y + 8) / s)
+		if spec.y < insetBase then
+			local n = #col.ids
+			local room = Tokens.base.pc.h - 24 - insetBase
+			local gap = math.max(10, math.min(spec.gap, math.floor((room - n * spec.size) / math.max(1, n - 1))))
+			spec = { x = spec.x, y = insetBase, size = spec.size, gap = gap }
+			labelsFit = gap >= 30
+		end
+	end
 	if col == columns.right then
 		local n = 0
 		for _, id in ipairs(col.ids) do
@@ -382,7 +393,19 @@ local function placeMore()
 	end
 end
 
+local function publishReserve()
+	if phone then
+		UIManager.hudReserve = { left = 0, right = 0 }
+		return
+	end
+	local s = leftRoot.scale.Scale
+	local lw = (L.left.x + L.left.size + 12) * s
+	local rw = (Tokens.base.pc.w - L.right.x + 12) * s
+	UIManager.hudReserve = { left = math.ceil(lw), right = math.ceil(rw) }
+end
+
 local function relayout()
+	publishReserve()
 	local boss = inBoss()
 	for _, key in ipairs({ "left", "right", "top" }) do
 		if columns[key] then

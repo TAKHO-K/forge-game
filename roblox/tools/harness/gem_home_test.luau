@@ -60,6 +60,25 @@ local ok, err = pcall(function()
 	local after = Icons.gemKey(gem)
 	check("박힌 채 등급 상승 → 키 바뀜", before ~= after and after:find("ancient", 1, true) ~= nil, before .. " → " .. after)
 
+	-- ②-2 UI2-5 2겹 아이콘(몸통 = 등급 · 문양 = 종류): 보석 등급(영웅 이상) × 보석 옵션 전부 = 몸통 + 문양 그림 있음
+	local GD = MODS.GemData
+	local miss = {}
+	for i, g in ipairs(Armor.gradeOrder) do
+		if i >= Armor.dismantleMinGradeIndex then
+			for _, k in ipairs(kinds) do
+				local def = OptionData.options[k]
+				if def and (def.gem ~= false) then
+					local body, mark = Icons.gemLayerKeys({ grade = g, option = { id = k } })
+					if not body or not mark then table.insert(miss, g .. ":" .. k) end
+				end
+			end
+		end
+	end
+	check("UI2-5 2겹 보석 아이콘: 영웅 이상 × 옵션 = 몸통 + 문양(그림 있음)", #miss == 0, #miss .. " " .. table.concat(miss, ",", 1, math.min(#miss, 6)))
+	local _, m1 = Icons.gemLayerKeys({ grade = "epic", option = { id = "skill_greatsword_Q" } })
+	local _, m2 = Icons.gemLayerKeys({ grade = "epic", option = { id = "crit" } })
+	check("UI2-5 문양: 직업 스킬 보석 = class · 치명 = crit", m1 == GD.iconMarkKey:format("class") and m2 == GD.iconMarkKey:format("crit"), tostring(m1) .. " " .. tostring(m2))
+
 	-- ③ 무기 이펙트 단계(사용자 10-04 밤): 초월 +0 ~ +25 → 0 ~ 25 · 요소 표 하나(WeaponFxStepData) · 계승 전 +20 ~ +30 색 띠
 	local Fx, FxD = MODS.WeaponFx, MODS.WeaponFxStepData
 	local T = FxD.transcend

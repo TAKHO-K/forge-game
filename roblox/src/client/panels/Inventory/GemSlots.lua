@@ -18,7 +18,7 @@ local GemActions = require(script.Parent.GemActions)
 local GemSlots = {}
 
 local LOCK_ICON_SIZE = 20
-local DOT_RATIO = 0.42 -- 보석 원 지름 = 칩 크기 × 이 값
+local DOT_RATIO = 0.62 -- 보석 지름 = 칩 크기 × 이 값(UI2-5: 2겹 보석 그림 · 옛 등급색 원 0.42)
 local LABEL_HEIGHT = 14
 
 local function blendToward(base, target, ratio)

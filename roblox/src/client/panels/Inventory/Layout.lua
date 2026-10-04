@@ -14,8 +14,10 @@ Layout.phoneWidthBelow = 720
 Layout.phoneHeightBelow = 400
 Layout.margin = 8 -- 화면 가장자리 안전 여백(UIManager.safeMargin과 같은 값)
 
-Layout.cellSize, Layout.cellGap = 78, 8 -- 가방 칸(줄이지 않는다)
-Layout.pcWidth, Layout.pcHeight = 1240, 720 -- PC 창 최대(1920 × 1080에서 채팅 500 · 오른쪽 칩 90을 피하고도 들어간다)
+Layout.cellSize, Layout.cellGap = 78, 8 -- 가방 칸(줄이지 않는다) - 폰
+-- QUEUE-UI2 UI2-5(03 v2): PC 창 1600 × 880 · 3구역 왼쪽 312 · 가운데 716 · 오른쪽 500 · 칸 88 · 간격 10 · 최대 7열(작은 화면 = 예전처럼 들어가는 만큼)
+Layout.pc = { cellSize = 88, cellGap = 10, maxCols = 7, leftW = 312, rightW = 500 }
+Layout.pcWidth, Layout.pcHeight = 1600, 880 -- PC 창 최대(03 v2 - 옛 1240 × 720)
 Layout.wideWidth = 1100
 Layout.pad, Layout.colGap = 12, 10
 Layout.phoneLeftInset = 72 -- 폰 창의 왼쪽 여백: 메뉴바(hud/MenuBar, 오른쪽 끝 66)가 창 위에 그려지므로 그 오른쪽부터 시작한다(스크린샷 Play에서 겹침 발견)
@@ -37,7 +39,8 @@ end
 
 -- 반환: { mode, wide, screenW, screenH, winX, winW, winH, headerH, tabH, tabX, tabY, tabW, tabButtonH, pillH, closeSize, actionH, tabs(= tabNames),
 --         bodyTop, bodyH, bodyX, bodyW(보석 · 도감 본문), gearX/Y/W/H, bagX/Y/W/H, detailX/Y/W/H(PC 오른쪽 카드 - 폰은 시트라 nil), gearSlot, gearCols, bagCols }
-function Layout.compute(screenWidth, screenHeight, touch)
+-- hudReserve(선택 · PC) = { left, right } 화면 px - HUD v5 메뉴 열 자리(창 폭에서 뺀다 · Shell이 그 사이에 놓는다)
+function Layout.compute(screenWidth, screenHeight, touch, hudReserve)
 	local phone = Layout.isPhone(screenWidth, screenHeight)
 	local L = { screenW = screenWidth, screenH = screenHeight, mode = phone and "phone" or "pc" }
 	local margin = Layout.margin
@@ -60,7 +63,7 @@ function Layout.compute(screenWidth, screenHeight, touch)
 	else
 		-- QUEUE-ALL9C 2-6: 터치 화면(태블릿 · 큰 폰 842 × 534)은 창이 메뉴바 오른쪽(phoneLeftInset)부터 그려진다 → 그만큼 뺀 폭으로 3단을 짠다
 		--   (옛 = 화면 폭으로 짜서 오른쪽 상세 카드가 창 밖으로 밀려 안내 글 · 테두리가 잘렸다)
-		local availW = screenWidth - 2 * margin - (touch and (Layout.phoneLeftInset - margin) or 0)
+		local availW = screenWidth - 2 * margin - (touch and (Layout.phoneLeftInset - margin) or 0) - (hudReserve and (hudReserve.left + hudReserve.right) or 0)
 		L.winW, L.winH = math.min(Layout.pcWidth, availW), math.min(Layout.pcHeight, screenHeight - 2 * margin)
 		L.headerH, L.tabH = 48, 36
 		L.currencyH = Layout.currencyH -- QUEUE-ALL9B R3
@@ -68,8 +71,8 @@ function Layout.compute(screenWidth, screenHeight, touch)
 		L.tabs = { "all", "armor", "gloves", "shoes", "gem" }
 		L.wide = L.winW >= Layout.wideWidth
 		local pad, gap = Layout.pad, Layout.colGap
-		local leftW = L.wide and 260 or 190
-		local rightW = L.wide and 360 or 290
+		local leftW = L.wide and (L.winW >= Layout.pcWidth and Layout.pc.leftW or 260) or 190
+		local rightW = L.wide and (L.winW >= Layout.pcWidth and Layout.pc.rightW or 360) or 290
 		local colTop = L.headerH + L.currencyH + pad
 		local colH = L.winH - colTop - pad
 		local midMin = Layout.cellSize + 2 * Layout.gridPad
@@ -92,7 +95,12 @@ function Layout.compute(screenWidth, screenHeight, touch)
 		L.sheetWide = true
 	end
 	L.tabNames = L.tabs -- 옛 이름(자체 점검이 개수를 센다)
-	L.bagCols = columns(L.bagW - 2 * Layout.gridPad, Layout.cellSize, Layout.cellGap)
+	L.cellSize = phone and Layout.cellSize or Layout.pc.cellSize
+	L.cellGap = phone and Layout.cellGap or Layout.pc.cellGap
+	L.bagCols = columns(L.bagW - 2 * Layout.gridPad, L.cellSize, L.cellGap)
+	if not phone then
+		L.bagCols = math.min(L.bagCols, Layout.pc.maxCols)
+	end
 	return L
 end
 
