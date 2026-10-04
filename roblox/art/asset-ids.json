@@ -7938,6 +7938,118 @@
   "status": "Approved",
   "imageId": 118134208508602
  },
+ "ui/ds/icon-skill-bow-e.png": {
+  "sha256": "9da4fe091aa946691c4b8d0e8d7fb6424c1ee31279007494a1fc894858d23f0d",
+  "assetType": "Decal",
+  "assetId": 134309569453178,
+  "status": "Approved",
+  "imageId": 113820127040605
+ },
+ "ui/ds/icon-skill-bow-q.png": {
+  "sha256": "f5c4eafc86661871b573917a566fff51596f8ad8a6001700ac70e1858fef7266",
+  "assetType": "Decal",
+  "assetId": 74785139389291,
+  "status": "Approved",
+  "imageId": 127171296795127
+ },
+ "ui/ds/icon-skill-bow-r.png": {
+  "sha256": "e0ec098df70fea6a02b7366dac68f8cc74d26213f7e0f8255742bd015a72fd33",
+  "assetType": "Decal",
+  "assetId": 77868086766167,
+  "status": "Approved",
+  "imageId": 131218194767155
+ },
+ "ui/ds/icon-skill-bow-t.png": {
+  "sha256": "ca07b6dd6d5682cc5a6db48ea50d785732e14e813b06801785bf268e6a45bae4",
+  "assetType": "Decal",
+  "assetId": 88361695315901,
+  "status": "Approved",
+  "imageId": 88113880728742
+ },
+ "ui/ds/icon-skill-dualblade-e.png": {
+  "sha256": "348590437ee104a902df9fe0dcf74adadb6587be6db607c328fe4715bccf1318",
+  "assetType": "Decal",
+  "assetId": 128013958285912,
+  "status": "Approved",
+  "imageId": 96707258724815
+ },
+ "ui/ds/icon-skill-dualblade-q.png": {
+  "sha256": "1790c05c2fd1f8d3d739c7428e9726c62c2a6d5f3384da2b22ba3f087d31d0b2",
+  "assetType": "Decal",
+  "assetId": 129706319818795,
+  "status": "Approved",
+  "imageId": 70441017339039
+ },
+ "ui/ds/icon-skill-dualblade-r.png": {
+  "sha256": "24d2dff81ec9dcbad1d795b58149df95b893a966eac2f2e19a3e3dad86fd0025",
+  "assetType": "Decal",
+  "assetId": 104550453544489,
+  "status": "Approved",
+  "imageId": 97547858030347
+ },
+ "ui/ds/icon-skill-dualblade-t.png": {
+  "sha256": "233c4be65ef61d6d8ecda1e2eae344fabd92edf285fe459b3c387e05007ecfb3",
+  "assetType": "Decal",
+  "assetId": 91168499800776,
+  "status": "Approved",
+  "imageId": 89133554414450
+ },
+ "ui/ds/icon-skill-greatsword-e.png": {
+  "sha256": "4971fcd7c26f48624acc5ff19889e384174be91c11a2416a9a8faffb3b574012",
+  "assetType": "Decal",
+  "assetId": 72638561961684,
+  "status": "Approved",
+  "imageId": 72151263864367
+ },
+ "ui/ds/icon-skill-greatsword-q.png": {
+  "sha256": "152ba57e18e8850a82960efcd3f56cdd036a9d499904bb74f28f962cb6e641a8",
+  "assetType": "Decal",
+  "assetId": 112684186592605,
+  "status": "Approved",
+  "imageId": 117221404136927
+ },
+ "ui/ds/icon-skill-greatsword-r.png": {
+  "sha256": "18cc8f12eacfd704c5b6973f324a486e08a3f4c28d36587a3a302cc9e77e74c9",
+  "assetType": "Decal",
+  "assetId": 140218734381617,
+  "status": "Approved",
+  "imageId": 119478517031619
+ },
+ "ui/ds/icon-skill-greatsword-t.png": {
+  "sha256": "45940893af6f8c22142d8a7ccac73a78283c4d515844ea9ce536db1fcd541620",
+  "assetType": "Decal",
+  "assetId": 115883732791794,
+  "status": "Approved",
+  "imageId": 94629949984601
+ },
+ "ui/ds/icon-skill-healer-e.png": {
+  "sha256": "92530f914c4059e7f164a29a1e84a23d78f6d66b18d9ba7f0c666a1c46a1b15e",
+  "assetType": "Decal",
+  "assetId": 104927831333696,
+  "status": "Approved",
+  "imageId": 74538991851122
+ },
+ "ui/ds/icon-skill-healer-q.png": {
+  "sha256": "dd7d23df0cea400970421f91a942d56f17fad623142250671be230447f560212",
+  "assetType": "Decal",
+  "assetId": 105069064867565,
+  "status": "Approved",
+  "imageId": 94734914736137
+ },
+ "ui/ds/icon-skill-healer-r.png": {
+  "sha256": "045f421a1d5cf58bcc478e16ed618c237471cfd4adb495ce36a5fd9bf3fae12e",
+  "assetType": "Decal",
+  "assetId": 128404948376582,
+  "status": "Approved",
+  "imageId": 121809914164299
+ },
+ "ui/ds/icon-skill-healer-t.png": {
+  "sha256": "3117ca6453e5bd9447a5fe59492d93e07995c78f483ec407697f37a03e961fb5",
+  "assetType": "Decal",
+  "assetId": 92142288891443,
+  "status": "Approved",
+  "imageId": 127595331130464
+ },
  "ui/ds/icon-star.png": {
   "sha256": "0f52780bf5b1506e21d0dd422556f9940ba32ffcda21fe10b46acbe0a8858a7f",
   "assetType": "Decal",

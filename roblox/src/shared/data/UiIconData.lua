@@ -42,6 +42,11 @@ return {
 		["shop"] = { asset = "ui/ds/icon-shop", tint = false, fallback = "?", old = "icons/hud/shop" },
 		["star"] = { asset = "ui/ds/icon-star", tint = false, fallback = "★" },
 		["x"] = { asset = "ui/ds/icon-x", tint = false, fallback = "X" },
+		-- 스킬 아이콘 16장(00 v2 · icon-skill-<직업>-<칸>) - 아이콘은 직업 · 칸으로 고른다(이름 · 설명 = 게임 데이터)
+		["skill-greatsword-q"] = { asset = "ui/ds/icon-skill-greatsword-q", tint = false, fallback = "Q" }, ["skill-greatsword-e"] = { asset = "ui/ds/icon-skill-greatsword-e", tint = false, fallback = "E" }, ["skill-greatsword-r"] = { asset = "ui/ds/icon-skill-greatsword-r", tint = false, fallback = "R" }, ["skill-greatsword-t"] = { asset = "ui/ds/icon-skill-greatsword-t", tint = false, fallback = "T" },
+		["skill-dualblade-q"] = { asset = "ui/ds/icon-skill-dualblade-q", tint = false, fallback = "Q" }, ["skill-dualblade-e"] = { asset = "ui/ds/icon-skill-dualblade-e", tint = false, fallback = "E" }, ["skill-dualblade-r"] = { asset = "ui/ds/icon-skill-dualblade-r", tint = false, fallback = "R" }, ["skill-dualblade-t"] = { asset = "ui/ds/icon-skill-dualblade-t", tint = false, fallback = "T" },
+		["skill-bow-q"] = { asset = "ui/ds/icon-skill-bow-q", tint = false, fallback = "Q" }, ["skill-bow-e"] = { asset = "ui/ds/icon-skill-bow-e", tint = false, fallback = "E" }, ["skill-bow-r"] = { asset = "ui/ds/icon-skill-bow-r", tint = false, fallback = "R" }, ["skill-bow-t"] = { asset = "ui/ds/icon-skill-bow-t", tint = false, fallback = "T" },
+		["skill-healer-q"] = { asset = "ui/ds/icon-skill-healer-q", tint = false, fallback = "Q" }, ["skill-healer-e"] = { asset = "ui/ds/icon-skill-healer-e", tint = false, fallback = "E" }, ["skill-healer-r"] = { asset = "ui/ds/icon-skill-healer-r", tint = false, fallback = "R" }, ["skill-healer-t"] = { asset = "ui/ds/icon-skill-healer-t", tint = false, fallback = "T" },
 	},
 	-- 넘김 묶음 파일 이름 → 00 기준 아이콘 ID(같은 그림 · sha256 같음 - 10-05 UI2-1)
 	aliases = {
