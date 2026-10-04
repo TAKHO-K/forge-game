@@ -175,6 +175,29 @@ do
 			attackPress:Fire(false)
 		end
 	end)
+	-- QUEUE-UI UI-0: 공격 버튼 아이콘 = 지금 직업 무기 아이콘(UiIconData.attackUsesWeaponIcon · 키 = UiModel.weaponIconKey - 직업 · 등급이 바뀌면 다시) · 그림이 없으면 글자 그대로
+	local UiIconData = require(ReplicatedStorage.Shared.data.UiIconData)
+	local UiModel = require(ReplicatedStorage.Shared.UiModel)
+	local ArtAssetIds = require(ReplicatedStorage.Shared.data.ArtAssetIds)
+	local weaponImg = Instance.new("ImageLabel")
+	weaponImg.Name = "WeaponIcon"
+	weaponImg.BackgroundTransparency = 1
+	weaponImg.ScaleType = Enum.ScaleType.Fit
+	weaponImg.AnchorPoint = Vector2.new(0.5, 0.5)
+	weaponImg.Position = UDim2.fromScale(0.5, 0.5)
+	weaponImg.Size = UDim2.fromScale(1.5, 2.2) -- 패딩(위아래 0.3 · 좌우 0.2) 안쪽 기준 → 버튼의 약 90%
+	weaponImg.Visible = false
+	weaponImg.Parent = attackButton
+	local function refreshWeaponIcon()
+		local key = UiIconData.attackUsesWeaponIcon and UiModel.weaponIconKey(player:GetAttribute("ClassId"), player:GetAttribute("WeaponGrade"))
+		local e = key and ArtAssetIds[key]
+		weaponImg.Image = e and e.image and ("rbxassetid://" .. tostring(e.image)) or ""
+		weaponImg.Visible = weaponImg.Image ~= ""
+		attackButton.TextTransparency = weaponImg.Visible and 1 or 0
+	end
+	player:GetAttributeChangedSignal("ClassId"):Connect(refreshWeaponIcon)
+	player:GetAttributeChangedSignal("WeaponGrade"):Connect(refreshWeaponIcon)
+	refreshWeaponIcon()
 end
 
 -- SkillInput.client.lua가 WaitForChild로 찾는 로컬 전용 신호(20-2a) - ComboPipsAnchor

@@ -33,11 +33,13 @@ return {
 	--   대표 스킬 = SkillData Q · E + UltimateData 궁극기 이름(카드가 읽는다) · 성향 막대 = 아래 classes의 atk · def · atkSpeed · rangeMultiplier를 직업 중 최댓값으로 나눈 비율(새 수치 없음).
 	--   준비 중 직업 = 검은 실루엣 + 무기 윤곽 + "곧 공개"(날짜 약속 없음) · 누르면 소개 한 줄(TextData class.soon.<id>)만.
 	cards = {
-		greatsword = { role = "melee", difficulty = 1, transform = "heavy" },
-		dualblade = { role = "melee", difficulty = 3, transform = "juggle" },
-		bow = { role = "ranged", difficulty = 2, transform = "apple" },
-		healer = { role = "support", difficulty = 2, transform = "flowers" },
+		greatsword = { role = "melee", difficulty = 1, transform = "heavy", tendency = { atk = 4, def = 4, move = 3, support = 2 } },
+		dualblade = { role = "melee", difficulty = 3, transform = "juggle", tendency = { atk = 5, def = 2, move = 4, support = 2 } },
+		bow = { role = "ranged", difficulty = 2, transform = "apple", tendency = { atk = 4, def = 2, move = 3, support = 2 } },
+		healer = { role = "support", difficulty = 2, transform = "flowers", tendency = { atk = 2, def = 3, move = 3, support = 5 } },
 	},
+	-- QUEUE-UI UI-1 직업 선택 성향 막대(01 spec - 5칸 × 4줄 공격 · 방어 · 이동 · 지원 · 매우 높음 5 · 높음 4 · 보통 3 · 낮음 2 - 화면 표시 전용 · 밸런스와 무관). 값 = 01 spec 가안
+	tendencyKeys = { "atk", "def", "move", "support" }, -- TextData class.tend.<키>
 	cardStats = { "atk", "def", "atkSpeed", "rangeMultiplier" }, -- 성향 막대 순서(TextData class.stat.<키>)
 
 	-- rangeMultiplier(19-2) - CombatConfig.attackRangeStuds(=10, 대검 기준 웹 원본값)에
