@@ -16,6 +16,8 @@ docs/art/ref/*
 !docs/art/ref/menu-safe-zone.png
 # QUEUE-ALL9E1(사용자 10-04): 치장 시안 v2(우리 GPT 콘셉트 - 읽기만 · 구현은 사용자 검수 뒤)
 !docs/art/ref/cosmetics_concept_v2.png
+# QUEUE-ALL9E1(사용자 10-04): 불씨 테마 시안 v3(우리 GPT 콘셉트 - 읽기만 · 사양 = docs/design/cosmetics-v3.md · 구현은 ALL9E-2)
+!docs/art/ref/cosmetics_ember_v3.png
 
 # Python 캐시(Blender 스크립트 실행 산출물)
 __pycache__/
