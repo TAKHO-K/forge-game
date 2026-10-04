@@ -21,8 +21,11 @@
 
 | 1 | 1-1 장비 v3 메시 | 완료 | (이 커밋) | FBX 86 업로드(Approved 86) · MeshMeta 갱신 · shared/GearV3(구역 색 · 문 부품 · 스위치 GearV3Meshes) · ArmorWearView(v3 우선 · 세트 문장) · ArtMeshKit 무기 v3 · 하네스 gear_v3 8/8(48조합 · 1인 MeshPart 최대 23) · Play 캡처 4장(8등급 · 4직업 · 6세트 · 플레이어) · 무기 Grip/가림 = 1-2 |
 | - | P3 결정 판정(사용자 10-04 19:30) | 완료 | 41818c75 | 2-1 돌파 2.2 · 2-2 값 보류(조건 동시 불가) · 2-3 안전장치 · 2-4 기본값 · docs/design/all10-p3-decisions.md · 리뷰어 결함 없음 |
-| - | (사용자 추가) 불씨 시안 v3 .gitignore 예외 + 사양 문서 | 1-1 뒤 바로 | | docs/design/cosmetics-v3.md |
-| - | (사용자 추가) class_legend_*.png 예외 · warrior_v1만 커밋(나머지 3장 = MENU2 F블록) | 1-1 뒤 바로 | | |
+| - | (사용자 추가) 불씨 시안 v3 .gitignore 예외 + 사양 문서 | 완료 | 29d4734e | docs/design/cosmetics-v3.md |
+| - | (사용자 추가) class_legend_*.png 예외 · warrior_v1만 커밋(나머지 3장 = MENU2 F블록) | 완료 | 602c275b | |
+| 1 | 1-1 무대 캐릭터(활 시위 · 장갑 크기) | 완료 | 2b1f52d0 | |
+| 1 | 1-2 착용 통과 시험 | 멈춤(LOOK1 먼저) | | 한 것: 체형 0.8/1.0/1.35 × 4직업 수치 통과(손발 ≤ 1.10 · 두께 0.150 · 덮음 ≥ 1.11) + 캡처 · Grip 대검 3각도 · 활 2 · 치유사 2 · 쌍검 2(W1PoseHook freeze stance) · 태초 Inner 자홍 → 은빛(Trim = 자홍) 수정(아직 커밋 전). 남은 것: 달리기 · 공격 · 활강 freeze 캡처 · 레이어드 옷 · 시안 비교(docs/art/ref/compare/) |
+| + | LOOK1 장비 마감(상한 4h) | 진행 중 | | 원문 = 지시 파일 끝 "추가 항목 LOOK1" · 조사 문서 docs/design/look1-survey.md |
 
 ## 정지 기록(2026-10-04 · 사용자 "지금 하는 항목까지만 마치고 멈춰")
 

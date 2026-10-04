@@ -56,9 +56,12 @@ function GearV3.armorColor(pieceName, setZone, grade)
 	if zone == "Body" then
 		return gv.color, false
 	elseif zone == "Trim" then
-		return gv.light, false
+		return grade == "primordial" and gv.dark or gv.light, false -- 1-2 Play: 태초 "어두운" 칸 = 강조 자홍(2절) → 넓은 면(Inner) 대신 가는 테두리에만(자홍 에나멜)
 	elseif zone == "Inner" then
-		return grade == "transcendent" and scale(gv.color, 0.75) or gv.dark, false
+		if grade == "transcendent" then
+			return scale(gv.color, 0.75), false
+		end
+		return grade == "primordial" and gv.light or gv.dark, false -- 태초 = 은빛 #D5D9E2(장갑 · 신발 전체가 자홍이 되던 것)
 	elseif zone == "Attach" then
 		return scale(rgb(set.color1), bright), false
 	elseif zone == "Gem" or zone == "Emblem" then
