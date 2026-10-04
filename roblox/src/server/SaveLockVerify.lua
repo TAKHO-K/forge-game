@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DataStoreService = game:GetService("DataStoreService")
 
 local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
+local SlotSaveData = require(ReplicatedStorage.Shared.data.SlotSaveData)
 local SaveSystem = require(script.Parent.SaveSystem)
 local SaveCoordinator = require(script.Parent.SaveCoordinator)
 local PlayerProfile = require(script.Parent.PlayerProfile)
@@ -25,7 +26,9 @@ function SaveLockVerify.runLive(player, env)
 	end
 	local store = DataStoreService:GetDataStore(SaveConfig.dataStoreName)
 	local standin = { UserId = STANDIN_USER_ID, Name = "NewAcct6hbF", Parent = true }
-	local key = "Player_" .. STANDIN_USER_ID .. "_verify"
+	-- MENU2 B1: 캐릭터 칸 저장 = 잠금 · 표식은 계정 키(Acct_) · 골드는 캐릭터 키(Char_) - 끔 = 옛 키(Player_)
+	local slot = SlotSaveData.enabled
+	local key = slot and (SaveSystem.accountKeyBase(STANDIN_USER_ID) .. "_verify") or ("Player_" .. STANDIN_USER_ID .. "_verify")
 	local function raw()
 		return store:GetAsync(key)
 	end
@@ -36,7 +39,10 @@ function SaveLockVerify.runLive(player, env)
 		tostring(p and p.version), tostring(p and p.gold), tostring(p and p.sessionId), tostring(p and p.tutorial.completed), tostring(info and info.lockWaitedSeconds), tostring(err), SaveConfig.saveVersion),
 		p ~= nil and p.version == SaveConfig.saveVersion and p.gold == 0 and p.sessionId == "" and p.tutorial.completed == false and info.lockWaitedSeconds == nil and SaveSystem.isValidProfile(p))
 
-	-- B. 저장 왕복: 저장 = 이 서버 표식 · 다시 읽기 = 같은 값 · 대기 없음
+	-- B. 저장 왕복: 저장 = 이 서버 표식 · 다시 읽기 = 같은 값 · 대기 없음(칸 저장 = 직업을 골라 캐릭터 1을 만든다 - 골드는 캐릭터 키)
+	if slot then
+		p.classId = "greatsword"
+	end
 	p.gold = 4321
 	local okSave = SaveSystem.saveProfile(standin, p)
 	local r1 = raw()
@@ -56,32 +62,50 @@ function SaveLockVerify.runLive(player, env)
 	local held = table.clone(r2)
 	held.sessionId, held.savedAt, held.gold = "OTHER-SERVER", os.time(), 555
 	store:SetAsync(key, held)
+	local function mark(prof) -- 다른 서버 값을 읽었는가: 옛 키 = 골드 555/777 · 칸 = 계정 savedAt(골드는 계정 키에 없다)
+		if slot then
+			return prof and prof.savedAt
+		end
+		return prof and prof.gold
+	end
 	local t0 = os.clock()
 	local p3, _, info3 = SaveSystem.loadProfile(standin)
 	local waitedD = os.clock() - t0
-	check(("D 안 풀림: 대기 %s초(실제 %.1f초) · 풀림 %s · 골드 %s (기대 %d초 · false · 555 - 막지 않고 진행)"):format(tostring(info3 and info3.lockWaitedSeconds), waitedD,
-		tostring(info3 and info3.lockReleased), tostring(p3 and p3.gold), SaveConfig.sessionLockMaxWaitSeconds),
-		p3 and p3.gold == 555 and info3.lockWaitedSeconds == SaveConfig.sessionLockMaxWaitSeconds and info3.lockReleased == false and waitedD >= SaveConfig.sessionLockMaxWaitSeconds - 0.5)
+	check(("D 안 풀림: 대기 %s초(실제 %.1f초) · 풀림 %s · 표식 %s (기대 %d초 · false · %s - 막지 않고 진행)"):format(tostring(info3 and info3.lockWaitedSeconds), waitedD,
+		tostring(info3 and info3.lockReleased), tostring(mark(p3)), SaveConfig.sessionLockMaxWaitSeconds, tostring(slot and held.savedAt or 555)),
+		p3 and mark(p3) == (slot and held.savedAt or 555) and info3.lockWaitedSeconds == SaveConfig.sessionLockMaxWaitSeconds and info3.lockReleased == false and waitedD >= SaveConfig.sessionLockMaxWaitSeconds - 0.5)
 
 	-- E. 옛 서버의 퇴장 저장이 3초 뒤 도착 → 기다렸다 새 값으로
 	held.savedAt = os.time()
 	store:SetAsync(key, held)
+	local releasedMark = nil
 	task.delay(3, function()
 		local released = table.clone(held)
 		released.sessionId, released.savedAt, released.gold = "", os.time(), 777
+		releasedMark = slot and released.savedAt or 777
 		store:SetAsync(key, released)
 	end)
 	t0 = os.clock()
 	local p4, _, info4 = SaveSystem.loadProfile(standin)
 	local waitedE = os.clock() - t0
-	check(("E 3초 뒤 풀림: 대기 %s초(실제 %.1f초) · 풀림 %s · 골드 %s (기대 풀림 true · 777 · 10초 안)"):format(tostring(info4 and info4.lockWaitedSeconds), waitedE,
-		tostring(info4 and info4.lockReleased), tostring(p4 and p4.gold)),
-		p4 and p4.gold == 777 and info4.lockReleased == true and info4.lockWaitedSeconds < SaveConfig.sessionLockMaxWaitSeconds)
+	check(("E 3초 뒤 풀림: 대기 %s초(실제 %.1f초) · 풀림 %s · 표식 %s (기대 풀림 true · %s · 10초 안)"):format(tostring(info4 and info4.lockWaitedSeconds), waitedE,
+		tostring(info4 and info4.lockReleased), tostring(mark(p4)), tostring(releasedMark)),
+		p4 and mark(p4) == releasedMark and info4.lockReleased == true and info4.lockWaitedSeconds < SaveConfig.sessionLockMaxWaitSeconds)
 
 	-- F. 손상 저장 음수 골드 → 0
 	local bad = table.clone(held)
 	bad.sessionId, bad.savedAt, bad.gold = "", os.time() - 3600, -500
 	store:SetAsync(key, bad)
+	local charKey = nil
+	if slot then -- 칸: 골드는 캐릭터 키 - 캐릭터 1 키에 음수 골드
+		local s1 = type(bad.slots) == "table" and bad.slots[1]
+		charKey = s1 and (SaveSystem.characterKeyBase(STANDIN_USER_ID, s1.charId) .. "_verify")
+		local ch = charKey and store:GetAsync(charKey)
+		if type(ch) == "table" and type(ch.data) == "table" then
+			ch.data.gold = -500
+			store:SetAsync(charKey, ch)
+		end
+	end
 	local p5, _, info5 = SaveSystem.loadProfile(standin)
 	check(("F 음수 골드: 로드 골드 %s · 이벤트 값 %s (기대 0 · -500)"):format(tostring(p5 and p5.gold), tostring(info5 and info5.negativeGold)),
 		p5 and p5.gold == 0 and info5.negativeGold == -500)
@@ -93,13 +117,19 @@ function SaveLockVerify.runLive(player, env)
 	local profile = PlayerProfile.getProfile(player)
 	local goldBefore = profile and profile.gold
 	SaveCoordinator.saveForPlayer(player)
-	local realRaw = store:GetAsync("Player_" .. player.UserId .. "_verify")
+	local realRaw = store:GetAsync((slot and SaveSystem.accountKeyBase(player.UserId) or ("Player_" .. player.UserId)) .. "_verify")
 	local p6, _, info6 = SaveSystem.loadProfile(player)
 	check(("G 개발 계정 왕복: 저장 표식 = 이 서버 %s · 다시 읽은 골드 %s = 메모리 %s · v%s · 대기 %s"):format(tostring(realRaw and realRaw.sessionId == SaveSystem.serverSessionId),
 		tostring(p6 and p6.gold), tostring(goldBefore), tostring(p6 and p6.version), tostring(info6 and info6.lockWaitedSeconds)),
 		realRaw and realRaw.sessionId == SaveSystem.serverSessionId and p6 and p6.gold == goldBefore and p6.version == SaveConfig.saveVersion and info6.lockWaitedSeconds == nil)
 
-	store:RemoveAsync(key)
+	store:RemoveAsync(key) -- 검증이 만든 스탠드인 _verify 키만(실제 키 아님)
+	if charKey then
+		store:RemoveAsync(charKey)
+	end
+	if slot then
+		SaveSystem.forgetSlotSession(standin)
+	end
 	check(("정리: 스탠드인 저장 키 지움 %s"):format(tostring(store:GetAsync(key) == nil)), store:GetAsync(key) == nil)
 	print(("===6hbF 검증 끝(나)=== %d/%d 통과"):format(pass, total))
 end

@@ -4402,12 +4402,13 @@ if RunService:IsStudio() then
 		end
 		task.spawn(function()
 			local waited = 0
-			while not PlayerProfile.getProfile(player) and waited < 10 do
+			-- MENU2 B1: 캐릭터 칸 이관(검증 키 비우기 + 캐릭터 4 + 계정 쓰기)이 Studio DataStore에서 약 9초 → 10초 대기로는 체인이 통째로 건너뛰어졌다(10-05 실측) - 30초
+			while not PlayerProfile.getProfile(player) and waited < 30 do
 				task.wait(0.5)
 				waited += 0.5
 			end
 			if not PlayerProfile.getProfile(player) then
-				print("[29-1] 프로필 로드 실패(10초 대기) - 검증을 건너뜁니다")
+				print("[29-1] 프로필 로드 실패(30초 대기) - 검증을 건너뜁니다")
 				heavyChainState = "done"
 				runHeavyPureNow()
 				return

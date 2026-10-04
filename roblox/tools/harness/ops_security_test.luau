@@ -142,4 +142,53 @@ table.insert(old, { k = "ancient", d = "", at = now - (C.trail.maxAgeDays + 1) *
 local merged = AT.merge(old, { { k = "new", d = "", at = now } }, now)
 check(("병합: 새 줄 맨 앞 · 개수 %d(상한 %d) · 90일 지난 줄 버림"):format(#merged, C.trail.keep), merged[1].k == "new" and #merged == C.trail.keep and merged[#merged].k ~= "ancient")
 
+-- 7. MENU2 B1: 캐릭터 칸 저장 되돌리기(계정 키 + 캐릭터 키 · 시각 기준)
+local function slotWorld()
+	local w = { backups = {}, writes = {}, failWriteKey = nil }
+	w.now = { -- 지금 값
+		Acct_42 = { savedAt = 900, sessionId = "other", nextCharId = 4, slots = { { charId = 1 }, { charId = 2 }, { charId = 3 } }, shared = { gamepasses = { bagExpand = true }, purchases = { receipts = { "R9" } }, titles = { now = true } } },
+		Char_42_1 = { savedAt = 900, charId = 1, data = { gold = 999999 } },
+		Char_42_2 = { savedAt = 900, charId = 2, data = { gold = 50 } },
+		Char_42_3 = { savedAt = 900, charId = 3, data = { gold = 7 } }, -- 그 시각 뒤에 만든 캐릭터
+	}
+	w.vers = { -- 키별 버전(최신 먼저 · createdTime ms)
+		Acct_42 = { { version = "a2", createdTime = 800000 }, { version = "a1", createdTime = 300000 } },
+		Char_42_1 = { { version = "c1b", createdTime = 800000 }, { version = "c1a", createdTime = 300000 } },
+		Char_42_2 = { { version = "c2a", createdTime = 300000 } },
+		Char_42_3 = { { version = "c3a", createdTime = 700000 } },
+	}
+	w.data = {
+		a1 = { savedAt = 300, sessionId = "old", nextCharId = 3, slots = { { charId = 1 }, { charId = 2 } }, shared = { titles = { old = true } } },
+		c1a = { savedAt = 300, charId = 1, data = { gold = 100 } },
+		c2a = { savedAt = 300, charId = 2, data = { gold = 40 } },
+	}
+	w.deps = {
+		keys = function() return { acct = "Acct_42", chars = { "Char_42_1", "Char_42_2", "Char_42_3" } } end,
+		listVersions = function(k) return w.vers[k] end,
+		readKey = function(k) return w.now[k], nil end,
+		readVersion = function(_, v) return w.data[v] end,
+		writeBackup = function(key, value) w.backups[key] = value return true end,
+		writeKey = function(k, data) if w.failWriteKey == k then return false, "boom" end table.insert(w.writes, k) w.now[k] = data return true end,
+		now = 1000,
+	}
+	return w
+end
+local sw = slotWorld()
+local okS, whyS, bkS, cnt = R.executeSlots(sw.deps, 42, 500)
+local A = sw.now.Acct_42
+check(("칸 되돌리기: %s(%s) · 캐릭터 %d 되돌림 · %d 그대로"):format(tostring(okS), tostring(whyS), cnt and cnt.rolled or -1, cnt and cnt.kept or -1), okS and whyS == "rolled_back" and cnt.rolled == 2 and cnt.kept == 1)
+check("칸: 캐릭터 1 골드 999999 → 100 · 캐릭터 2 = 40 · 그 뒤 만든 캐릭터 3 = 그대로(지우지 않음)", sw.now.Char_42_1.data.gold == 100 and sw.now.Char_42_2.data.gold == 40 and sw.now.Char_42_3.data.gold == 7)
+check("칸: 계정 = 그 시각 칸 목록 · 돈 기록(패스 · 영수증) 유지 · 캐릭터 번호 = 큰 값 4(번호 겹침 방지)", #A.slots == 2 and A.shared.gamepasses.bagExpand == true and A.shared.purchases.receipts[1] == "R9" and A.shared.titles.old == true and A.nextCharId == 4)
+check("칸: 그 시각 뒤 만든 캐릭터 3 = 보관함으로(복구 가능 · 빠짐 0)", A.archive and #A.archive == 1 and A.archive[1].charId == 3)
+check("칸: 쓰기 순서 = 캐릭터 먼저 · 계정 마지막 · savedAt = 지금 · sessionId 빈칸", sw.writes[#sw.writes] == "Acct_42" and A.savedAt == 1000 and A.sessionId == "" and sw.now.Char_42_1.savedAt == 1000)
+check("칸: 백업 = 모든 키 지금 값 한 줄", sw.backups[bkS] and sw.backups[bkS].keys.Char_42_1.data.gold == 999999 and sw.backups[bkS].keys.Acct_42.nextCharId == 4)
+check("칸: 버전 원본은 그대로", sw.data.c1a.savedAt == 300 and sw.data.a1.sessionId == "old")
+local sw2 = slotWorld()
+local okE, whyE = R.executeSlots(sw2.deps, 42, 100) -- 계정 키보다 옛 시각
+check(("칸: 계정 버전 없는 시각 = 중단 · 아무것도 안 씀(%s)"):format(tostring(whyE)), not okE and whyE == "no_version" and #sw2.writes == 0 and sw2.now.Char_42_1.data.gold == 999999)
+local sw3 = slotWorld()
+sw3.failWriteKey = "Acct_42"
+local okW, whyW = R.executeSlots(sw3.deps, 42, 500)
+check(("칸: 계정 쓰기 실패 = 실패 보고 · 계정 그대로 · 백업 남음(%s)"):format(tostring(whyW)), not okW and whyW == "write_failed" and sw3.now.Acct_42.nextCharId == 4 and #sw3.now.Acct_42.slots == 3 and next(sw3.backups) ~= nil)
+
 print(("[OPS] 끝 %d/%d"):format(pass, total))

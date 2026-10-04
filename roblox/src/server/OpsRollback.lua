@@ -178,6 +178,99 @@ function OpsRollback.execute(deps, userId, version)
 	return true, "rolled_back", backupKey
 end
 
+-- MENU2 B1(10-05) 캐릭터 칸 저장(계정 키 Acct_ + 캐릭터 키 Char_) 되돌리기 - 시각 기준만(버전 문자열은 키마다 달라 못 쓴다).
+--   deps = { keys(userId) → { acct = 키, chars = { 키 … } } | nil, err · listVersions(키) → 목록 | nil, err · readKey(키) → data | nil, err ·
+--            readVersion(키, 버전) → data · writeBackup(백업 키, 값) → ok · writeKey(키, data) → ok, err · now }
+--   순서: 모든 키 지금 값 읽기 → 한 백업에 전부 → 키마다 그 시각 이전 최신 버전 고르기(캐릭터 키에 그 시각 버전이 없으면 = 그 뒤 만든 캐릭터 → 그대로 · 지우지 않는다)
+--         → 계정 = 돈 · 한 번만 기록 유지(keepPaid를 shared에) + 캐릭터 번호는 큰 값(그 뒤 만든 캐릭터 키와 번호가 겹치지 않게) → 캐릭터 키 먼저 · 계정 키 마지막(확정 지점).
+--   반환 ok, 이유("rolled_back" · "read_failed" · "backup_failed" · "no_version" · "no_version_data" · "write_failed"), 백업 키, { rolled = n, kept = n }
+function OpsRollback.executeSlots(deps, userId, targetTime)
+	local keys = deps.keys(userId)
+	if type(keys) ~= "table" or not keys.acct then
+		return false, "read_failed"
+	end
+	local all = { keys.acct }
+	for _, k in ipairs(keys.chars or {}) do
+		table.insert(all, k)
+	end
+	local current = {}
+	for _, k in ipairs(all) do
+		local data, err = deps.readKey(k)
+		if err then
+			return false, "read_failed"
+		end
+		current[k] = data
+	end
+	local backupKey = ("u%d_%d"):format(userId, deps.now)
+	if not deps.writeBackup(backupKey, { at = deps.now, target = targetTime, slot = true, keys = current }) then
+		return false, "backup_failed"
+	end
+	local plan, kept = {}, 0
+	for _, k in ipairs(all) do
+		local list = deps.listVersions(k)
+		local pick = type(list) == "table" and OpsRollback.pick(list, targetTime) or nil
+		if not pick then
+			if k == keys.acct then
+				return false, "no_version"
+			end
+			kept += 1
+		else
+			local old = deps.readVersion(k, pick.version)
+			if type(old) ~= "table" then
+				return false, "no_version_data"
+			end
+			old = table.clone(old)
+			old.savedAt = deps.now
+			old.sessionId = ""
+			plan[k] = old
+		end
+	end
+	local acct, cur = plan[keys.acct], current[keys.acct]
+	if type(cur) == "table" then
+		acct.shared = OpsRollback.keepPaid(table.clone(type(acct.shared) == "table" and acct.shared or {}), type(cur.shared) == "table" and cur.shared or {})
+		acct.nextCharId = math.max(tonumber(acct.nextCharId) or 1, tonumber(cur.nextCharId) or 1)
+		-- 그 시각 뒤에 만든 캐릭터(그때 칸 목록에 없음) = 보관함으로(데이터 그대로 · 복구 가능 - 삭제 없음 원칙)
+		local listed = {}
+		for _, s in ipairs(type(acct.slots) == "table" and acct.slots or {}) do
+			if type(s) == "table" then
+				listed[s.charId] = true
+			end
+		end
+		acct.archive = table.clone(type(acct.archive) == "table" and acct.archive or {})
+		for _, s in ipairs(acct.archive) do
+			listed[s.charId] = true
+		end
+		local curList = {}
+		for _, s in ipairs(type(cur.slots) == "table" and cur.slots or {}) do
+			if type(s) == "table" then
+				table.insert(curList, s)
+			end
+		end
+		for _, s in ipairs(type(cur.archive) == "table" and cur.archive or {}) do
+			table.insert(curList, s)
+		end
+		for _, s in ipairs(curList) do
+			if not listed[s.charId] then
+				listed[s.charId] = true
+				table.insert(acct.archive, table.clone(s))
+			end
+		end
+	end
+	local rolled = 0
+	for _, k in ipairs(all) do
+		if k ~= keys.acct and plan[k] then
+			if not deps.writeKey(k, plan[k]) then
+				return false, "write_failed", backupKey, { rolled = rolled, kept = kept }
+			end
+			rolled += 1
+		end
+	end
+	if not deps.writeKey(keys.acct, acct) then
+		return false, "write_failed", backupKey, { rolled = rolled, kept = kept }
+	end
+	return true, "rolled_back", backupKey, { rolled = rolled, kept = kept }
+end
+
 -- 순수: 차단 인자 → BanAsync 설정 | nil, 이유
 function OpsRollback.banConfig(userId, durationKey, reason)
 	local seconds = require(game:GetService("ReplicatedStorage").Shared.data.SecurityOpsConfig).ban.durations[tostring(durationKey)]

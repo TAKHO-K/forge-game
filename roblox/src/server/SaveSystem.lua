@@ -2425,6 +2425,18 @@ function SaveSystem.loadSlotProfile(player, wantSlot)
 	return profile, nil, outInfo
 end
 
+-- 저장 직전 고친 숫자(NaN · inf → 이전 정상값 - sanitizeForSave)를 메모리 프로필에도 되돌린다(옛 경로는 프로필 자체를 고쳤다 - 칸 경로는 사본을 쓰므로 S21-0(나) 2단계가 X였다)
+local function pullSanitized(dst, src)
+	for k, v in pairs(src) do
+		local d = dst[k]
+		if type(v) == "number" and type(d) == "number" and v ~= d then
+			dst[k] = v
+		elseif type(v) == "table" and type(d) == "table" then
+			pullSanitized(d, v)
+		end
+	end
+end
+
 -- 슬롯 저장: 캐릭터 키 → 계정 키. 직업 선택(캐릭터 없음 → 직업 생김) = 새 칸 잡기
 function SaveSystem.saveSlotProfile(player, profile)
 	local sess = slotSession[player]
@@ -2462,6 +2474,16 @@ function SaveSystem.saveSlotProfile(player, profile)
 		if not ok then
 			return false, err
 		end
+		for _, k in ipairs(SlotSaveData.characterTop) do
+			if type(profile[k]) == "number" and type(ch.data[k]) == "number" then
+				profile[k] = ch.data[k]
+			elseif type(profile[k]) == "table" and type(ch.data[k]) == "table" then
+				pullSanitized(profile[k], ch.data[k])
+			end
+		end
+		if type(cs) == "table" and type(ch.data.classState) == "table" then
+			pullSanitized(cs, ch.data.classState)
+		end
 		sess.charSavedAt = at
 		local sum = SlotSave.summarize(ch, now, sess.account.slots[sess.slot] or nil)
 		sum.lastPlayedAt = now
@@ -2475,6 +2497,7 @@ function SaveSystem.saveSlotProfile(player, profile)
 	if not ok then
 		return false, err
 	end
+	pullSanitized(profile, sess.account.shared)
 	sess.acctSavedAt = at
 	profile.savedAt = at
 	return true
@@ -2536,12 +2559,75 @@ end
 
 -- S1 2-8 운영: 저장 버전 목록 · 복구(DataStore 버전 = 30일 보관 - 탐지 · 복구는 30일 안). userId 키(Studio = 수동 · 검증 키 - 실제 프로필을 건드리지 않는다).
 --   복구는 그 사람이 이 서버에 없을 때만(있으면 메모리 상태가 곧 덮어쓴다 - 다른 서버 접속은 알 수 없다: 운영 절차로 확인).
-local function opsKey(userId)
+-- MENU2 B1(10-05): 캐릭터 칸 저장이 켜져 있고 계정 키가 있으면 운영 기본 대상 = 계정 키(Acct_) · which = "legacy"(옛 Player_) | "acct" | 캐릭터 번호.
+local function legacyOpsKey(userId)
 	return "Player_" .. userId .. (studioSuffix() or "")
 end
-function SaveSystem.opsListVersions(userId, count)
+local function acctOpsKey(userId)
+	return accountKeyBase(userId) .. (studioSuffix() or "")
+end
+local function charOpsKey(userId, charId)
+	return characterKeyBase(userId, charId) .. (studioSuffix() or "")
+end
+local function rawGet(key)
+	local ok, data = pcall(function()
+		return store:GetAsync(key)
+	end)
+	if not ok then
+		return nil, tostring(data)
+	end
+	return data, nil
+end
+-- 이 사람이 칸 저장 구조인가(스위치 켬 + 계정 키 있음) → 계정 원본 | nil
+function SaveSystem.opsSlotAccount(userId)
+	if not SlotSaveData.enabled then
+		return nil
+	end
+	local acct = rawGet(acctOpsKey(userId))
+	return type(acct) == "table" and acct or nil
+end
+-- 계정 원본의 모든 캐릭터 번호(칸 + 보관함)
+local function charIdsOf(acct)
+	local ids, seen = {}, {}
+	local function add(s)
+		if type(s) == "table" and s.charId and not seen[s.charId] then
+			seen[s.charId] = true
+			table.insert(ids, s.charId)
+		end
+	end
+	for _, s in ipairs(type(acct.slots) == "table" and acct.slots or {}) do
+		add(s)
+	end
+	for _, s in ipairs(type(acct.archive) == "table" and acct.archive or {}) do
+		add(s)
+	end
+	return ids
+end
+function SaveSystem.opsSlotKeys(userId)
+	local acct = SaveSystem.opsSlotAccount(userId)
+	if not acct then
+		return nil, "no_slot_account"
+	end
+	local chars = {}
+	for _, id in ipairs(charIdsOf(acct)) do
+		table.insert(chars, charOpsKey(userId, id))
+	end
+	return { acct = acctOpsKey(userId), chars = chars }
+end
+local function opsKey(userId, which)
+	if which == "legacy" then
+		return legacyOpsKey(userId)
+	elseif tonumber(which) then
+		return charOpsKey(userId, tonumber(which))
+	elseif which == "acct" or SaveSystem.opsSlotAccount(userId) then
+		return acctOpsKey(userId)
+	end
+	return legacyOpsKey(userId)
+end
+-- 키 단위 입구(되돌리기 executeSlots deps)
+function SaveSystem.opsListVersionsKey(key, count)
 	local ok, pages = pcall(function()
-		return store:ListVersionsAsync(opsKey(userId), Enum.SortDirection.Descending, nil, nil, count or 10)
+		return store:ListVersionsAsync(key, Enum.SortDirection.Descending, nil, nil, count or 10)
 	end)
 	if not ok then
 		return nil, tostring(pages)
@@ -2552,37 +2638,99 @@ function SaveSystem.opsListVersions(userId, count)
 	end
 	return list
 end
-function SaveSystem.opsRestoreVersion(userId, version)
+SaveSystem.opsReadKey = rawGet
+function SaveSystem.opsReadKeyVersion(key, version)
 	local ok, data = pcall(function()
-		return store:GetVersionAsync(opsKey(userId), version)
+		return store:GetVersionAsync(key, version)
+	end)
+	return ok and data or nil
+end
+function SaveSystem.opsWriteKey(key, data)
+	local ok, err = pcall(function()
+		store:SetAsync(key, data)
+	end)
+	return ok, ok and nil or tostring(err)
+end
+-- 칸 저장 보기(미리보기 · inspect): 계정 + 모든 캐릭터를 옛 모양 한 프로필로 합친다(요약 전용 - 쓰지 않는다). atTime = 그 시각 버전(없으면 지금)
+--   잠금 판정(heldElsewhere)이 그대로 쓰게 savedAt · sessionId = 계정 키 값.
+function SaveSystem.opsSlotView(userId, atTime)
+	local keys = SaveSystem.opsSlotKeys(userId)
+	if not keys then
+		return nil
+	end
+	local function at(key)
+		if not atTime then
+			return (rawGet(key))
+		end
+		local list = SaveSystem.opsListVersionsKey(key, 50)
+		local pick = list and require(script.Parent.OpsRollback).pick(list, atTime)
+		return pick and SaveSystem.opsReadKeyVersion(key, pick.version) or nil
+	end
+	local acct = at(keys.acct)
+	if type(acct) ~= "table" then
+		return nil
+	end
+	local chars = {}
+	for _, id in ipairs(charIdsOf(acct)) do
+		local raw = at(charOpsKey(userId, id))
+		if type(raw) == "table" and type(raw.data) == "table" then
+			table.insert(chars, { charId = id, classId = raw.classId, data = raw.data })
+		end
+	end
+	local view = SlotSave.mergeToLegacy(defaultProfile(), acct, chars, nil)
+	view.savedAt, view.sessionId, view.version = acct.savedAt, acct.sessionId, acct.version
+	view.slotCharacters = #chars
+	return view
+end
+function SaveSystem.opsListVersions(userId, count, which)
+	local ok, pages = pcall(function()
+		return store:ListVersionsAsync(opsKey(userId, which), Enum.SortDirection.Descending, nil, nil, count or 10)
+	end)
+	if not ok then
+		return nil, tostring(pages)
+	end
+	local list = {}
+	for _, info in ipairs(pages:GetCurrentPage()) do
+		table.insert(list, { version = info.Version, createdTime = info.CreatedTime, isDeleted = info.IsDeleted })
+	end
+	return list
+end
+function SaveSystem.opsRestoreVersion(userId, version, which)
+	local key = opsKey(userId, which)
+	local ok, data = pcall(function()
+		return store:GetVersionAsync(key, version)
 	end)
 	if not ok or type(data) ~= "table" then
 		return false, ok and "no_data" or tostring(data)
 	end
+	data = table.clone(data)
+	data.savedAt = os.time() -- 다른 서버의 옛 세션 저장이 이 값을 보고 포기한다(되돌리기와 같은 규칙 - MENU2 B1)
+	data.sessionId = ""
 	local okSet, err = pcall(function()
-		store:SetAsync(opsKey(userId), data)
+		store:SetAsync(key, data)
 	end)
 	return okSet, okSet and "ok" or tostring(err)
 end
 -- QUEUE-ALL6 F4 되돌리기(OpsRollback) 저장소 입구: 지금 값 · 버전 값 읽기 · 통째로 쓰기(같은 키 규칙 opsKey)
+--   MENU2 B1: 칸 저장이면 지금 값 = 계정 + 캐릭터 합친 보기(요약 · 잠금 판정용 - opsSlotView) · 버전 읽기 · 통째 쓰기는 옛 키 전용(칸 = executeSlots)
 function SaveSystem.opsReadCurrent(userId)
-	local ok, data = pcall(function()
-		return store:GetAsync(opsKey(userId))
-	end)
-	if not ok then
-		return nil, tostring(data)
+	if SaveSystem.opsSlotAccount(userId) then
+		local view = SaveSystem.opsSlotView(userId)
+		if view then
+			return view, nil
+		end
 	end
-	return data, nil
+	return rawGet(legacyOpsKey(userId))
 end
 function SaveSystem.opsReadVersion(userId, version)
 	local ok, data = pcall(function()
-		return store:GetVersionAsync(opsKey(userId), version)
+		return store:GetVersionAsync(legacyOpsKey(userId), version)
 	end)
 	return ok and data or nil
 end
 function SaveSystem.opsWriteProfile(userId, data)
 	local ok, err = pcall(function()
-		store:SetAsync(opsKey(userId), data)
+		store:SetAsync(legacyOpsKey(userId), data)
 	end)
 	return ok, ok and nil or tostring(err)
 end

@@ -264,7 +264,7 @@ function handlers.lbremove(args)
 	return Leaderboard.removeEntry(kind, userId) and "removed" or "failed"
 end
 function handlers.versions(args)
-	local list, err = SaveSystem.opsListVersions(tonumber(args[2]) or 0, 10)
+	local list, err = SaveSystem.opsListVersions(tonumber(args[2]) or 0, 10, args[3]) -- MENU2 B1: 3번째 = acct | 캐릭터 번호 | legacy(없으면 칸 저장 = 계정 키)
 	if not list then
 		return "failed: " .. tostring(err)
 	end
@@ -282,7 +282,7 @@ function handlers.restore(args)
 	if Players:GetPlayerByUserId(userId) then
 		return "online_here" -- 메모리 상태가 곧 덮어쓴다 - 먼저 나가게 한 뒤
 	end
-	local ok, why = SaveSystem.opsRestoreVersion(userId, version)
+	local ok, why = SaveSystem.opsRestoreVersion(userId, version, args[4]) -- MENU2 B1: 4번째 = acct | 캐릭터 번호 | legacy
 	return ok and "restored" or ("failed: " .. tostring(why))
 end
 function handlers.review(args)
@@ -373,6 +373,27 @@ function handlers.rollback(args, player)
 			end
 		end
 		local backup = DataStoreService:GetDataStore(SecurityOps.rollback.backupStore .. (require(ReplicatedStorage.Shared.data.DevToolsConfig).verifyArmed and "_verify" or ""))
+		local function writeBackup(key, value)
+			return (pcall(function()
+				backup:SetAsync((isStudio and AuditConfig.testKeyPrefix or "") .. key, value)
+			end))
+		end
+		if p.slotTime then -- MENU2 B1: 칸 저장(계정 + 캐릭터 키) = 시각 기준 전체 되돌리기
+			local ok, why, backupKey, cnt = OpsRollback.executeSlots({
+				keys = SaveSystem.opsSlotKeys,
+				listVersions = function(key)
+					return SaveSystem.opsListVersionsKey(key, SecurityOps.rollback.listVersions)
+				end,
+				readKey = SaveSystem.opsReadKey,
+				readVersion = SaveSystem.opsReadKeyVersion,
+				writeBackup = writeBackup,
+				writeKey = SaveSystem.opsWriteKey,
+				now = os.time(),
+			}, p.userId, p.slotTime)
+			local detail = cnt and ("캐릭터 %d 되돌림 · %d 그대로"):format(cnt.rolled, cnt.kept) or ""
+			AuditTrail.note(p.userId, "ops_rollback", ("%s → %s(칸 · %s · 백업 %s · %s)"):format(tostring(ok), os.date("!%m-%d %H:%M", p.slotTime), detail, tostring(backupKey), player.Name))
+			return ok and ("rolled_back(칸 · " .. detail .. " · 백업 " .. tostring(backupKey) .. ")") or ("failed: " .. tostring(why))
+		end
 		local ok, why, backupKey = OpsRollback.execute({
 			readCurrent = SaveSystem.opsReadCurrent,
 			readVersion = SaveSystem.opsReadVersion,
@@ -391,6 +412,19 @@ function handlers.rollback(args, player)
 	local target = tostring(args[3] or "")
 	if not userId or target == "" then
 		return "bad_args"
+	end
+	if SaveSystem.opsSlotAccount(userId) then -- MENU2 B1: 칸 저장 = 시각만(버전 문자열은 키마다 달라 못 쓴다)
+		local at = OpsRollback.parseTime(target)
+		if not at then
+			return "need_time(칸 저장 = UTC 시각 2026-10-01T12:30 또는 unix 초)"
+		end
+		local nowView, thenView = SaveSystem.opsSlotView(userId), SaveSystem.opsSlotView(userId, at)
+		if not thenView then
+			return "no_version"
+		end
+		local token = issueToken({ kind = "rollback", userId = userId, slotTime = at, version = "slot@" .. tostring(at), by = player.UserId })
+		return ("미리보기(칸 · 캐릭터 %d) %s | 지금: %s | 그때: %s | 실행 = /ops rollback confirm %s(%d초 안)"):format(thenView.slotCharacters or 0, os.date("!%m-%d %H:%M", at),
+			OpsRollback.describe(OpsRollback.summary(nowView)), OpsRollback.describe(OpsRollback.summary(thenView)), token, SecurityOps.rollback.confirmSeconds)
 	end
 	local list, err = SaveSystem.opsListVersions(userId, SecurityOps.rollback.listVersions)
 	if not list then
