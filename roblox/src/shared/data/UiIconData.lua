@@ -42,9 +42,13 @@ return {
 		["shop"] = { asset = "ui/ds/icon-shop", tint = false, fallback = "?", old = "icons/hud/shop" },
 		["star"] = { asset = "ui/ds/icon-star", tint = false, fallback = "★" },
 		["x"] = { asset = "ui/ds/icon-x", tint = false, fallback = "X" },
+		-- 00 v3(10-05): 구역 선택 · 수련 · 보상
+		["zone"] = { asset = "ui/ds/icon-zone", tint = false, fallback = "?", old = "icons/hud/zone_select" },
+		["training"] = { asset = "ui/ds/icon-training", tint = false, fallback = "?", old = "icons/hud/training" },
+		["reward"] = { asset = "ui/ds/icon-reward", tint = false, fallback = "?" },
 		-- 스킬 아이콘 16장(00 v2 · icon-skill-<직업>-<칸>) - 아이콘은 직업 · 칸으로 고른다(이름 · 설명 = 게임 데이터)
-		["skill-greatsword-q"] = { asset = "ui/ds/icon-skill-greatsword-q", tint = false, fallback = "Q" }, ["skill-greatsword-e"] = { asset = "ui/ds/icon-skill-greatsword-e", tint = false, fallback = "E" }, ["skill-greatsword-r"] = { asset = "ui/ds/icon-skill-greatsword-r", tint = false, fallback = "R" }, ["skill-greatsword-t"] = { asset = "ui/ds/icon-skill-greatsword-t", tint = false, fallback = "T" },
-		["skill-dualblade-q"] = { asset = "ui/ds/icon-skill-dualblade-q", tint = false, fallback = "Q" }, ["skill-dualblade-e"] = { asset = "ui/ds/icon-skill-dualblade-e", tint = false, fallback = "E" }, ["skill-dualblade-r"] = { asset = "ui/ds/icon-skill-dualblade-r", tint = false, fallback = "R" }, ["skill-dualblade-t"] = { asset = "ui/ds/icon-skill-dualblade-t", tint = false, fallback = "T" },
+		["skill-greatsword-q"] = { asset = "ui/ds/icon-skill-greatsword-q", tint = false, fallback = "Q" }, ["skill-greatsword-e"] = { asset = "ui/ds/icon-skill-greatsword-e", tint = false, fallback = "E" }, ["skill-greatsword-r"] = { asset = "ui/ds/icon-skill-greatsword-r", tint = false, fallback = "R" }, ["skill-greatsword-t"] = { asset = "ui/ds/icon-skill-greatsword-t_v3", tint = false, fallback = "T", old = "ui/ds/icon-skill-greatsword-t" },
+		["skill-dualblade-q"] = { asset = "ui/ds/icon-skill-dualblade-q_v3", tint = false, fallback = "Q", old = "ui/ds/icon-skill-dualblade-q" }, ["skill-dualblade-e"] = { asset = "ui/ds/icon-skill-dualblade-e", tint = false, fallback = "E" }, ["skill-dualblade-r"] = { asset = "ui/ds/icon-skill-dualblade-r", tint = false, fallback = "R" }, ["skill-dualblade-t"] = { asset = "ui/ds/icon-skill-dualblade-t", tint = false, fallback = "T" },
 		["skill-bow-q"] = { asset = "ui/ds/icon-skill-bow-q", tint = false, fallback = "Q" }, ["skill-bow-e"] = { asset = "ui/ds/icon-skill-bow-e", tint = false, fallback = "E" }, ["skill-bow-r"] = { asset = "ui/ds/icon-skill-bow-r", tint = false, fallback = "R" }, ["skill-bow-t"] = { asset = "ui/ds/icon-skill-bow-t", tint = false, fallback = "T" },
 		["skill-healer-q"] = { asset = "ui/ds/icon-skill-healer-q", tint = false, fallback = "Q" }, ["skill-healer-e"] = { asset = "ui/ds/icon-skill-healer-e", tint = false, fallback = "E" }, ["skill-healer-r"] = { asset = "ui/ds/icon-skill-healer-r", tint = false, fallback = "R" }, ["skill-healer-t"] = { asset = "ui/ds/icon-skill-healer-t", tint = false, fallback = "T" },
 	},

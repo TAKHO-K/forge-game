@@ -7931,6 +7931,13 @@
   "status": "Approved",
   "imageId": 109476606601291
  },
+ "ui/ds/icon-reward.png": {
+  "sha256": "3eb40ca3d8ce9d6051f0fb16643de9566ce5d25cd901f44c491b053aa04b65f1",
+  "assetType": "Decal",
+  "assetId": 97738542099128,
+  "status": "Approved",
+  "imageId": 100229963916617
+ },
  "ui/ds/icon-shop.png": {
   "sha256": "f431d7f9cd8adaa247667cfbd983ca4958aa04102034cf1ebbec05619ea02384",
   "assetType": "Decal",
@@ -7980,6 +7987,13 @@
   "status": "Approved",
   "imageId": 70441017339039
  },
+ "ui/ds/icon-skill-dualblade-q_v3.png": {
+  "sha256": "46aeff80cbf63a55aa3e5e51f497364e6d80d8d59569ffcb15527b379343f102",
+  "assetType": "Decal",
+  "assetId": 89458783275197,
+  "status": "Approved",
+  "imageId": 72247761545832
+ },
  "ui/ds/icon-skill-dualblade-r.png": {
   "sha256": "24d2dff81ec9dcbad1d795b58149df95b893a966eac2f2e19a3e3dad86fd0025",
   "assetType": "Decal",
@@ -8022,6 +8036,13 @@
   "status": "Approved",
   "imageId": 94629949984601
  },
+ "ui/ds/icon-skill-greatsword-t_v3.png": {
+  "sha256": "a8905723ab14c99e60dba865fd309f2eb1621bc82dc4d6ebd92fd5d69603171a",
+  "assetType": "Decal",
+  "assetId": 91203181554702,
+  "status": "Approved",
+  "imageId": 96232560509566
+ },
  "ui/ds/icon-skill-healer-e.png": {
   "sha256": "92530f914c4059e7f164a29a1e84a23d78f6d66b18d9ba7f0c666a1c46a1b15e",
   "assetType": "Decal",
@@ -8057,12 +8078,26 @@
   "status": "Approved",
   "imageId": 139821311732585
  },
+ "ui/ds/icon-training.png": {
+  "sha256": "c9cf368bbb3122902920d0e94f68679245cea03d408a5dba230f3ee0c65a7436",
+  "assetType": "Decal",
+  "assetId": 96820248651180,
+  "status": "Approved",
+  "imageId": 135575658787218
+ },
  "ui/ds/icon-x.png": {
   "sha256": "d36a04dc9d99122afb91fef2270d1df3c782d2cd22170df32ffca6d5aeb8afcf",
   "assetType": "Decal",
   "assetId": 86741066565219,
   "status": "Approved",
   "imageId": 83357819928941
+ },
+ "ui/ds/icon-zone.png": {
+  "sha256": "6df6fdf6292e9b1f6dd176bb8333aa75e007310d9767ae000fa32f108e864004",
+  "assetType": "Decal",
+  "assetId": 107957378112047,
+  "status": "Approved",
+  "imageId": 124695660841973
  },
  "ui/hud/disc-256.png": {
   "sha256": "43740fe47355b9cd5fa4898459b9e78ade0b901d7434b042373d195f2789d2dc",
