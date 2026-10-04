@@ -373,6 +373,14 @@ local function main()
 	check("SLOT", "크기: 캐릭터 키(가방 80) ≤ 4MB × 25%", sizeChar <= DS.sizeLimit * 0.25, ("%d자(%.2f%%)"):format(sizeChar, sizeChar / DS.sizeLimit * 100))
 	check("SLOT", "크기: 계정 키 ≤ 4MB × 25%", sizeAcct <= DS.sizeLimit * 0.25, ("%d자(%.2f%%)"):format(sizeAcct, sizeAcct / DS.sizeLimit * 100))
 
+	-- ═══ 도감 칸 보상 = 완료한 캐릭터만(B2) ═══
+	do
+		local CR = MODS.CodexRules
+		local r = { done = { a = 120, b = 40 }, doneBy = { a = 1, b = 2 }, claimed = {} }
+		check("SLOT", "도감: 완료 캐릭터만 받기(1 → a O · b X)", CR.cellMine(r, "a", 1) and not CR.cellMine(r, "b", 1))
+		check("SLOT", "도감: 옛 기록(doneBy 없음) = 누구나", CR.cellMine({ done = { a = 1 } }, "a", 3))
+	end
+
 	-- ═══ 7. 새 계정 ═══
 	local pn = mkPlayer(777)
 	local fresh = SaveA.loadSlotProfile(pn)

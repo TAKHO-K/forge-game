@@ -204,4 +204,10 @@ function CodexRules.totalTokens(book)
 	return sum
 end
 
+-- QUEUE-MENU2 B2: 이 칸 보상을 지금 캐릭터가 받을 수 있는가(r.doneBy[칸] = 완료한 캐릭터 번호 · 없음 = 옛 기록 → 누구나)
+function CodexRules.cellMine(r, id, charId)
+	local by = type(r.doneBy) == "table" and r.doneBy[id] or nil
+	return by == nil or by == charId
+end
+
 return CodexRules

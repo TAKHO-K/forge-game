@@ -53,6 +53,15 @@ local function nestDex(player)
 	return PlayerProfile.getNestDex(player) or {}
 end
 
+-- QUEUE-MENU2 B2: 도감 칸 보상 몰아주기 차단 - 칸 보상(골드 · 재료)은 그 칸을 완료한 캐릭터만 받는다(r.doneBy[칸] = 캐릭터 번호 · 옛 기록 = 없음 = 누구나)
+local function currentCharId(player)
+	local sess = require(script.Parent.SaveSystem).slotSessionOf(player)
+	return sess and sess.charId or nil
+end
+local function cellMine(player, r, id)
+	return CodexRules.cellMine(r, id, currentCharId(player))
+end
+
 local pending = {}
 local refresh
 
@@ -84,7 +93,7 @@ local function viewOf(player, r)
 	local cells = {}
 	for _, c in ipairs(BUILT.cells) do
 		local v = CodexRules.progress(r, dex, c)
-		cells[c.id] = { v = v, need = c.need, done = r.done[c.id] ~= nil, claimed = r.claimed[c.id] == true, label = c.label, tab = c.tab }
+		cells[c.id] = { v = v, need = c.need, done = r.done[c.id] ~= nil, claimed = r.claimed[c.id] == true, label = c.label, tab = c.tab, otherChar = r.done[c.id] ~= nil and not cellMine(player, r, c.id) or nil }
 	end
 	local lines = {}
 	for id, l in pairs(BUILT.lines) do
@@ -131,6 +140,8 @@ function refresh(player)
 			local _, complete = CodexRules.progress(r, dex, c)
 			if complete then
 				r.done[c.id] = stage
+				r.doneBy = type(r.doneBy) == "table" and r.doneBy or {}
+				r.doneBy[c.id] = currentCharId(player) -- QUEUE-MENU2 B2: 완료한 캐릭터(골드 기준 = 그 캐릭터 스테이지 - stage가 캐릭터 최고)
 				changed = true
 			end
 		end
@@ -163,7 +174,7 @@ function refresh(player)
 	end
 	local claimable = false
 	for id in pairs(r.done) do
-		if not r.claimed[id] then
+		if not r.claimed[id] and cellMine(player, r, id) then
 			claimable = true
 			break
 		end
@@ -222,6 +233,9 @@ local function claimCell(player, r, id)
 	if not c or not r.done[id] or r.claimed[id] then
 		return nil
 	end
+	if not cellMine(player, r, id) then
+		return nil -- QUEUE-MENU2 B2: 다른 캐릭터가 완료한 칸
+	end
 	local ok, summary = pay(player, CodexRules.reward(c, r.done[id], goldPerKill))
 	if not ok then
 		return false
@@ -266,7 +280,7 @@ requestRemote.OnServerEvent:Connect(function(player, action, arg)
 		end
 		if arg == "all" then
 			for _, c in ipairs(BUILT.cells) do
-				if r.done[c.id] and not r.claimed[c.id] then
+				if r.done[c.id] and not r.claimed[c.id] and cellMine(player, r, c.id) then
 					one(claimCell(player, r, c.id))
 				end
 			end
@@ -276,6 +290,9 @@ requestRemote.OnServerEvent:Connect(function(player, action, arg)
 		elseif arg:sub(1, 6) == "board:" then
 			one(claimBoard(player, r, arg:sub(7)))
 		else
+			if r.done[arg] and not r.claimed[arg] and not cellMine(player, r, arg) then
+				noticeRemote:FireClient(player, "srv.codex.otherChar") -- QUEUE-MENU2 B2
+			end
 			one(claimCell(player, r, arg))
 		end
 		if #got > 0 then

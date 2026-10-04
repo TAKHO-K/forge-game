@@ -59,6 +59,7 @@ return {
 		["srv.reward.gold"] = "골드 {n}",
 		["srv.class.inBoss"] = "보스전 중에는 직업을 바꿀 수 없습니다.", -- QUEUE-ALL10 0-2
 		["srv.class.newCharOnly"] = "다른 직업은 메인 메뉴에서 새 캐릭터로 시작할 수 있습니다.", -- QUEUE-MENU2 C: 캐릭터 = 직업 고정
+		["srv.codex.otherChar"] = "이 칸 보상은 완료한 캐릭터만 받을 수 있습니다.", -- QUEUE-MENU2 B2
 		["srv.transcend.inheritAnnounce"] = "{name}님이 무기를 초월 무기로 계승했습니다!", -- QUEUE-ALL10 2-1 같은 서버 알림(D2) · QUEUE-ALL9E1 0-2 조건 +29(등급 무관)
 		["srv.transcend.firstAnnounce"] = "{name}님이 전 서버 최초로 초월 강화 +{level}에 도달했습니다!", -- QUEUE-ALL9E1 0-5 전 서버 최초
 		["srv.transcend.enhAnnounce"] = "{name}님이 초월 강화 +{level}에 성공했습니다!", -- QUEUE-ALL9E1 0-5 같은 서버(+15 이상)
@@ -151,6 +152,7 @@ return {
 		["srv.reward.gold"] = "Gold {n}",
 		["srv.class.inBoss"] = "You can't change class during a boss fight.",
 		["srv.class.newCharOnly"] = "Other classes can be started as a new character from the main menu.",
+		["srv.codex.otherChar"] = "Only the character who completed this entry can claim its reward.",
 		["srv.transcend.inheritAnnounce"] = "{name} inherited their weapon into a Transcendent weapon!",
 		["srv.transcend.firstAnnounce"] = "{name} is the first in all servers to reach Transcend +{level}!",
 		["srv.transcend.enhAnnounce"] = "{name} succeeded at Transcend +{level}!",
