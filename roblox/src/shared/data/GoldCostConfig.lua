@@ -22,6 +22,8 @@ return {
 		classAbility = 1, -- Q6 직업 고유 능력(같은 단위)
 		variantReroll = 1, -- QUEUE-10h Q9 K4 스킬 변형 리롤(tier1 잡몹 골드 × SkillVariantData.rerollKills)
 		quest = 1, -- Q6 퀘스트 · 접속 보상 골드(몇 마리분 - 수입과 같은 율)
+		transcend = 1, -- QUEUE-ALL10 2-2 초월 강화 칸(tier1 잡몹 골드 × All10Data 마리분 × killUnitScale)
+		advTraining = 1, -- QUEUE-ALL10 2-3 고급 수련 · 방어 수련(같은 단위)
 		refine = 1, -- P2.5b B: 보석 재련(기본 비용 = tier1 잡몹 골드 × GemData.dust.refineGoldKills[대상 등급]) - 같은 기준 1
 	},
 }
