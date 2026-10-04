@@ -277,6 +277,19 @@ function PartyListView.build(opts)
 
 	-- 모바일: 세로 중앙 목록의 아래 끝이 BL 터치 예약 구역 위 끝에 닿으면 닿지 않을 만큼만 위로 민다(메뉴바와 같은 함수). PC는 슬롯 그대로.
 	function view.applyPosition(viewportHeight)
+		local RS = game:GetService("ReplicatedStorage")
+		if require(RS.Shared.data.HudData).menuV5 then -- QUEUE-UI2 UI2-4 HUD v5: 파티원 = 왼쪽 메뉴 아래(PC 24, 704 · 보스전 472 · 폰 10, 87 - UiLayoutData.hud) · 위 끝 기준
+			local HL = require(RS.Shared.data.UiLayoutData).hud
+			local phoneLayout = compact
+			local spec = phoneLayout and HL.phone.party or (game:GetService("Players").LocalPlayer:GetAttribute("BossEncounterId") ~= nil and HL.pc.partyBoss or HL.pc.party)
+			local cam = workspace.CurrentCamera
+			local vw = cam and cam.ViewportSize.X or 1920
+			local base = phoneLayout and { 800, 360 } or { 1920, 1080 }
+			local s = math.min(vw / base[1], (viewportHeight + game:GetService("GuiService"):GetGuiInset().Y) / base[2])
+			list.AnchorPoint = Vector2.new(0, 0)
+			list.Position = UDim2.fromOffset(math.floor(spec.x * s), math.floor(spec.y * s) - game:GetService("GuiService"):GetGuiInset().Y)
+			return 0
+		end
 		local slotDef = ScreenMap.slot("ML", "partyList")
 		local shift = compact and ScreenMap.mobileMenuBarShiftUp(viewportHeight, view.height()) or 0
 		list.Position = UDim2.new(slotDef.position.X.Scale, slotDef.position.X.Offset, slotDef.position.Y.Scale, slotDef.position.Y.Offset - shift)

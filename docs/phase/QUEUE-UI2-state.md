@@ -13,9 +13,9 @@
 | UI2-2 UI-0 갱신(토큰 · 9-slice · 포커스 링 · 버튼 손맛 · 글자 · 글자 크기 설정) | 완료 | (이 커밋) | 보고서 UI2-2 절 · shared/ButtonPress + UiKit.attachPress · 토큰 00 값 · 글자 원인 = 루트 UIScale(0.548) → textMinRootScale · 설정 textScale · PreferredTextSize 읽기 전용(실기기 확인 필요) · ui_v2 47/47 · run_all 전부 · Play PC |
 | UI2-3 01 메인 메뉴 → v3 기준(키 아트 초점 · 좁은 창 · 아이콘 v2 · 글자 1.3 · 캡처 35장) | 완료 | (이 커밋) | 보고서 UI2-3 절 · 01_main-menu\v3\play · ui_v2 56/56 |
 | (추가 10-05) 새 묶음 00 v2 · 01 v3 · 02 v4 · 03 v2 | 풀기 · spec 커밋 · 에셋(스킬 16장) 완료 | 9bec2db4 · (spec 커밋) | 남은 UI2는 새 버전 기준 · 01 v3 키 아트 초점 규칙(MenuArtFit.place) · 좁은 창 모드 · 글자 단계 = 00 v2(토큰 값 같음) |
-| (추가 2 · 10-05) 00 v3 · 02 HUD v5(메뉴 재배치 · 보상 창 · 환생 경로 · 잠긴 스킬 말풍선 · 키 칩 = PanelRegistry · 미니맵 자리) | 진행 중 | | 업로드 = 해시로 새것 · 바뀐 것만(icon-zone · training · reward · skill-greatsword-t · dualblade-q) |
+| (추가 2 · 10-05) 00 v3 · 02 HUD v5(메뉴 재배치 · 보상 창 · 환생 경로 · 잠긴 스킬 말풍선 · 키 칩 = PanelRegistry · 미니맵 자리) | 완료 = UI2-4 | ee48a73a · (이 커밋) | 업로드 = 해시로 새것 · 바뀐 것만(icon-zone · training · reward · skill-greatsword-t · dualblade-q) |
 | (판정 10-05 · HUD 끝난 뒤) UI2-3 보정 | 대기 | | ① 좁은 창 모드 = 얼굴 · 대검 가림 또는 메뉴 패널 ↔ 이어하기 창 간격 < 24px(값 = 데이터) · 좁은 창 모드 창 폭 = 16:9와 같게 ② 카드 줄바꿈 = 숫자 + 단위 한 덩어리("1분 전" · "스테이지 21" · "환생 4회") ③ PreferredTextSize = 큰 쪽 하나 유지(실기기 = 사용자 출시 전) ④ 재캡처 keyart_pc-4x3_open · keyart_pc-4x3_closed · text-1.3_pc_continue → 이름 뒤 _v2(덮어쓰기 금지) |
-| UI2-4 02 HUD → v5 기준 | 대기 | | v4 큰 글자 예외 3 · 빨강 규칙 · 스킬 칸 icon-skill · PC 파티 Y 568 · Play 관찰 3건(키 칩 "키" 글자 · PC 오른쪽 위 재화/스테이지/퀘스트 안 보임 · 알림 띠 아이콘 자리표시) |
+| UI2-4 02 HUD → v5 기준 | 완료(판단 3 · 캡처 일부 남음) | (이 커밋) | v4 큰 글자 예외 3 · 빨강 규칙 · 스킬 칸 icon-skill · PC 파티 Y 568 · Play 관찰 3건(키 칩 "키" 글자 · PC 오른쪽 위 재화/스테이지/퀘스트 안 보임 · 알림 띠 아이콘 자리표시) |
 | UI2-5 03 가방 · 장비 + 보석 홈 → v2 기준 | 대기 | | 가방 [분해] [판매] = 보조(남색) |
 | UI2 보고 | 대기 | | |
 | 기존 큐 1) MENU2 B2 ~ B5 · 2) DESIGN-BACKLOG · 3) ALL9D · 4) SEC2 · 5) PERF1 준비 | 대기 | | |

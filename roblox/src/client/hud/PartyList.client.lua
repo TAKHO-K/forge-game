@@ -108,6 +108,9 @@ end
 player:GetAttributeChangedSignal("HealerBuffActive"):Connect(refreshBuffChip)
 refreshBuffChip()
 
+player:GetAttributeChangedSignal("BossEncounterId"):Connect(function() -- QUEUE-UI2 UI2-4: 보스전 = 파티원 칸이 위로(왼쪽 메뉴가 작아짐)
+	view.applyPosition(screenGui.AbsoluteSize.Y)
+end)
 screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
 	view.applyPosition(screenGui.AbsoluteSize.Y)
 end)

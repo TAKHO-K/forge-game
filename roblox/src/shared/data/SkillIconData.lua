@@ -15,8 +15,20 @@ for _, classId in ipairs({ "greatsword", "dualblade", "bow", "healer" }) do
 	end
 end
 
+-- QUEUE-UI2 UI2-4: 스킬 칸 그림 = 00 v2 스킬 아이콘(UiIconData skill-<직업>-<칸> → ArtAssetIds 키) · 대시 = icon-dash · 옛 그림 = imagesV1(지우지 않음 - 되돌리기 = images를 imagesV1로)
+local IconData = require(script.Parent.UiIconData)
+local imagesV2 = {}
+for classId, set in pairs(images) do
+	imagesV2[classId] = {}
+	for slot, old in pairs(set) do
+		local def = IconData.icons[slot == "dash" and "dash" or ("skill-" .. classId .. "-" .. slot)]
+		imagesV2[classId][slot] = def and def.asset or old
+	end
+end
+
 return {
-	images = images,
+	images = imagesV2,
+	imagesV1 = images,
 	unlockRebirth = { q = 0, e = 0, r = 0, t = 0, dash = 0 },
 	short = {
 		greatsword = { q = "앞으로 돌진하며 길 위의 적을 모두 베요", e = "제자리에서 돌며 주변 적을 여러 번 베요", r = "주변 적을 끌어오고 파티 공격력을 올려요", t = "잠시 거대해져 모든 공격이 강해져요", dash = "빠르게 짧은 거리를 이동해요" },
