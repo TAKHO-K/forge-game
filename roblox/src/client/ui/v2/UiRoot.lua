@@ -10,14 +10,15 @@ local UiRoot = {}
 
 UiRoot.fit = require(ReplicatedStorage.Shared.UiModel).fit -- 순수(하네스) - 화면 크기 · 폰 여부 → 기준 크기 · 배율
 
-function UiRoot.new(screenGui, name)
+-- anchorX = 0(왼쪽 붙임 · 기본) | 1(오른쪽 붙임 - HUD 오른쪽 열 · 재화처럼 화면 오른쪽 끝 기준 좌표) · anchorY = 0.5(세로 가운데 · 기본) | 0(위 붙임 - HUD 위쪽 좌표)
+function UiRoot.new(screenGui, name, anchorX, anchorY)
 	Theme.recompute()
 	local isPhone = Theme.isMobile
 	local frame = Instance.new("Frame")
 	frame.Name = name or "UiRoot"
 	frame.BackgroundTransparency = 1
-	frame.AnchorPoint = Vector2.new(0, 0.5) -- 왼쪽 붙임 · 세로 가운데(넓은 화면 = 오른쪽이 남음 - 키 아트가 오른쪽에 붙어 그 자리를 채운다)
-	frame.Position = UDim2.fromScale(0, 0.5)
+	frame.AnchorPoint = Vector2.new(anchorX or 0, anchorY or 0.5) -- 왼쪽 붙임 · 세로 가운데(넓은 화면 = 오른쪽이 남음 - 키 아트가 오른쪽에 붙어 그 자리를 채운다)
+	frame.Position = UDim2.fromScale(anchorX or 0, anchorY or 0.5)
 	local scale = Instance.new("UIScale")
 	scale.Parent = frame
 	frame.Parent = screenGui

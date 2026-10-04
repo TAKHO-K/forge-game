@@ -136,10 +136,15 @@ local function hasClaimable(v)
 	return false
 end
 
-Attendance.hasClaimable = hasClaimable
+Attendance.hasClaimable = require(ReplicatedStorage.Shared.RewardHub).attendance -- QUEUE-UI2: HUD [보상] 점과 같은 판정 한 곳(위 지역 함수와 같은 규칙)
 
 function Attendance.open()
 	UIManager.switchTo(Attendance.id)
+end
+
+-- QUEUE-UI2 UI2-4: 마지막 QuestUpdate 값(HUD [보상] 점 - 늦게 뜬 HUD도 접속 때 받은 값을 쓴다)
+function Attendance.currentView()
+	return view
 end
 
 -- QUEUE-ALL9B A: 서버 확정 지급(QuestClaimResult) → 연출 · A6 접속 보상 연출이 끝나고 받을 칸이 없으면 창을 닫는다(닫히면 시즌 출석판 - onClose)

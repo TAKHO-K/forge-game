@@ -126,7 +126,7 @@ end
 
 -- QUEUE-UI2 UI2-2 글자 크기: 토큰 이름 → 기준 px(PC/폰 · scale 이름 따라감)
 function UiModel.textToken(name, isPhone)
-	local t = Tokens.text[name]
+	local t = Tokens.text[name] or Tokens.textScale[name] -- 화면 이름(cardInfo 등) 또는 단계 이름(body · heading 등)
 	if type(t) == "string" then
 		t = Tokens.textScale[t]
 	end

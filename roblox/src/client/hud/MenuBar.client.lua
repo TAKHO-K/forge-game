@@ -9,6 +9,9 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+if require(ReplicatedStorage.Shared.data.HudData).menuV5 then -- QUEUE-UI2 UI2-4: HUD v5 메뉴 = hud/HudMenuV2(스위치 끄면 이 옛 메뉴)
+	return
+end
 local RunService = game:GetService("RunService")
 local TextService = game:GetService("TextService")
 local UserInputService = game:GetService("UserInputService")

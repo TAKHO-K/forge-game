@@ -68,6 +68,8 @@ local function bagButton()
 	local menuGui = player.PlayerGui:FindFirstChild("MenuBarGui")
 	local bar = menuGui and menuGui:FindFirstChild("MenuBar")
 	local button = bar and bar:FindFirstChild("MenuButton_inventory", true)
+	local v5 = player.PlayerGui:FindFirstChild("HudMenuV2Gui") -- QUEUE-UI2 UI2-4 HUD v5 가방 버튼
+	button = button or (v5 and v5:FindFirstChild("Menu_inventory", true))
 	return button and button.Visible and button.AbsoluteSize.X > 0 and button or nil
 end
 

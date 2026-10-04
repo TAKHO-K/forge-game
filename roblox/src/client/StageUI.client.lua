@@ -51,6 +51,21 @@ row.Size = UDim2.new(0, 0, 0, 0)
 row.BackgroundTransparency = 1
 row.Parent = screenGui
 
+if require(ReplicatedStorage.Shared.data.HudData).menuV5 then -- QUEUE-UI2 UI2-4: HUD v5 = 기준 해상도 배율(UiModel.fit - 1080p = 1 · 작은 창 = 같이 줄어 메뉴 · 퀘스트 칸과 비율 유지)
+	local fit = require(ReplicatedStorage.Shared.UiModel).fit
+	local rowScale = Instance.new("UIScale")
+	rowScale.Parent = row
+	local function rescale()
+		local v = screenGui.AbsoluteSize
+		if v.X > 0 and v.Y > 0 then
+			local _, s = fit(v.X, v.Y, Theme.isMobile)
+			rowScale.Scale = math.max(s, require(ReplicatedStorage.Shared.data.UiTokens).textMinRootScale) -- 글자 읽힘 하한(UI2-2와 같은 값)
+		end
+	end
+	screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(rescale)
+	rescale()
+end
+
 local rowLayout = Instance.new("UIListLayout")
 rowLayout.FillDirection = Enum.FillDirection.Vertical
 rowLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
@@ -152,6 +167,7 @@ updateLabels()
 local settingsButton = Instance.new("TextButton")
 settingsButton.Name = "SettingsButton"
 settingsButton.LayoutOrder = 4
+settingsButton.Visible = not require(ReplicatedStorage.Shared.data.HudData).menuV5 -- QUEUE-UI2 UI2-4: 설정 · 펫(알 칩 = 이 버튼의 자식) = HUD v5 메뉴 더보기 안
 local SETTINGS_SIZE = Theme.isMobile and Theme.touchMin or 34 -- QUEUE-STUDIO S-1: 폰 터치 44 이상(옛 = 34 고정)
 settingsButton.Size = UDim2.new(0, SETTINGS_SIZE, 0, SETTINGS_SIZE)
 settingsButton.Text = ""

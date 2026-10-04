@@ -363,6 +363,17 @@ local function pressRecall()
 	end
 end
 hubButton.Activated:Connect(pressRecall)
+-- QUEUE-UI2 UI2-4: HUD v5 = 귀환 버튼은 HUD 메뉴(오른쪽 열 둥근 판 · 폰 더보기) → 이 버튼은 숨기고 같은 동작을 그 버튼에 잇는다
+if require(ReplicatedStorage.Shared.data.HudData).menuV5 then
+	hubButton.Visible = false
+	task.spawn(function()
+		local hud = player.PlayerGui:WaitForChild("HudMenuV2Gui", 30)
+		local ev = hud and hud:WaitForChild("HudRecallPress", 10)
+		if ev then
+			ev.Event:Connect(pressRecall)
+		end
+	end)
+end
 -- 이동 입력(WASD · 조이스틱 = Humanoid.MoveDirection) · 점프 · 대시(DashInput이 쏘는 LocalPlayer Attribute DashAt) = 취소
 local lastMoveCancel = 0
 RunService.Heartbeat:Connect(function()

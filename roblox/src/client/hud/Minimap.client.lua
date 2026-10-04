@@ -397,10 +397,19 @@ local function square(x, y, s)
 end
 
 -- 반환: mode("below" = 칩 스택 아래 · "side" = 칩 스택 왼쪽 열 옆 · nil = 둘 다 안 됨), 자리(rect), 칩 스택 rect
+local HudData = require(game:GetService("ReplicatedStorage").Shared.data.HudData)
+local HudLayout = require(game:GetService("ReplicatedStorage").Shared.data.UiLayoutData).hud
 local function place()
 	local chips = shownRect("TopChipsRow")
 	if not chips then
 		return nil
+	end
+	if HudData.menuV5 and not Theme.isMobile then -- QUEUE-UI2 UI2-4 HUD v5: PC 미니맵 = 재화 왼쪽(UiLayoutData.hud.pc.minimap · 화면 오른쪽 끝 기준 · 원형 그대로)
+		local m = HudLayout.pc.minimap
+		local screen = gui.AbsoluteSize
+		local s = math.min(screen.X / 1920, screen.Y / 1080)
+		local size = math.floor(m[3] * s)
+		return "side", square(screen.X - math.floor((1920 - m[1]) * s), math.floor(m[2] * s), size), chips
 	end
 	local screen = gui.AbsoluteSize
 	local blockers = { ScreenMap.centerRect(screen), chips }

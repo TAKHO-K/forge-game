@@ -194,6 +194,8 @@ local function maybeSellHint()
 	Toast.push("TC", { text = Text.get(Theme.isMobile and "bag.sellHint.phone" or "bag.sellHint.pc"), grade = "notice", seconds = 5 })
 	local gui = player.PlayerGui:FindFirstChild("MenuBarGui")
 	local button = gui and gui:FindFirstChild("MenuButton_inventory", true)
+	local v5 = player.PlayerGui:FindFirstChild("HudMenuV2Gui") -- QUEUE-UI2 UI2-4 HUD v5 가방 버튼
+	button = button or (v5 and v5:FindFirstChild("Menu_inventory", true))
 	if button then
 		local glow = Instance.new("UIStroke")
 		glow.Name = "SellHintGlow"

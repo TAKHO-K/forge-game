@@ -31,6 +31,7 @@ local okRun, err = pcall(function()
 	local M0 = MODS.UiModel
 	check("UI2-2 PC 하한: body 18 · caption 16 · button 20 · 창 제목 28 이상", T.textScale.body.pc >= 18 and T.textScale.caption.pc >= 16 and T.textScale.button.pc >= 20 and M0.textToken("windowTitle", false) >= 28 and M0.textToken("cardInfo", false) >= 18)
 	check("UI2-2 폰: body 16 · caption 14 · button 18 · 창 제목 22", T.textScale.body.phone == 16 and T.textScale.caption.phone == 14 and T.textScale.button.phone == 18 and M0.textToken("windowTitle", true) == 22)
+	check("UI2-4 글자 단계 이름 직접(body · heading) = 단계 값", M0.textToken("heading", false) == T.textScale.heading.pc and M0.textToken("body", true) == T.textScale.body.phone)
 	check("UI2-2 글자 크기 설정 = 보통 1.0 · 크게 1.15 · 아주 크게 1.3", M0.textMul("normal") == 1 and M0.textMul("large") == 1.15 and M0.textMul("xlarge") == 1.3)
 	check("UI2-2 PreferredTextSize와 안 겹침(큰 쪽 하나 - 1.3 × 1.3 아님)", M0.textMul("xlarge", "Larger") == 1.3 and M0.textMul("normal", "Largest") == 1.5 and M0.textMul("large", "Medium") == 1.15)
 	check("UI2-2 루트 배율 보정: 1080 = 토큰 그대로 · 592 창(0.548) = 화면 글자 ≥ 토큰 × 0.75", M0.textPx("cardInfo", false, "normal", "Medium", 1) == 18 and M0.textPx("cardInfo", false, "normal", "Medium", 0.548) * 0.548 >= 18 * 0.75 - 0.5)
@@ -164,6 +165,75 @@ local okRun, err = pcall(function()
 		local ok = r.keepScreen[1] >= uiEdge - 0.5 and r.keepScreen[3] <= c[2] + 0.5 and r.x + r.w >= c[2] - 0.5 and r.keepScreen[4] <= c[3]
 		check(("UI2-3 키 아트 %s: 지킬 영역 %.0f ~ %.0f ⊂ [창 끝 %.0f, 화면 %d] · 좁은 창 %s"):format(c[1], r.keepScreen[1], r.keepScreen[3], uiEdge, c[2], tostring(r.narrow)), ok)
 	end
+
+	-- UI2-4 HUD v5(HudData · UiLayoutData.hud · RewardHub)
+	local HD, HL, RH = MODS.HudData, L.hud, MODS.RewardHub
+	local badIcon = {}
+	for id, d in pairs(HD.items) do
+		if not I.icons[d.icon] or (d.phoneIcon and not I.icons[d.phoneIcon]) then table.insert(badIcon, id) end
+	end
+	for _, r in ipairs(HD.rewards) do
+		if not I.icons[r.icon] then table.insert(badIcon, "reward." .. r.id) end
+	end
+	check("UI2-4 HUD 항목 아이콘 = 아이콘 표(v2)", #badIcon == 0, table.concat(badIcon, ","))
+	local function inList(list, id) for _, x in ipairs(list) do if x == id then return true end end return false end
+	check("UI2-4 PC 왼쪽 = 가방 · 성장 · 수련 · 지도 · 더보기 / 오른쪽 = 구역 · 퀘스트 · 보상 · 상점 + 귀환", table.concat(HD.pc.left, ",") == "inventory,character,training,worldMap,more" and table.concat(HD.pc.right, ",") == "stageSelect,quests,reward,shop" and HD.pc.returnItem == "hubReturn")
+	check("UI2-4 PC 더보기 = 파티 · 도감 · 순위 · 펫 · 설정", table.concat(HD.pc.more, ",") == "party,codex,leaderboard,pet,settings")
+	check("UI2-4 폰 위 줄 = 가방 · 보상 · 더보기 · 자주 쓰는 것 = 구역 · 수련 · 성장 · 퀘스트", table.concat(HD.phone.top, ",") == "inventory,reward,more" and table.concat(HD.phone.moreFrequent, ",") == "stageSelect,training,character,quests")
+	local all = {}
+	for _, list in ipairs({ HD.pc.left, HD.pc.right, { HD.pc.returnItem }, HD.pc.more }) do for _, id in ipairs(list) do all[id] = (all[id] or 0) + 1 end end
+	local phoneAll = {}
+	for _, list in ipairs({ HD.phone.top, HD.phone.moreFrequent, HD.phone.moreRest }) do for _, id in ipairs(list) do phoneAll[id] = (phoneAll[id] or 0) + 1 end end
+	local missing = {}
+	for id in pairs(HD.items) do
+		if all[id] ~= 1 then table.insert(missing, "pc:" .. id) end
+		if phoneAll[id] ~= 1 and id ~= "more" then table.insert(missing, "phone:" .. id) end
+	end
+	check("UI2-4 모든 항목이 PC · 폰에 한 번씩(빠짐 · 중복 0)", #missing == 0, table.concat(missing, ","))
+	-- 폰 전투 버튼: 사각 간격 8 이상 · 화면 끝 8 이상 · 조이스틱 · 위 줄과 안 겹침
+	local C = HL.phone.combat
+	local names = {}
+	for k in pairs(C) do table.insert(names, k) end
+	table.sort(names)
+	local function gapOf(a, b)
+		local dx = math.max(b[1] - (a[1] + a[3]), a[1] - (b[1] + b[3]))
+		local dy = math.max(b[2] - (a[2] + a[4]), a[2] - (b[2] + b[4]))
+		return math.max(dx, dy)
+	end
+	local minGap, edgeBad = 999, {}
+	for i = 1, #names do
+		local a = C[names[i]]
+		if a[1] < 8 or a[2] < 8 or a[1] + a[3] > 800 - 8 or a[2] + a[4] > 360 - 8 then table.insert(edgeBad, names[i]) end
+		for j = i + 1, #names do
+			minGap = math.min(minGap, gapOf(a, C[names[j]]))
+		end
+	end
+	check(("UI2-4 폰 전투 버튼 사각 간격 ≥ 8(최소 %d) · 화면 끝 ≥ 8"):format(minGap), minGap >= 8 and #edgeBad == 0, table.concat(edgeBad, ","))
+	local joy = HL.phone.joystick
+	local hitJoy = {}
+	for _, n in ipairs(names) do if gapOf(C[n], joy) < 0 then table.insert(hitJoy, n) end end
+	local TR = HL.phone.top
+	local topRight = TR.x + #HD.phone.top * TR.size + (#HD.phone.top - 1) * TR.gap
+	check("UI2-4 폰 조이스틱 영역 비움 · 위 줄이 로블록스 버튼(140) 오른쪽 · 체력 막대(310) 왼쪽", #hitJoy == 0 and TR.x >= HL.phone.robloxButtons[3] and topRight <= HL.phone.hp[1], table.concat(hitJoy, ",") .. " topRight " .. topRight)
+	-- PC 오른쪽 열: 메인 퀘스트 칸 아래 · 미니맵 · 재화와 안 겹침 · 귀환까지 화면 안
+	local PL = HL.pc
+	local rightTop = PL.right.y
+	local rightBottom = PL.right.y + (#HD.pc.right + 1) * PL.right.size + #HD.pc.right * PL.right.gap
+	check(("UI2-4 PC 오른쪽 열 %d ~ %d = 퀘스트 칸 아래(%d) · 미니맵 아래(%d) · 화면 안"):format(rightTop, rightBottom, PL.quest[2] + PL.quest[4], PL.minimap[2] + PL.minimap[4]), rightTop >= PL.quest[2] + PL.quest[4] and rightTop >= PL.minimap[2] + PL.minimap[4] and rightBottom <= 1080 and PL.right.x + PL.right.size <= 1920 - 24)
+	check("UI2-4 PC 미니맵이 재화 · 스테이지 · 퀘스트 칸과 안 겹침", gapOf(PL.minimap, PL.currency) >= 0 and gapOf(PL.minimap, PL.stage) >= 0 and gapOf(PL.minimap, PL.quest) >= 0)
+	-- 보상 점
+	local view = { loginReady = false, attendance = { count = 2, claimed = { ["1"] = true, ["2"] = true }, rewards = { { day = 1 }, { day = 2 }, { day = 3 } } }, board = { todayKind = nil } }
+	local d0, any0 = RH.dots(view, 0)
+	check("UI2-4 보상 점: 받을 것 없음 = 점 0(버튼 · 줄)", not any0 and not d0.attendance and not d0.seasonBoard and not d0.gift)
+	view.attendance.claimed["2"] = nil
+	local d1, any1 = RH.dots(view, 0)
+	check("UI2-4 보상 점: 출석 칸 남음 = 출석 줄 점 + 버튼 점", any1 and d1.attendance and not d1.seasonBoard)
+	view.attendance.claimed["2"] = true
+	view.board.todayKind = "cell"
+	local d2, any2 = RH.dots(view, 2)
+	check("UI2-4 보상 점: 시즌 출석판 · 선물 = 각 줄 점", any2 and d2.seasonBoard and d2.gift and not d2.attendance)
+	check("UI2-4 환생 가능 알림 = 레벨 ≥ 요구 · 회차 < 최대(서버 조건과 같음)", RH.rebirthReady(100, 0, 100, 5) and not RH.rebirthReady(99, 0, 100, 5) and not RH.rebirthReady(500, 5, 100, 5) and not RH.rebirthReady(nil, 0, 100, 5))
+	check("UI2-4 보상 점: 접속 보상 = 출석 줄 · 값 없음(nil) = 점 0", RH.attendance({ loginReady = true }) and not select(2, RH.dots(nil, nil)))
 
 	-- 3. 아이콘 표
 	local noFallback, noImage, oldMissing = {}, {}, {}

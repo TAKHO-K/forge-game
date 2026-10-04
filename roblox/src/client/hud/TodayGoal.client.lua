@@ -88,9 +88,28 @@ local function collapsed()
 	return player:GetAttribute("BossEncounterId") ~= nil or os.clock() - hitAt < COMBAT_SECONDS
 end
 
+local HudData = require(game:GetService("ReplicatedStorage").Shared.data.HudData)
+local HudLayout = require(game:GetService("ReplicatedStorage").Shared.data.UiLayoutData).hud
 local function place()
 	local menu = player.PlayerGui:FindFirstChild("MenuBarGui") and player.PlayerGui.MenuBarGui:FindFirstChild("MenuBar")
 	local width = Theme.isMobile and WIDTH_PHONE or WIDTH_PC
+	if HudData.menuV5 then -- QUEUE-UI2 UI2-4 HUD v5: 메인 퀘스트 = 오른쪽 위(재화 · 스테이지 아래 - UiLayoutData.hud.quest · 화면 오른쪽 끝 기준)
+		local q = Theme.isMobile and HudLayout.phone.quest or HudLayout.pc.quest
+		local base = Theme.isMobile and { 800, 360 } or { 1920, 1080 }
+		local s = math.min(gui.AbsoluteSize.X / base[1], gui.AbsoluteSize.Y / base[2])
+		local boxScale = box:FindFirstChild("HudV5Scale") or Instance.new("UIScale") -- 칸도 기준 해상도 배율(칩 스택과 같음)
+		boxScale.Name = "HudV5Scale"
+		boxScale.Scale = math.max(s, require(game:GetService("ReplicatedStorage").Shared.data.UiTokens).textMinRootScale) -- 글자 읽힘 하한(UI2-2와 같은 값)
+		boxScale.Parent = box
+		menu = nil
+		box.AnchorPoint = Vector2.new(1, 0)
+		local top = math.floor(q[2] * s)
+		local chips = player.PlayerGui:FindFirstChild("TopChipsGui") and player.PlayerGui.TopChipsGui:FindFirstChild("TopChipsRow")
+		if chips and chips.AbsoluteSize.Y > 0 then -- 지금 칩 스택(재화 · 레벨 · 스테이지)이 v5 두 줄보다 길다 → 그 바로 아래
+			top = math.max(top, chips.AbsolutePosition.Y + chips.AbsoluteSize.Y + 8 - gui.AbsolutePosition.Y)
+		end
+		box.Position = UDim2.new(1, -math.floor((base[1] - q[1] - q[3]) * s), 0, top)
+	end
 	if menu and menu.AbsoluteSize.Y > 0 then
 		local offset = gui.AbsolutePosition
 		local below = menu.AbsolutePosition.Y - offset.Y + menu.AbsoluteSize.Y + 10
@@ -202,8 +221,17 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(place)
+task.spawn(function() -- QUEUE-UI2 UI2-4 HUD v5: 칩 스택 크기가 바뀌면 다시
+	local chipsGui = player.PlayerGui:WaitForChild("TopChipsGui", 30)
+	local chips = chipsGui and chipsGui:WaitForChild("TopChipsRow", 10)
+	if chips and HudData.menuV5 then
+		chips:GetPropertyChangedSignal("AbsoluteSize"):Connect(place)
+		chips:GetPropertyChangedSignal("AbsolutePosition"):Connect(place)
+		place()
+	end
+end)
 task.spawn(function()
-	local menuGui = player.PlayerGui:WaitForChild("MenuBarGui", 30)
+	local menuGui = not HudData.menuV5 and player.PlayerGui:WaitForChild("MenuBarGui", 30)
 	local menu = menuGui and menuGui:WaitForChild("MenuBar", 10)
 	if menu then
 		menu:GetPropertyChangedSignal("AbsoluteSize"):Connect(place)

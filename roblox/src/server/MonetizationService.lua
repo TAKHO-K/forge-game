@@ -492,7 +492,7 @@ function MonetizationService.promptPass(player, key)
 	return true
 end
 
-local ACTIONS = { view = true, buyShards = true, buyTokens = true, buyRobux = true, buyPass = true, equip = true, equipAll = true, seasonClaim = true, seasonClaimAll = true, giftClaim = true }
+local ACTIONS = { view = true, buyShards = true, buyTokens = true, buyRobux = true, buyPass = true, equip = true, equipAll = true, seasonClaim = true, seasonClaimAll = true, giftClaim = true, giftOpen = true } -- giftOpen = QUEUE-UI2 HUD [보상] 선물함 줄
 function MonetizationService.handle(player, action, a, b)
 	if type(action) ~= "string" or not ACTIONS[action] then
 		return false, "bad_action"
@@ -520,6 +520,9 @@ function MonetizationService.handle(player, action, a, b)
 	elseif action == "giftClaim" and type(a) == "string" then
 		local got = GiftService.claim(player, a)
 		ok, why = got > 0, if got > 0 then nil else "none"
+	elseif action == "giftOpen" then -- QUEUE-UI2 UI2-4 HUD [보상] 선물함 줄
+		GiftService.pushPopup(player)
+		ok = true
 	elseif action == "view" then
 		local s = PlayerProfile.getMonetizationState(player) -- QUEUE-ALL9C 1-6: 상점을 연 횟수(스타터 노출 조건 - 두 번째 방문)
 		if s then

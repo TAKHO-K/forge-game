@@ -68,12 +68,22 @@ local function rememberClaimed(s, id)
 	end
 end
 
+-- QUEUE-UI2 UI2-4: 선물함 남은 수 = Attribute GiftPending(HUD [보상] 선물함 줄 점)
+local function syncCount(player)
+	local s = PlayerProfile.getMonetizationState(player)
+	if s and typeof(player) == "Instance" and player.Parent then
+		player:SetAttribute("GiftPending", #s.mailbox.gifts)
+	end
+end
+
 local function pushPopup(player)
 	local s = PlayerProfile.getMonetizationState(player)
+	syncCount(player)
 	if popupRemote and s and #s.mailbox.gifts > 0 and typeof(player) == "Instance" then
 		popupRemote:FireClient(player, s.mailbox.gifts)
 	end
 end
+GiftService.pushPopup = pushPopup -- HUD [보상] 선물함 줄 = 선물 창 다시 열기(ShopRequest "giftOpen")
 
 -- 보내기(관리자). 반환: 결과 문자열
 function GiftService.send(targetUserId, kind, value, note, fromName)
@@ -195,6 +205,7 @@ function GiftService.claim(player, id)
 		end
 	end
 	s.mailbox.gifts = kept
+	syncCount(player)
 	if got > 0 then
 		require(script.Parent.ImmediateSave).request(player)
 		require(script.Parent.MenuBlock).mark(player, "gift") -- MENU2 판정 4: 선물 받기 중 메뉴 이동 금지
