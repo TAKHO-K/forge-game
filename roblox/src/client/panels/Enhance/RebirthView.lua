@@ -4,6 +4,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat) -- MULT-PCT 배율 표시
 
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local MovementUnlockData = require(ReplicatedStorage.Shared.data.MovementUnlockData)
@@ -119,7 +120,7 @@ function RebirthView.build(parent, _overlayParent)
 		end
 		infoLabel.Text = Text.get("rebirth.tab.where") .. "\n" .. Text.get("rebirth.tab.status", {
 			count = rebirthCount, max = GemData.maxRebirthCount, level = level, required = RebirthView.requiredLevel(rebirthCount),
-			expFrom = ("%g"):format(CharacterLevel.getRebirthExpMultiplier(rebirthCount)), expTo = ("%g"):format(CharacterLevel.getRebirthExpMultiplier(rebirthCount + 1)),
+			expFrom = NumberFormat.multiplier(CharacterLevel.getRebirthExpMultiplier(rebirthCount)), expTo = NumberFormat.multiplier(CharacterLevel.getRebirthExpMultiplier(rebirthCount + 1)),
 		}) .. "\n" .. weaponRule
 	end
 

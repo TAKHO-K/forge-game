@@ -242,3 +242,44 @@
 - 장비 상세 카드 "착용 중 옵션: 치명타 확률 … · 치명타 피해 …" 줄이 PC에서 …로 잘림 → **DetailCard 글 줄 = 줄바꿈 + 높이 = 글 높이**(다시 축약 안 함 · 옛부터 잘리던 "분해 시 … 판매 시 …" 줄도 같이 해결). 캡처 `claude-design-handoff\_audit	ext-full\pc_detail_compare.png`(상세 + 비교 툴팁).
 - 폰(DebugInventoryScreen 800×302): 아래 시트 상세 줄 잘림 없음 `phone_detail_sheet_debug-screen.png`. 캐릭터 창 상세 능력치(치명타 확률 · 치명타 피해 · 공격 속도 · 이동 속도) TextFits 전부 O `pc_character_stats.png`.
 - **1.3배**: 장비창 · 캐릭터 창 · 비교 툴팁은 옛 `ui/kit/Theme.textSize` 글자라 설정 "글자 크기"(textScale)가 곱해지지 않는다(UiKit v2 화면만 곱함 - UI2-4 보고와 같은 사실). 즉 지금 1.3배에서도 위 1.0 화면과 같다. 이 창들을 v2 글자로 옮기는 일 = UI2-5 2-4(1.3배 폰 가방)에서.
+
+## MULT-PCT 배율 표시 → %(추가 3 · 10-05)
+
+표기 함수 한 곳 = `shared/NumberFormat.multiplier(v)`: ×1.01 → "+1%" · ×1.5 → "+50%" · ×0.97 → "-3%" · ×1 → "+0%" · 소수 한 자리(끝 0 버림) · **×10 이상 = × 그대로**(×12.5 · ×1,234). 계산 값은 그대로(표시만).
+
+| 파일 | 자리 | 옛 표시 | 새 표시 |
+|---|---|---|---|
+| client/panels/Character.lua | 캐릭터 창 줄 "레벨 이정표 배율"(MilestoneMultiplier) | ×1.00 | +0% |
+| client/panels/Character.lua | 상세 능력치 합계 format mult(공격 속도 · 이동 속도 · 경험치 획득 = StatSheetData) | ×2.50 · ×1.50 · ×1.01 | +150% · +50% · +0.7% |
+| client/panels/Character.lua | 출처 분해 kind mult | ×n | +n% |
+| shared/EquipCompare.lua | 장비 비교 무기 배율(multText) | ×1.85 / ×1.2K | +85% / ×1.2K(10 이상 ×) |
+| client/panels/Enhance/RebirthView.lua · client/RebirthAltar.client.lua + TextData `rebirth.tab.status` · `rebirth.confirm.body`(ko · en) | 환생 경험치 배율 | 경험치 ×1.5 → ×2 | 경험치 +50% → +100% |
+| client/panels/Enhance/TranscendView.lua + TextData_forge `transcend.enh.effectMult`(ko · en) | 초월 강화 공격력 | ×1.25 · 성공하면 ×1.31 | +25% · 성공하면 +31% |
+| client/panels/Shop/ConvenienceTab.lua · Catalog.lua + TextData `shop.pass.pickupRadius.desc` · `shop.pass.recallCooldown.desc`(ko · en) | 편의 패스 효과 | 반경 ×1.5 넓어짐 · 대기 ×0.5 줄어듦 | 반경 +50% · 대기 -50% |
+
+그대로 둔 것(예외 · 판단 근거):
+- 비용 배수: 강화 방지 "비용 ×{k}" · 방지 켬(×k)(지시 예외).
+- 초월 계승 "공격력 ×{mult} · 지금의 {mult}배"(`transcend.inherit.*`) = 무기 교체 환산 비율(보너스가 아님) → ×.
+- 스킬 설명 공식(`desc.skill.*` ×{mult} · ×{cap} · 이동 속도 ×{move} 등) = 계산식 설명 → ×. 바꾸려면 판단 필요.
+- 확률 표 가중치(Probability ×%g) · 묶음 개수(Toast ×n) · 보스 기둥 개수 = 배율 아님.
+- `moveUnlock.reward.4` 공중 대시 ×{mult} = 횟수 배수 → ×.
+- 옵션 · 세트 · 수련 · 펫 표시는 이미 +n%(배율 표시 없음 - 확인함).
+
+캡처: `claude-design-handoff\_audit\text-full\mult-pct_pc_character.png` · `mult-pct_pc_character_breakdown.png` · `mult-pct_phone_character.png`(ForceTouchLayout 800×361) - 잘림 0(TextFits 전부 O). 1.3배 = 캐릭터 창은 옛 Theme 글자라 설정 배율이 안 걸린다(TEXT-FULL 절과 같음).
+
+추가(TEXT-FULL 보충): 스킬 설명 ko "치명 ×{crit}" · "치명 굴림" · "치명이면" · "1타 … 치명 {crit}" → "치명타 …"(TextData_shared 5곳).
+
+## 세계 번호 확인(읽기 전용 · 10-05)
+
+| 무엇 | 태초 | 초월 | 사용자 결정(09-29) | 같음? |
+|---|---|---|---|---|
+| 세계 번호 발급(`PrimordialRegistry.claim` → `nextNumber` - DataStore 카운터) | **받음**(PrimordialData.counterKey) | 받음(TranscendentData 별도 카운터) | 초월부터 | **다름** |
+| 전 서버 알림(MessagingService 토픽 · 배너 · 채팅) | 없음 | 있음(`DropNoticeData.globalGrades = { transcendent = true }`) | 초월부터 | 같음 |
+| 같은 서버 알림(`announceLocal` = 그 서버 전원 배너) | 있음 | 있음 | 태초 = 같은 서버만 | 같음 |
+| 명예의 전당 최근 목록 · 칭호 | 없음(global만) | 있음 | - | - |
+| 장비 상세 각인 칩 "세계 N번째 태초 · 날짜" | 보임(번호 있음) | 보임 | - | - |
+
+→ **차이 1건: 태초도 세계 번호(태초 전용 순번)를 받는다.** 지시대로 코드는 바꾸지 않았다. 바꾸려면 결정 필요: ① 태초 번호 발급 끄기(각인 칩 문구 · 03 v2 목업 "세계 N번째 태초"도 같이 바뀜) ② 지금대로 두기(태초 = 번호는 있고 알림만 같은 서버).
+
+## 메모(추가 3 · 3번)
+- 성장(캐릭터) 창 왼쪽 = 로블록스 아바타 대신 직업 전설 일러스트(직업 선택과 같은 그림 · 치유사 · 도적 자리표시) → 08 v3 묶음이 오면 구현(지금은 안 함).

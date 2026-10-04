@@ -2,6 +2,7 @@
 --   치장 하위 칩(테마 세트 · 글라이더 · 처치 이펙트 · 무기 스킨 · 이모트 · 펫 꾸미기 · 이름표 · 연출) = CHIPS 표 · 공개 상품 0개 칩은 숨긴다(chipEntries가 빈 목록).
 --   그림 = 정지 ViewportFrame(테마 = 칸 4개 모양 · 글라이더 = 실제 모양) 또는 아이콘 · 글자 칸 - 회전 없음(스크롤 성능).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat) -- MULT-PCT 배율 표시
 
 local CosmeticSlotData = require(ReplicatedStorage.Shared.data.CosmeticSlotData)
 local MonetizationData = require(ReplicatedStorage.Shared.data.MonetizationData)
@@ -296,10 +297,10 @@ local PASS_TEXT = {
 		return "+" .. tostring(def.bonusSlots)
 	end,
 	pickupRadius = function(def)
-		return ("×%g"):format(def.radiusMultiplier)
+		return NumberFormat.multiplier(def.radiusMultiplier)
 	end,
 	recallCooldown = function(def)
-		return ("×%g"):format(def.cooldownMultiplier)
+		return NumberFormat.multiplier(def.cooldownMultiplier)
 	end,
 }
 function Catalog.passCard(env, key, title, subtitle)

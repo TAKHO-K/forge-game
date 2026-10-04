@@ -297,7 +297,7 @@ local TextData = {
 
 		-- 환생(G1-3)
 		["rebirth.confirm.title"] = "환생 - 레벨이 1로 돌아갑니다",
-		["rebirth.confirm.body"] = "레벨 {level} → 1 · 스테이지 {stage} → 1(되돌릴 수 없음) - 높은 스테이지에서는 레벨만큼 약해집니다.\n얻는 것(영구): 무기 등급 +1 · 보석 칸 +1 · 경험치 ×{expFrom} → ×{expTo}\n필요 레벨 {required} · 환생 {count}/{max}회",
+		["rebirth.confirm.body"] = "레벨 {level} → 1 · 스테이지 {stage} → 1(되돌릴 수 없음) - 높은 스테이지에서는 레벨만큼 약해집니다.\n얻는 것(영구): 무기 등급 +1 · 보석 칸 +1 · 경험치 {expFrom} → {expTo}\n필요 레벨 {required} · 환생 {count}/{max}회",
 		["rebirth.confirm.done"] = "환생 {count}/{max}회 완료 - 더 이상 환생할 수 없습니다.",
 		["rebirth.weaponPrimordialRule"] = "무기 태초 = 환생 {max}회 + 보석 홈 {slots}칸 전부 장착(마지막 환생 때 마지막 홈이 채워지며 함께 달성)", -- D1-2: 코드 조건(PlayerProfile.rebirth)과 같은 값 - 데이터에서 채운다
 		["rebirth.confirm.ok"] = "환생하기",
@@ -305,7 +305,7 @@ local TextData = {
 		["rebirth.confirm.close"] = "닫기",
 		["rebirth.levelShort"] = "레벨이 부족합니다(필요 레벨 {required})",
 		["rebirth.tab.where"] = "환생은 커뮤니티 센터의 환생 제단에서 합니다(마을 한가운데 건물 앞).",
-		["rebirth.tab.status"] = "환생 {count}/{max}회 · 현재 레벨 {level} · 필요 레벨 {required} · 경험치 ×{expFrom} → ×{expTo}",
+		["rebirth.tab.status"] = "환생 {count}/{max}회 · 현재 레벨 {level} · 필요 레벨 {required} · 경험치 {expFrom} → {expTo}",
 		["world.communityCenter"] = "커뮤니티 센터",
 
 		-- 보스맵 잔류(G1-4)
@@ -794,9 +794,9 @@ local TextData = {
 		["shop.pass.bagExpand.name"] = "가방 확장",
 		["shop.pass.bagExpand.desc"] = "가방 칸 +{slots} 늘어남.",
 		["shop.pass.pickupRadius.name"] = "자동 줍기 반경",
-		["shop.pass.pickupRadius.desc"] = "펫 자동 줍기 반경 ×{mult} 넓어짐.",
+		["shop.pass.pickupRadius.desc"] = "펫 자동 줍기 반경 {mult}.",
 		["shop.pass.recallCooldown.name"] = "빠른 귀환",
-		["shop.pass.recallCooldown.desc"] = "마을 귀환 대기 시간 ×{mult} 줄어듦.",
+		["shop.pass.recallCooldown.desc"] = "마을 귀환 대기 시간 {mult}.",
 		["shop.pass.nameplateBadge.name"] = "이름표 배지", -- QUEUE-ALL1 P6
 		["shop.pass.nameplateBadge.desc"] = "이름 앞 작은 아이콘 {count}가지 중 골라 사용함.",
 		["shop.cos.badgeSection"] = "이름표 배지",

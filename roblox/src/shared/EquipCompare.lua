@@ -71,11 +71,8 @@ function EquipCompare.weaponMultiplier(weapon)
 end
 
 -- 배율 글: 1000 미만은 소수 둘째 자리(NumberFormat은 정수로 버린다), 그 위는 NumberFormat 단위.
-local function multText(value)
-	if value < 1000 then
-		return ("×%.2f"):format(value)
-	end
-	return "×" .. NumberFormat.format(value)
+local function multText(value) -- MULT-PCT: ×10 미만 = 기준 대비 % · 그 위 = ×(NumberFormat.multiplier)
+	return NumberFormat.multiplier(value)
 end
 
 local function filledGems(weapon)

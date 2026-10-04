@@ -389,7 +389,7 @@ function TranscendView.render(refs)
 		refs.title.Text = Text.get("transcend.enh.title", { level = tostring(level) })
 		refs.reward.Visible, refs.bar.Visible, refs.slotsText.Visible, refs.note.Visible = false, not maxed, not maxed, true
 		if prob then
-			refs.body.Text = Text.get("transcend.enh.effectMult", { now = ("%.2f"):format(v.multNow or 1), next = ("%.2f"):format(v.multNext or v.multNow or 1) })
+			refs.body.Text = Text.get("transcend.enh.effectMult", { now = NumberFormat.multiplier(v.multNow or 1), next = NumberFormat.multiplier(v.multNext or v.multNow or 1) })
 			if v.nextChance then
 				rebuildCells(refs, v.nextCeiling, v.fails or 0)
 				refs.slotsText.Text = Text.get("transcend.enh.chance", { chance = ("%d"):format(math.floor(v.nextChance * 100 + 0.5)), fails = tostring(v.fails or 0), ceiling = tostring(v.nextCeiling) })

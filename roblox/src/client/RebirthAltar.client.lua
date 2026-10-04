@@ -5,6 +5,7 @@
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat) -- MULT-PCT 배율 표시
 
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
@@ -40,7 +41,7 @@ local function askRebirth()
 		title = Text.get("rebirth.confirm.title"),
 		body = Text.get("rebirth.confirm.body", {
 			level = level, stage = player:GetAttribute("InfiniteStage") or 1,
-			expFrom = ("%g"):format(CharacterLevel.getRebirthExpMultiplier(rebirthCount)), expTo = ("%g"):format(CharacterLevel.getRebirthExpMultiplier(rebirthCount + 1)),
+			expFrom = NumberFormat.multiplier(CharacterLevel.getRebirthExpMultiplier(rebirthCount)), expTo = NumberFormat.multiplier(CharacterLevel.getRebirthExpMultiplier(rebirthCount + 1)),
 			count = rebirthCount, max = GemData.maxRebirthCount, required = requiredLevel,
 		}),
 		primaryText = Text.get("rebirth.confirm.ok"),

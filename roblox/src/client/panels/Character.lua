@@ -55,7 +55,7 @@ local function format(kind, v)
 	elseif kind == "pct" then
 		return ("%+.1f%%"):format(v) -- SpeedPercentBonus = 이미 % 단위
 	elseif kind == "mult" then
-		return ("×%.2f"):format(v == 0 and 1 or v)
+		return NumberFormat.multiplier(v == 0 and 1 or v) -- MULT-PCT: 배율 = 기준 대비 %
 	end
 	return tostring(math.floor(v))
 end
@@ -71,13 +71,13 @@ local function totalText(format, v)
 	elseif format == "rate" then
 		return ("%.1f%%"):format(v * 100)
 	elseif format == "mult" then
-		return ("×%.2f"):format(v)
+		return NumberFormat.multiplier(v)
 	end
 	return tostring(v)
 end
 local function partText(part)
 	if part.kind == "mult" then
-		return ("×%.2f"):format(part.value)
+		return NumberFormat.multiplier(part.value)
 	elseif part.kind == "add" then
 		return ("%+.1f%%"):format(part.value * 100)
 	end

@@ -292,7 +292,7 @@ return {
 
 	-- 환생(G1-3)
 	["rebirth.confirm.title"] = "Rebirth - Your level goes back to 1",
-	["rebirth.confirm.body"] = "Level {level} → 1 · Stage {stage} → 1 (can't undo) - You will be weaker at high stages.\nYou keep forever: Weapon grade +1 · Gem Socket +1 · EXP ×{expFrom} → ×{expTo}\nNeeds level {required} · Rebirth {count}/{max}",
+	["rebirth.confirm.body"] = "Level {level} → 1 · Stage {stage} → 1 (can't undo) - You will be weaker at high stages.\nYou keep forever: Weapon grade +1 · Gem Socket +1 · EXP {expFrom} → {expTo}\nNeeds level {required} · Rebirth {count}/{max}",
 	["rebirth.confirm.done"] = "Rebirth {count}/{max} done - no more Rebirths.",
 	["rebirth.weaponPrimordialRule"] = "Primordial weapon = {max} Rebirths + all {slots} sockets filled (done together at the last Rebirth)",
 	["rebirth.confirm.ok"] = "Rebirth",
@@ -300,7 +300,7 @@ return {
 	["rebirth.confirm.close"] = "Close",
 	["rebirth.levelShort"] = "Level too low (needs level {required})",
 	["rebirth.tab.where"] = "Rebirth at the Rebirth Altar in the Community Center (town center).",
-	["rebirth.tab.status"] = "Rebirth {count}/{max} · Level {level} · Needs {required} · EXP ×{expFrom} → ×{expTo}",
+	["rebirth.tab.status"] = "Rebirth {count}/{max} · Level {level} · Needs {required} · EXP {expFrom} → {expTo}",
 	["world.communityCenter"] = "Community Center",
 
 	-- 보스맵 잔류(G1-4)
@@ -788,9 +788,9 @@ return {
 	["shop.pass.bagExpand.name"] = "Bag Upgrade",
 	["shop.pass.bagExpand.desc"] = "Bag slots +{slots}",
 	["shop.pass.pickupRadius.name"] = "Pickup Range",
-	["shop.pass.pickupRadius.desc"] = "Pet auto pickup range ×{mult}",
+	["shop.pass.pickupRadius.desc"] = "Pet auto pickup range {mult}",
 	["shop.pass.recallCooldown.name"] = "Fast Recall",
-	["shop.pass.recallCooldown.desc"] = "Town recall wait ×{mult}",
+	["shop.pass.recallCooldown.desc"] = "Town recall wait {mult}",
 	["shop.pass.nameplateBadge.name"] = "Nameplate Badge",
 	["shop.pass.nameplateBadge.desc"] = "Pick from {count} small icons by your name",
 	["shop.cos.badgeSection"] = "Nameplate Badge",

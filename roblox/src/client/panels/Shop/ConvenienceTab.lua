@@ -1,6 +1,7 @@
 -- 상점 [편의] 탭(QUEUE-B1 B2 UI · QUEUE-ALL9C 1-6R 카드): 게임패스(편의만 - 전투력 · 획득량 없음) = 가방 · 줍기 · 귀환 · 이름표 색/배지(이름표 세트 = 둘 다 없는 사람에게만).
 --   요청 = ShopRequest("buyPass", key) → 서버가 Roblox 구매 창을 연다. 효과 수치는 MonetizationData.gamePasses를 읽어 문장 인자로 넘긴다(여기에 숫자 없음).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat) -- MULT-PCT 배율 표시
 
 local MonetizationData = require(ReplicatedStorage.Shared.data.MonetizationData)
 local Text = require(ReplicatedStorage.Shared.Text)
@@ -14,7 +15,7 @@ local function describeArgs(key)
 	local pass = MonetizationData.gamePasses[key]
 	return {
 		slots = tostring(pass.bonusSlots or 0),
-		mult = ("%g"):format(pass.radiusMultiplier or pass.cooldownMultiplier or 1),
+		mult = NumberFormat.multiplier(pass.radiusMultiplier or pass.cooldownMultiplier or 1), -- MULT-PCT
 		count = tostring((pass.colors and #pass.colors) or (pass.badges and #pass.badges) or 0),
 	}
 end

@@ -144,7 +144,7 @@ return {
 		["transcend.enh.note"] = "확정 성공 · 골드만 사용 · 하락과 초기화가 없습니다.",
 		["transcend.enh.leveled"] = "초월 강화 +{level}에 도달했습니다!",
 		["transcend.enh.paid"] = "칸을 납입했습니다({slot}/{slots}).",
-		["transcend.enh.effectMult"] = "초월 강화 공격력 ×{now} · 성공하면 ×{next}", -- QUEUE-ALL9E1 0-4 확률 단계(+6 ~)
+		["transcend.enh.effectMult"] = "초월 강화 공격력 {now} · 성공하면 {next}", -- QUEUE-ALL9E1 0-4 확률 단계(+6 ~)
 		["transcend.enh.chance"] = "성공 확률 {chance}% · 불씨 {fails} / {ceiling}(가득 차면 다음 시도 확정)",
 		["transcend.enh.try"] = "시도 {cost}",
 		["transcend.enh.noteProb"] = "실패해도 골드만 사용됩니다 · 하락과 초기화가 없습니다.",
@@ -376,7 +376,7 @@ return {
 		["transcend.enh.note"] = "Always succeeds · Gold only · No drops or resets.",
 		["transcend.enh.leveled"] = "Reached Transcend +{level}!",
 		["transcend.enh.paid"] = "Segment paid ({slot}/{slots}).",
-		["transcend.enh.effectMult"] = "Transcend Attack ×{now} · ×{next} on success",
+		["transcend.enh.effectMult"] = "Transcend Attack {now} · {next} on success",
 		["transcend.enh.chance"] = "Success {chance}% · Ember {fails} / {ceiling} (full = next try succeeds)",
 		["transcend.enh.try"] = "Try {cost}",
 		["transcend.enh.noteProb"] = "A fail only costs Gold · No drops or resets.",

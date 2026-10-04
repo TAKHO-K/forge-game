@@ -213,4 +213,23 @@ function NumberFormat.currency(value, lang)
 	return oneDecimal(t) .. unitLabel(k - 1)
 end
 
+-- QUEUE-UI2 MULT-PCT(10-05 사용자): 능력치 · 보너스 배율 표시 = 기준(×1) 대비 %(표시만 - 계산 값 그대로).
+--   ×1.01 → "+1%" · ×1.5 → "+50%" · ×0.5 → "-50%" · ×1 = "+0%" · 소수 한 자리까지(끝 0 버림).
+--   예외: ×10 이상 큰 배율은 × 그대로(×12.5 · ×1.2K) · 비용 배수(강화 방지 ×3 등)는 이 함수를 쓰지 않는다(부르는 쪽이 ×).
+NumberFormat.multiplierPctMax = 10
+function NumberFormat.multiplier(value)
+	if value ~= value or value == math.huge or value == -math.huge then
+		return NumberFormat.format(value)
+	end
+	if value >= NumberFormat.multiplierPctMax then
+		return "×" .. (value < 1000 and ("%.2f"):format(value):gsub("%.?0+$", "") or NumberFormat.format(value))
+	end
+	local pct = math.floor((value - 1) * 1000 + 0.5) / 10 -- 소수 한 자리(반올림)
+	if pct == 0 then
+		return "+0%"
+	end
+	local body = ("%.1f"):format(math.abs(pct)):gsub("%.0$", "")
+	return (pct > 0 and "+" or "-") .. body .. "%"
+end
+
 return NumberFormat
