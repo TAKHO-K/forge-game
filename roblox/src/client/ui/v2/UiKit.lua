@@ -53,9 +53,14 @@ function UiKit.size(name)
 	return UiModel.textPx(name, UiKit.isPhone(), UiKit.textStep(), platformTextName(), UiKit.rootScale)
 end
 
--- 글자 칸 등록(약한 표) → 설정 · 루트 배율 · PreferredTextSize가 바뀌면 다시 계산
-local textLabels = setmetatable({}, { __mode = "k" })
+-- 글자 칸 등록 → 설정 · 루트 배율 · PreferredTextSize가 바뀌면 다시 계산. 강한 표 + Destroying에서 지움(Instance 키 약한 표는 프록시가 수거되어 조용히 빠진다)
+local textLabels = {}
 function UiKit.setTextSize(label, name)
+	if textLabels[label] == nil then
+		label.Destroying:Connect(function()
+			textLabels[label] = nil
+		end)
+	end
 	textLabels[label] = name
 	label.TextSize = UiKit.size(name)
 end
@@ -172,7 +177,7 @@ local function focusRing(kind)
 	return r
 end
 
-local controllers = setmetatable({}, { __mode = "k" }) -- 버튼 → 손맛 묶음
+local controllers = {} -- 버튼 → 손맛 묶음(강한 표 + Destroying에서 지움)
 local CONFIRM_KEYS = { [Enum.KeyCode.Return] = true, [Enum.KeyCode.KeypadEnter] = true, [Enum.KeyCode.ButtonA] = true }
 
 -- 아무 GuiButton에 손맛 붙이기 → ctl { Activated(신호), setEnabled(on), bp }
@@ -320,6 +325,7 @@ function UiKit.attachPress(btn, opts)
 		for _, c in ipairs(conns) do
 			c:Disconnect()
 		end
+		controllers[btn] = nil
 		event:Destroy()
 	end)
 	local ring = focusRing(opts.kind)
@@ -460,6 +466,10 @@ function UiKit.icon(parent, id, sizePx, props)
 	end
 	inst.Parent = parent
 	return inst
+end
+
+function UiKit.hasIcon(id)
+	return IconData.icons[id] ~= nil or (IconData.aliases ~= nil and IconData.aliases[id] ~= nil)
 end
 
 -- 닫기 = btn-close 원(상태 그림 88) + 흰 X(icon-x) · props.plate = 판 B(양피지 9-slice) + 아이콘(폰 [<] 등)

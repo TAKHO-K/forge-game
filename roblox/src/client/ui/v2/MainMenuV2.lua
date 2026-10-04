@@ -6,6 +6,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local TextService = game:GetService("TextService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Tokens = require(Shared.data.UiTokens)
@@ -201,6 +202,15 @@ function MainMenuV2.new(gui, deps)
 		for _, b in ipairs({ classBtn, settingsBtn, newsBtn }) do
 			UiKit.setTextSize(b.title, bs)
 		end
+		-- UI2-3 겹침 금지: [직업 선택] 옆 "빈 칸 없음 · 구경"이 제목과 겹치면(좁은 펼침 폭 · 큰 글자) 숨김(같은 안내 = 직업 선택 화면 띠)
+		local function textW(t, size, font)
+			local ok, v = pcall(function()
+				return TextService:GetTextSize(t, size, font, Vector2.new(10000, 1000))
+			end)
+			return ok and v.X or 0
+		end
+		local room = w - 44 - 12
+		browseNote.Visible = textW(classBtn.title.Text, classBtn.title.TextSize, classBtn.title.Font) + textW(browseNote.Text, browseNote.TextSize, browseNote.Font) <= room
 	end
 
 	local function refreshMain()
@@ -289,10 +299,19 @@ function MainMenuV2.new(gui, deps)
 		reason = type(reason) == "string" and reason:match("^[%w_]+") or reason
 		return Text.get(SlotSaveData.errorReasons[reason] and ("menu.slot.err." .. reason) or "menu.slot.err.default")
 	end
-	local function loadList()
+	-- 목록 = 서버 SlotRequest list(요청 제한 초당 2 · 몰아서 6 - RequestLimitConfig). 실패(제한 · 통신) ≠ 칸 저장 끔: listOff = 서버가 "끔"이라고 답했을 때만
+	local function loadList(fresh)
+		if fresh and self.list and self.listAt and os.clock() - self.listAt < 1 then -- UI2-3: 방금 받은 목록 재사용(한 번 누름에 list 두 번 = 연타 시 제한에 걸림)
+			return self.list
+		end
 		local d = call("list")
-		self.list = (d and d.enabled ~= false and d.slots) and d or nil
-		return self.list
+		self.listOff = type(d) == "table" and d.enabled == false
+		if d and d.enabled ~= false and d.slots then
+			self.list, self.listAt = d, os.clock()
+		elseif self.listOff then
+			self.list = nil
+		end
+		return (d and d.enabled ~= false and d.slots) and self.list or nil
 	end
 
 	-- ── 이어하기 창 ──
@@ -328,6 +347,21 @@ function MainMenuV2.new(gui, deps)
 		win.sub.Size = UDim2.new(0, 0, 1, 0)
 		win.sub.LayoutOrder = 2
 	end
+	-- UI2-3 키 아트(01 v3 "키 아트 초점"): 가장 넓은 UI = 이어하기 창 오른쪽 화면 px → MenuBoot가 그림 자리 · 좁은 창 모드(KeyArtNarrow) 계산(열고 닫아도 그림은 같은 자리)
+	local function reportUiRight()
+		local s = ui.scale.Scale
+		local x0 = ui.frame.AbsolutePosition.X
+		local n = L.slotWindowNarrow or L.slotWindow
+		gui:SetAttribute("KeyArtUiRight", x0 + (L.slotWindow[1] + L.slotWindow[3]) * s)
+		gui:SetAttribute("KeyArtUiRightNarrow", x0 + (n[1] + n[3]) * s)
+	end
+	ui.scale:GetPropertyChangedSignal("Scale"):Connect(reportUiRight)
+	ui.frame:GetPropertyChangedSignal("AbsolutePosition"):Connect(reportUiRight)
+	task.defer(reportUiRight)
+	local function narrowMode()
+		return not phone and gui:GetAttribute("KeyArtNarrow") == true
+	end
+
 	local closeBtn = UiKit.closeButton({ parent = win.root, rect = L.slotClose, name = "Close", icon = phone and "back" or "x", plate = phone, colorToken = phone and "panel.slot" or "warning", ring = L.slotCloseRing, onActivated = function()
 		self.closeSlots()
 	end })
@@ -366,6 +400,25 @@ function MainMenuV2.new(gui, deps)
 	status.Position = UDim2.new(0, 0, 1, phone and -2 or -(L.slotWindow[4] - footerTop) - 26)
 	status.Size = UDim2.new(1, 0, 0, 22)
 	status.AnchorPoint = Vector2.new(0, phone and 1 or 0)
+	if footer then -- UI2-3 잘림 금지: 아래 안내 글 = 줄바꿈 + 높이 늘림(위로) → 줄 · 보관함 버튼 · 목록 아래 끝을 그만큼 올린다
+		local bottomPad = L.slotWindow[4] - (L.slotFooterNote[2] + L.slotFooterNote[4])
+		local archiveGap = L.slotArchive[2] - footerTop
+		footer.AnchorPoint = Vector2.new(0, 1)
+		footer.Position = UDim2.fromOffset(L.slotFooterNote[1], L.slotWindow[4] - bottomPad)
+		footer.Size = UDim2.fromOffset(L.slotFooterNote[3], 0)
+		footer.AutomaticSize = Enum.AutomaticSize.Y
+		local function refitFooter()
+			local s = math.max(ui.scale.Scale, 0.01)
+			local noteH = math.max(L.slotFooterNote[4], footer.AbsoluteSize.Y / s)
+			local top = math.min(L.slotArchive[2] - archiveGap, L.slotWindow[4] - bottomPad - noteH - archiveGap + (L.slotFooterNote[2] - L.slotArchive[2]))
+			win.root:FindFirstChild("FooterLine").Position = UDim2.fromOffset(0, top)
+			archiveBtn.root.Position = UDim2.fromOffset(L.slotArchive[1], top + archiveGap)
+			listFrame.Size = UDim2.new(1, 0, 0, top - SL.y - 4 + LIST_PAD)
+			status.Position = UDim2.new(0, 0, 1, -(L.slotWindow[4] - top) - 26)
+		end
+		footer:GetPropertyChangedSignal("AbsoluteSize"):Connect(refitFooter)
+		task.defer(refitFooter)
+	end
 
 	local function setStatus(text, warn)
 		status.Text = text or ""
@@ -425,18 +478,43 @@ function MainMenuV2.new(gui, deps)
 		end
 	end
 
-	local function cardRow(row, y, h, selected)
+	-- 카드 글 줄 배치(UI2-3 · 00 v2 "글자 크기 = 글자만 · 잘림 금지"): 줄 높이 = 실제 글 높이(TextService - 좁으면 줄바꿈) · 카드 높이 = 기준 + 늘어난 만큼(목록은 스크롤)
+	local CARD = phone and { top = 8, name = 20, gap1 = 2, line = 16, gap2 = 2, gap3 = 4, hint = 22 } or { top = 14, name = 30, gap1 = 4, line = 26, gap2 = 2, gap3 = 2, hint = 30 }
+	local function textH(text, sizeName, fontKind, width)
+		local ok, v = pcall(function()
+			return TextService:GetTextSize(text, UiKit.size(sizeName), UiKit.font(fontKind), Vector2.new(width, 10000))
+		end)
+		return ok and v.Y or UiKit.size(sizeName)
+	end
+
+	local function cardRow(row, y, selected) -- → 카드 높이
 		local s = row.summary
+		local x0 = L.slotFace[1] + L.slotFace[3] + (phone and 10 or 16)
+		local infoW = L.slotWeapon[1] - x0 - 8
+		local hours = math.floor((tonumber(s.playSeconds) or 0) / 3600)
+		local text1 = Text.get("menu.v2.cardLine1", { level = tostring(s.level or 1), best = commas(s.best or 1) })
+		local text2 = Text.get("menu.v2.cardLine2", { rebirth = tostring(s.rebirth or 0), hours = tostring(hours), ago = agoText(s.lastPlayedAt) })
+		local armedHint = selected and self.armed == row.slot
+		local nameH = math.max(CARD.name, math.ceil(UiKit.size("cardName") * 1.2))
+		local h1 = math.max(CARD.line, math.ceil(textH(text1, "cardInfo", "number", infoW)))
+		local h2 = math.max(CARD.line, math.ceil(textH(text2, "cardInfo", nil, infoW)))
+		local hintH = math.max(CARD.hint, math.ceil(UiKit.size("cardInfo") * 1.25))
+		local baseH = selected and SL.selectedH or SL.cardH
+		local baseUsed = CARD.top + CARD.name + CARD.gap1 + CARD.line * 2 + CARD.gap2 + CARD.gap3 + (selected and CARD.hint or 0)
+		local used = CARD.top + nameH + CARD.gap1 + h1 + CARD.gap2 + h2 + CARD.gap3 + (selected and hintH or 0)
+		local h = math.max(baseH, baseH + (used - baseUsed))
+		local G = { name = { CARD.top, nameH } }
+		G.line1 = { CARD.top + nameH + CARD.gap1, h1 }
+		G.line2 = { G.line1[1] + h1 + CARD.gap2, h2 }
+		G.hint = { G.line2[1] + h2 + CARD.gap3, hintH }
 		local c = UiKit.card(listFrame, { SL.x, y, SL.w, h }, selected, "Slot" .. row.slot)
 		c.root:SetAttribute("CharId", s.charId)
 		face(c.root, L.slotFace, s.classId)
-		local x0 = L.slotFace[1] + L.slotFace[3] + (phone and 10 or 16)
-		local infoW = L.slotWeapon[1] - x0 - 8
 		local nameRow = Instance.new("Frame")
 		nameRow.Name = "NameRow"
 		nameRow.BackgroundTransparency = 1
-		nameRow.Position = UDim2.fromOffset(x0, phone and 8 or 14)
-		nameRow.Size = UDim2.fromOffset(infoW, phone and 20 or 30)
+		nameRow.Position = UDim2.fromOffset(x0, G.name[1])
+		nameRow.Size = UDim2.fromOffset(infoW, G.name[2])
 		nameRow.Parent = c.root
 		local nl = Instance.new("UIListLayout")
 		nl.FillDirection = Enum.FillDirection.Horizontal
@@ -462,17 +540,15 @@ function MainMenuV2.new(gui, deps)
 			pad.PaddingLeft, pad.PaddingRight = UDim.new(0, 8), UDim.new(0, 8)
 			pad.Parent = badge
 		end
-		local lh = phone and 16 or 26
-		local line1 = UiKit.label(c.root, Text.get("menu.v2.cardLine1", { level = tostring(s.level or 1), best = commas(s.best or 1) }), "cardInfo", "text.primary", { name = "Line1", font = "number" })
-		UiKit.place(line1, { x0, (phone and 30 or 48), infoW, lh })
-		local hours = math.floor((tonumber(s.playSeconds) or 0) / 3600)
-		local line2 = UiKit.label(c.root, Text.get("menu.v2.cardLine2", { rebirth = tostring(s.rebirth or 0), hours = tostring(hours), ago = agoText(s.lastPlayedAt) }), "cardInfo", "text.secondary", { name = "Line2" })
-		UiKit.place(line2, { x0, (phone and 48 or 76), infoW, lh })
-		if selected and self.armed == row.slot then
+		local line1 = UiKit.label(c.root, text1, "cardInfo", "text.primary", { name = "Line1", font = "number", wrap = true, alignY = Enum.TextYAlignment.Top })
+		UiKit.place(line1, { x0, G.line1[1], infoW, G.line1[2] })
+		local line2 = UiKit.label(c.root, text2, "cardInfo", "text.secondary", { name = "Line2", wrap = true, alignY = Enum.TextYAlignment.Top })
+		UiKit.place(line2, { x0, G.line2[1], infoW, G.line2[2] })
+		if armedHint then
 			local hint = Instance.new("Frame")
 			hint.Name = "TapAgain"
 			hint.BackgroundTransparency = 1
-			UiKit.place(hint, { x0, phone and 68 or 104, infoW, phone and 22 or 30 })
+			UiKit.place(hint, { x0, G.hint[1], infoW, G.hint[2] })
 			hint.Parent = c.root
 			local hl = Instance.new("UIListLayout")
 			hl.FillDirection = Enum.FillDirection.Horizontal
@@ -501,6 +577,7 @@ function MainMenuV2.new(gui, deps)
 			setStatus("")
 			self.renderSlots()
 		end)
+		return h
 	end
 
 	local function storageRows()
@@ -552,8 +629,7 @@ function MainMenuV2.new(gui, deps)
 		for _, row in ipairs(rows) do
 			if row.kind == "card" then
 				local sel = self.selected == row.slot
-				local h = sel and SL.selectedH or SL.cardH
-				cardRow(row, y, h, sel)
+				local h = cardRow(row, y, sel)
 				y += h + SL.gap
 			elseif row.kind == "empty" then
 				local e = UiKit.emptySlot(listFrame, { SL.x, y, SL.w, SL.emptyH }, Text.get("menu.v2.newChar"), Text.get("menu.v2.newCharSub"), "NewCharacter")
@@ -568,8 +644,8 @@ function MainMenuV2.new(gui, deps)
 		end
 	end
 
-	function self.refreshSlots()
-		if not loadList() then
+	function self.refreshSlots(fresh)
+		if not loadList(fresh) then
 			return false
 		end
 		local d = self.list
@@ -586,7 +662,7 @@ function MainMenuV2.new(gui, deps)
 	end
 
 	function self.openSlots()
-		if not self.refreshSlots() then
+		if not self.refreshSlots(true) then
 			return false
 		end
 		self.mode = "slots"
@@ -595,12 +671,14 @@ function MainMenuV2.new(gui, deps)
 		setStatus("")
 		self.renderSlots()
 		self.expanded = true
-		menu.Visible = not phone -- 폰 = 메뉴 숨김 → 같은 자리에 창
-		title.Visible, titleSub.Visible = not phone, not phone
+		local narrow = narrowMode() -- 01 v3: 좁은 창 = 메뉴 패널 숨김 + 창 왼쪽(x 24) · 닫기로 복귀
+		menu.Visible = not phone and not narrow -- 폰 = 메뉴 숨김 → 같은 자리에 창
+		title.Visible, titleSub.Visible = menu.Visible, menu.Visible
 		placeMenu()
 		win.root.Visible = true
-		local target = UDim2.fromOffset(L.slotWindow[1], L.slotWindow[2])
-		win.root.Position = UDim2.fromOffset(L.slotWindow[1] - L.slotWindowSlide, L.slotWindow[2])
+		local rect = narrow and L.slotWindowNarrow or L.slotWindow
+		local target = UDim2.fromOffset(rect[1], rect[2])
+		win.root.Position = UDim2.fromOffset(rect[1] - L.slotWindowSlide, rect[2])
 		TweenService:Create(win.root, TweenInfo.new(Tokens.tweenSeconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = target }):Play()
 		return true
 	end
@@ -674,6 +752,10 @@ function MainMenuV2.new(gui, deps)
 	end })
 	local startNote = UiKit.label(cls, "", "caption", "text.secondary", { name = "StartNote", wrap = true })
 	UiKit.place(startNote, { L.classStart[1], L.classStart[2] - (phone and 0 or 56), L.classStart[3], phone and 0 or 50 })
+	startNote.AnchorPoint = Vector2.new(0, 1) -- UI2-3 잘림 금지: 줄바꿈이 늘면 위로 자란다(버튼과 6 간격)
+	startNote.Position = UDim2.fromOffset(L.classStart[1], L.classStart[2] - 6)
+	startNote.Size = UDim2.fromOffset(L.classStart[3], 0)
+	startNote.AutomaticSize = Enum.AutomaticSize.Y
 	startNote.Visible = not phone
 	local startLock = UiKit.icon(startBtn.face, "lock", phone and 18 or 24)
 	startLock.Position = UDim2.fromOffset(phone and 8 or 20, phone and 14 or 20)
@@ -794,6 +876,10 @@ function MainMenuV2.new(gui, deps)
 					UiKit.corner(box, Tokens.corner.chip)
 					UiKit.stroke(box, k == "ult" and "accent" or "line", 2)
 					box.Parent = body
+					local skillIcon = "skill-" .. id .. "-" .. (k == "ult" and "t" or k) -- 00 v2 스킬 아이콘(직업 · 칸으로 고름 · 없는 직업 = 빈 칸)
+					if UiKit.hasIcon(skillIcon) then
+						UiKit.icon(box, skillIcon, 36, { center = true })
+					end
 				end
 				local sl = UiKit.label(body, phone and Text.get("menu.v2.skill." .. k, { name = Text.name(name) }) or Text.name(name), phone and "cardInfo" or "cardName", "text.primary", { name = "Skill_" .. k, font = "korean" })
 				sl.AutomaticSize = Enum.AutomaticSize.X
@@ -896,13 +982,37 @@ function MainMenuV2.new(gui, deps)
 
 	-- ── 메인 버튼 동작 ──
 	function self.onMain()
+		if self.mainBusy then -- UI2-3: 접속 직후 목록 답이 몇 초 걸린다 → 연타가 onMain을 겹쳐 돌리지 않게
+			return
+		end
+		self.mainBusy = true
+		mainBtn.setText(Text.get("menu.continue"), Text.get("menu.slot.loading"))
+		local ok, err = pcall(self.onMainBody)
+		self.mainBusy = false
+		if not self.mainBusyHint then
+			refreshMain()
+		end
+		if not ok then
+			warn("[MainMenuV2] onMain " .. tostring(err))
+		end
+	end
+	function self.onMainBody()
 		loadList()
 		if countChars() == 0 and not hasChar() then
 			self.openClasses("new") -- 01: 캐릭터 0개 = 이어하기 창 없이 바로 직업 선택
 			return
 		end
 		if not self.openSlots() then
-			deps.enter("continue") -- 칸 저장 끔 = 옛 동작
+			if self.listOff then
+				deps.enter("continue") -- 칸 저장 끔 = 옛 동작
+			else
+				self.mainBusyHint = true -- 목록을 못 받음(요청 제한 · 통신) = 월드로 들어가지 않는다(UI2-3) · 주 버튼 부제에 잠깐
+				mainBtn.setText(Text.get("menu.continue"), errText("busy"))
+				task.delay(2, function()
+					self.mainBusyHint = false
+					refreshMain()
+				end)
+			end
 		end
 	end
 	function self.onClasses()
@@ -943,6 +1053,15 @@ function MainMenuV2.new(gui, deps)
 			end
 		end)
 	end
+	player:GetAttributeChangedSignal("UiTextScale"):Connect(function() -- 글자 크기 바뀜 = 카드 높이 다시(글자 칸은 UiKit이 이미 바꿈)
+		if win.root.Visible then
+			self.renderSlots()
+		end
+		if cls.Visible then
+			self.renderStart() -- 제목 옆 부제 자리(제목 폭 기준) 다시
+		end
+		task.defer(placeMenu) -- 메뉴 글 겹침 판정 다시
+	end)
 	self.frame = ui.frame
 	ui.frame.Visible = false
 	placeMenu()

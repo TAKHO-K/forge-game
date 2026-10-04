@@ -11,9 +11,9 @@
 | UI2-0 묶음 풀기 + 저장소 spec 커밋 | 완료 | (이 커밋) | 4묶음 zip → 최상위 폴더 벗겨 assets · mockups · prototype(00 96 · 01 58 · 02 56 · 03 73 파일 복사 · 덮어쓰기 0 · zip 그대로) · zip 안 MISSING.md는 빈 파일 → 기존(설계 담당 "없음") 유지 · 저장소 docs/design/handoff 4폴더 spec · checklist · MISSING 커밋 |
 | UI2-1 에셋 올리기 · 이름 하나로(해시 별칭) | 완료 | (이 커밋) | 해시 비교: 01 = 00과 같은 이름 36 + 새 8 · 02 = 같은 이름 28 + 별칭 17(icon-attack-* → atk-* · menu-* → bag · book · party2 등) + 새 3 · 03 = 전부 00과 같음 · 같은 이름 다른 내용 0 · 업로드 = 00 90장(ui/ds) + 01 얼굴 2 · 자리표시 2(ui/legends - 전설 2장은 이미 올림 · 같은 해시) + 02 disc · ring · star4(ui/hud) = 97 Decal Approved + 이미지 id 97 · 키 아트 jpg 2장 = 이미 쓰는 menu_keyart_v2_L/R png와 같은 그림(upload.py는 png만) → 안 올림 · 아이콘 표 UiIconData = 00 아이콘 32 + 별칭 17 + old(옛 icons/hud 13) · 하네스 ui_v2 아이콘 v2 이미지 · old · 별칭 |
 | UI2-2 UI-0 갱신(토큰 · 9-slice · 포커스 링 · 버튼 손맛 · 글자 · 글자 크기 설정) | 완료 | (이 커밋) | 보고서 UI2-2 절 · shared/ButtonPress + UiKit.attachPress · 토큰 00 값 · 글자 원인 = 루트 UIScale(0.548) → textMinRootScale · 설정 textScale · PreferredTextSize 읽기 전용(실기기 확인 필요) · ui_v2 47/47 · run_all 전부 · Play PC |
-| UI2-3 01 메인 메뉴 v2(아이콘 표 · 키 아트 cover · 캡처) | 진행 중 | | |
+| UI2-3 01 메인 메뉴 → v3 기준(키 아트 초점 · 좁은 창 · 아이콘 v2 · 글자 1.3 · 캡처 35장) | 완료 | (이 커밋) | 보고서 UI2-3 절 · 01_main-menu\v3\play · ui_v2 56/56 |
 | (추가 10-05) 새 묶음 00 v2 · 01 v3 · 02 v4 · 03 v2 | 풀기 · spec 커밋 · 에셋(스킬 16장) 완료 | 9bec2db4 · (spec 커밋) | 남은 UI2는 새 버전 기준 · 01 v3 키 아트 초점 규칙(MenuArtFit.place) · 좁은 창 모드 · 글자 단계 = 00 v2(토큰 값 같음) |
-| (추가 2 · 10-05) 00 v3 · 02 HUD v5(메뉴 재배치 · 보상 창 · 환생 경로 · 잠긴 스킬 말풍선 · 키 칩 = PanelRegistry · 미니맵 자리) | 대기(UI2-3 끝난 뒤) | | 업로드 = 해시로 새것 · 바뀐 것만(icon-zone · training · reward · skill-greatsword-t · dualblade-q) |
+| (추가 2 · 10-05) 00 v3 · 02 HUD v5(메뉴 재배치 · 보상 창 · 환생 경로 · 잠긴 스킬 말풍선 · 키 칩 = PanelRegistry · 미니맵 자리) | 진행 중 | | 업로드 = 해시로 새것 · 바뀐 것만(icon-zone · training · reward · skill-greatsword-t · dualblade-q) |
 | UI2-4 02 HUD → v5 기준 | 대기 | | v4 큰 글자 예외 3 · 빨강 규칙 · 스킬 칸 icon-skill · PC 파티 Y 568 · Play 관찰 3건(키 칩 "키" 글자 · PC 오른쪽 위 재화/스테이지/퀘스트 안 보임 · 알림 띠 아이콘 자리표시) |
 | UI2-5 03 가방 · 장비 + 보석 홈 → v2 기준 | 대기 | | 가방 [분해] [판매] = 보조(남색) |
 | UI2 보고 | 대기 | | |

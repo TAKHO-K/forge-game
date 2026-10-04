@@ -137,27 +137,32 @@ local okRun, err = pcall(function()
 	local k3 = kb:keyEnded()
 	check("UI2-2 확인 키 = 누름 모양 · 뗄 때 1번(반복 입력 무시)", k1.paint == "pressed" and not k1.fire and not k2.fire and k3.fire == true)
 
-	-- UI2-3 키 아트 맞춤(first/MenuArtFit + MenuBootData.v2) - 비율별: 빈틈 0 · 얼굴이 이어하기 창 오른쪽 밖
+	-- UI2-3 키 아트 초점(01 v3 spec · first/MenuArtFit.place) - spec 결과값 + 우리 루트 배율(min)로 본 실제 창 끝
 	local F, BD = MODS.MenuArtFit, MODS.MenuBootData
-	local V = BD.v2
-	local faceLeftArt = 800 / 1536 -- 전사 얼굴 왼쪽 끝(원본) · 마법사 얼굴 오른쪽 끝 = BD.v2.keepRight
-	local cases = {
-		{ "PC 16:9", 1920, 1080, V.fit.pc, 1012 / 1920 },
-		{ "좁은 창 4:3", 1440, 1080, V.fit.pc, 1012 / 1920 },
-		{ "Studio 1052×592", 1052, 592, V.fit.pc, 1012 / 1920 },
-		{ "폰 19.5:9", 844, 390, V.fit.phone, 482 / 800 },
-		{ "폰 800×360", 800, 360, V.fit.phone, 482 / 800 },
-	}
+	local K, IW, IH = BD.v2.keyArt, BD.background.width, BD.background.height
+	local function place(W, H, right, narrowRight)
+		return F.place(W, H, IW, IH, K.keep, K.margin, right, narrowRight)
+	end
+	local r1 = place(1920, 1080, 1012, 604)
+	check(("UI2-3 spec PC 16:9: s 1.055 · X 385 · 지킬 (1208, 422)~(1724, 812) → %.3f · %.0f · (%.0f ~ %.0f)"):format(r1.s, r1.x, r1.keepScreen[1], r1.keepScreen[3]), math.abs(r1.s - 1.0547) < 0.001 and math.abs(r1.x - 385) < 1.5 and math.abs(r1.keepScreen[1] - 1208) < 1.5 and not r1.narrow)
+	local r2 = place(1440, 1080, 1012, 604)
+	check(("UI2-3 spec 4:3(UI 배율 1 가정): 좁은 창 모드 · X −59 → %s · %.0f"):format(tostring(r2.narrow), r2.x), r2.narrow and math.abs(r2.x + 59) < 1.5)
+	local r3 = place(800, 360, 482, 482)
+	local r4 = place(780, 360, 482, 482)
+	check(("UI2-3 spec 폰 800×360 X 281 · 780×360 X 271 → %.0f · %.0f"):format(r3.x, r4.x), math.abs(r3.x - 281) < 1.5 and math.abs(r4.x - 271) < 1.5)
+	-- 실제(루트 배율 = min(W/기준W, H/기준H) · 왼쪽 붙임): 창 끝 화면 px = 1012 × 배율
+	local cases = { { "PC 16:9", 1920, 1080, false }, { "좁은 창 4:3", 1440, 1080, false }, { "Studio 1052×592", 1052, 592, false }, { "정사각에 가까운 창 1080×1000", 1080, 1000, false }, { "폰 19.5:9", 844, 390, true }, { "폰 800×360", 800, 360, true } }
+	local LM = L.mainMenu
 	for _, c in ipairs(cases) do
-		local r = F.fit(c[2], c[3], BD.background.width / BD.background.height, V.focus, c[4].target, c[4].maxZoom, V.keepRight, c[4].mode)
-		local gap = (c[4].mode ~= "anchorRight" and r.x > 0.5) or r.y > 0.5 or r.x + r.w < c[2] - 0.5 or r.y + r.h < c[3] - 0.5 -- anchorRight = 왼쪽 남색 바탕(설계)
-		local faceLeft = (r.x + faceLeftArt * r.w) / c[2]
-		local mageRight = (r.x + V.keepRight * r.w) / c[2]
-		-- 창 오른쪽 끝 화면 비율: 루트 = 왼쪽 붙임 · 배율 min → 좁은 창(가로 기준 배율)에서 가장 크다 = 표 비율, 넓은 창은 더 작음
-		local base = c[4] == V.fit.phone and { 800, 360 } or { 1920, 1080 }
-		local s = math.min(c[2] / base[1], c[3] / base[2])
-		local winRight = c[5] * base[1] * s / c[2]
-		check(("UI2-3 키 아트 %s: 빈틈 0 · 전사 얼굴 왼쪽 %.2f > 창 끝 %.2f · 마법사 얼굴 끝 %.2f ≤ 1 · 세로 %.2f"):format(c[1], faceLeft, winRight, mageRight, r.focusScreen[2]), not gap and faceLeft > winRight and mageRight <= 1 and r.focusScreen[2] > 0.3 and r.focusScreen[2] < 0.6)
+		local lay = c[4] and LM.phone or LM.pc
+		local base = c[4] and { 800, 360 } or { 1920, 1080 }
+		local u = math.min(c[2] / base[1], c[3] / base[2])
+		local nw = lay.slotWindowNarrow or lay.slotWindow
+		local right, nright = (lay.slotWindow[1] + lay.slotWindow[3]) * u, (nw[1] + nw[3]) * u
+		local r = place(c[2], c[3], right, nright)
+		local uiEdge = r.narrow and nright or right
+		local ok = r.keepScreen[1] >= uiEdge - 0.5 and r.keepScreen[3] <= c[2] + 0.5 and r.x + r.w >= c[2] - 0.5 and r.keepScreen[4] <= c[3]
+		check(("UI2-3 키 아트 %s: 지킬 영역 %.0f ~ %.0f ⊂ [창 끝 %.0f, 화면 %d] · 좁은 창 %s"):format(c[1], r.keepScreen[1], r.keepScreen[3], uiEdge, c[2], tostring(r.narrow)), ok)
 	end
 
 	-- 3. 아이콘 표
