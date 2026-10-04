@@ -19,7 +19,8 @@ local worn = {} -- [owner(Player | Model)] = { key = 문자열, pieces = { MeshP
 -- 조각 색 = client/ArmorColors(QUEUE-ALL9C 2-4: 직업 선택 무대 캐릭터(client/ClassStage)와 같은 함수 - 옮기기만 · 값 그대로)
 local ArmorColors = require(script.Parent.ArmorColors)
 local colorOf, colorOfV3 = ArmorColors.colorOf, ArmorColors.colorOfV3
-local GearV3 = require(ReplicatedStorage.Shared.data.GearV3Data)
+local GearV3Data = require(ReplicatedStorage.Shared.data.GearV3Data)
+local GearV3 = require(ReplicatedStorage.Shared.GearV3)
 
 local function lookOf(owner)
 	local parts = { tostring(owner:GetAttribute(Data.armorClassAttribute)) }
@@ -75,7 +76,7 @@ local function build(owner, character)
 			modelKey = classKey
 		end
 		-- QUEUE-ALL9E1 1-1 장비 v3: 스위치 GearV3Meshes · <부위>_<직업>_<단계>(s1 ~ s5)가 있으면 그것(구역 색 · 문 부품 · 갑옷 = 세트 문장 메시) · 없으면 위 그대로
-		local stageKey = zone and type(classId) == "string" and GearV3.stageOfGrade[grade] and ("%s_%s_%s"):format(part, classId, GearV3.stageOfGrade[grade])
+		local stageKey = zone and type(classId) == "string" and GearV3Data.stageOfGrade[grade] and ("%s_%s_%s"):format(part, classId, GearV3Data.stageOfGrade[grade])
 		local g3 = stageKey and ArmorColors.gearV3Enabled() and ArtMeshKit.get("armor/" .. stageKey) and Wear.pieces[stageKey] and true or false
 		if g3 then
 			modelKey, v3 = stageKey, true
@@ -89,7 +90,7 @@ local function build(owner, character)
 					table.insert(entries, { piece = piece, meta = metaPieces })
 				end
 			end
-			local emblemKey = g3 and part == "armor" and GearV3.sets[zone] and "emblem_" .. GearV3.sets[zone].emblem
+			local emblemKey = g3 and part == "armor" and GearV3Data.sets[zone] and "emblem_" .. GearV3Data.sets[zone].emblem
 			local emblemSrc = emblemKey and ArtMeshKit.get("armor/" .. emblemKey)
 			if emblemSrc and Wear.pieces[emblemKey] then
 				for _, piece in ipairs(emblemSrc:GetChildren()) do
@@ -110,7 +111,7 @@ local function build(owner, character)
 						groups[body] = {}
 						table.insert(order, body)
 					end
-					table.insert(groups[body], { piece = piece, m = m })
+					table.insert(groups[body], { piece = piece, m = m, key = entry.meta == metaPieces and modelKey or emblemKey })
 				end
 			end
 			local F = Data.armorFit
@@ -163,6 +164,13 @@ local function build(owner, character)
 					local color, neon = (g3 and ArmorColors.colorOfGearV3 or v3 and colorOfV3 or colorOf)(piece.Name, zone, grade, classId)
 					p.Color = color
 					p.Material = neon and Enum.Material.Neon or Enum.Material.SmoothPlastic
+					if g3 and not neon then -- QUEUE-ALL9E1 LOOK2 3번: 굽은 음영 지도(SurfaceAppearance 템플릿) + 구역 색 틴트 - 템플릿이 없으면 단색 그대로
+						local sa = GearV3.surfaceFor(g.key, piece.Name, grade)
+						if sa then
+							sa.Color = color
+							sa.Parent = p
+						end
+					end
 					p.Anchored, p.Massless = false, true
 					p.CanCollide, p.CanQuery, p.CanTouch = false, false, false
 					p.CastShadow = false

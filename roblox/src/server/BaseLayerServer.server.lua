@@ -40,8 +40,18 @@ local function bind(player)
 	player.CharacterAppearanceLoaded:Connect(function()
 		refresh(player)
 	end)
-	player.CharacterAdded:Connect(function()
+	player.CharacterAdded:Connect(function(character)
 		task.delay(1, refresh, player) -- Studio 시험 계정은 AppearanceLoaded가 늦거나 없다
+		local pending = false
+		character.ChildAdded:Connect(function(c) -- 리뷰: 옷 · 장신구가 늦게 붙어도 다시(셔츠 두 벌 · 숨기지 못한 레이어드 옷 방지)
+			if (c:IsA("Shirt") or c:IsA("Pants") or c:IsA("Accessory")) and not c:GetAttribute("GearCreated") and not pending then
+				pending = true
+				task.delay(0.2, function()
+					pending = false
+					refresh(player)
+				end)
+			end
+		end)
 	end)
 	task.spawn(function()
 		for _ = 1, 120 do -- 프로필 로드 대기

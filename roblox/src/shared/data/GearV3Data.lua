@@ -7,7 +7,7 @@ return {
 	-- 등급 → 모양 단계(4절): S1 일반 / S2 희귀 · 영웅 / S3 전설 / S4 유물 · 고대 / S5 태초 · 초월
 	stageOfGrade = { normal = "s1", rare = "s2", epic = "s2", legendary = "s3", relic = "s4", ancient = "s4", primordial = "s5", transcendent = "s5" },
 	-- 문 = 같은 단계 안 위 등급 전용 부품(4절: 영웅 = 희귀 + 보석 2 · 이중 테두리 / 고대 = 유물 + 관 · 깃 층 / 초월 = 태초 + 균열 선)
-	gateGrade = { Ep = "epic", Re = "relic", An = "ancient", Tr = "transcendent" }, -- Re = 유물 루비 오벌(고대 = An 에메랄드 스텝 컷과 자리 공유)
+	gateGrade = { Ep = "epic", Re = "relic", An = "ancient", Tr = "transcendent", Pr = "primordial" }, -- Pr = 태초 전용(LOOK2: s5 부유 조각 - 초월은 균열 조각에 합침) -- Re = 유물 루비 오벌(고대 = An 에메랄드 스텝 컷과 자리 공유)
 	-- 세트(구역 tier1 ~ 6) 부착물 색(3절 hex): color1 = 천 띠 · 테두리(Attach) · color2 = 보조 보석 · 장식(Gem · Emblem) · emblem = 문장 메시 키
 	sets = {
 		tier1 = { name = "석조 평원", color1 = { 102, 131, 74 }, color2 = { 168, 121, 69 }, emblem = "stone" }, -- #66834A · #A87945

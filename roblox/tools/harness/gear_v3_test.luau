@@ -15,7 +15,7 @@ local ok, err = pcall(function()
 	end
 	local WHITE, MAGENTA = { 247, 245, 239 }, { 233, 91, 200 }
 	local BLACK, GOLDS = { 32, 33, 39 }, { { 216, 185, 110 }, { 198, 154, 69 } }
-	local ZONES = { "Body", "Trim", "Inner", "Attach", "Gem", "CoreGem", "Float", "Crack", "Emblem" }
+	local ZONES = { "Body", "Trim", "Inner", "Attach", "Gem", "CoreGem", "Float", "Crack", "Emblem", "Band" }
 	-- ① 48조합
 	local bad, n = {}, 0
 	for _, grade in ipairs(Armor.gradeOrder) do
@@ -60,6 +60,24 @@ local ok, err = pcall(function()
 	local neonOk = select(2, AC.colorOfGearV3("X_Crack", "tier1", "transcendent")) == true and select(2, AC.colorOfGearV3("X_Float", "tier1", "relic")) == true
 		and select(2, AC.colorOfGearV3("X_Body", "tier1", "transcendent")) == false and select(2, AC.colorOfGearV3("X_Gem", "tier1", "normal")) == false
 	check("발광: 균열 · 부유 = Neon · 본체 = 아님 · 일반 보조 보석 = 아님(발광 0)", neonOk)
+	-- LOOK2 색 구역 v2: 등급색 = 판금(가슴 · 어깨 · 허리 판 · 무릎)만 · 커프 · 테두리 = 등급대 금속 · 장갑 · 장화 · 벨트 = 가죽 · 가슴 안쪽 = 직업 천 · 커프 띠 = 등급(태초 자홍)
+	local L2 = G.look2
+	local l2bad = {}
+	for _, grade in ipairs(Armor.gradeOrder) do
+		local gv = MODS.ItemVisualData.gradeVisuals[grade]
+		local main = { gv.color.R * 255, gv.color.G * 255, gv.color.B * 255 }
+		local function plateNear(name)
+			local c = AC.colorOfGearV3(name, "tier1", grade, "greatsword")
+			local f = L2.brightness[grade] or 1
+			return near(c, { math.min(255, main[1] * f), math.min(255, main[2] * f), math.min(255, main[3] * f) }, 0.03)
+		end
+		if not (plateNear("Chest_Body") and plateNear("Shoulder_L_Body") and plateNear("Tasset_L_Body")) then table.insert(l2bad, grade .. " 판금") end
+		if not (near(AC.colorOfGearV3("Bracer_L_Body", "tier1", grade, "bow"), L2.trimMetal[grade], 0.02) and near(AC.colorOfGearV3("Chest_Trim", "tier1", grade, "bow"), L2.trimMetal[grade], 0.02)) then table.insert(l2bad, grade .. " 금속") end
+		if not (near(AC.colorOfGearV3("Glove_R_Inner", "tier1", grade, "bow"), L2.leather, 0.02) and near(AC.colorOfGearV3("Belt_Inner", "tier1", grade, "bow"), L2.leather, 0.02)) then table.insert(l2bad, grade .. " 가죽") end
+		if not near(AC.colorOfGearV3("Chest_Inner", "tier1", grade, "bow"), L2.leather, 0.02) then table.insert(l2bad, grade .. " 가슴 끈") end
+	end
+	local bandOk = near(AC.colorOfGearV3("Bracer_L_Band", "tier1", "primordial", "bow"), { 233, 91, 200 }, 0.02) and near(AC.colorOfGearV3("Greave_R_Band", "tier1", "legendary", "bow"), { 216, 120, 40 }, 0.02)
+	check("LOOK2 색 구역 v2: 8등급 × 판금 = 등급색(밝기 보정) · 커프 · 테두리 = 강철/금/백금/흑금 · 장갑 · 벨트 · 가슴 끈 = 가죽 · 커프 띠 = 등급(태초 자홍)", #l2bad == 0 and bandOk, table.concat(l2bad, ", "))
 	-- 무기(5절 ⑤): 초월 = 흑요석 몸 + 금 균열(보라 = 영웅 색 금지) · 태초 = 백색 몸 · 균열(Tr)은 초월만
 	local GV = MODS.GearV3
 	local EPIC = { 117, 69, 198 }
@@ -99,7 +117,7 @@ local ok, err = pcall(function()
 	for _, s in pairs(G.sets) do
 		if not Wear.pieces["emblem_" .. s.emblem] then nMissing += 1 end
 	end
-	check("메시 메타 60 + 문장 6 키 있음 · 조각 구역 = 규격 9개 안", nMissing == 0 and #badZone == 0, ("빠짐 %d · 구역 밖 %d"):format(nMissing, #badZone))
+	check("메시 메타 60 + 문장 6 키 있음 · 조각 구역 = 규격 10개 안(LOOK2 Band 포함)", nMissing == 0 and #badZone == 0, ("빠짐 %d · 구역 밖 %d"):format(nMissing, #badZone))
 	check("1인 방어구 MeshPart ≤ 24(문 부품은 그 등급만 · 문장 포함)", worst <= G.budget.meshPartsPerPlayer, ("최대 %d(%s)"):format(worst, worstKey))
 end)
 if not ok then

@@ -79,9 +79,7 @@ local function build()
 	-- QUEUE-ALL9E1 LOOK2 보정 2: "내 아바타 옷 보이기"(기본 끔 = 바닥층 누빔 옷 · 켬 = 본인 옷 + 갑옷 판 · 겹침 허용) - 서버가 캐릭터에 적용(모두에게 같게) · 직업별 저장
 	local clothes = Instance.new("TextButton")
 	clothes.Name = "OwnClothesToggle"
-	clothes.AnchorPoint = Vector2.new(0.5, 0)
-	clothes.Position = UDim2.new(0.5, 0, 0, 0)
-	clothes.Size = UDim2.new(1, 0, 0, math.max(Theme.buttonHeight, 28))
+	-- 자리 = 장비 칸 아래(R.layoutGear - 폰은 캐릭터 그림이 숨겨져 그림 안에 두면 안 보였다)
 	clothes.BackgroundColor3 = UIColors.slot
 	clothes.BackgroundTransparency = 0.2
 	clothes.AutoButtonColor = true
@@ -89,8 +87,8 @@ local function build()
 	clothes.TextSize = Theme.textSize("caption")
 	clothes.TextColor3 = Theme.color("textPrimary")
 	clothes.TextWrapped = true
-	clothes.ZIndex = preview.frame.ZIndex + 2
-	clothes.Parent = figure
+	clothes.Parent = gear
+	refs.clothes = clothes
 	Instance.new("UICorner", clothes).CornerRadius = UDim.new(0, 8)
 	local function showClothes()
 		clothes.Text = Text.get(player:GetAttribute("ShowOwnClothes") == true and "inv.ownClothes.on" or "inv.ownClothes.off")
@@ -602,6 +600,19 @@ function R.layoutGear(L)
 		infoX, infoY, infoW = 12, slotsBottom + 10, width - 24
 	end
 	refs.slots.Size = UDim2.new(1, 0, 0, slotsBottom)
+	-- QUEUE-ALL9E1 LOOK2: "내 아바타 옷 보이기" = 장비 칸 바로 아래(폰 = 터치 44 · 칸 줄 폭 / 정보가 아래로 내려가면 그 위에)
+	local toggleH = phone and Theme.touchMin or 30
+	if refs.clothes then
+		if phone and infoX > 14 then
+			refs.clothes.Position = UDim2.new(0, 14, 0, slotsBottom + 8)
+			refs.clothes.Size = UDim2.new(0, infoX - 4 - 14 - 10, 0, toggleH)
+			slotsBottom += 8 + toggleH
+		else
+			refs.clothes.Position = UDim2.new(0, infoX, 0, infoY)
+			refs.clothes.Size = UDim2.new(0, infoW, 0, toggleH)
+			infoY += toggleH + 8
+		end
+	end
 	local y = infoY
 	refs.statsBox.Position = UDim2.new(0, infoX, 0, y)
 	refs.statsBox.Size = UDim2.new(0, infoW, 0, 3 * 22 + 12)

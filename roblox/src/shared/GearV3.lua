@@ -48,16 +48,10 @@ end
 
 -- 방어구 구역 색(8등급 × 6세트 · LOOK2 10-04 밤 - gear-art-v3.md 3-1절): → (Color3, 네온 여부)
 --   주 판금 에나멜(가슴 · 어깨 · 허리 아래 판 · 허벅지/무릎 판의 Body) = 등급 메인 × 밝기 보정 · Band(장갑 · 신발 커프 띠) = 등급 메인(태초 = 자홍 포인트)
---   Trim · 팔/정강이 커프(Bracer · Greave Body) = 등급대 금속(강철 · 금 · 백금 · 흑금) · Inner = 가죽(벨트 · 장갑 · 장화) / 천(가슴 안쪽 - 직업 색)
+--   Trim · 팔/정강이 커프(Bracer · Greave Body) = 등급대 금속(강철 · 금 · 백금 · 흑금) · Inner = 가죽(벨트 · 장갑 · 장화 · 가슴 끈) · 천 = 바닥층 2D 옷(직업 색)
 --   Attach = 세트 색1 · Gem · Emblem = 세트 색2(같은 계열 = 밝게 · 초월 + 모래 = 금 대신 모래) · CoreGem = 등급 보석 · Float · Crack = Neon
 local PLATE = { Chest = true, Shoulder = true, Tasset = true, Thigh = true, Knee = true }
 local CUFF = { Bracer = true, Greave = true }
-local LEATHER = { Belt = true, Glove = true, Boot = true }
-
-function GearV3.clothColor(classId)
-	local L = GearV3Data.look2
-	return rgb(L.cloth[GearV3Data.baseLayer[classId] or "navy"] or L.cloth.navy)
-end
 
 function GearV3.armorColor(pieceName, setZone, grade, classId)
 	local zone = GearV3.zone(pieceName)
@@ -77,10 +71,7 @@ function GearV3.armorColor(pieceName, setZone, grade, classId)
 	elseif zone == "Trim" then
 		return metal, false
 	elseif zone == "Inner" then
-		if LEATHER[kind] then
-			return rgb(L.leather), false
-		end
-		return GearV3.clothColor(classId), false
+		return rgb(L.leather), false -- 가죽(벨트 · 장갑 · 장화 · 가슴 끈 - 직업 바탕의 leather 역할) · 천 = 바닥층 2D 옷
 	elseif zone == "Attach" then
 		return scale(rgb(set.color1), bright), false
 	elseif zone == "Gem" or zone == "Emblem" then
@@ -99,6 +90,20 @@ function GearV3.armorColor(pieceName, setZone, grade, classId)
 		return rgb(GearV3Data.crack), true
 	end
 	return gv.color, false
+end
+
+-- LOOK2 3번 재질: 메시 키(armor_greatsword_s3 · emblem_stone)의 굽은 음영 지도 SurfaceAppearance 템플릿(ReplicatedStorage.Shared.GearV3Looks - roblox/tools/blender/gear_v3_looks.py가 만든다)을 복제해 돌려준다.
+--   금속(Body · Trim · Band · 보석 · 문장) = 금속 1 · 거칠기 낮음(전설 이상 = 더 매끈 metalHi) · 가죽 · 천(Inner · Attach) = 금속 0 · 거칠기 높음(cloth). 없으면 nil(단색 그대로).
+local CLOTH_ZONE = { Inner = true, Attach = true }
+function GearV3.surfaceFor(key, pieceName, grade)
+	local folder = key and ReplicatedStorage:FindFirstChild("Shared") and ReplicatedStorage.Shared:FindFirstChild("GearV3Looks")
+	if not folder then
+		return nil
+	end
+	local zone = GearV3.zone(pieceName)
+	local kind = CLOTH_ZONE[zone] and "cloth" or (rank(grade) >= rank("legendary") and "metalHi" or "metal")
+	local template = folder:FindFirstChild(key .. "_" .. kind)
+	return template and template:Clone() or nil
 end
 
 -- 무기 구역 색(세트 없음): 날 · 몸(Body) = 강철에 등급 메인을 조금(weaponBodyTint) · 태초 = 백색 금속 · 초월 = 흑요석(보라 금지 - 5절 ⑤)

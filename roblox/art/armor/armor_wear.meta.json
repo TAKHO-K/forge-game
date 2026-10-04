@@ -14737,26 +14737,41 @@
     "tris": 128,
     "neon": false
    },
-   "Chest_Trim": {
+   "Chest_Inner": {
     "attach": "UpperTorso",
     "offset": [
      0.0,
-     0.353,
-     -0.655
+     -1.0,
+     0.0
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 52,
+    "tris": 56,
+    "neon": false
+   },
+   "Chest_Trim": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -0.243,
+     -0.667
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 104,
     "neon": false
    },
    "Shoulder_L_Body": {
     "attach": "LeftUpperArm",
     "offset": [
-     -0.05,
-     0.235,
+     -0.088,
+     0.204,
      0.0
     ],
     "refSize": [
@@ -14764,14 +14779,14 @@
      1.17,
      1
     ],
-    "tris": 60,
+    "tris": 64,
     "neon": false
    },
    "Shoulder_L_Trim": {
     "attach": "LeftUpperArm",
     "offset": [
-     0.0,
-     0.17,
+     -0.08,
+     0.36,
      0.0
     ],
     "refSize": [
@@ -14779,14 +14794,14 @@
      1.17,
      1
     ],
-    "tris": 80,
+    "tris": 44,
     "neon": false
    },
    "Shoulder_R_Body": {
     "attach": "RightUpperArm",
     "offset": [
-     0.05,
-     0.235,
+     0.088,
+     0.204,
      0.0
     ],
     "refSize": [
@@ -14794,14 +14809,14 @@
      1.17,
      1
     ],
-    "tris": 60,
+    "tris": 64,
     "neon": false
    },
    "Shoulder_R_Trim": {
     "attach": "RightUpperArm",
     "offset": [
-     0.0,
-     0.17,
+     0.08,
+     0.36,
      0.0
     ],
     "refSize": [
@@ -14809,22 +14824,7 @@
      1.17,
      1
     ],
-    "tris": 80,
-    "neon": false
-   },
-   "Belt_Inner": {
-    "attach": "LowerTorso",
-    "offset": [
-     0.0,
-     0.0,
-     -0.03
-    ],
-    "refSize": [
-     2,
-     0.4,
-     1
-    ],
-    "tris": 84,
+    "tris": 44,
     "neon": false
    },
    "Tasset_L_Body": {
@@ -14864,14 +14864,14 @@
     "offset": [
      0.0,
      -0.05,
-     -0.01
+     -0.053
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 56,
+    "tris": 70,
     "neon": false
    },
    "Chest_Body": {
@@ -14889,26 +14889,11 @@
     "tris": 128,
     "neon": false
    },
-   "Chest_Gem": {
-    "attach": "UpperTorso",
-    "offset": [
-     0.624,
-     0.506,
-     -0.7
-    ],
-    "refSize": [
-     2,
-     1.6,
-     1
-    ],
-    "tris": 14,
-    "neon": false
-   },
    "Chest_Gem_Ep": {
     "attach": "UpperTorso",
     "offset": [
      -0.311,
-     -0.024,
+     -0.016,
      -0.7
     ],
     "refSize": [
@@ -14919,19 +14904,34 @@
     "tris": 28,
     "neon": false
    },
-   "Chest_Trim": {
+   "Chest_Inner": {
     "attach": "UpperTorso",
     "offset": [
      0.0,
-     0.105,
-     -0.655
+     -1.0,
+     0.0
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 76,
+    "tris": 56,
+    "neon": false
+   },
+   "Chest_Trim": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -0.243,
+     -0.667
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 128,
     "neon": false
    },
    "Chest_Trim_Ep": {
@@ -14952,8 +14952,8 @@
    "Shoulder_L_Body": {
     "attach": "LeftUpperArm",
     "offset": [
-     -0.05,
-     0.235,
+     -0.088,
+     0.204,
      0.0
     ],
     "refSize": [
@@ -14961,14 +14961,14 @@
      1.17,
      1
     ],
-    "tris": 60,
+    "tris": 64,
     "neon": false
    },
    "Shoulder_L_Trim": {
     "attach": "LeftUpperArm",
     "offset": [
-     0.002,
-     0.17,
+     -0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -14976,14 +14976,14 @@
      1.17,
      1
     ],
-    "tris": 130,
+    "tris": 68,
     "neon": false
    },
    "Shoulder_R_Body": {
     "attach": "RightUpperArm",
     "offset": [
-     0.05,
-     0.235,
+     0.088,
+     0.204,
      0.0
     ],
     "refSize": [
@@ -14991,14 +14991,14 @@
      1.17,
      1
     ],
-    "tris": 60,
+    "tris": 64,
     "neon": false
    },
    "Shoulder_R_Trim": {
     "attach": "RightUpperArm",
     "offset": [
-     0.002,
-     0.17,
+     0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -15006,22 +15006,7 @@
      1.17,
      1
     ],
-    "tris": 130,
-    "neon": false
-   },
-   "Belt_Inner": {
-    "attach": "LowerTorso",
-    "offset": [
-     0.0,
-     0.0,
-     -0.03
-    ],
-    "refSize": [
-     2,
-     0.4,
-     1
-    ],
-    "tris": 84,
+    "tris": 68,
     "neon": false
    },
    "Tasset_L_Body": {
@@ -15061,14 +15046,14 @@
     "offset": [
      0.0,
      -0.05,
-     -0.01
+     -0.053
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 56,
+    "tris": 70,
     "neon": false
    },
    "Chest_Body": {
@@ -15089,8 +15074,8 @@
    "Chest_Gem": {
     "attach": "UpperTorso",
     "offset": [
-     0.31,
-     0.374,
+     0.01,
+     0.3,
      -0.7
     ],
     "refSize": [
@@ -15098,14 +15083,14 @@
      1.6,
      1
     ],
-    "tris": 34,
+    "tris": 20,
     "neon": false
    },
    "Chest_Gem_Ep": {
     "attach": "UpperTorso",
     "offset": [
      -0.311,
-     -0.024,
+     -0.016,
      -0.7
     ],
     "refSize": [
@@ -15116,11 +15101,26 @@
     "tris": 28,
     "neon": false
    },
+   "Chest_Inner": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -1.0,
+     -0.083
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 76,
+    "neon": false
+   },
    "Chest_Trim": {
     "attach": "UpperTorso",
     "offset": [
      0.0,
-     -0.063,
+     -0.243,
      -0.086
     ],
     "refSize": [
@@ -15128,7 +15128,7 @@
      1.6,
      1
     ],
-    "tris": 176,
+    "tris": 228,
     "neon": false
    },
    "Chest_Trim_Ep": {
@@ -15149,8 +15149,8 @@
    "Shoulder_L_Body": {
     "attach": "LeftUpperArm",
     "offset": [
-     -0.05,
-     0.235,
+     -0.088,
+     0.204,
      0.0
     ],
     "refSize": [
@@ -15158,14 +15158,14 @@
      1.17,
      1
     ],
-    "tris": 60,
+    "tris": 64,
     "neon": false
    },
    "Shoulder_L_Trim": {
     "attach": "LeftUpperArm",
     "offset": [
-     0.002,
-     0.282,
+     -0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -15173,14 +15173,14 @@
      1.17,
      1
     ],
-    "tris": 204,
+    "tris": 68,
     "neon": false
    },
    "Shoulder_R_Body": {
     "attach": "RightUpperArm",
     "offset": [
-     0.05,
-     0.235,
+     0.088,
+     0.204,
      0.0
     ],
     "refSize": [
@@ -15188,14 +15188,14 @@
      1.17,
      1
     ],
-    "tris": 60,
+    "tris": 64,
     "neon": false
    },
    "Shoulder_R_Trim": {
     "attach": "RightUpperArm",
     "offset": [
-     0.002,
-     0.282,
+     0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -15203,22 +15203,7 @@
      1.17,
      1
     ],
-    "tris": 204,
-    "neon": false
-   },
-   "Belt_Inner": {
-    "attach": "LowerTorso",
-    "offset": [
-     0.0,
-     0.0,
-     -0.083
-    ],
-    "refSize": [
-     2,
-     0.4,
-     1
-    ],
-    "tris": 104,
+    "tris": 68,
     "neon": false
    },
    "Tasset_L_Body": {
@@ -15258,14 +15243,14 @@
     "offset": [
      0.0,
      -0.05,
-     -0.01
+     -0.053
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 56,
+    "tris": 70,
     "neon": false
    },
    "Chest_Body": {
@@ -15287,15 +15272,15 @@
     "attach": "UpperTorso",
     "offset": [
      0.0,
-     0.52,
-     -0.735
+     0.669,
+     -0.223
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 56,
+    "tris": 52,
     "neon": false
    },
    "Chest_CoreGem_Re": {
@@ -15316,8 +15301,8 @@
    "Chest_Gem": {
     "attach": "UpperTorso",
     "offset": [
-     0.31,
-     0.374,
+     0.01,
+     0.3,
      -0.7
     ],
     "refSize": [
@@ -15325,14 +15310,14 @@
      1.6,
      1
     ],
-    "tris": 34,
+    "tris": 20,
     "neon": false
    },
    "Chest_Gem_Ep": {
     "attach": "UpperTorso",
     "offset": [
      -0.311,
-     -0.024,
+     -0.016,
      -0.7
     ],
     "refSize": [
@@ -15343,11 +15328,26 @@
     "tris": 28,
     "neon": false
    },
+   "Chest_Inner": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -1.0,
+     -0.083
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 76,
+    "neon": false
+   },
    "Chest_Trim": {
     "attach": "UpperTorso",
     "offset": [
      0.0,
-     -0.035,
+     -0.215,
      -0.086
     ],
     "refSize": [
@@ -15355,22 +15355,7 @@
      1.6,
      1
     ],
-    "tris": 256,
-    "neon": false
-   },
-   "Chest_Trim_An": {
-    "attach": "UpperTorso",
-    "offset": [
-     0.0,
-     0.86,
-     0.32
-    ],
-    "refSize": [
-     2,
-     1.6,
-     1
-    ],
-    "tris": 28,
+    "tris": 308,
     "neon": false
    },
    "Chest_Trim_Ep": {
@@ -15391,8 +15376,8 @@
    "Shoulder_L_Body": {
     "attach": "LeftUpperArm",
     "offset": [
-     -0.05,
-     0.235,
+     -0.088,
+     0.204,
      0.0
     ],
     "refSize": [
@@ -15400,14 +15385,14 @@
      1.17,
      1
     ],
-    "tris": 60,
+    "tris": 64,
     "neon": false
    },
    "Shoulder_L_Trim": {
     "attach": "LeftUpperArm",
     "offset": [
-     0.002,
-     0.282,
+     -0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -15415,14 +15400,14 @@
      1.17,
      1
     ],
-    "tris": 204,
+    "tris": 68,
     "neon": false
    },
    "Shoulder_R_Body": {
     "attach": "RightUpperArm",
     "offset": [
-     0.05,
-     0.235,
+     0.088,
+     0.204,
      0.0
     ],
     "refSize": [
@@ -15430,14 +15415,14 @@
      1.17,
      1
     ],
-    "tris": 60,
+    "tris": 64,
     "neon": false
    },
    "Shoulder_R_Trim": {
     "attach": "RightUpperArm",
     "offset": [
-     0.002,
-     0.282,
+     0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -15445,22 +15430,7 @@
      1.17,
      1
     ],
-    "tris": 204,
-    "neon": false
-   },
-   "Belt_Inner": {
-    "attach": "LowerTorso",
-    "offset": [
-     0.0,
-     0.0,
-     -0.083
-    ],
-    "refSize": [
-     2,
-     0.4,
-     1
-    ],
-    "tris": 104,
+    "tris": 68,
     "neon": false
    },
    "Tasset_L_Body": {
@@ -15515,14 +15485,14 @@
     "offset": [
      0.0,
      -0.05,
-     -0.01
+     -0.053
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 56,
+    "tris": 70,
     "neon": false
    },
    "Chest_Body": {
@@ -15558,23 +15528,23 @@
    "Chest_Crack_Tr": {
     "attach": "UpperTorso",
     "offset": [
-     0.02,
-     -0.017,
-     -0.719
+     0.004,
+     0.554,
+     -0.042
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 36,
+    "tris": 54,
     "neon": true
    },
    "Chest_Gem": {
     "attach": "UpperTorso",
     "offset": [
-     0.31,
-     0.374,
+     0.01,
+     0.3,
      -0.7
     ],
     "refSize": [
@@ -15582,14 +15552,14 @@
      1.6,
      1
     ],
-    "tris": 34,
+    "tris": 20,
     "neon": false
    },
    "Chest_Gem_Ep": {
     "attach": "UpperTorso",
     "offset": [
      -0.311,
-     -0.024,
+     -0.016,
      -0.7
     ],
     "refSize": [
@@ -15600,11 +15570,26 @@
     "tris": 28,
     "neon": false
    },
+   "Chest_Inner": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -1.0,
+     -0.083
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 76,
+    "neon": false
+   },
    "Chest_Trim": {
     "attach": "UpperTorso",
     "offset": [
      0.0,
-     0.05,
+     -0.13,
      -0.081
     ],
     "refSize": [
@@ -15612,22 +15597,7 @@
      1.6,
      1
     ],
-    "tris": 256,
-    "neon": false
-   },
-   "Chest_Trim_An": {
-    "attach": "UpperTorso",
-    "offset": [
-     0.0,
-     0.86,
-     0.32
-    ],
-    "refSize": [
-     2,
-     1.6,
-     1
-    ],
-    "tris": 28,
+    "tris": 308,
     "neon": false
    },
    "Chest_Trim_Ep": {
@@ -15648,8 +15618,8 @@
    "Shoulder_L_Body": {
     "attach": "LeftUpperArm",
     "offset": [
-     -0.05,
-     0.235,
+     -0.088,
+     0.204,
      0.0
     ],
     "refSize": [
@@ -15657,14 +15627,14 @@
      1.17,
      1
     ],
-    "tris": 60,
+    "tris": 64,
     "neon": false
    },
    "Shoulder_L_Trim": {
     "attach": "LeftUpperArm",
     "offset": [
-     0.002,
-     0.363,
+     -0.08,
+     0.607,
      0.0
     ],
     "refSize": [
@@ -15672,14 +15642,14 @@
      1.17,
      1
     ],
-    "tris": 178,
+    "tris": 92,
     "neon": false
    },
    "Shoulder_R_Body": {
     "attach": "RightUpperArm",
     "offset": [
-     0.05,
-     0.235,
+     0.088,
+     0.204,
      0.0
     ],
     "refSize": [
@@ -15687,14 +15657,14 @@
      1.17,
      1
     ],
-    "tris": 60,
+    "tris": 64,
     "neon": false
    },
    "Shoulder_R_Trim": {
     "attach": "RightUpperArm",
     "offset": [
-     0.002,
-     0.363,
+     0.08,
+     0.607,
      0.0
     ],
     "refSize": [
@@ -15702,22 +15672,7 @@
      1.17,
      1
     ],
-    "tris": 178,
-    "neon": false
-   },
-   "Belt_Inner": {
-    "attach": "LowerTorso",
-    "offset": [
-     0.0,
-     0.0,
-     -0.083
-    ],
-    "refSize": [
-     2,
-     0.4,
-     1
-    ],
-    "tris": 104,
+    "tris": 92,
     "neon": false
    },
    "Tasset_L_Body": {
@@ -15750,7 +15705,7 @@
     "tris": 68,
     "neon": false
    },
-   "Float_Float": {
+   "Float_Float_Pr": {
     "attach": "UpperTorso",
     "offset": [
      0.004,
@@ -15797,11 +15752,11 @@
     "tris": 108,
     "neon": false
    },
-   "Bracer_L_Body": {
+   "Bracer_L_Band": {
     "attach": "LeftLowerArm",
     "offset": [
      0.0,
-     -0.21,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -15812,11 +15767,11 @@
     "tris": 72,
     "neon": false
    },
-   "Bracer_R_Body": {
+   "Bracer_R_Band": {
     "attach": "RightLowerArm",
     "offset": [
      0.0,
-     -0.21,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -15859,11 +15814,11 @@
     "tris": 108,
     "neon": false
    },
-   "Bracer_L_Body": {
+   "Bracer_L_Band": {
     "attach": "LeftLowerArm",
     "offset": [
      0.0,
-     -0.21,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -15874,11 +15829,11 @@
     "tris": 72,
     "neon": false
    },
-   "Bracer_R_Body": {
+   "Bracer_R_Band": {
     "attach": "RightLowerArm",
     "offset": [
      0.0,
-     -0.21,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -15921,11 +15876,11 @@
     "tris": 108,
     "neon": false
    },
-   "Bracer_L_Body": {
+   "Bracer_L_Band": {
     "attach": "LeftLowerArm",
     "offset": [
      0.0,
-     -0.122,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -15933,14 +15888,14 @@
      1.05,
      1
     ],
-    "tris": 104,
+    "tris": 72,
     "neon": false
    },
-   "Bracer_R_Body": {
+   "Bracer_R_Band": {
     "attach": "RightLowerArm",
     "offset": [
      0.0,
-     -0.122,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -15948,7 +15903,7 @@
      1.05,
      1
     ],
-    "tris": 104,
+    "tris": 72,
     "neon": false
    }
   },
@@ -15983,11 +15938,11 @@
     "tris": 108,
     "neon": false
    },
-   "Bracer_L_Body": {
+   "Bracer_L_Band": {
     "attach": "LeftLowerArm",
     "offset": [
      0.0,
-     -0.122,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -15995,14 +15950,14 @@
      1.05,
      1
     ],
-    "tris": 104,
+    "tris": 72,
     "neon": false
    },
-   "Bracer_R_Body": {
+   "Bracer_R_Band": {
     "attach": "RightLowerArm",
     "offset": [
      0.0,
-     -0.122,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -16010,7 +15965,7 @@
      1.05,
      1
     ],
-    "tris": 104,
+    "tris": 72,
     "neon": false
    }
   },
@@ -16045,11 +16000,11 @@
     "tris": 108,
     "neon": false
    },
-   "Bracer_L_Body": {
+   "Bracer_L_Band": {
     "attach": "LeftLowerArm",
     "offset": [
      0.0,
-     -0.122,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -16057,14 +16012,14 @@
      1.05,
      1
     ],
-    "tris": 104,
+    "tris": 72,
     "neon": false
    },
-   "Bracer_R_Body": {
+   "Bracer_R_Band": {
     "attach": "RightLowerArm",
     "offset": [
      0.0,
-     -0.122,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -16072,7 +16027,7 @@
      1.05,
      1
     ],
-    "tris": 104,
+    "tris": 72,
     "neon": false
    }
   },
@@ -16107,34 +16062,64 @@
     "tris": 72,
     "neon": false
    },
-   "Greave_L_Body": {
+   "Greave_L_Band": {
     "attach": "LeftLowerLeg",
     "offset": [
      0.0,
-     0.06,
-     -0.052
+     0.152,
+     -0.051
     ],
     "refSize": [
      1,
      1.19,
      1
     ],
-    "tris": 172,
+    "tris": 76,
+    "neon": false
+   },
+   "Greave_L_Body": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.41,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Band": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
     "neon": false
    },
    "Greave_R_Body": {
     "attach": "RightLowerLeg",
     "offset": [
      0.0,
-     0.06,
-     -0.052
+     -0.41,
+     0.0
     ],
     "refSize": [
      1,
      1.19,
      1
     ],
-    "tris": 172,
+    "tris": 28,
     "neon": false
    }
   },
@@ -16169,34 +16154,64 @@
     "tris": 72,
     "neon": false
    },
-   "Greave_L_Body": {
+   "Greave_L_Band": {
     "attach": "LeftLowerLeg",
     "offset": [
      0.0,
-     0.06,
-     -0.052
+     0.152,
+     -0.051
     ],
     "refSize": [
      1,
      1.19,
      1
     ],
-    "tris": 172,
+    "tris": 76,
+    "neon": false
+   },
+   "Greave_L_Body": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.41,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Band": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
     "neon": false
    },
    "Greave_R_Body": {
     "attach": "RightLowerLeg",
     "offset": [
      0.0,
-     0.06,
-     -0.052
+     -0.41,
+     0.0
     ],
     "refSize": [
      1,
      1.19,
      1
     ],
-    "tris": 172,
+    "tris": 28,
     "neon": false
    }
   },
@@ -16231,34 +16246,64 @@
     "tris": 72,
     "neon": false
    },
-   "Greave_L_Body": {
+   "Greave_L_Band": {
     "attach": "LeftLowerLeg",
     "offset": [
      0.0,
-     0.06,
-     -0.052
+     0.152,
+     -0.051
     ],
     "refSize": [
      1,
      1.19,
      1
     ],
-    "tris": 172,
+    "tris": 76,
+    "neon": false
+   },
+   "Greave_L_Body": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.41,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Band": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
     "neon": false
    },
    "Greave_R_Body": {
     "attach": "RightLowerLeg",
     "offset": [
      0.0,
-     0.06,
-     -0.052
+     -0.41,
+     0.0
     ],
     "refSize": [
      1,
      1.19,
      1
     ],
-    "tris": 172,
+    "tris": 28,
     "neon": false
    }
   },
@@ -16293,34 +16338,64 @@
     "tris": 72,
     "neon": false
    },
-   "Greave_L_Body": {
+   "Greave_L_Band": {
     "attach": "LeftLowerLeg",
     "offset": [
      0.0,
-     0.06,
-     -0.052
+     0.152,
+     -0.051
     ],
     "refSize": [
      1,
      1.19,
      1
     ],
-    "tris": 172,
+    "tris": 76,
+    "neon": false
+   },
+   "Greave_L_Body": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.41,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Band": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
     "neon": false
    },
    "Greave_R_Body": {
     "attach": "RightLowerLeg",
     "offset": [
      0.0,
-     0.06,
-     -0.052
+     -0.41,
+     0.0
     ],
     "refSize": [
      1,
      1.19,
      1
     ],
-    "tris": 172,
+    "tris": 28,
     "neon": false
    }
   },
@@ -16355,34 +16430,64 @@
     "tris": 72,
     "neon": false
    },
-   "Greave_L_Body": {
+   "Greave_L_Band": {
     "attach": "LeftLowerLeg",
     "offset": [
      0.0,
-     0.06,
-     -0.052
+     0.152,
+     -0.051
     ],
     "refSize": [
      1,
      1.19,
      1
     ],
-    "tris": 172,
+    "tris": 76,
+    "neon": false
+   },
+   "Greave_L_Body": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.41,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Band": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
     "neon": false
    },
    "Greave_R_Body": {
     "attach": "RightLowerLeg",
     "offset": [
      0.0,
-     0.06,
-     -0.052
+     -0.41,
+     0.0
     ],
     "refSize": [
      1,
      1.19,
      1
     ],
-    "tris": 172,
+    "tris": 28,
     "neon": false
    }
   },
@@ -16421,23 +16526,8 @@
     "attach": "UpperTorso",
     "offset": [
      0.0,
-     0.05,
-     -0.62
-    ],
-    "refSize": [
-     2,
-     1.6,
-     1
-    ],
-    "tris": 36,
-    "neon": false
-   },
-   "Chest_Trim": {
-    "attach": "UpperTorso",
-    "offset": [
-     0.0,
-     0.25,
-     -0.135
+     -0.204,
+     -0.04
     ],
     "refSize": [
      2,
@@ -16447,11 +16537,26 @@
     "tris": 120,
     "neon": false
    },
+   "Chest_Trim": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -0.155,
+     -0.158
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 172,
+    "neon": false
+   },
    "Shoulder_L_Body": {
     "attach": "LeftUpperArm",
     "offset": [
-     0.019,
-     0.37,
+     -0.088,
+     0.341,
      0.0
     ],
     "refSize": [
@@ -16459,14 +16564,29 @@
      1.17,
      1
     ],
-    "tris": 98,
+    "tris": 48,
+    "neon": false
+   },
+   "Shoulder_L_Trim": {
+    "attach": "LeftUpperArm",
+    "offset": [
+     -0.08,
+     0.36,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.17,
+     1
+    ],
+    "tris": 44,
     "neon": false
    },
    "Shoulder_R_Body": {
     "attach": "RightUpperArm",
     "offset": [
-     0.019,
-     0.37,
+     0.088,
+     0.341,
      0.0
     ],
     "refSize": [
@@ -16474,22 +16594,22 @@
      1.17,
      1
     ],
-    "tris": 98,
+    "tris": 48,
     "neon": false
    },
-   "Belt_Inner": {
-    "attach": "LowerTorso",
+   "Shoulder_R_Trim": {
+    "attach": "RightUpperArm",
     "offset": [
-     0.0,
-     -0.045,
-     -0.04
+     0.08,
+     0.36,
+     0.0
     ],
     "refSize": [
-     2,
-     0.4,
+     1,
+     1.17,
      1
     ],
-    "tris": 112,
+    "tris": 44,
     "neon": false
    }
   },
@@ -16497,16 +16617,16 @@
    "Chest_Attach": {
     "attach": "UpperTorso",
     "offset": [
-     0.0,
-     0.74,
-     0.0
+     0.062,
+     0.632,
+     -0.15
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 44,
+    "tris": 58,
     "neon": false
    },
    "Chest_Body": {
@@ -16524,26 +16644,11 @@
     "tris": 84,
     "neon": false
    },
-   "Chest_Gem": {
-    "attach": "UpperTorso",
-    "offset": [
-     0.624,
-     0.506,
-     -0.7
-    ],
-    "refSize": [
-     2,
-     1.6,
-     1
-    ],
-    "tris": 14,
-    "neon": false
-   },
    "Chest_Gem_Ep": {
     "attach": "UpperTorso",
     "offset": [
      -0.311,
-     -0.024,
+     -0.016,
      -0.7
     ],
     "refSize": [
@@ -16558,30 +16663,30 @@
     "attach": "UpperTorso",
     "offset": [
      0.0,
-     0.05,
-     -0.62
+     -0.204,
+     -0.04
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 36,
+    "tris": 120,
     "neon": false
    },
    "Chest_Trim": {
     "attach": "UpperTorso",
     "offset": [
      0.0,
-     0.192,
-     -0.135
+     -0.155,
+     -0.158
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 144,
+    "tris": 196,
     "neon": false
    },
    "Chest_Trim_Ep": {
@@ -16602,8 +16707,8 @@
    "Shoulder_L_Body": {
     "attach": "LeftUpperArm",
     "offset": [
-     0.019,
-     0.37,
+     -0.088,
+     0.341,
      0.0
     ],
     "refSize": [
@@ -16611,14 +16716,14 @@
      1.17,
      1
     ],
-    "tris": 98,
+    "tris": 48,
     "neon": false
    },
    "Shoulder_L_Trim": {
     "attach": "LeftUpperArm",
     "offset": [
-     0.02,
-     0.1,
+     -0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -16626,14 +16731,14 @@
      1.17,
      1
     ],
-    "tris": 50,
+    "tris": 68,
     "neon": false
    },
    "Shoulder_R_Body": {
     "attach": "RightUpperArm",
     "offset": [
-     0.019,
-     0.37,
+     0.088,
+     0.341,
      0.0
     ],
     "refSize": [
@@ -16641,14 +16746,14 @@
      1.17,
      1
     ],
-    "tris": 98,
+    "tris": 48,
     "neon": false
    },
    "Shoulder_R_Trim": {
     "attach": "RightUpperArm",
     "offset": [
-     0.02,
-     0.1,
+     0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -16656,22 +16761,7 @@
      1.17,
      1
     ],
-    "tris": 50,
-    "neon": false
-   },
-   "Belt_Inner": {
-    "attach": "LowerTorso",
-    "offset": [
-     0.0,
-     -0.045,
-     -0.04
-    ],
-    "refSize": [
-     2,
-     0.4,
-     1
-    ],
-    "tris": 112,
+    "tris": 68,
     "neon": false
    }
   },
@@ -16679,16 +16769,16 @@
    "Chest_Attach": {
     "attach": "UpperTorso",
     "offset": [
-     0.0,
-     0.74,
-     0.0
+     0.062,
+     0.632,
+     -0.15
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 44,
+    "tris": 58,
     "neon": false
    },
    "Chest_Body": {
@@ -16709,8 +16799,8 @@
    "Chest_Gem": {
     "attach": "UpperTorso",
     "offset": [
-     0.31,
-     0.374,
+     0.01,
+     0.3,
      -0.7
     ],
     "refSize": [
@@ -16718,14 +16808,14 @@
      1.6,
      1
     ],
-    "tris": 34,
+    "tris": 20,
     "neon": false
    },
    "Chest_Gem_Ep": {
     "attach": "UpperTorso",
     "offset": [
      -0.311,
-     -0.024,
+     -0.016,
      -0.7
     ],
     "refSize": [
@@ -16740,22 +16830,22 @@
     "attach": "UpperTorso",
     "offset": [
      0.0,
-     0.05,
-     -0.62
+     -0.204,
+     -0.088
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 36,
+    "tris": 140,
     "neon": false
    },
    "Chest_Trim": {
     "attach": "UpperTorso",
     "offset": [
      0.0,
-     0.025,
+     -0.155,
      -0.086
     ],
     "refSize": [
@@ -16763,7 +16853,7 @@
      1.6,
      1
     ],
-    "tris": 244,
+    "tris": 296,
     "neon": false
    },
    "Chest_Trim_Ep": {
@@ -16784,8 +16874,8 @@
    "Shoulder_L_Body": {
     "attach": "LeftUpperArm",
     "offset": [
-     0.019,
-     0.37,
+     -0.088,
+     0.341,
      0.0
     ],
     "refSize": [
@@ -16793,14 +16883,14 @@
      1.17,
      1
     ],
-    "tris": 98,
+    "tris": 48,
     "neon": false
    },
    "Shoulder_L_Trim": {
     "attach": "LeftUpperArm",
     "offset": [
-     0.02,
-     0.375,
+     -0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -16808,14 +16898,14 @@
      1.17,
      1
     ],
-    "tris": 124,
+    "tris": 68,
     "neon": false
    },
    "Shoulder_R_Body": {
     "attach": "RightUpperArm",
     "offset": [
-     0.019,
-     0.37,
+     0.088,
+     0.341,
      0.0
     ],
     "refSize": [
@@ -16823,14 +16913,14 @@
      1.17,
      1
     ],
-    "tris": 98,
+    "tris": 48,
     "neon": false
    },
    "Shoulder_R_Trim": {
     "attach": "RightUpperArm",
     "offset": [
-     0.02,
-     0.375,
+     0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -16838,22 +16928,7 @@
      1.17,
      1
     ],
-    "tris": 124,
-    "neon": false
-   },
-   "Belt_Inner": {
-    "attach": "LowerTorso",
-    "offset": [
-     0.0,
-     -0.045,
-     -0.088
-    ],
-    "refSize": [
-     2,
-     0.4,
-     1
-    ],
-    "tris": 132,
+    "tris": 68,
     "neon": false
    }
   },
@@ -16861,16 +16936,16 @@
    "Chest_Attach": {
     "attach": "UpperTorso",
     "offset": [
-     0.0,
-     0.74,
-     0.0
+     0.062,
+     0.632,
+     -0.15
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 44,
+    "tris": 58,
     "neon": false
    },
    "Chest_Body": {
@@ -16892,15 +16967,15 @@
     "attach": "UpperTorso",
     "offset": [
      0.0,
-     0.52,
-     -0.735
+     0.669,
+     -0.223
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 56,
+    "tris": 52,
     "neon": false
    },
    "Chest_CoreGem_Re": {
@@ -16921,8 +16996,8 @@
    "Chest_Gem": {
     "attach": "UpperTorso",
     "offset": [
-     0.31,
-     0.374,
+     0.01,
+     0.3,
      -0.7
     ],
     "refSize": [
@@ -16930,14 +17005,14 @@
      1.6,
      1
     ],
-    "tris": 34,
+    "tris": 20,
     "neon": false
    },
    "Chest_Gem_Ep": {
     "attach": "UpperTorso",
     "offset": [
      -0.311,
-     -0.024,
+     -0.016,
      -0.7
     ],
     "refSize": [
@@ -16952,22 +17027,22 @@
     "attach": "UpperTorso",
     "offset": [
      0.0,
-     0.05,
-     -0.62
+     -0.204,
+     -0.088
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 36,
+    "tris": 140,
     "neon": false
    },
    "Chest_Trim": {
     "attach": "UpperTorso",
     "offset": [
      0.0,
-     0.025,
+     -0.155,
      -0.086
     ],
     "refSize": [
@@ -16975,22 +17050,7 @@
      1.6,
      1
     ],
-    "tris": 324,
-    "neon": false
-   },
-   "Chest_Trim_An": {
-    "attach": "UpperTorso",
-    "offset": [
-     0.0,
-     0.86,
-     0.32
-    ],
-    "refSize": [
-     2,
-     1.6,
-     1
-    ],
-    "tris": 28,
+    "tris": 376,
     "neon": false
    },
    "Chest_Trim_Ep": {
@@ -17011,8 +17071,8 @@
    "Shoulder_L_Body": {
     "attach": "LeftUpperArm",
     "offset": [
-     0.019,
-     0.37,
+     -0.088,
+     0.341,
      0.0
     ],
     "refSize": [
@@ -17020,14 +17080,14 @@
      1.17,
      1
     ],
-    "tris": 98,
+    "tris": 48,
     "neon": false
    },
    "Shoulder_L_Trim": {
     "attach": "LeftUpperArm",
     "offset": [
-     0.02,
-     0.375,
+     -0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -17035,14 +17095,14 @@
      1.17,
      1
     ],
-    "tris": 124,
+    "tris": 68,
     "neon": false
    },
    "Shoulder_R_Body": {
     "attach": "RightUpperArm",
     "offset": [
-     0.019,
-     0.37,
+     0.088,
+     0.341,
      0.0
     ],
     "refSize": [
@@ -17050,14 +17110,14 @@
      1.17,
      1
     ],
-    "tris": 98,
+    "tris": 48,
     "neon": false
    },
    "Shoulder_R_Trim": {
     "attach": "RightUpperArm",
     "offset": [
-     0.02,
-     0.375,
+     0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -17065,22 +17125,7 @@
      1.17,
      1
     ],
-    "tris": 124,
-    "neon": false
-   },
-   "Belt_Inner": {
-    "attach": "LowerTorso",
-    "offset": [
-     0.0,
-     -0.045,
-     -0.088
-    ],
-    "refSize": [
-     2,
-     0.4,
-     1
-    ],
-    "tris": 132,
+    "tris": 68,
     "neon": false
    },
    "Float_Float": {
@@ -17103,16 +17148,16 @@
    "Chest_Attach": {
     "attach": "UpperTorso",
     "offset": [
-     0.0,
-     0.74,
-     0.0
+     0.062,
+     0.632,
+     -0.15
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 44,
+    "tris": 58,
     "neon": false
    },
    "Chest_Body": {
@@ -17148,23 +17193,23 @@
    "Chest_Crack_Tr": {
     "attach": "UpperTorso",
     "offset": [
-     0.02,
-     -0.017,
-     -0.719
+     0.0,
+     0.545,
+     -0.061
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 36,
+    "tris": 72,
     "neon": true
    },
    "Chest_Gem": {
     "attach": "UpperTorso",
     "offset": [
-     0.31,
-     0.374,
+     0.01,
+     0.3,
      -0.7
     ],
     "refSize": [
@@ -17172,14 +17217,14 @@
      1.6,
      1
     ],
-    "tris": 34,
+    "tris": 20,
     "neon": false
    },
    "Chest_Gem_Ep": {
     "attach": "UpperTorso",
     "offset": [
      -0.311,
-     -0.024,
+     -0.016,
      -0.7
     ],
     "refSize": [
@@ -17194,22 +17239,22 @@
     "attach": "UpperTorso",
     "offset": [
      0.0,
-     0.05,
-     -0.62
+     -0.204,
+     -0.088
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 36,
+    "tris": 140,
     "neon": false
    },
    "Chest_Trim": {
     "attach": "UpperTorso",
     "offset": [
      0.0,
-     0.05,
+     -0.13,
      -0.081
     ],
     "refSize": [
@@ -17217,22 +17262,7 @@
      1.6,
      1
     ],
-    "tris": 324,
-    "neon": false
-   },
-   "Chest_Trim_An": {
-    "attach": "UpperTorso",
-    "offset": [
-     0.0,
-     0.86,
-     0.32
-    ],
-    "refSize": [
-     2,
-     1.6,
-     1
-    ],
-    "tris": 28,
+    "tris": 376,
     "neon": false
    },
    "Chest_Trim_Ep": {
@@ -17253,8 +17283,8 @@
    "Shoulder_L_Body": {
     "attach": "LeftUpperArm",
     "offset": [
-     0.019,
-     0.37,
+     -0.088,
+     0.341,
      0.0
     ],
     "refSize": [
@@ -17262,14 +17292,14 @@
      1.17,
      1
     ],
-    "tris": 98,
+    "tris": 48,
     "neon": false
    },
    "Shoulder_L_Trim": {
     "attach": "LeftUpperArm",
     "offset": [
-     0.02,
-     0.498,
+     -0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -17277,14 +17307,14 @@
      1.17,
      1
     ],
-    "tris": 74,
+    "tris": 68,
     "neon": false
    },
    "Shoulder_R_Body": {
     "attach": "RightUpperArm",
     "offset": [
-     0.019,
-     0.37,
+     0.088,
+     0.341,
      0.0
     ],
     "refSize": [
@@ -17292,14 +17322,14 @@
      1.17,
      1
     ],
-    "tris": 98,
+    "tris": 48,
     "neon": false
    },
    "Shoulder_R_Trim": {
     "attach": "RightUpperArm",
     "offset": [
-     0.02,
-     0.578,
+     0.08,
+     0.607,
      0.0
     ],
     "refSize": [
@@ -17307,25 +17337,10 @@
      1.17,
      1
     ],
-    "tris": 98,
+    "tris": 92,
     "neon": false
    },
-   "Belt_Inner": {
-    "attach": "LowerTorso",
-    "offset": [
-     0.0,
-     -0.045,
-     -0.088
-    ],
-    "refSize": [
-     2,
-     0.4,
-     1
-    ],
-    "tris": 132,
-    "neon": false
-   },
-   "Float_Float": {
+   "Float_Float_Pr": {
     "attach": "UpperTorso",
     "offset": [
      0.0,
@@ -17372,11 +17387,11 @@
     "tris": 64,
     "neon": false
    },
-   "Bracer_L_Body": {
+   "Bracer_L_Band": {
     "attach": "LeftLowerArm",
     "offset": [
      0.0,
-     -0.16,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -17384,14 +17399,14 @@
      1.05,
      1
     ],
-    "tris": 160,
+    "tris": 72,
     "neon": false
    },
-   "Bracer_R_Body": {
+   "Bracer_R_Band": {
     "attach": "RightLowerArm",
     "offset": [
      0.0,
-     -0.16,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -17399,7 +17414,7 @@
      1.05,
      1
     ],
-    "tris": 160,
+    "tris": 72,
     "neon": false
    }
   },
@@ -17434,11 +17449,11 @@
     "tris": 64,
     "neon": false
    },
-   "Bracer_L_Body": {
+   "Bracer_L_Band": {
     "attach": "LeftLowerArm",
     "offset": [
      0.0,
-     -0.16,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -17446,14 +17461,14 @@
      1.05,
      1
     ],
-    "tris": 160,
+    "tris": 72,
     "neon": false
    },
-   "Bracer_R_Body": {
+   "Bracer_R_Band": {
     "attach": "RightLowerArm",
     "offset": [
      0.0,
-     -0.16,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -17461,7 +17476,7 @@
      1.05,
      1
     ],
-    "tris": 160,
+    "tris": 72,
     "neon": false
    }
   },
@@ -17496,11 +17511,11 @@
     "tris": 64,
     "neon": false
    },
-   "Bracer_L_Body": {
+   "Bracer_L_Band": {
     "attach": "LeftLowerArm",
     "offset": [
      0.0,
-     -0.16,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -17508,14 +17523,14 @@
      1.05,
      1
     ],
-    "tris": 160,
+    "tris": 72,
     "neon": false
    },
-   "Bracer_R_Body": {
+   "Bracer_R_Band": {
     "attach": "RightLowerArm",
     "offset": [
      0.0,
-     -0.16,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -17523,7 +17538,7 @@
      1.05,
      1
     ],
-    "tris": 160,
+    "tris": 72,
     "neon": false
    }
   },
@@ -17558,11 +17573,11 @@
     "tris": 64,
     "neon": false
    },
-   "Bracer_L_Body": {
+   "Bracer_L_Band": {
     "attach": "LeftLowerArm",
     "offset": [
      0.0,
-     -0.16,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -17570,14 +17585,14 @@
      1.05,
      1
     ],
-    "tris": 160,
+    "tris": 72,
     "neon": false
    },
-   "Bracer_R_Body": {
+   "Bracer_R_Band": {
     "attach": "RightLowerArm",
     "offset": [
      0.0,
-     -0.16,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -17585,7 +17600,7 @@
      1.05,
      1
     ],
-    "tris": 160,
+    "tris": 72,
     "neon": false
    }
   },
@@ -17620,11 +17635,11 @@
     "tris": 64,
     "neon": false
    },
-   "Bracer_L_Body": {
+   "Bracer_L_Band": {
     "attach": "LeftLowerArm",
     "offset": [
      0.0,
-     -0.16,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -17632,14 +17647,14 @@
      1.05,
      1
     ],
-    "tris": 160,
+    "tris": 72,
     "neon": false
    },
-   "Bracer_R_Body": {
+   "Bracer_R_Band": {
     "attach": "RightLowerArm",
     "offset": [
      0.0,
-     -0.16,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -17647,7 +17662,7 @@
      1.05,
      1
     ],
-    "tris": 160,
+    "tris": 72,
     "neon": false
    }
   },
@@ -17682,34 +17697,64 @@
     "tris": 56,
     "neon": false
    },
-   "Greave_L_Body": {
+   "Greave_L_Band": {
     "attach": "LeftLowerLeg",
     "offset": [
      0.0,
-     0.06,
-     -0.056
+     0.152,
+     -0.051
     ],
     "refSize": [
      1,
      1.19,
      1
     ],
-    "tris": 116,
+    "tris": 76,
+    "neon": false
+   },
+   "Greave_L_Body": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.41,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Band": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
     "neon": false
    },
    "Greave_R_Body": {
     "attach": "RightLowerLeg",
     "offset": [
      0.0,
-     0.06,
-     -0.056
+     -0.41,
+     0.0
     ],
     "refSize": [
      1,
      1.19,
      1
     ],
-    "tris": 116,
+    "tris": 28,
     "neon": false
    }
   },
@@ -17744,34 +17789,64 @@
     "tris": 56,
     "neon": false
    },
-   "Greave_L_Body": {
+   "Greave_L_Band": {
     "attach": "LeftLowerLeg",
     "offset": [
      0.0,
-     0.06,
-     -0.056
+     0.152,
+     -0.051
     ],
     "refSize": [
      1,
      1.19,
      1
     ],
-    "tris": 116,
+    "tris": 76,
+    "neon": false
+   },
+   "Greave_L_Body": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.41,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Band": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
     "neon": false
    },
    "Greave_R_Body": {
     "attach": "RightLowerLeg",
     "offset": [
      0.0,
-     0.06,
-     -0.056
+     -0.41,
+     0.0
     ],
     "refSize": [
      1,
      1.19,
      1
     ],
-    "tris": 116,
+    "tris": 28,
     "neon": false
    }
   },
@@ -17806,34 +17881,64 @@
     "tris": 56,
     "neon": false
    },
-   "Greave_L_Body": {
+   "Greave_L_Band": {
     "attach": "LeftLowerLeg",
     "offset": [
      0.0,
-     0.06,
-     -0.056
+     0.152,
+     -0.051
     ],
     "refSize": [
      1,
      1.19,
      1
     ],
-    "tris": 148,
+    "tris": 76,
+    "neon": false
+   },
+   "Greave_L_Body": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.41,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Band": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
     "neon": false
    },
    "Greave_R_Body": {
     "attach": "RightLowerLeg",
     "offset": [
      0.0,
-     0.06,
-     -0.056
+     -0.41,
+     0.0
     ],
     "refSize": [
      1,
      1.19,
      1
     ],
-    "tris": 148,
+    "tris": 28,
     "neon": false
    }
   },
@@ -17868,34 +17973,64 @@
     "tris": 56,
     "neon": false
    },
-   "Greave_L_Body": {
+   "Greave_L_Band": {
     "attach": "LeftLowerLeg",
     "offset": [
      0.0,
-     0.06,
-     -0.056
+     0.152,
+     -0.051
     ],
     "refSize": [
      1,
      1.19,
      1
     ],
-    "tris": 148,
+    "tris": 76,
+    "neon": false
+   },
+   "Greave_L_Body": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.41,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Band": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
     "neon": false
    },
    "Greave_R_Body": {
     "attach": "RightLowerLeg",
     "offset": [
      0.0,
-     0.06,
-     -0.056
+     -0.41,
+     0.0
     ],
     "refSize": [
      1,
      1.19,
      1
     ],
-    "tris": 148,
+    "tris": 28,
     "neon": false
    }
   },
@@ -17930,34 +18065,64 @@
     "tris": 56,
     "neon": false
    },
-   "Greave_L_Body": {
+   "Greave_L_Band": {
     "attach": "LeftLowerLeg",
     "offset": [
      0.0,
-     0.06,
-     -0.056
+     0.152,
+     -0.051
     ],
     "refSize": [
      1,
      1.19,
      1
     ],
-    "tris": 148,
+    "tris": 76,
+    "neon": false
+   },
+   "Greave_L_Body": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     -0.41,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Band": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
     "neon": false
    },
    "Greave_R_Body": {
     "attach": "RightLowerLeg",
     "offset": [
      0.0,
-     0.06,
-     -0.056
+     -0.41,
+     0.0
     ],
     "refSize": [
      1,
      1.19,
      1
     ],
-    "tris": 148,
+    "tris": 28,
     "neon": false
    }
   },
@@ -17995,8 +18160,8 @@
    "Chest_Inner": {
     "attach": "UpperTorso",
     "offset": [
-     -0.06,
-     0.03,
+     0.0,
+     -0.15,
      0.0
     ],
     "refSize": [
@@ -18004,29 +18169,29 @@
      1.6,
      1
     ],
-    "tris": 24,
+    "tris": 52,
     "neon": false
    },
    "Chest_Trim": {
     "attach": "UpperTorso",
     "offset": [
-     0.021,
-     0.535,
-     0.063
+     0.236,
+     0.095,
+     0.03
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 128,
+    "tris": 208,
     "neon": false
    },
    "Shoulder_L_Body": {
     "attach": "LeftUpperArm",
     "offset": [
-     0.016,
-     0.425,
+     -0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -18034,14 +18199,14 @@
      1.17,
      1
     ],
-    "tris": 36,
+    "tris": 32,
     "neon": false
    },
    "Shoulder_L_Trim": {
     "attach": "LeftUpperArm",
     "offset": [
-     0.019,
-     0.0,
+     -0.08,
+     0.36,
      0.0
     ],
     "refSize": [
@@ -18049,14 +18214,14 @@
      1.17,
      1
     ],
-    "tris": 50,
+    "tris": 44,
     "neon": false
    },
    "Shoulder_R_Body": {
     "attach": "RightUpperArm",
     "offset": [
-     0.016,
-     0.425,
+     0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -18064,14 +18229,14 @@
      1.17,
      1
     ],
-    "tris": 36,
+    "tris": 32,
     "neon": false
    },
    "Shoulder_R_Trim": {
     "attach": "RightUpperArm",
     "offset": [
-     0.019,
-     0.0,
+     0.08,
+     0.36,
      0.0
     ],
     "refSize": [
@@ -18079,22 +18244,7 @@
      1.17,
      1
     ],
-    "tris": 50,
-    "neon": false
-   },
-   "Belt_Inner": {
-    "attach": "LowerTorso",
-    "offset": [
-     0.02,
-     -0.055,
-     -0.032
-    ],
-    "refSize": [
-     2,
-     0.4,
-     1
-    ],
-    "tris": 84,
+    "tris": 44,
     "neon": false
    }
   },
@@ -18102,16 +18252,16 @@
    "Chest_Attach": {
     "attach": "UpperTorso",
     "offset": [
-     -0.55,
-     -0.1,
-     -0.64
+     -0.003,
+     -0.068,
+     -0.693
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 28,
+    "tris": 42,
     "neon": false
    },
    "Chest_Body": {
@@ -18129,26 +18279,11 @@
     "tris": 104,
     "neon": false
    },
-   "Chest_Gem": {
-    "attach": "UpperTorso",
-    "offset": [
-     0.624,
-     0.506,
-     -0.7
-    ],
-    "refSize": [
-     2,
-     1.6,
-     1
-    ],
-    "tris": 14,
-    "neon": false
-   },
    "Chest_Gem_Ep": {
     "attach": "UpperTorso",
     "offset": [
      -0.311,
-     -0.024,
+     -0.016,
      -0.7
     ],
     "refSize": [
@@ -18162,8 +18297,8 @@
    "Chest_Inner": {
     "attach": "UpperTorso",
     "offset": [
-     -0.06,
-     0.03,
+     0.0,
+     -0.15,
      0.0
     ],
     "refSize": [
@@ -18171,22 +18306,22 @@
      1.6,
      1
     ],
-    "tris": 24,
+    "tris": 52,
     "neon": false
    },
    "Chest_Trim": {
     "attach": "UpperTorso",
     "offset": [
-     0.0,
-     0.478,
-     0.058
+     0.195,
+     0.095,
+     0.03
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 152,
+    "tris": 232,
     "neon": false
    },
    "Chest_Trim_Ep": {
@@ -18207,8 +18342,8 @@
    "Shoulder_L_Body": {
     "attach": "LeftUpperArm",
     "offset": [
-     0.016,
-     0.425,
+     -0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -18216,14 +18351,14 @@
      1.17,
      1
     ],
-    "tris": 36,
+    "tris": 32,
     "neon": false
    },
    "Shoulder_L_Trim": {
     "attach": "LeftUpperArm",
     "offset": [
-     0.02,
-     0.05,
+     -0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -18231,14 +18366,14 @@
      1.17,
      1
     ],
-    "tris": 100,
+    "tris": 68,
     "neon": false
    },
    "Shoulder_R_Body": {
     "attach": "RightUpperArm",
     "offset": [
-     0.016,
-     0.425,
+     0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -18246,14 +18381,14 @@
      1.17,
      1
     ],
-    "tris": 36,
+    "tris": 32,
     "neon": false
    },
    "Shoulder_R_Trim": {
     "attach": "RightUpperArm",
     "offset": [
-     0.02,
-     0.05,
+     0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -18261,22 +18396,7 @@
      1.17,
      1
     ],
-    "tris": 100,
-    "neon": false
-   },
-   "Belt_Inner": {
-    "attach": "LowerTorso",
-    "offset": [
-     0.02,
-     -0.055,
-     -0.032
-    ],
-    "refSize": [
-     2,
-     0.4,
-     1
-    ],
-    "tris": 84,
+    "tris": 68,
     "neon": false
    }
   },
@@ -18284,16 +18404,16 @@
    "Chest_Attach": {
     "attach": "UpperTorso",
     "offset": [
-     -0.55,
-     -0.1,
-     -0.64
+     -0.003,
+     -0.068,
+     -0.693
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 28,
+    "tris": 42,
     "neon": false
    },
    "Chest_Body": {
@@ -18314,8 +18434,8 @@
    "Chest_Gem": {
     "attach": "UpperTorso",
     "offset": [
-     0.31,
-     0.374,
+     0.01,
+     0.3,
      -0.7
     ],
     "refSize": [
@@ -18323,14 +18443,14 @@
      1.6,
      1
     ],
-    "tris": 34,
+    "tris": 20,
     "neon": false
    },
    "Chest_Gem_Ep": {
     "attach": "UpperTorso",
     "offset": [
      -0.311,
-     -0.024,
+     -0.016,
      -0.7
     ],
     "refSize": [
@@ -18344,23 +18464,23 @@
    "Chest_Inner": {
     "attach": "UpperTorso",
     "offset": [
-     -0.06,
-     0.03,
-     0.0
+     0.0,
+     -0.15,
+     -0.076
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 24,
+    "tris": 72,
     "neon": false
    },
    "Chest_Trim": {
     "attach": "UpperTorso",
     "offset": [
-     0.0,
-     0.31,
+     0.003,
+     0.095,
      0.013
     ],
     "refSize": [
@@ -18368,7 +18488,7 @@
      1.6,
      1
     ],
-    "tris": 252,
+    "tris": 332,
     "neon": false
    },
    "Chest_Trim_Ep": {
@@ -18389,8 +18509,8 @@
    "Shoulder_L_Body": {
     "attach": "LeftUpperArm",
     "offset": [
-     0.016,
-     0.425,
+     -0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -18398,14 +18518,14 @@
      1.17,
      1
     ],
-    "tris": 36,
+    "tris": 32,
     "neon": false
    },
    "Shoulder_L_Trim": {
     "attach": "LeftUpperArm",
     "offset": [
-     0.02,
-     0.325,
+     -0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -18413,14 +18533,14 @@
      1.17,
      1
     ],
-    "tris": 174,
+    "tris": 68,
     "neon": false
    },
    "Shoulder_R_Body": {
     "attach": "RightUpperArm",
     "offset": [
-     0.016,
-     0.425,
+     0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -18428,14 +18548,14 @@
      1.17,
      1
     ],
-    "tris": 36,
+    "tris": 32,
     "neon": false
    },
    "Shoulder_R_Trim": {
     "attach": "RightUpperArm",
     "offset": [
-     0.02,
-     0.325,
+     0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -18443,22 +18563,7 @@
      1.17,
      1
     ],
-    "tris": 174,
-    "neon": false
-   },
-   "Belt_Inner": {
-    "attach": "LowerTorso",
-    "offset": [
-     0.02,
-     -0.055,
-     -0.088
-    ],
-    "refSize": [
-     2,
-     0.4,
-     1
-    ],
-    "tris": 104,
+    "tris": 68,
     "neon": false
    }
   },
@@ -18466,16 +18571,16 @@
    "Chest_Attach": {
     "attach": "UpperTorso",
     "offset": [
-     -0.55,
-     -0.1,
-     -0.64
+     -0.003,
+     -0.068,
+     -0.693
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 28,
+    "tris": 42,
     "neon": false
    },
    "Chest_Body": {
@@ -18497,15 +18602,15 @@
     "attach": "UpperTorso",
     "offset": [
      0.0,
-     0.52,
-     -0.735
+     0.669,
+     -0.223
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 56,
+    "tris": 52,
     "neon": false
    },
    "Chest_CoreGem_Re": {
@@ -18526,8 +18631,8 @@
    "Chest_Gem": {
     "attach": "UpperTorso",
     "offset": [
-     0.31,
-     0.374,
+     0.01,
+     0.3,
      -0.7
     ],
     "refSize": [
@@ -18535,14 +18640,14 @@
      1.6,
      1
     ],
-    "tris": 34,
+    "tris": 20,
     "neon": false
    },
    "Chest_Gem_Ep": {
     "attach": "UpperTorso",
     "offset": [
      -0.311,
-     -0.024,
+     -0.016,
      -0.7
     ],
     "refSize": [
@@ -18556,23 +18661,23 @@
    "Chest_Inner": {
     "attach": "UpperTorso",
     "offset": [
-     -0.06,
-     0.03,
-     0.0
+     0.0,
+     -0.15,
+     -0.076
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 24,
+    "tris": 72,
     "neon": false
    },
    "Chest_Trim": {
     "attach": "UpperTorso",
     "offset": [
-     0.0,
-     0.31,
+     0.003,
+     0.095,
      0.013
     ],
     "refSize": [
@@ -18580,22 +18685,7 @@
      1.6,
      1
     ],
-    "tris": 332,
-    "neon": false
-   },
-   "Chest_Trim_An": {
-    "attach": "UpperTorso",
-    "offset": [
-     0.0,
-     0.86,
-     0.32
-    ],
-    "refSize": [
-     2,
-     1.6,
-     1
-    ],
-    "tris": 28,
+    "tris": 412,
     "neon": false
    },
    "Chest_Trim_Ep": {
@@ -18616,8 +18706,8 @@
    "Shoulder_L_Body": {
     "attach": "LeftUpperArm",
     "offset": [
-     0.016,
-     0.425,
+     -0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -18625,14 +18715,14 @@
      1.17,
      1
     ],
-    "tris": 36,
+    "tris": 32,
     "neon": false
    },
    "Shoulder_L_Trim": {
     "attach": "LeftUpperArm",
     "offset": [
-     0.02,
-     0.325,
+     -0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -18640,14 +18730,14 @@
      1.17,
      1
     ],
-    "tris": 174,
+    "tris": 68,
     "neon": false
    },
    "Shoulder_R_Body": {
     "attach": "RightUpperArm",
     "offset": [
-     0.016,
-     0.425,
+     0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -18655,14 +18745,14 @@
      1.17,
      1
     ],
-    "tris": 36,
+    "tris": 32,
     "neon": false
    },
    "Shoulder_R_Trim": {
     "attach": "RightUpperArm",
     "offset": [
-     0.02,
-     0.325,
+     0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -18670,22 +18760,7 @@
      1.17,
      1
     ],
-    "tris": 174,
-    "neon": false
-   },
-   "Belt_Inner": {
-    "attach": "LowerTorso",
-    "offset": [
-     0.02,
-     -0.055,
-     -0.088
-    ],
-    "refSize": [
-     2,
-     0.4,
-     1
-    ],
-    "tris": 104,
+    "tris": 68,
     "neon": false
    },
    "Float_Float": {
@@ -18708,16 +18783,16 @@
    "Chest_Attach": {
     "attach": "UpperTorso",
     "offset": [
-     -0.55,
-     -0.1,
-     -0.64
+     -0.003,
+     -0.068,
+     -0.693
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 28,
+    "tris": 42,
     "neon": false
    },
    "Chest_Body": {
@@ -18753,23 +18828,23 @@
    "Chest_Crack_Tr": {
     "attach": "UpperTorso",
     "offset": [
-     0.02,
-     -0.017,
-     -0.719
+     0.0,
+     0.53,
+     -0.045
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 36,
+    "tris": 84,
     "neon": true
    },
    "Chest_Gem": {
     "attach": "UpperTorso",
     "offset": [
-     0.31,
-     0.374,
+     0.01,
+     0.3,
      -0.7
     ],
     "refSize": [
@@ -18777,14 +18852,14 @@
      1.6,
      1
     ],
-    "tris": 34,
+    "tris": 20,
     "neon": false
    },
    "Chest_Gem_Ep": {
     "attach": "UpperTorso",
     "offset": [
      -0.311,
-     -0.024,
+     -0.016,
      -0.7
     ],
     "refSize": [
@@ -18798,23 +18873,23 @@
    "Chest_Inner": {
     "attach": "UpperTorso",
     "offset": [
-     -0.06,
-     0.03,
-     0.0
+     0.0,
+     -0.15,
+     -0.076
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 24,
+    "tris": 72,
     "neon": false
    },
    "Chest_Trim": {
     "attach": "UpperTorso",
     "offset": [
-     0.0,
-     0.31,
+     0.003,
+     0.095,
      0.018
     ],
     "refSize": [
@@ -18822,22 +18897,7 @@
      1.6,
      1
     ],
-    "tris": 332,
-    "neon": false
-   },
-   "Chest_Trim_An": {
-    "attach": "UpperTorso",
-    "offset": [
-     0.0,
-     0.86,
-     0.32
-    ],
-    "refSize": [
-     2,
-     1.6,
-     1
-    ],
-    "tris": 28,
+    "tris": 412,
     "neon": false
    },
    "Chest_Trim_Ep": {
@@ -18858,8 +18918,8 @@
    "Shoulder_L_Body": {
     "attach": "LeftUpperArm",
     "offset": [
-     0.016,
-     0.425,
+     -0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -18867,14 +18927,14 @@
      1.17,
      1
     ],
-    "tris": 36,
+    "tris": 32,
     "neon": false
    },
    "Shoulder_L_Trim": {
     "attach": "LeftUpperArm",
     "offset": [
-     0.02,
-     0.405,
+     -0.08,
+     0.607,
      0.0
     ],
     "refSize": [
@@ -18882,14 +18942,14 @@
      1.17,
      1
     ],
-    "tris": 148,
+    "tris": 92,
     "neon": false
    },
    "Shoulder_R_Body": {
     "attach": "RightUpperArm",
     "offset": [
-     0.016,
-     0.425,
+     0.08,
+     0.492,
      0.0
     ],
     "refSize": [
@@ -18897,14 +18957,14 @@
      1.17,
      1
     ],
-    "tris": 36,
+    "tris": 32,
     "neon": false
    },
    "Shoulder_R_Trim": {
     "attach": "RightUpperArm",
     "offset": [
-     0.02,
-     0.405,
+     0.08,
+     0.607,
      0.0
     ],
     "refSize": [
@@ -18912,25 +18972,10 @@
      1.17,
      1
     ],
-    "tris": 148,
+    "tris": 92,
     "neon": false
    },
-   "Belt_Inner": {
-    "attach": "LowerTorso",
-    "offset": [
-     0.02,
-     -0.055,
-     -0.088
-    ],
-    "refSize": [
-     2,
-     0.4,
-     1
-    ],
-    "tris": 104,
-    "neon": false
-   },
-   "Float_Float": {
+   "Float_Float_Pr": {
     "attach": "UpperTorso",
     "offset": [
      0.0,
@@ -18977,11 +19022,11 @@
     "tris": 64,
     "neon": false
    },
-   "Bracer_L_Body": {
+   "Bracer_L_Band": {
     "attach": "LeftLowerArm",
     "offset": [
-     0.037,
-     -0.11,
+     0.0,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -18989,14 +19034,14 @@
      1.05,
      1
     ],
-    "tris": 168,
+    "tris": 72,
     "neon": false
    },
-   "Bracer_R_Body": {
+   "Bracer_R_Band": {
     "attach": "RightLowerArm",
     "offset": [
      0.0,
-     -0.41,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -19004,7 +19049,7 @@
      1.05,
      1
     ],
-    "tris": 28,
+    "tris": 72,
     "neon": false
    }
   },
@@ -19039,11 +19084,11 @@
     "tris": 64,
     "neon": false
    },
-   "Bracer_L_Body": {
+   "Bracer_L_Band": {
     "attach": "LeftLowerArm",
     "offset": [
-     0.037,
-     -0.11,
+     0.0,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -19051,14 +19096,14 @@
      1.05,
      1
     ],
-    "tris": 168,
+    "tris": 72,
     "neon": false
    },
-   "Bracer_R_Body": {
+   "Bracer_R_Band": {
     "attach": "RightLowerArm",
     "offset": [
      0.0,
-     -0.41,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -19066,7 +19111,7 @@
      1.05,
      1
     ],
-    "tris": 28,
+    "tris": 72,
     "neon": false
    }
   },
@@ -19101,11 +19146,11 @@
     "tris": 64,
     "neon": false
    },
-   "Bracer_L_Body": {
+   "Bracer_L_Band": {
     "attach": "LeftLowerArm",
     "offset": [
-     0.037,
-     -0.11,
+     0.0,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -19113,14 +19158,14 @@
      1.05,
      1
     ],
-    "tris": 200,
+    "tris": 72,
     "neon": false
    },
-   "Bracer_R_Body": {
+   "Bracer_R_Band": {
     "attach": "RightLowerArm",
     "offset": [
      0.0,
-     -0.122,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -19128,7 +19173,7 @@
      1.05,
      1
     ],
-    "tris": 60,
+    "tris": 72,
     "neon": false
    }
   },
@@ -19163,11 +19208,11 @@
     "tris": 64,
     "neon": false
    },
-   "Bracer_L_Body": {
+   "Bracer_L_Band": {
     "attach": "LeftLowerArm",
     "offset": [
-     0.037,
-     -0.11,
+     0.0,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -19175,14 +19220,14 @@
      1.05,
      1
     ],
-    "tris": 200,
+    "tris": 72,
     "neon": false
    },
-   "Bracer_R_Body": {
+   "Bracer_R_Band": {
     "attach": "RightLowerArm",
     "offset": [
      0.0,
-     -0.122,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -19190,7 +19235,7 @@
      1.05,
      1
     ],
-    "tris": 60,
+    "tris": 72,
     "neon": false
    }
   },
@@ -19225,11 +19270,11 @@
     "tris": 64,
     "neon": false
    },
-   "Bracer_L_Body": {
+   "Bracer_L_Band": {
     "attach": "LeftLowerArm",
     "offset": [
-     0.037,
-     -0.11,
+     0.0,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -19237,14 +19282,14 @@
      1.05,
      1
     ],
-    "tris": 200,
+    "tris": 72,
     "neon": false
    },
-   "Bracer_R_Body": {
+   "Bracer_R_Band": {
     "attach": "RightLowerArm",
     "offset": [
      0.0,
-     -0.122,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -19252,7 +19297,7 @@
      1.05,
      1
     ],
-    "tris": 60,
+    "tris": 72,
     "neon": false
    }
   },
@@ -19287,11 +19332,26 @@
     "tris": 80,
     "neon": false
    },
+   "Greave_L_Band": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
+    "neon": false
+   },
    "Greave_L_Body": {
     "attach": "LeftLowerLeg",
     "offset": [
      0.0,
-     -0.04,
+     -0.41,
      0.0
     ],
     "refSize": [
@@ -19299,14 +19359,29 @@
      1.19,
      1
     ],
-    "tris": 100,
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Band": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
     "neon": false
    },
    "Greave_R_Body": {
     "attach": "RightLowerLeg",
     "offset": [
      0.0,
-     -0.04,
+     -0.41,
      0.0
     ],
     "refSize": [
@@ -19314,7 +19389,7 @@
      1.19,
      1
     ],
-    "tris": 100,
+    "tris": 28,
     "neon": false
    }
   },
@@ -19349,11 +19424,26 @@
     "tris": 80,
     "neon": false
    },
+   "Greave_L_Band": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
+    "neon": false
+   },
    "Greave_L_Body": {
     "attach": "LeftLowerLeg",
     "offset": [
      0.0,
-     -0.04,
+     -0.41,
      0.0
     ],
     "refSize": [
@@ -19361,14 +19451,29 @@
      1.19,
      1
     ],
-    "tris": 100,
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Band": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
     "neon": false
    },
    "Greave_R_Body": {
     "attach": "RightLowerLeg",
     "offset": [
      0.0,
-     -0.04,
+     -0.41,
      0.0
     ],
     "refSize": [
@@ -19376,7 +19481,7 @@
      1.19,
      1
     ],
-    "tris": 100,
+    "tris": 28,
     "neon": false
    }
   },
@@ -19411,11 +19516,26 @@
     "tris": 80,
     "neon": false
    },
+   "Greave_L_Band": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
+    "neon": false
+   },
    "Greave_L_Body": {
     "attach": "LeftLowerLeg",
     "offset": [
      0.0,
-     -0.04,
+     -0.41,
      0.0
     ],
     "refSize": [
@@ -19423,14 +19543,29 @@
      1.19,
      1
     ],
-    "tris": 132,
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Band": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
     "neon": false
    },
    "Greave_R_Body": {
     "attach": "RightLowerLeg",
     "offset": [
      0.0,
-     -0.04,
+     -0.41,
      0.0
     ],
     "refSize": [
@@ -19438,7 +19573,7 @@
      1.19,
      1
     ],
-    "tris": 132,
+    "tris": 28,
     "neon": false
    }
   },
@@ -19473,11 +19608,26 @@
     "tris": 80,
     "neon": false
    },
+   "Greave_L_Band": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
+    "neon": false
+   },
    "Greave_L_Body": {
     "attach": "LeftLowerLeg",
     "offset": [
      0.0,
-     -0.04,
+     -0.41,
      0.0
     ],
     "refSize": [
@@ -19485,14 +19635,29 @@
      1.19,
      1
     ],
-    "tris": 132,
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Band": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
     "neon": false
    },
    "Greave_R_Body": {
     "attach": "RightLowerLeg",
     "offset": [
      0.0,
-     -0.04,
+     -0.41,
      0.0
     ],
     "refSize": [
@@ -19500,7 +19665,7 @@
      1.19,
      1
     ],
-    "tris": 132,
+    "tris": 28,
     "neon": false
    }
   },
@@ -19535,11 +19700,26 @@
     "tris": 80,
     "neon": false
    },
+   "Greave_L_Band": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
+    "neon": false
+   },
    "Greave_L_Body": {
     "attach": "LeftLowerLeg",
     "offset": [
      0.0,
-     -0.04,
+     -0.41,
      0.0
     ],
     "refSize": [
@@ -19547,14 +19727,29 @@
      1.19,
      1
     ],
-    "tris": 132,
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Band": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
     "neon": false
    },
    "Greave_R_Body": {
     "attach": "RightLowerLeg",
     "offset": [
      0.0,
-     -0.04,
+     -0.41,
      0.0
     ],
     "refSize": [
@@ -19562,7 +19757,7 @@
      1.19,
      1
     ],
-    "tris": 132,
+    "tris": 28,
     "neon": false
    }
   },
@@ -19601,15 +19796,15 @@
     "attach": "UpperTorso",
     "offset": [
      0.0,
-     0.065,
-     -0.132
+     -0.12,
+     -0.067
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 112,
+    "tris": 192,
     "neon": false
    },
    "Shoulder_L_Body": {
@@ -19667,21 +19862,6 @@
     "refSize": [
      1,
      1.17,
-     1
-    ],
-    "tris": 56,
-    "neon": false
-   },
-   "Belt_Inner": {
-    "attach": "LowerTorso",
-    "offset": [
-     0.0,
-     -0.01,
-     -0.035
-    ],
-    "refSize": [
-     2,
-     0.4,
      1
     ],
     "tris": 56,
@@ -19722,16 +19902,16 @@
    "Chest_Attach": {
     "attach": "UpperTorso",
     "offset": [
-     0.0,
-     -0.15,
-     -0.66
+     0.237,
+     -0.118,
+     -0.7
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 28,
+    "tris": 42,
     "neon": false
    },
    "Chest_Body": {
@@ -19749,26 +19929,11 @@
     "tris": 44,
     "neon": false
    },
-   "Chest_Gem": {
-    "attach": "UpperTorso",
-    "offset": [
-     0.624,
-     0.506,
-     -0.7
-    ],
-    "refSize": [
-     2,
-     1.6,
-     1
-    ],
-    "tris": 14,
-    "neon": false
-   },
    "Chest_Gem_Ep": {
     "attach": "UpperTorso",
     "offset": [
      -0.311,
-     -0.024,
+     -0.016,
      -0.7
     ],
     "refSize": [
@@ -19783,15 +19948,15 @@
     "attach": "UpperTorso",
     "offset": [
      0.0,
-     0.065,
-     -0.132
+     -0.12,
+     -0.067
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 136,
+    "tris": 216,
     "neon": false
    },
    "Chest_Trim_Ep": {
@@ -19867,21 +20032,6 @@
      1
     ],
     "tris": 106,
-    "neon": false
-   },
-   "Belt_Inner": {
-    "attach": "LowerTorso",
-    "offset": [
-     0.0,
-     -0.01,
-     -0.035
-    ],
-    "refSize": [
-     2,
-     0.4,
-     1
-    ],
-    "tris": 56,
     "neon": false
    },
    "Tasset_L_Body": {
@@ -19919,16 +20069,16 @@
    "Chest_Attach": {
     "attach": "UpperTorso",
     "offset": [
-     0.0,
-     -0.15,
-     -0.66
+     0.237,
+     -0.118,
+     -0.7
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 28,
+    "tris": 42,
     "neon": false
    },
    "Chest_Body": {
@@ -19949,8 +20099,8 @@
    "Chest_Gem": {
     "attach": "UpperTorso",
     "offset": [
-     0.31,
-     0.374,
+     0.01,
+     0.3,
      -0.7
     ],
     "refSize": [
@@ -19958,14 +20108,14 @@
      1.6,
      1
     ],
-    "tris": 34,
+    "tris": 20,
     "neon": false
    },
    "Chest_Gem_Ep": {
     "attach": "UpperTorso",
     "offset": [
      -0.311,
-     -0.024,
+     -0.016,
      -0.7
     ],
     "refSize": [
@@ -19976,19 +20126,34 @@
     "tris": 28,
     "neon": false
    },
-   "Chest_Trim": {
+   "Chest_Inner": {
     "attach": "UpperTorso",
     "offset": [
-     0.0,
-     0.06,
-     -0.086
+     0.007,
+     -0.98,
+     -0.7
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 236,
+    "tris": 20,
+    "neon": false
+   },
+   "Chest_Trim": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -0.12,
+     -0.085
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 316,
     "neon": false
    },
    "Chest_Trim_Ep": {
@@ -20064,21 +20229,6 @@
      1
     ],
     "tris": 180,
-    "neon": false
-   },
-   "Belt_Inner": {
-    "attach": "LowerTorso",
-    "offset": [
-     0.0,
-     -0.01,
-     -0.088
-    ],
-    "refSize": [
-     2,
-     0.4,
-     1
-    ],
-    "tris": 76,
     "neon": false
    },
    "Tasset_L_Body": {
@@ -20116,16 +20266,16 @@
    "Chest_Attach": {
     "attach": "UpperTorso",
     "offset": [
-     0.0,
-     -0.15,
-     -0.66
+     0.237,
+     -0.118,
+     -0.7
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 28,
+    "tris": 42,
     "neon": false
    },
    "Chest_Body": {
@@ -20147,15 +20297,15 @@
     "attach": "UpperTorso",
     "offset": [
      0.0,
-     0.52,
-     -0.735
+     0.669,
+     -0.223
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 56,
+    "tris": 52,
     "neon": false
    },
    "Chest_CoreGem_Re": {
@@ -20176,8 +20326,8 @@
    "Chest_Gem": {
     "attach": "UpperTorso",
     "offset": [
-     0.31,
-     0.374,
+     0.01,
+     0.3,
      -0.7
     ],
     "refSize": [
@@ -20185,14 +20335,14 @@
      1.6,
      1
     ],
-    "tris": 34,
+    "tris": 20,
     "neon": false
    },
    "Chest_Gem_Ep": {
     "attach": "UpperTorso",
     "offset": [
      -0.311,
-     -0.024,
+     -0.016,
      -0.7
     ],
     "refSize": [
@@ -20203,34 +20353,34 @@
     "tris": 28,
     "neon": false
    },
+   "Chest_Inner": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.007,
+     -0.98,
+     -0.7
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
    "Chest_Trim": {
     "attach": "UpperTorso",
     "offset": [
      0.0,
-     0.06,
-     -0.086
+     -0.12,
+     -0.085
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 316,
-    "neon": false
-   },
-   "Chest_Trim_An": {
-    "attach": "UpperTorso",
-    "offset": [
-     0.0,
-     0.86,
-     0.32
-    ],
-    "refSize": [
-     2,
-     1.6,
-     1
-    ],
-    "tris": 28,
+    "tris": 396,
     "neon": false
    },
    "Chest_Trim_Ep": {
@@ -20306,21 +20456,6 @@
      1
     ],
     "tris": 180,
-    "neon": false
-   },
-   "Belt_Inner": {
-    "attach": "LowerTorso",
-    "offset": [
-     0.0,
-     -0.01,
-     -0.088
-    ],
-    "refSize": [
-     2,
-     0.4,
-     1
-    ],
-    "tris": 76,
     "neon": false
    },
    "Tasset_L_Body": {
@@ -20373,16 +20508,16 @@
    "Chest_Attach": {
     "attach": "UpperTorso",
     "offset": [
-     0.0,
-     -0.15,
-     -0.66
+     0.237,
+     -0.118,
+     -0.7
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 28,
+    "tris": 42,
     "neon": false
    },
    "Chest_Body": {
@@ -20418,23 +20553,23 @@
    "Chest_Crack_Tr": {
     "attach": "UpperTorso",
     "offset": [
-     0.02,
-     -0.017,
-     -0.719
+     0.0,
+     0.349,
+     -0.241
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 36,
+    "tris": 100,
     "neon": true
    },
    "Chest_Gem": {
     "attach": "UpperTorso",
     "offset": [
-     0.31,
-     0.374,
+     0.01,
+     0.3,
      -0.7
     ],
     "refSize": [
@@ -20442,14 +20577,14 @@
      1.6,
      1
     ],
-    "tris": 34,
+    "tris": 20,
     "neon": false
    },
    "Chest_Gem_Ep": {
     "attach": "UpperTorso",
     "offset": [
      -0.311,
-     -0.024,
+     -0.016,
      -0.7
     ],
     "refSize": [
@@ -20460,34 +20595,34 @@
     "tris": 28,
     "neon": false
    },
+   "Chest_Inner": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.007,
+     -0.98,
+     -0.7
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 20,
+    "neon": false
+   },
    "Chest_Trim": {
     "attach": "UpperTorso",
     "offset": [
      0.0,
-     0.07,
-     -0.081
+     -0.11,
+     -0.08
     ],
     "refSize": [
      2,
      1.6,
      1
     ],
-    "tris": 316,
-    "neon": false
-   },
-   "Chest_Trim_An": {
-    "attach": "UpperTorso",
-    "offset": [
-     0.0,
-     0.86,
-     0.32
-    ],
-    "refSize": [
-     2,
-     1.6,
-     1
-    ],
-    "tris": 28,
+    "tris": 396,
     "neon": false
    },
    "Chest_Trim_Ep": {
@@ -20565,21 +20700,6 @@
     "tris": 154,
     "neon": false
    },
-   "Belt_Inner": {
-    "attach": "LowerTorso",
-    "offset": [
-     0.0,
-     -0.01,
-     -0.088
-    ],
-    "refSize": [
-     2,
-     0.4,
-     1
-    ],
-    "tris": 76,
-    "neon": false
-   },
    "Tasset_L_Body": {
     "attach": "LeftUpperLeg",
     "offset": [
@@ -20610,7 +20730,7 @@
     "tris": 152,
     "neon": false
    },
-   "Float_Float": {
+   "Float_Float_Pr": {
     "attach": "UpperTorso",
     "offset": [
      0.0,
@@ -20657,11 +20777,11 @@
     "tris": 28,
     "neon": false
    },
-   "Bracer_L_Body": {
+   "Bracer_L_Band": {
     "attach": "LeftLowerArm",
     "offset": [
      0.0,
-     0.035,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -20669,14 +20789,14 @@
      1.05,
      1
     ],
-    "tris": 116,
+    "tris": 72,
     "neon": false
    },
-   "Bracer_R_Body": {
+   "Bracer_R_Band": {
     "attach": "RightLowerArm",
     "offset": [
      0.0,
-     0.035,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -20684,7 +20804,7 @@
      1.05,
      1
     ],
-    "tris": 116,
+    "tris": 72,
     "neon": false
    }
   },
@@ -20719,11 +20839,11 @@
     "tris": 28,
     "neon": false
    },
-   "Bracer_L_Body": {
+   "Bracer_L_Band": {
     "attach": "LeftLowerArm",
     "offset": [
      0.0,
-     0.035,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -20731,14 +20851,14 @@
      1.05,
      1
     ],
-    "tris": 116,
+    "tris": 72,
     "neon": false
    },
-   "Bracer_R_Body": {
+   "Bracer_R_Band": {
     "attach": "RightLowerArm",
     "offset": [
      0.0,
-     0.035,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -20746,7 +20866,7 @@
      1.05,
      1
     ],
-    "tris": 116,
+    "tris": 72,
     "neon": false
    }
   },
@@ -20781,11 +20901,11 @@
     "tris": 28,
     "neon": false
    },
-   "Bracer_L_Body": {
+   "Bracer_L_Band": {
     "attach": "LeftLowerArm",
     "offset": [
      0.0,
-     0.035,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -20793,14 +20913,14 @@
      1.05,
      1
     ],
-    "tris": 148,
+    "tris": 72,
     "neon": false
    },
-   "Bracer_R_Body": {
+   "Bracer_R_Band": {
     "attach": "RightLowerArm",
     "offset": [
      0.0,
-     0.035,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -20808,7 +20928,7 @@
      1.05,
      1
     ],
-    "tris": 148,
+    "tris": 72,
     "neon": false
    }
   },
@@ -20843,11 +20963,11 @@
     "tris": 28,
     "neon": false
    },
-   "Bracer_L_Body": {
+   "Bracer_L_Band": {
     "attach": "LeftLowerArm",
     "offset": [
      0.0,
-     0.035,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -20855,14 +20975,14 @@
      1.05,
      1
     ],
-    "tris": 148,
+    "tris": 72,
     "neon": false
    },
-   "Bracer_R_Body": {
+   "Bracer_R_Band": {
     "attach": "RightLowerArm",
     "offset": [
      0.0,
-     0.035,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -20870,7 +20990,7 @@
      1.05,
      1
     ],
-    "tris": 148,
+    "tris": 72,
     "neon": false
    }
   },
@@ -20905,11 +21025,11 @@
     "tris": 28,
     "neon": false
    },
-   "Bracer_L_Body": {
+   "Bracer_L_Band": {
     "attach": "LeftLowerArm",
     "offset": [
      0.0,
-     0.035,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -20917,14 +21037,14 @@
      1.05,
      1
     ],
-    "tris": 148,
+    "tris": 72,
     "neon": false
    },
-   "Bracer_R_Body": {
+   "Bracer_R_Band": {
     "attach": "RightLowerArm",
     "offset": [
      0.0,
-     0.035,
+     -0.35,
      0.0
     ],
     "refSize": [
@@ -20932,7 +21052,7 @@
      1.05,
      1
     ],
-    "tris": 148,
+    "tris": 72,
     "neon": false
    }
   },
@@ -20967,11 +21087,26 @@
     "tris": 72,
     "neon": false
    },
+   "Greave_L_Band": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
+    "neon": false
+   },
    "Greave_L_Body": {
     "attach": "LeftLowerLeg",
     "offset": [
      0.0,
-     -0.325,
+     -0.41,
      0.0
     ],
     "refSize": [
@@ -20979,14 +21114,29 @@
      1.19,
      1
     ],
-    "tris": 116,
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Band": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
     "neon": false
    },
    "Greave_R_Body": {
     "attach": "RightLowerLeg",
     "offset": [
      0.0,
-     -0.325,
+     -0.41,
      0.0
     ],
     "refSize": [
@@ -20994,7 +21144,7 @@
      1.19,
      1
     ],
-    "tris": 116,
+    "tris": 28,
     "neon": false
    }
   },
@@ -21029,11 +21179,26 @@
     "tris": 72,
     "neon": false
    },
+   "Greave_L_Band": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
+    "neon": false
+   },
    "Greave_L_Body": {
     "attach": "LeftLowerLeg",
     "offset": [
      0.0,
-     -0.325,
+     -0.41,
      0.0
     ],
     "refSize": [
@@ -21041,14 +21206,29 @@
      1.19,
      1
     ],
-    "tris": 116,
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Band": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
     "neon": false
    },
    "Greave_R_Body": {
     "attach": "RightLowerLeg",
     "offset": [
      0.0,
-     -0.325,
+     -0.41,
      0.0
     ],
     "refSize": [
@@ -21056,7 +21236,7 @@
      1.19,
      1
     ],
-    "tris": 116,
+    "tris": 28,
     "neon": false
    }
   },
@@ -21091,11 +21271,26 @@
     "tris": 72,
     "neon": false
    },
+   "Greave_L_Band": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
+    "neon": false
+   },
    "Greave_L_Body": {
     "attach": "LeftLowerLeg",
     "offset": [
      0.0,
-     -0.112,
+     -0.41,
      0.0
     ],
     "refSize": [
@@ -21103,14 +21298,29 @@
      1.19,
      1
     ],
-    "tris": 148,
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Band": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
     "neon": false
    },
    "Greave_R_Body": {
     "attach": "RightLowerLeg",
     "offset": [
      0.0,
-     -0.112,
+     -0.41,
      0.0
     ],
     "refSize": [
@@ -21118,7 +21328,7 @@
      1.19,
      1
     ],
-    "tris": 148,
+    "tris": 28,
     "neon": false
    }
   },
@@ -21153,11 +21363,26 @@
     "tris": 72,
     "neon": false
    },
+   "Greave_L_Band": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
+    "neon": false
+   },
    "Greave_L_Body": {
     "attach": "LeftLowerLeg",
     "offset": [
      0.0,
-     -0.112,
+     -0.41,
      0.0
     ],
     "refSize": [
@@ -21165,14 +21390,29 @@
      1.19,
      1
     ],
-    "tris": 148,
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Band": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
     "neon": false
    },
    "Greave_R_Body": {
     "attach": "RightLowerLeg",
     "offset": [
      0.0,
-     -0.112,
+     -0.41,
      0.0
     ],
     "refSize": [
@@ -21180,7 +21420,7 @@
      1.19,
      1
     ],
-    "tris": 148,
+    "tris": 28,
     "neon": false
    }
   },
@@ -21215,11 +21455,26 @@
     "tris": 72,
     "neon": false
    },
+   "Greave_L_Band": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
+    "neon": false
+   },
    "Greave_L_Body": {
     "attach": "LeftLowerLeg",
     "offset": [
      0.0,
-     -0.112,
+     -0.41,
      0.0
     ],
     "refSize": [
@@ -21227,14 +21482,29 @@
      1.19,
      1
     ],
-    "tris": 148,
+    "tris": 28,
+    "neon": false
+   },
+   "Greave_R_Band": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.152,
+     -0.051
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 76,
     "neon": false
    },
    "Greave_R_Body": {
     "attach": "RightLowerLeg",
     "offset": [
      0.0,
-     -0.112,
+     -0.41,
      0.0
     ],
     "refSize": [
@@ -21242,7 +21512,7 @@
      1.19,
      1
     ],
-    "tris": 148,
+    "tris": 28,
     "neon": false
    }
   },
@@ -21320,7 +21590,7 @@
     "offset": [
      0.0,
      0.066,
-     -0.73
+     -0.733
     ],
     "refSize": [
      2,

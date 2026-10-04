@@ -27,6 +27,7 @@ CLASSES = AC.CLASSES
 SLOTS = AC.SLOTS
 STAGES = ["s1", "s2", "s3", "s4", "s5"]
 # GearV3Data.budget 미러(7절)
+BUDGET_S5_ARMOR = 1600  # LOOK2: 태초 · 초월(s5)만 추가 예산 허용(상한 1,600 · 실제 값 보고)
 BUDGET = {"armor": 1500, "gloves": 500, "shoes": 500, "weapon": 800, "float": 300, "coreGem": 120}
 PARTS_PER_PLAYER = 24
 # 단계 → make_armor_class 외형(바탕 장식 단계)
@@ -34,12 +35,15 @@ BASE_LOOK = {"s1": "normal", "s2": "normal", "s3": "legendary", "s4": "legendary
 # 단계 → 무기 등급(make_weapons 형태) · 문(같은 단계 위 등급 무기)
 WEAPON_GRADE = {"s1": "normal", "s2": "rare", "s3": "legendary", "s4": "relic", "s5": "primordial"}
 # 미리보기 색(렌더 전용 - 게임 색은 코드가 칠한다: 석조 평원 · 그 단계 아래 등급)
-PREVIEW = {"Body": (146, 153, 161), "Trim": (193, 198, 204), "Inner": (98, 107, 117), "Attach": (102, 131, 74), "Gem": (168, 121, 69),
+PREVIEW = {"Band": (36, 120, 212), "Body": (146, 153, 161), "Trim": (193, 198, 204), "Inner": (98, 107, 117), "Attach": (102, 131, 74), "Gem": (168, 121, 69),
            "CoreGem": (185, 47, 72), "Float": (240, 107, 118), "Crack": (216, 185, 110), "Emblem": (168, 121, 69)}
 NEON = {"CoreGem": False, "Float": True, "Crack": True}
 # 조각 종류 → 쓸 수 있는 구역(첫째 = 대표 - 나머지는 대표로 합침)
-ZONES_OF = {"Chest": ["Body", "Trim", "Inner", "Attach", "Gem", "CoreGem", "Crack"], "Shoulder": ["Body", "Trim"], "Belt": ["Inner"], "Tasset": ["Body"],
-            "Glove": ["Inner"], "Bracer": ["Body"], "Boot": ["Inner"], "Greave": ["Body"]}
+ZONES_OF = {"Chest": ["Body", "Trim", "Inner", "Attach", "Gem", "CoreGem", "Crack"], "Shoulder": ["Body", "Trim"], "Belt": ["Inner", "Trim"], "Tasset": ["Body"],
+            "Glove": ["Inner"], "Bracer": ["Band"], "Boot": ["Inner"], "Greave": ["Body", "Band"], "Knee": ["Body"]}
+# QUEUE-ALL9E1 LOOK2(10-04 밤): 형태 보강 켬 - 어깨 둥근 겹판 · 짧은 커프 + 등급 띠(Band) · 무릎 판(새 조각 Knee) · 벨트 버클 · 문장 돌출 · 보석 크게(새 모델링 없이 저폴리 부착물)
+LOOK2 = True
+LOOK2_EXTRA_PIECES = {}  # (무릎 판은 정강이 Band에 합침 - 1인 MeshPart ≤ 24)
 # make_armor_class 역할 → v3 구역(대검 가슴 태바드 · 등 망토 = 세트 천 = Attach)
 ROLE_ZONE = {"base": "Body", "steel": "Body", "leather": "Inner", "trim": "Trim", "grade": "Trim", "glow": "Gem"}
 
@@ -54,20 +58,24 @@ def facet_lathe(profile, n):
     return A.xform(A.lathe(profile, n), m=A.rot(rx=90))
 
 
-def cabochon(c, r=0.09):  # 희귀 · 영웅 · 전설: 둥근 면 6 ~ 8
-    return A.xform(A.ellipsoid((r, r * 0.8, r * 0.5), n=7, rings=2, squash_bottom=0.2), t=c)
+def cabochon(c, r=0.09):  # 희귀 · 영웅 · 전설: 둥근 면 6 ~ 8 · LOOK2 = 1.3배 · 도톰하게(납작 → 깊이 0.7)
+    r = r * (1.3 if LOOK2 else 1.0)
+    return A.xform(A.ellipsoid((r, r * 0.8, r * (0.7 if LOOK2 else 0.5)), n=7, rings=2, squash_bottom=0.2), t=c)
 
 
 def oval_facet(c, r=0.15):  # 유물 루비 오벌(면 10 ~ 14)
+    r = r * (1.35 if LOOK2 else 1.0)
     g = facet_lathe([(0.0, 0.07), (r * 0.62, 0.07), (r, 0.0), (r * 0.5, -0.05), (0.0, -0.07)], 12)
     return A.xform(g, s=(1.0, 1.3, 1.0), t=c)
 
 
 def step_cut(c, w=0.26, h=0.2):  # 고대 에메랄드 스텝 컷(직사각 계단 면)
-    return A.merge(A.box(w, h, 0.06, b=0.03, center=(c[0], c[1], c[2] + 0.02)), A.box(w * 0.7, h * 0.66, 0.06, b=0.02, center=(c[0], c[1], c[2] - 0.03)))
+    w, h = (w * 1.35, h * 1.35) if LOOK2 else (w, h)
+    return A.merge(A.box(w, h, 0.06, center=(c[0], c[1], c[2] + 0.02)), A.box(w * 0.7, h * 0.66, 0.06, center=(c[0], c[1], c[2] - 0.03)))  # LOOK2 예산: 모따기 없음(계단 2단은 유지)
 
 
 def brilliant(c, r=0.16):  # 태초 · 초월 브릴리언트(원형 다면 16 · 위 평평)
+    r = r * (1.35 if LOOK2 else 1.0)
     return A.xform(facet_lathe([(0.0, 0.08), (r * 0.55, 0.08), (r, 0.02), (r * 0.9, -0.01), (0.0, -0.12)], 16), t=c)
 
 
@@ -76,7 +84,7 @@ def setting_ring(c, r):  # 받침 테(Trim)
 
 
 # ────────────────────────── 문장 6종(3절 - 세트 공용 · 가슴 앞) ──────────────────────────
-def plate(outline, d=0.05):
+def plate(outline, d=0.09):  # LOOK2: 문장 돌출 0.05 → 0.09
     n = len(outline)
     v = [(x, y, -d / 2) for x, y in outline] + [(x, y, d / 2) for x, y in outline]
     return v, [tuple(reversed(range(n))), tuple(range(n, 2 * n))] + [(i, (i + 1) % n, n + (i + 1) % n, n + i) for i in range(n)]
@@ -133,7 +141,7 @@ def stage_extras(cls, kind, side, stage, z):
         if n >= 2:  # s2: 가슴 문양 선 2 + 작은 세트 보석
             add("Trim", A.box(1.5, 0.05, 0.04, center=(0, 0.32, -0.66)))
             add("Trim", A.box(1.5, 0.05, 0.04, center=(0, -0.42, -0.66)))
-            add("Gem", cabochon((0.62, 0.48, -0.7), 0.08))
+            add("Attach" if LOOK2 else "Gem", cabochon((0.62, 0.48, -0.7), 0.08))  # LOOK2: 세트 천 조각에 합침(조각 수 - 세트 색2는 문장이 유지)
             add("Gem", A.merge(cabochon((-0.62, 0.48, -0.7), 0.08), cabochon((0.0, -0.58, -0.7), 0.07)), "Ep")  # 영웅 = 보석 2 더
             add("Trim", AW.ring_y(-0.7, 1.11, 0.62, 0.02, 0.05, n=10), "Ep")  # 이중 테두리
         if 3 <= n <= 4:  # s3 · s4: 금속 테두리(look legendary 바탕) + 문장 받침 테(s5 = 목깃 · 균열이 대신)
@@ -143,7 +151,7 @@ def stage_extras(cls, kind, side, stage, z):
             add("CoreGem", oval_facet(CORE_AT, 0.13), "Re")
             add("CoreGem", step_cut(CORE_AT, 0.24, 0.18), "An")
             add("Trim", setting_ring(CORE_AT, 0.16))
-            add("Trim", A.xform(A.box(1.6, 0.16, 0.05, b=0.03), t=(0, 0.86, 0.32)), "An")  # 고대 = 목 뒤 관 · 깃 층
+            add("CoreGem" if LOOK2 else "Trim", A.xform(A.box(1.6, 0.16, 0.05, b=0.03), t=(0, 0.86, 0.32)), "An")  # 고대 = 목 뒤 관 · 깃 층(LOOK2 = 에메랄드 조각에 합침 - 조각 수)
         if n >= 5:  # s5: 브릴리언트 핵심 보석 + 넓은 목깃(치유사 = 왕관형) + 초월 균열
             z.pop(("CoreGem", "Re"), None)
             z.pop(("CoreGem", "An"), None)
@@ -181,9 +189,50 @@ def float_geo(cls, stage):
     return A.merge(*[A.shard(size, seed=i, center=p) for i, p in enumerate(pts)])
 
 
+def look2_piece(cls, kind, side, stage):
+    """LOOK2 형태 보강 - 이 조각을 통째로 바꾸면 { (구역, 문): [geo] } · 아니면 None(바탕 그대로)"""
+    if not LOOK2:
+        return None
+    n = STAGES.index(stage) + 1
+    z = {}
+
+    def add(zone, geo):
+        z.setdefault((zone, None), []).append(geo)
+
+    if kind == "Shoulder" and cls != "healer":  # 둥근 겹판(아래로 갈수록 작게 · 바깥으로 비켜 겹침) - 성벽 톱니 금지 · 치유사 = 로브 천 어깨 그대로
+        layers = {"greatsword": 3, "dualblade": 2, "bow": 1}[cls]
+        # 위 돔 1장 + 바깥 아래로 비켜 내려가는 판(아래로 갈수록 작게 · 바깥으로 기움) - 팔을 링으로 감싸지 않는다(층층 링 = 톱니로 읽혔다)
+        add("Body", A.ellipsoid((0.64, 0.36, 0.64), n=8, rings=3, center=(side * 0.08, 0.42, 0), squash_bottom=0.6))
+        add("Trim", A.xform(AW.ring_y(0.0, 0.63, 0.63, 0.03, 0.05, n=8), t=(side * 0.08, 0.36, 0)))  # 돔 끝 금속 테
+        for i in range(1, layers):
+            w = 0.56 - (i - 1) * 0.1
+            add("Body", A.xform(A.ellipsoid((w * 0.75, 0.2, w), n=8, rings=2, squash_bottom=0.5), m=A.rot(rz=-side * (18 + 10 * i)), t=(side * (0.2 + 0.08 * i), 0.36 - 0.26 * i, 0)))
+        if n >= 2:
+            add("Trim", A.merge(*[A.box(0.06, 0.06, 0.04, center=(side * 0.12, 0.62, dz)) for dz in (-0.4, 0.4)]))  # 리벳
+        if n >= 5 and (cls != "dualblade" or side > 0):  # s5 왕관형(둥근 마루 - 가시 금지)
+            add("Trim", A.merge(*[A.xform(A.ellipsoid((0.11, 0.16, 0.11), n=6, rings=2), t=(side * 0.08, 0.72, dz)) for dz in (-0.22, 0.22)]))
+        return z
+    if kind == "Bracer":  # 짧은 커프(손목 쪽) = 등급 띠 한 조각(1인 MeshPart ≤ 24) - 팔은 바닥층 소매 · 장갑 = 가죽
+        add("Band", AW.yl([(-0.52, 1.1, 1.1, 0), (-0.18, 1.06, 1.06, 0)], 0.08))
+        add("Band", AW.ring_y(-0.3, 0.565, 0.565, 0.02, 0.07, n=8))
+        return z
+    if kind == "Greave":  # 장화 윗단 금속 커프 + 등급 띠 + 무릎 판(등급색 - 띠와 같은 조각) - 정강이 위는 바닥층 바지
+        add("Body", AW.yl([(-0.6, 1.08, 1.08, 0), (-0.22, 1.06, 1.06, 0)], 0.08))
+        add("Band", AW.ring_y(-0.34, 0.555, 0.555, 0.02, 0.07, n=8))
+        add("Band", A.ellipsoid((0.36, 0.26, 0.16), n=8, rings=3, center=(0, 0.42, -0.53)))
+        return z
+    if kind == "Knee":  # 무릎 판(등급색) - 정강이 위 앞
+        add("Body", A.ellipsoid((0.36, 0.26, 0.16), n=8, rings=3, center=(0, 0.42, -0.53)))
+        return z
+    return None
+
+
 def piece_zones(cls, slot, stage, piece):
     kind = piece.split("_")[0]
     side = -1 if piece.endswith("_L") else 1
+    over = look2_piece(cls, kind, side, stage)
+    if over is not None:
+        return over
     fn = {"Chest": lambda: AC.chest(cls), "Shoulder": lambda: AC.shoulder(cls, side), "Belt": lambda: AC.belt(cls), "Tasset": lambda: AC.tasset(cls, side),
           "Glove": lambda: AC.glove(cls, side), "Bracer": lambda: AC.bracer(cls, side), "Boot": lambda: AC.boot(cls), "Greave": lambda: AC.greave(cls)}[kind]
     r = fn()
@@ -199,6 +248,8 @@ def piece_zones(cls, slot, stage, piece):
             zone = "Attach"  # 대검 태바드 · 등 망토 = 세트 천(② 시안)
         z.setdefault(zone_of(kind, zone), []).extend(geos)
     stage_extras(cls, kind, side, stage, z)
+    if LOOK2 and kind == "Belt":  # 큰 금속 버클(앞 가운데) - 등급대 금속
+        z.setdefault("Trim", []).append(A.merge(A.box(0.36, 0.28, 0.07, center=(0, 0.0, -0.66)), A.box(0.2, 0.12, 0.05, center=(0, 0.0, -0.71))))  # 예산: 모따기 없음
     # 허용 밖 구역 → 대표로 합침(문 부품은 따로 유지 - 문은 그 등급에서만 보이는 별도 파트)
     out = {}
     for key, geos in z.items():
@@ -211,18 +262,33 @@ def piece_zones(cls, slot, stage, piece):
 def build(cls, slot, stage):
     col = A.new_collection("%s_%s_%s" % (slot, cls, stage))
     objs, info = [], {}
-    for piece, part in AC.PIECES[cls][slot]:
+    pieces = AC.PIECES[cls][slot] + (LOOK2_EXTRA_PIECES.get(slot, []) if LOOK2 else [])
+    merged = {}
+    if LOOK2 and slot == "armor":  # 벨트(가죽 · 버클) = 가슴 조각의 가죽 · 금속 구역에 합침(1인 MeshPart ≤ 24 · 같은 색 구역)
+        bpc, upc = REF["LowerTorso"][0], REF["UpperTorso"][0]
+        off = tuple(bpc[i] - upc[i] for i in range(3))
+        for (zone, gate), geos in piece_zones(cls, slot, stage, "Belt").items():
+            merged.setdefault((zone, gate), []).extend(A.xform(g, t=off) for g in geos)
+        pieces = [pp for pp in pieces if pp[0] != "Belt"]
+    for piece, part in pieces:
         pc, _ = REF[part]
-        for (zone, gate), geos in sorted(piece_zones(cls, slot, stage, piece).items(), key=lambda kv: (kv[0][0], kv[0][1] or "")):
+        zones = piece_zones(cls, slot, stage, piece)
+        if piece == "Chest":
+            for k, geos in merged.items():
+                zones.setdefault(k, []).extend(geos)
+            if LOOK2 and slot == "armor" and stage == "s5":  # 초월 부유 조각 = 균열 조각에 합침(같은 금빛 Neon) · 태초 부유 = Float_Pr(태초만) - 조각 수
+                zones.setdefault(("Crack", "Tr"), []).append(float_geo(cls, stage))
+        for (zone, gate), geos in sorted(zones.items(), key=lambda kv: (kv[0][0], kv[0][1] or "")):
             name = "%s_%s%s" % (piece, zone, ("_" + gate) if gate else "")
             o = A.make_obj(name, A.xform(A.merge(*geos), t=pc), PREVIEW[zone], col, neon=NEON.get(zone, False), origin=pc, mat_name="%s_%s_%s_%s" % (slot, cls, stage, name))
             objs.append(o)
             info[name] = part
     if slot == "armor" and stage in ("s4", "s5"):
         pc, _ = REF["UpperTorso"]
-        o = A.make_obj("Float_Float", A.xform(float_geo(cls, stage), t=pc), PREVIEW["Float"], col, neon=True, origin=pc, mat_name="%s_%s_%s_Float" % (slot, cls, stage))
+        fname = "Float_Float_Pr" if (LOOK2 and stage == "s5") else "Float_Float"
+        o = A.make_obj(fname, A.xform(float_geo(cls, stage), t=pc), PREVIEW["Float"], col, neon=True, origin=pc, mat_name="%s_%s_%s_Float" % (slot, cls, stage))
         objs.append(o)
-        info["Float_Float"] = "UpperTorso"
+        info[fname] = "UpperTorso"
     return col, objs, info
 
 
@@ -266,7 +332,7 @@ def build_weapon(weapon, stage):
 
 def parse():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-    opt = {"classes": CLASSES, "slots": SLOTS, "stages": STAGES, "render": None, "export": False, "weapons": False, "emblems": False, "armor": True}
+    opt = {"classes": CLASSES, "slots": SLOTS, "stages": STAGES, "render": None, "export": False, "weapons": False, "emblems": False, "armor": True, "bake": False}
     i = 0
     while i < len(argv):
         a = argv[i]
@@ -280,15 +346,98 @@ def parse():
             opt["weapons"] = True
         elif a == "--emblems":
             opt["emblems"] = True
+        elif a == "--bake":
+            opt["bake"] = True
         elif a == "--no-armor":
             opt["armor"] = False
         i += 1
     return opt
 
 
+# ────────────────────────── LOOK2 3번 재질 지도(UV + 카툰 음영 굽기) ──────────────────────────
+MAPS = os.path.normpath(os.path.join(HERE, "..", "..", "art", "textures", "gear_v3", "maps"))
+
+
+def bake_shade(objs, key, res=512):
+    """objs 전체를 한 UV 공간에 펼치고(smart project) 회색 음영 지도를 굽는다: 바탕 0.80 + 윗면 +0.08 · 아랫면 −0.08 + 모서리 밝은 선(Bevel 노멀 차) + 틈 그림자(AO).
+    색은 게임에서 SurfaceAppearance.Color 틴트(등급 · 구역 색) - 지도는 밝기만(사실적 때 · 긁힘 없음)."""
+    import bpy
+    scene = bpy.context.scene
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in objs:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = objs[0]
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.uv.smart_project(angle_limit=math.radians(60), island_margin=0.02, area_weight=0.0, scale_to_bounds=True)
+    bpy.ops.object.mode_set(mode="OBJECT")
+    img = bpy.data.images.new("shade_" + key, res, res, alpha=False)
+    for o in objs:
+        mat = o.data.materials[0]
+        mat.use_nodes = True
+        nt = mat.node_tree
+        for n in list(nt.nodes):
+            nt.nodes.remove(n)
+        N = nt.nodes.new
+        out = N("ShaderNodeOutputMaterial")
+        emit = N("ShaderNodeEmission")
+        geo = N("ShaderNodeNewGeometry")
+        bev = N("ShaderNodeBevel")
+        bev.inputs["Radius"].default_value = 0.03
+        bev.samples = 8
+        dot = N("ShaderNodeVectorMath")
+        dot.operation = "DOT_PRODUCT"
+        nt.links.new(bev.outputs["Normal"], dot.inputs[0])
+        nt.links.new(geo.outputs["Normal"], dot.inputs[1])
+        edge = N("ShaderNodeMath")  # (1 − dot) × 7 → 0 ~ 1
+        edge.operation = "MULTIPLY_ADD"
+        edge.inputs[1].default_value = -7.0
+        edge.inputs[2].default_value = 7.0
+        edge.use_clamp = True
+        nt.links.new(dot.outputs["Value"], edge.inputs[0])
+        sep = N("ShaderNodeSeparateXYZ")
+        nt.links.new(geo.outputs["Normal"], sep.inputs[0])
+        up = N("ShaderNodeMath")  # 0.80 + 0.08 × 윗면(nz)
+        up.operation = "MULTIPLY_ADD"
+        up.inputs[1].default_value = 0.08
+        up.inputs[2].default_value = 0.80
+        nt.links.new(sep.outputs["Z"], up.inputs[0])
+        hl = N("ShaderNodeMath")  # + 0.2 × 모서리
+        hl.operation = "MULTIPLY_ADD"
+        hl.inputs[1].default_value = 0.2
+        nt.links.new(edge.outputs["Value"], hl.inputs[0])
+        nt.links.new(up.outputs["Value"], hl.inputs[2])
+        ao = N("ShaderNodeAmbientOcclusion")
+        ao.inputs["Distance"].default_value = 0.18
+        aom = N("ShaderNodeMapRange")  # AO 0 ~ 1 → 0.6 ~ 1(틈만 어둡게)
+        aom.inputs["To Min"].default_value = 0.6
+        nt.links.new(ao.outputs["AO"], aom.inputs["Value"])
+        mul = N("ShaderNodeMath")
+        mul.operation = "MULTIPLY"
+        mul.use_clamp = True
+        nt.links.new(hl.outputs["Value"], mul.inputs[0])
+        nt.links.new(aom.outputs["Result"], mul.inputs[1])
+        nt.links.new(mul.outputs["Value"], emit.inputs["Color"])
+        nt.links.new(emit.outputs["Emission"], out.inputs["Surface"])
+        tex = N("ShaderNodeTexImage")
+        tex.image = img
+        nt.nodes.active = tex
+    scene.render.engine = "CYCLES"
+    scene.cycles.device = "CPU"
+    scene.cycles.samples = 24
+    scene.render.bake.margin = 4
+    bpy.ops.object.bake(type="EMIT")
+    os.makedirs(MAPS, exist_ok=True)
+    path = os.path.join(MAPS, "%s.png" % key)
+    img.filepath_raw = path
+    img.file_format = "PNG"
+    img.save()
+    return path
+
+
 def gate_visible_count(objs, gate_of_grade):
     """그 등급에서 실제로 보이는 파트 수(문 파트는 그 등급만)"""
-    return sum(1 for o in objs if (len(o.name.split("_")) < 3 or o.name.split("_")[-1] not in ("Ep", "Re", "An", "Tr") or o.name.split("_")[-1] == gate_of_grade))
+    return sum(1 for o in objs if (len(o.name.split("_")) < 3 or o.name.split("_")[-1] not in ("Ep", "Re", "An", "Tr", "Pr") or o.name.split("_")[-1] == gate_of_grade))
 
 
 def main():
@@ -304,11 +453,13 @@ def main():
                     tri = sum(A.tri_count(o) for o in objs)
                     core = max([A.tri_count(o) for o in objs if "_CoreGem" in o.name] or [0])  # 문 파트(Re · An)는 한 번에 하나만 보인다
                     flo = sum(A.tri_count(o) for o in objs if "_Float" in o.name)
-                    worst_parts = max(gate_visible_count(objs, g) for g in (None, "Ep", "Re", "An", "Tr"))
+                    worst_parts = max(gate_visible_count(objs, g) for g in (None, "Ep", "Re", "An", "Tr", "Pr"))
                     stats[key] = dict(tris=tri, parts=len(objs), visibleParts=worst_parts, coreGem=core, float=flo)
-                    limit = BUDGET["armor"] if slot == "armor" else BUDGET[slot.replace("gloves", "gloves").replace("shoes", "shoes")]
+                    limit = (BUDGET_S5_ARMOR if stage == "s5" else BUDGET["armor"]) if slot == "armor" else BUDGET[slot.replace("gloves", "gloves").replace("shoes", "shoes")]
                     if tri > limit or core > BUDGET["coreGem"] or flo > BUDGET["float"]:
                         print("[make_gear_v3] 예산 초과", key, tri, core, flo)
+                    if opt["bake"]:
+                        bake_shade(objs, key)
                     if opt["export"]:
                         A.export_fbx(os.path.join(OUT, "%s.fbx" % key), objs)
                         for o in objs:
@@ -325,6 +476,8 @@ def main():
             col, objs, info = build_emblem(kind)
             key = "emblem_%s" % kind
             stats[key] = dict(tris=sum(A.tri_count(o) for o in objs), parts=1, visibleParts=1, coreGem=0, float=0)
+            if opt["bake"]:
+                bake_shade(objs, key, res=256)
             if opt["export"]:
                 A.export_fbx(os.path.join(OUT, "%s.fbx" % key), objs)
                 o = objs[0]
