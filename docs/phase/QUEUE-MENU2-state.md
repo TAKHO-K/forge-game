@@ -12,7 +12,7 @@
 | C 메뉴 건너뛰기 제거 | 남음 | | |
 | D 메인 메뉴로 · 쿨/게이지 | 진행(쿨 · 게이지 · 위치 유지 완료 · 메뉴로 버튼 · 금지 상태 · 파티 해제 남음) | (이 커밋) | SkillCooldowns(서버 공용 시각) · CharacterRuntime(capture = 저장 훅 · restore) · ProfileBoot(접속 · 전환 공용) · 클라 SkillCooldowns 표시 · Studio 접미사 키 첫 쓰기 비움(이관 stale 고침) |
 | E 이어하기 창 | 남음 | | |
-| F 직업 선택 두 화면 | 남음 | | 그림 2/4 들어옴(class_legend_warrior_v1 · class_legend_archer_v1, 10-04) · 치유사 · 도적은 사용자가 나중에 넣음 - 없으면 임시 실루엣 유지. 궁수 배경 제거 주의: 옷 · 망토 · 잎 문양이 초록 → #00FF00와의 색 거리로 좁게 키(밝고 채도 높은 순수 초록만) · despill은 외곽 몇 px에만 · 결과를 확대 캡처로 망토 가장자리 · 잎 문양 · 화살 깃이 지워지거나 회색으로 안 변했는지 확인 |
+| F 직업 선택 두 화면 | 남음 · **방향 변경(10-04 밤)**: 2D 전설 일러스트만 · 아바타 미리보기 · 변신 연출 = 스위치로 끔(ClassSelectAvatarPreview · ClassSelectTransform) · 확정 → 액션 포즈 → 바로 진입 · 애니메이션 = 재생기 자리 + 임시 실루엣만(그림 · legend_anim.json은 설계 담당이 넘김) | | (옛 메모) 그림 2/4 들어옴(warrior · archer) · 궁수 배경 제거 주의 |
 | G 검증 · 보고 | 남음 | | |
 
 ## 끼워 넣기(10-05 · 사용자) - 메인 메뉴 배경 menu_keyart_v2 교체(상한 30분 · 지금 항목 끝난 뒤 바로)
