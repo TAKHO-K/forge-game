@@ -94,7 +94,11 @@ local function buildOptionSources(classState)
 	local gems = classState.weapon.gems
 	for slot = 1, Gem.slotCount do
 		if Gem.isFilled(gems, slot) then
-			table.insert(sources, gems[slot])
+			local gem = gems[slot]
+			if gem.transcendGemId and not All10.enabled() then -- QUEUE-ALL10 리뷰: 스위치 끔 = 초월 보석 사본도 태초 보석 값(지금 게임과 같음)
+				gem = { grade = "primordial", itemLevel = gem.itemLevel, option = gem.option }
+			end
+			table.insert(sources, gem)
 		end
 	end
 	return sources
@@ -1322,6 +1326,9 @@ function PlayerProfile.refineGem(player, targetKind, targetKey, fodderIndex)
 		target = classState.gemInventory[targetKey]
 	else
 		return false, "invalid"
+	end
+	if type(target) == "table" and target.transcendGemId then
+		return false, "invalid" -- QUEUE-ALL10 리뷰: 초월 보석 사본은 재련 대상 아님(원본 = 계정 목록 · 사본만 바뀌면 추출 때 사라진다)
 	end
 	local fodder = classState.gemInventory[fodderIndex]
 	local reason = GemCraft.refineBlockReason(target, fodder)

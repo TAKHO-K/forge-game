@@ -208,6 +208,20 @@ local okT, errT = pcall(function()
 	local ok4 = TS.confirm(pl2, t4.token)
 	check("토큰 만료 X · 저장 실패 = 무기 · 기록 · 보석 · 칭호 전부 되돌림 · 확인 사이 직업 바뀜 X · 다시 하면 성공", not expired.ok and expired.why == "token" and not failed.ok and failed.why == "save_failed"
 		and rolledBack and not changed.ok and changed.why == "class_changed" and ok4.ok and cs2.weapon.grade == 7)
+	-- 리뷰 높음: 저장 대기 중 다른 시스템이 무기 홈을 바꿔도(보석 교체) 실패 되돌림이 덮지 않음 · 진행 낮은 직업 계승 = 계정 최고 스테이지
+	local pl5, prof5, cs5 = fresh()
+	prof5.classes.healer.stageProgress.infiniteBest = 14000
+	local t5 = TS.prepare(pl5)
+	TS.deps.save = function()
+		cs5.weapon.gems[2] = { grade = "epic", itemLevel = 5, option = { id = "attackPercent", roll = 0.1 } }
+		return false
+	end
+	local f5 = TS.confirm(pl5, t5.token)
+	TS.deps.save = function() return saveOk end
+	local kept = not f5.ok and cs5.weapon.gems[2] and cs5.weapon.gems[2].grade == "epic" and cs5.weapon.grade == 6 and cs5.weapon.transcend == nil and #prof5.transcendGems.list == 0 and prof5.transcendGems.seq == 1
+	local t6 = TS.prepare(pl5)
+	local ok6 = TS.confirm(pl5, t6.token)
+	check("리뷰: 실패 되돌림 = 바꾼 칸만(대기 중 보석 교체 보존 · 번호 재사용 없음 → 재시도 TG2) · 계승 스테이지 = 계정 최고(14,000)", kept and ok6.ok and prof5.transcendGems.list[1].id == "TG2" and cs5.transcendInherit.stage == 14000)
 	local pl3 = fresh(6, 29)
 	local pl4 = fresh(5, 30)
 	check("조건 미달: 태초 +29 · 유물 +30 = not_ready", TS.prepare(pl3).why == "not_ready" and TS.prepare(pl4).why == "not_ready")

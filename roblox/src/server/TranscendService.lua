@@ -151,16 +151,20 @@ function TranscendService.confirm(player, token)
 	if not All10.canInherit(classState.weapon) then
 		return { ok = false, why = All10.isTranscendWeapon(classState.weapon) and "already" or "not_ready" }
 	end
-	-- 지급 전 상태(되돌림용) - 아래 변경은 yield 없이 한 번에
+	if require(script.Parent.BossEncounter).classChangeBlocked(player) then
+		return { ok = false, why = "in_boss" } -- 리뷰: 보스전 중 계승 = 거절(전투 중 즉시 강해짐 · 0-2 직업 고정과 같은 원칙)
+	end
+	-- 지급 전 상태(되돌림용) - 리뷰 높음: 무기 표 전체가 아니라 "이번에 바꾼 칸"만 기억한다(저장 대기 중 보석 교체 · 재련 등 다른 변경을 덮지 않게)
 	local before = {
-		weapon = deepCopy(classState.weapon), inherit = deepCopy(classState.transcendInherit),
-		hadTitle = PlayerProfile.hasTitle(player, All10Data.inherit.titleId), gems = deepCopy(profile.transcendGems),
+		grade = classState.weapon.grade, transcend = classState.weapon.transcend, inherit = classState.transcendInherit,
+		hadTitle = PlayerProfile.hasTitle(player, All10Data.inherit.titleId),
 	}
 	local weapon = classState.weapon
 	local fromGrade, fromLevel = weapon.grade, weapon.level
 	weapon.grade = All10Data.inherit.toGrade
 	weapon.transcend = { level = 0, slot = 0 }
-	classState.transcendInherit = { stage = math.max(1, math.floor(tonumber(classState.stageProgress.infiniteBest) or 1)), at = os.time(), fromGrade = fromGrade, fromLevel = fromLevel }
+	-- 계승 스테이지 = 계정 최고(리뷰: 진행 낮은 직업으로 계승해 돌파 기준을 낮추는 이득 방지 - 비용과 같은 기준)
+	classState.transcendInherit = { stage = math.max(1, math.floor(tonumber(PlayerProfile.getAccountBestStage(player)) or 1)), at = os.time(), fromGrade = fromGrade, fromLevel = fromLevel }
 	if not before.hadTitle then
 		PlayerProfile.grantTitle(player, All10Data.inherit.titleId)
 	end
@@ -174,15 +178,23 @@ function TranscendService.confirm(player, token)
 	end, player)
 	busy[player] = nil
 	if not (okSave and saved) then
-		-- 저장 실패 = 되돌림(무기 · 기록 · 칭호 · 보석) - 다음에 다시 시도
-		for k in pairs(weapon) do
-			weapon[k] = nil
-		end
-		for k, v in pairs(before.weapon) do
-			weapon[k] = v
-		end
+		-- 저장 실패 = 바꾼 칸만 되돌림(등급 · 초월 칸 · 기록 · 칭호 · 보상 보석 - 장착돼 있으면 홈도 비움) - 다음에 다시 시도
+		weapon.grade = before.grade
+		weapon.transcend = before.transcend
 		classState.transcendInherit = before.inherit
-		profile.transcendGems = before.gems
+		for _, id in ipairs(rewards) do
+			local gem, index = findGem(profile, id)
+			if gem then
+				if gem.socket then
+					local cs = profile.classes[gem.socket.classId]
+					local copy = cs and cs.weapon and cs.weapon.gems[gem.socket.slot]
+					if type(copy) == "table" and copy.transcendGemId == id then
+						cs.weapon.gems[gem.socket.slot] = false
+					end
+				end
+				table.remove(profile.transcendGems.list, index) -- 번호(seq)는 되돌리지 않는다(재사용 방지)
+			end
+		end
 		if not before.hadTitle then
 			PlayerProfile.revokeTitle(player, All10Data.inherit.titleId)
 		end
@@ -193,7 +205,7 @@ function TranscendService.confirm(player, token)
 	for _, id in ipairs(rewards) do
 		audit(player, "transcendGem", ("%s · 계승 보상"):format(id))
 	end
-	if typeof(player) == "Instance" then
+	if typeof(player) == "Instance" and profile.classId == entry.classId then -- 리뷰: 대기 중 직업을 바꿨으면 지금 직업 표시를 덮지 않는다
 		player:SetAttribute("WeaponGrade", weapon.grade)
 	end
 	sync(player)
@@ -394,6 +406,9 @@ function TranscendService.rollBossDrop(player, bossStage, roll)
 	local gem = newGem(player, profile, "boss")
 	audit(player, "transcendGem", ("%s · 보스 스테이지 %d 드랍"):format(gem.id, bossStage))
 	sync(player)
+	if typeof(player) == "Instance" then
+		require(script.Parent.ImmediateSave).request(player) -- 리뷰: 희귀 지급은 바로 저장 요청
+	end
 	return gem
 end
 
