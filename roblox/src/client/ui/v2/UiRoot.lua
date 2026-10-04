@@ -4,6 +4,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Layout = require(ReplicatedStorage.Shared.data.UiLayoutData)
 local Theme = require(script.Parent.Parent.kit.Theme)
+local UiKit = require(script.Parent.UiKit)
 
 local UiRoot = {}
 
@@ -30,6 +31,7 @@ function UiRoot.new(screenGui, name)
 		self.base = base
 		frame.Size = UDim2.fromOffset(base.w, base.h)
 		scale.Scale = s
+		UiKit.setRootScale(s) -- UI2-2 글자 = 루트 배율이 작을 때 덜 줄임(UiModel.textPx)
 	end
 	screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(refit)
 	refit()

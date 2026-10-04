@@ -1,7 +1,9 @@
 -- QUEUE-UI UI-0 공용 부품(새 화면 전용 - 값은 shared/data/UiTokens · 아이콘은 UiIconData · 좌표는 UiLayoutData에서만).
---   주 버튼(노랑 + 아래턱 + 눌림) · 보조 버튼 · 닫기 · 창(머리 + 노랑 줄) · 카드 · 빈 칸 · 잠긴 칸 · 확인 창(첫 포커스) · 안내 띠 · 토글 · 아이콘 · 아이콘 칸 틀 + 등급 배지 + 강화 칩.
---   rect = { X, Y, W, H }(기준 px - UiRoot 안). 노랑(accent) 주 버튼은 시작 · 구매에만 쓴다(01 spec).
+--   주 버튼 · 보조 버튼 · 닫기 · 창(머리 + 노랑 줄) · 카드 · 빈 칸 · 잠긴 칸 · 확인 창(첫 포커스) · 안내 띠 · 토글 · 아이콘 · 아이콘 칸 틀 + 등급 배지 + 강화 칩.
+--   rect = { X, Y, W, H }(기준 px - UiRoot 안). 노랑(pri) 주 버튼은 시작 · 구매에만 · 빨강(danger)은 확인 창 안에서만(00 spec).
+--   QUEUE-UI2 UI2-2: 버튼 = 9-slice 상태 그림 5개(00 spec) + 손맛(UiKit.attachPress - shared/ButtonPress 판정) · 글자 = UiModel.textPx(설정 글자 크기 · PreferredTextSize · 루트 배율 보정).
 local GuiService = game:GetService("GuiService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -11,6 +13,8 @@ local IconData = require(ReplicatedStorage.Shared.data.UiIconData)
 local ArtAssetIds = require(ReplicatedStorage.Shared.data.ArtAssetIds)
 local GradeColor = require(ReplicatedStorage.Shared.GradeColor)
 local WeaponFx = require(ReplicatedStorage.Shared.WeaponFx)
+local UiModel = require(ReplicatedStorage.Shared.UiModel)
+local ButtonPress = require(ReplicatedStorage.Shared.ButtonPress)
 local Theme = require(script.Parent.Parent.kit.Theme)
 
 local UiKit = {}
@@ -32,10 +36,50 @@ function UiKit.isPhone()
 	return Theme.isMobile
 end
 
+-- 글자 크기(UI2-2): 토큰 × max(설정 글자 크기, 로블록스 PreferredTextSize) × 루트 배율 보정(UiModel.textPx). 루트 배율 = UiRoot가 알려 준다.
+UiKit.rootScale = 1
+local function platformTextName()
+	local ok, v = pcall(function()
+		return GuiService.PreferredTextSize
+	end)
+	return ok and v and v.Name or "Medium"
+end
+UiKit.platformTextName = platformTextName
+function UiKit.textStep()
+	local lp = Players.LocalPlayer
+	return lp and lp:GetAttribute("UiTextScale") or "normal"
+end
 function UiKit.size(name)
-	local t = Tokens.text[name]
-	assert(t, "UiKit.size: UiTokens.text에 없는 글자 - " .. tostring(name))
-	return UiKit.isPhone() and math.max(t.phone, Tokens.minPhoneText) or t.pc
+	return UiModel.textPx(name, UiKit.isPhone(), UiKit.textStep(), platformTextName(), UiKit.rootScale)
+end
+
+-- 글자 칸 등록(약한 표) → 설정 · 루트 배율 · PreferredTextSize가 바뀌면 다시 계산
+local textLabels = setmetatable({}, { __mode = "k" })
+function UiKit.setTextSize(label, name)
+	textLabels[label] = name
+	label.TextSize = UiKit.size(name)
+end
+function UiKit.refreshText()
+	for label, name in pairs(textLabels) do
+		if label.Parent then
+			label.TextSize = UiKit.size(name)
+		end
+	end
+end
+function UiKit.setRootScale(s)
+	if s and s > 0 and math.abs(s - UiKit.rootScale) > 1e-4 then
+		UiKit.rootScale = s
+		UiKit.refreshText()
+	end
+end
+do
+	local lp = Players.LocalPlayer
+	if lp then
+		lp:GetAttributeChangedSignal("UiTextScale"):Connect(UiKit.refreshText)
+	end
+	pcall(function()
+		GuiService:GetPropertyChangedSignal("PreferredTextSize"):Connect(UiKit.refreshText)
+	end)
 end
 
 function UiKit.font(kind)
@@ -70,7 +114,7 @@ function UiKit.label(parent, text, sizeName, colorToken, props)
 	l.Name = props.name or "Label"
 	l.BackgroundTransparency = 1
 	l.Font = UiKit.font(props.font)
-	l.TextSize = UiKit.size(sizeName)
+	UiKit.setTextSize(l, sizeName)
 	l.TextColor3 = UiKit.color(colorToken or "text.primary")
 	l.Text = text or ""
 	l.TextXAlignment = props.align or Enum.TextXAlignment.Left
@@ -85,78 +129,294 @@ function UiKit.label(parent, text, sizeName, colorToken, props)
 	return l
 end
 
--- 버튼(주 = 노랑 · 보조 = 남색): 바닥 Frame(아래턱 색) 위에 얼굴 TextButton이 lip만큼 떠 있다 → 누르면 얼굴이 아래로(눌림)
-local LOOKS = {
-	primary = { face = "accent", lip = "accent.lip", text = "accent.text", stroke = nil },
-	secondary = { face = "panel.slot", lip = "panel.empty", text = "text.primary", stroke = "line" },
+-- ── 버튼 손맛(UI2-2 · 00 spec "버튼 상태 5개") ──
+--   상태 그림 = ui/ds/btn-<종류>-<normal|hover|pressed|disabled>(9-slice · SliceScale 0.5) · 누름 = 그림 교체 + UIScale 0.95(0.06초 Quad) · 뗌 = 1.0(0.10초 Back Out).
+--   판정 = shared/ButtonPress(뗄 때만 · 밖으로 끌면 풀림 · 다시 들어오면 복귀 · 스크롤 목록 8px 끌기 취소 · 전투 = 누르는 순간). Activated는 쓰지 않는다.
+local P = Tokens.press
+local function stateImage(kind, state)
+	local e = kind and ArtAssetIds["ui/ds/btn-" .. kind .. "-" .. state]
+	return e and e.image and ("rbxassetid://" .. tostring(e.image)) or nil
+end
+UiKit.stateImage = stateImage
+
+local function applySlice(img, kind)
+	local sl = Tokens.slice[kind]
+	if sl and sl.center then
+		img.ScaleType = Enum.ScaleType.Slice
+		img.SliceCenter = Rect.new(sl.center[1], sl.center[2], sl.center[3], sl.center[4])
+		img.SliceScale = Tokens.sliceScale
+	else
+		img.ScaleType = Enum.ScaleType.Stretch
+	end
+end
+
+-- 선택 테두리(게임패드 · 키보드만 - 로블록스 SelectionImageObject) = focus-ring r12 · 탭 r10 · 원
+local function focusRing(kind)
+	local ring = (kind == "close" or kind == "combat") and Tokens.focusRing.circle or ((kind or ""):match("^tab") and Tokens.focusRing.r10 or Tokens.focusRing.r12)
+	local e = ArtAssetIds[ring.key]
+	if not (e and e.image) then
+		return nil
+	end
+	local r = Instance.new("ImageLabel")
+	r.Name = "FocusRing"
+	r.BackgroundTransparency = 1
+	r.Image = "rbxassetid://" .. tostring(e.image)
+	if ring.center then
+		r.ScaleType = Enum.ScaleType.Slice
+		r.SliceCenter = Rect.new(ring.center[1], ring.center[2], ring.center[3], ring.center[4])
+		r.SliceScale = Tokens.sliceScale
+	end
+	local o = P.focusOutset
+	r.Position = UDim2.fromOffset(-o, -o)
+	r.Size = UDim2.new(1, o * 2, 1, o * 2)
+	return r
+end
+
+local controllers = setmetatable({}, { __mode = "k" }) -- 버튼 → 손맛 묶음
+local CONFIRM_KEYS = { [Enum.KeyCode.Return] = true, [Enum.KeyCode.KeypadEnter] = true, [Enum.KeyCode.ButtonA] = true }
+
+-- 아무 GuiButton에 손맛 붙이기 → ctl { Activated(신호), setEnabled(on), bp }
+--   opts = { kind(상태 그림 종류 - 없으면 크기만), mode("release" | "instant" 전투), content(누르면 y +2 · 흔들림 대상), onActivated, icons(비활성 = 반투명) }
+--   전투 버튼(공격 · Q/E/R/T · 대시 · 점프 · 고정)은 mode = "instant"로 누름 모양만 공통(발동은 자기 입력 경로 그대로 둘 수 있다 - onActivated 없이).
+function UiKit.attachPress(btn, opts)
+	opts = opts or {}
+	local bp = ButtonPress.new({ mode = opts.mode, dragCancel = P.dragCancel })
+	local scale = btn:FindFirstChild("PressScale") or Instance.new("UIScale")
+	scale.Name = "PressScale"
+	scale.Parent = btn
+	local event = Instance.new("BindableEvent")
+	local content = opts.content
+	local contentPos = content and content.Position or nil
+	local hovering = false
+	local active = nil
+	local conns = {}
+	local isImage = btn:IsA("ImageButton")
+	local function setImage(state)
+		if isImage and opts.kind then
+			local img = stateImage(opts.kind, state) or stateImage(opts.kind, "normal")
+			if img then
+				btn.Image = img
+			end
+		end
+	end
+	local function tween(target, seconds, style)
+		TweenService:Create(scale, TweenInfo.new(seconds, style, Enum.EasingDirection.Out), { Scale = target }):Play()
+	end
+	local function paint(state)
+		if bp.disabled then
+			setImage("disabled")
+			scale.Scale = 1
+			if content then
+				content.Position = contentPos
+			end
+			return
+		end
+		if state == "pressed" then
+			setImage("pressed")
+			tween(P.downScale, P.downSeconds, Enum.EasingStyle.Quad)
+			if content then
+				content.Position = contentPos + UDim2.fromOffset(0, P.contentDown)
+			end
+		else
+			setImage(hovering and "hover" or "normal")
+			tween(hovering and P.hoverScale or 1, hovering and P.hoverSeconds or P.upSeconds, hovering and Enum.EasingStyle.Quad or Enum.EasingStyle.Back)
+			if content then
+				content.Position = contentPos
+			end
+		end
+	end
+	local shaking = false
+	local function shake()
+		if shaking then
+			return
+		end
+		shaking = true
+		local target = content or btn
+		local base = target.Position
+		local step = P.shakeSeconds / (P.shakeCount * 2)
+		task.spawn(function()
+			for i = 1, P.shakeCount * 2 do
+				target.Position = base + UDim2.fromOffset((i % 2 == 1) and P.shakePx or -P.shakePx, 0)
+				task.wait(step)
+			end
+			target.Position = base
+			shaking = false
+		end)
+	end
+	local function apply(r)
+		if r.paint then
+			paint(r.paint)
+		end
+		if r.shake then
+			shake()
+		end
+		if r.fire then
+			event:Fire()
+			if opts.onActivated then
+				task.spawn(opts.onActivated)
+			end
+		end
+	end
+	local function inside(pos)
+		local a, sz = btn.AbsolutePosition, btn.AbsoluteSize
+		return pos.X >= a.X and pos.X <= a.X + sz.X and pos.Y >= a.Y and pos.Y <= a.Y + sz.Y
+	end
+	local function isPointer(input)
+		return input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch
+	end
+	local function sameRelease(input)
+		return input == active or (active.UserInputType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseButton1)
+	end
+	table.insert(conns, btn.InputBegan:Connect(function(input)
+		if active or not isPointer(input) then
+			return
+		end
+		bp.inList = btn:FindFirstAncestorWhichIsA("ScrollingFrame") ~= nil
+		if not bp.disabled then
+			active = input
+		end
+		apply(bp:pressBegan(input.Position.X, input.Position.Y))
+	end))
+	table.insert(conns, UserInputService.InputChanged:Connect(function(input)
+		if not active then
+			return
+		end
+		if input == active or (active.UserInputType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseMovement) then
+			apply(bp:pressMoved(input.Position.X, input.Position.Y, inside(input.Position)))
+		end
+	end))
+	table.insert(conns, UserInputService.InputEnded:Connect(function(input)
+		if active and sameRelease(input) then
+			active = nil
+			apply(bp:pressEnded(inside(input.Position), btn.Visible))
+		end
+	end))
+	table.insert(conns, btn.MouseEnter:Connect(function()
+		if UserInputService.MouseEnabled and not UserInputService.TouchEnabled then
+			hovering = true
+			if not bp.down then
+				paint("normal")
+			end
+		end
+	end))
+	table.insert(conns, btn.MouseLeave:Connect(function()
+		hovering = false
+		if not bp.down then
+			paint("normal")
+		end
+	end))
+	-- 게임패드 · 키보드: 고른 버튼(GuiService.SelectedObject)에서 확인 키 = 같은 누름 모양
+	table.insert(conns, UserInputService.InputBegan:Connect(function(input)
+		if CONFIRM_KEYS[input.KeyCode] and GuiService.SelectedObject == btn then
+			apply(bp:keyBegan())
+		end
+	end))
+	table.insert(conns, UserInputService.InputEnded:Connect(function(input)
+		if CONFIRM_KEYS[input.KeyCode] and bp.keyDown then
+			apply(bp:keyEnded())
+		end
+	end))
+	btn.Destroying:Connect(function()
+		for _, c in ipairs(conns) do
+			c:Disconnect()
+		end
+		event:Destroy()
+	end)
+	local ring = focusRing(opts.kind)
+	if ring then
+		btn.SelectionImageObject = ring
+	end
+	local ctl = { Activated = event.Event, bp = bp }
+	function ctl.setEnabled(on)
+		bp:setDisabled(not on)
+		if not on then
+			active = nil
+		end
+		for _, ic in ipairs(opts.icons or {}) do
+			if ic:IsA("ImageLabel") then
+				ic.ImageTransparency = on and 0 or P.disabledIconTransparency
+			end
+		end
+		paint("normal")
+	end
+	controllers[btn] = ctl
+	paint("normal")
+	return ctl
+end
+
+-- 손맛이 붙은 버튼의 발동 신호에 연결(UiKit 부품 = 이 길 · GuiButton.Activated 대신)
+function UiKit.onActivated(btn, fn)
+	local ctl = controllers[btn]
+	assert(ctl, "UiKit.onActivated: attachPress 안 된 버튼 - " .. btn:GetFullName())
+	return ctl.Activated:Connect(fn)
+end
+function UiKit.controller(btn)
+	return controllers[btn]
+end
+
+-- 그림 버튼 바탕(ImageButton + 9-slice 상태 그림) - 그림이 없으면(업로드 전) 색 바탕 + 모서리
+local FALLBACK = {
+	pri = "accent", primal = "accent", sec = "panel.slot", danger = "warning", plate = "plate.b", card = "panel.section",
+	["tab-on"] = "accent", ["tab-off"] = "panel.slot", combat = "panel.slot", close = "warning",
 }
+local function imageButton(kind, name)
+	local b = Instance.new("ImageButton")
+	b.Name = name or "Button"
+	b.AutoButtonColor = false
+	b.BackgroundTransparency = 1
+	b.BorderSizePixel = 0
+	applySlice(b, kind)
+	local img = stateImage(kind, "normal")
+	if img then
+		b.Image = img
+	else
+		b.BackgroundTransparency = 0
+		b.BackgroundColor3 = UiKit.color(FALLBACK[kind] or "panel.slot")
+		corner(b, Tokens.corner.button)
+	end
+	return b
+end
+UiKit.imageButton = imageButton
+
+-- 버튼(주 = 노랑 pri · 보조 = sec · 위험 = danger(확인 창 안에서만) · 판 B = plate · 태초 = primal)
+--   refs = { root(ImageButton), button(= root), face(내용 Frame - 글자 · 아이콘 자리), title, sub, setEnabled, setText, Activated }
+local KIND = { primary = "pri", secondary = "sec", danger = "danger", plate = "plate", primal = "primal", card = "card", tabOn = "tab-on", tabOff = "tab-off" }
+local TEXT_TOKEN = { pri = "accent.text", primal = "bg.deep", plate = "outline.warm" }
 function UiKit.button(props)
-	local look = LOOKS[props.kind or "secondary"]
-	assert(look, "UiKit.button: kind - " .. tostring(props.kind))
+	local kind = KIND[props.kind or "secondary"] or props.kind
+	assert(Tokens.slice[kind], "UiKit.button: kind - " .. tostring(props.kind))
+	local textToken = TEXT_TOKEN[kind] or "text.primary"
 	local lip = Tokens.lip
-	local holder = Instance.new("Frame")
-	holder.Name = props.name or "Button"
-	holder.BackgroundColor3 = UiKit.color(look.lip)
-	holder.BorderSizePixel = 0
+	local holder = imageButton(kind, props.name)
 	if props.rect then
 		UiKit.place(holder, props.rect)
 	end
-	corner(holder, Tokens.corner.button)
-	local face = Instance.new("TextButton")
+	local face = Instance.new("Frame") -- 내용(글자 · 아이콘) - 누르면 y +2
 	face.Name = "Face"
-	face.AutoButtonColor = false
-	face.Text = ""
-	face.BackgroundColor3 = UiKit.color(look.face)
-	face.BorderSizePixel = 0
+	face.BackgroundTransparency = 1
 	face.Size = UDim2.new(1, 0, 1, -lip)
 	face.Parent = holder
-	corner(face, Tokens.corner.button)
-	if look.stroke then
-		stroke(face, look.stroke, Tokens.stroke.button)
-	end
 	local pad = Instance.new("UIPadding")
 	pad.PaddingLeft = UDim.new(0, props.padX or 22)
 	pad.PaddingRight = UDim.new(0, props.padX or 22)
 	pad.Parent = face
-	local title = UiKit.label(face, props.text, props.textSize or "button", look.text, { name = "Title", align = props.align, font = "korean" })
+	local title = UiKit.label(face, props.text, props.textSize or "button", textToken, { name = "Title", align = props.align, font = "korean" })
 	title.Size = UDim2.new(1, 0, props.sub and 0.58 or 1, 0)
 	local sub = nil
 	if props.sub then
 		title.TextYAlignment = Enum.TextYAlignment.Bottom
-		sub = UiKit.label(face, props.sub, props.subSize or "mainButtonSub", look.text, { name = "Sub", align = props.align })
+		sub = UiKit.label(face, props.sub, props.subSize or "mainButtonSub", textToken, { name = "Sub", align = props.align })
 		sub.Position = UDim2.fromScale(0, 0.6)
 		sub.Size = UDim2.new(1, 0, 0.32, 0)
 		sub.TextYAlignment = Enum.TextYAlignment.Top
 	end
 	holder.Parent = props.parent
-	local enabled = true
-	local function setDown(down)
-		face.Position = UDim2.fromOffset(0, down and lip or 0)
-	end
-	face.InputBegan:Connect(function(input)
-		if enabled and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-			setDown(true)
-		end
-	end)
-	face.InputEnded:Connect(function()
-		setDown(false)
-	end)
-	face.MouseLeave:Connect(function()
-		setDown(false)
-	end)
-	if props.onActivated then
-		face.Activated:Connect(function()
-			if enabled then
-				props.onActivated()
-			end
-		end)
-	end
-	local refs = { root = holder, face = face, title = title, sub = sub }
+	local icons = {}
+	local ctl = UiKit.attachPress(holder, { kind = kind, mode = props.mode, content = face, onActivated = props.onActivated, icons = icons })
+	local refs = { root = holder, button = holder, face = face, title = title, sub = sub, Activated = ctl.Activated, icons = icons }
 	function refs.setEnabled(on)
-		enabled = on
-		face.BackgroundColor3 = UiKit.color(on and look.face or "disabled.bg")
-		holder.BackgroundColor3 = UiKit.color(on and look.lip or "panel.empty")
-		title.TextColor3 = UiKit.color(on and look.text or "text.muted")
+		ctl.setEnabled(on)
+		title.TextColor3 = UiKit.color(on and textToken or "text.muted")
 		if sub then
 			sub.TextColor3 = title.TextColor3
 		end
@@ -170,10 +430,10 @@ function UiKit.button(props)
 	return refs
 end
 
--- 아이콘(아이콘 표 한 곳): 그림이 있으면 ImageLabel(tint = 바탕 원 없이 글리프 색만 - 칠하기는 부르는 쪽 칸 바탕) · 없으면 fallback 글자
+-- 아이콘(아이콘 표 한 곳 · 별칭 = 넘김 묶음 파일 이름): 그림이 있으면 ImageLabel(tint = 글리프 색만 입힘) · 없으면 fallback 글자
 function UiKit.icon(parent, id, sizePx, props)
 	props = props or {}
-	local def = IconData.icons[id]
+	local def = IconData.icons[id] or (IconData.aliases and IconData.icons[IconData.aliases[id] or ""])
 	assert(def, "UiKit.icon: UiIconData에 없는 아이콘 - " .. tostring(id))
 	local e = def.asset and ArtAssetIds[def.asset]
 	local inst
@@ -202,33 +462,21 @@ function UiKit.icon(parent, id, sizePx, props)
 	return inst
 end
 
--- 닫기(빨강 원 44 + 흰 테두리 3 + X) · 눌림 = UIScale 0.92
+-- 닫기 = btn-close 원(상태 그림 88) + 흰 X(icon-x) · props.plate = 판 B(양피지 9-slice) + 아이콘(폰 [<] 등)
 function UiKit.closeButton(props)
-	local b = Instance.new("TextButton")
-	b.Name = props.name or "Close"
-	b.AutoButtonColor = false
-	b.Text = ""
-	b.BackgroundColor3 = UiKit.color(props.colorToken or "warning")
+	local kind = props.plate and "plate" or "close"
+	local b = imageButton(kind, props.name or "Close")
 	UiKit.place(b, props.rect)
-	corner(b, Tokens.close.size)
-	if props.ring ~= false then
-		stroke(b, "text.primary", Tokens.stroke.close)
-	end
-	UiKit.icon(b, props.icon or "close", math.floor(props.rect[3] * 0.5), { center = true, color = "text.primary" })
-	local s = Instance.new("UIScale")
-	s.Parent = b
-	b.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			s.Scale = Tokens.close.pressScale
+	if not stateImage(kind, "normal") then -- 그림 없음(업로드 전) = 옛 원 + 테두리
+		corner(b, Tokens.close.size)
+		b.BackgroundColor3 = UiKit.color(props.colorToken or "warning")
+		if props.ring ~= false then
+			stroke(b, "text.primary", Tokens.stroke.close)
 		end
-	end)
-	b.InputEnded:Connect(function()
-		s.Scale = 1
-	end)
-	if props.onActivated then
-		b.Activated:Connect(props.onActivated)
 	end
+	local icon = UiKit.icon(b, props.icon or (props.plate and "back" or "x"), math.floor(props.rect[3] * (props.plate and 0.62 or 0.5)), { center = true, color = "text.primary" })
 	b.Parent = props.parent
+	UiKit.attachPress(b, { kind = kind, onActivated = props.onActivated, icons = { icon } })
 	return b
 end
 
@@ -284,31 +532,30 @@ function UiKit.window(props)
 	return { root = root, head = head, body = body, title = title, sub = sub, headH = headH + lineH }
 end
 
--- 카드(캐릭터 · 직업) - selected = 노랑 테두리 3
+-- 카드(캐릭터 · 직업) = btn-card 상태 그림(9-slice · 테두리 포함) · selected = 노랑 테두리 3 추가 · 발동 = refs.Activated(손맛 판정 - 목록 끌기 취소)
 function UiKit.card(parent, rect, selected, name)
-	local f = Instance.new("TextButton")
-	f.Name = name or "Card"
-	f.AutoButtonColor = false
-	f.Text = ""
-	f.BackgroundColor3 = UiKit.color("panel.section")
+	local f = imageButton("card", name or "Card")
 	UiKit.place(f, rect)
 	corner(f, Tokens.corner.card)
+	local hasImage = stateImage("card", "normal") ~= nil
 	local s = stroke(f, selected and "accent" or "panel.slot", selected and Tokens.stroke.cardSelected or Tokens.stroke.card)
+	s.Transparency = (selected or not hasImage) and 0 or 1
 	f.Parent = parent
-	local refs = { root = f, stroke = s }
+	local ctl = UiKit.attachPress(f, { kind = "card" })
+	local refs = { root = f, stroke = s, Activated = ctl.Activated }
 	function refs.setSelected(on)
 		s.Color = UiKit.color(on and "accent" or "panel.slot")
 		s.Thickness = on and Tokens.stroke.cardSelected or Tokens.stroke.card
+		s.Transparency = (on or not hasImage) and 0 or 1
 	end
 	return refs
 end
 
--- 빈 칸(실선 - 점선 쓰지 않음) + 노랑 + 아이콘 · 글
+-- 빈 칸(실선 - 점선 쓰지 않음) + 노랑 + 아이콘 · 글 · 손맛(크기만 - 상태 그림 없음)
 function UiKit.emptySlot(parent, rect, text, sub, name)
-	local f = Instance.new("TextButton")
+	local f = Instance.new("ImageButton")
 	f.Name = name or "EmptySlot"
 	f.AutoButtonColor = false
-	f.Text = ""
 	f.BackgroundColor3 = UiKit.color("panel.empty")
 	UiKit.place(f, rect)
 	corner(f, Tokens.corner.card)
@@ -347,6 +594,7 @@ function UiKit.emptySlot(parent, rect, text, sub, name)
 		s2.LayoutOrder = 3
 	end
 	f.Parent = parent
+	UiKit.attachPress(f, {})
 	return f
 end
 
@@ -439,7 +687,7 @@ function UiKit.toggle(parent, rect, value, onChanged)
 end
 
 -- 확인 창(모달): dim 위 창 · 열 때 UIScale 0.9 → 1 · 첫 포커스 = props.focus("cancel" 기본) · Enter = 첫 포커스 버튼.
---   props = { parent(UiRoot.frame), rect, title, body, sub, cancelText, okText, okKind("secondary" 기본 - 노랑은 시작 · 구매만), cancelRect, okRect, onAnswer(bool) }
+--   props = { parent(UiRoot.frame), rect, title, body, sub, cancelText, okText, okKind("secondary" 기본 - 노랑은 시작 · 구매만 · 위험 = "danger"(빨강은 확인 창 안에서만)), cancelRect, okRect, onAnswer(bool) }
 function UiKit.confirm(props)
 	local layer = Instance.new("Frame") -- 루트 크기 층(창 좌표 = 기준 px) · 어둡게 덮개는 화면 밖까지(넓은 화면 = 루트 밖도 덮는다)
 	layer.Name = props.name or "ConfirmDim"
@@ -499,8 +747,7 @@ function UiKit.confirm(props)
 		b.root.ZIndex = 52
 	end
 	local first = props.focus == "ok" and ok or cancel
-	first.face.SelectionImageObject = nil
-	local focusStroke = stroke(first.face, "accent", 3) -- 첫 포커스 표시
+	local focusStroke = stroke(first.button, "accent", 3) -- 첫 포커스 표시(마우스 · 터치에도 보임) · 게임패드 · 키보드 = 선택 테두리(focus-ring)
 	focusStroke.Name = "FocusStroke"
 	local scale = Instance.new("UIScale")
 	scale.Scale = Tokens.confirmOpenScale
@@ -508,7 +755,7 @@ function UiKit.confirm(props)
 	layer.Parent = props.parent
 	TweenService:Create(scale, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1 }):Play()
 	pcall(function()
-		GuiService.SelectedObject = first.face
+		GuiService.SelectedObject = first.button
 	end)
 	local conn
 	conn = UserInputService.InputBegan:Connect(function(input)

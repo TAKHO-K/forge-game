@@ -661,6 +661,7 @@ end
 table.insert(texts, { nil, nil, nil, function()
 	skipToggle.setText(Text.get("menu.set.skip"))
 end })
+cycleRow(7, "textScale", "settings.textScale", SettingsData.keys.textScale.options, "settings.textScale.") -- QUEUE-UI2 UI2-2 글자 크기(새 화면 글자만 · 즉시 반영)
 
 -- 소식 페이지(업데이트 한 줄 · 코드는 마을 게시판 그대로)
 local newsPage = makePage("NewsPage")

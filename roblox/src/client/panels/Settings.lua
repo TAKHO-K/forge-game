@@ -133,6 +133,8 @@ local function build()
 	shiftHint.TextWrapped = true
 	shiftHint.Position = UDim2.fromOffset(PAD, PAD + 62 + ROW * 4 + 30)
 	shiftHint.Size = UDim2.new(1, -PAD * 2, 0, 36)
+	-- QUEUE-UI2 UI2-2 글자 크기(새 화면 글자 토큰에만 곱함 - 아이콘 · 칸 · 버튼 크기 그대로)
+	cycleRow(s, PAD + 62 + ROW * 4 + 72, Text.get("settings.textScale"), "textScale", { normal = Text.get("settings.textScale.normal"), large = Text.get("settings.textScale.large"), xlarge = Text.get("settings.textScale.xlarge") }, refs)
 
 	-- [소리] 음량 4줄(효과 · UI · 환경 · 음악)
 	local volumeRows = {}

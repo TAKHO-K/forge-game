@@ -21,12 +21,18 @@ local okRun, err = pcall(function()
 	end
 	check("색 토큰 = 6자리 hex · 01 spec 21색 + 바탕 2", badHex == 0 and T.colors.accent == "FFC83D" and T.colors["accent.lip"] == "C9901A", tostring(badHex))
 	local small = {}
-	for name, t in pairs(T.text) do
-		if t.phone < T.minPhoneText then
+	for name in pairs(T.text) do
+		if MODS.UiModel.textToken(name, true) < 13 then
 			table.insert(small, name)
 		end
 	end
-	check("폰 글자 12 이상(토큰)", #small == 0, table.concat(small, ","))
+	check("폰 글자 13 이상(토큰 - UI2-2: 12 이하 금지)", #small == 0, table.concat(small, ","))
+	local M0 = MODS.UiModel
+	check("UI2-2 PC 하한: body 18 · caption 16 · button 20 · 창 제목 28 이상", T.textScale.body.pc >= 18 and T.textScale.caption.pc >= 16 and T.textScale.button.pc >= 20 and M0.textToken("windowTitle", false) >= 28 and M0.textToken("cardInfo", false) >= 18)
+	check("UI2-2 폰: body 16 · caption 14 · button 18 · 창 제목 22", T.textScale.body.phone == 16 and T.textScale.caption.phone == 14 and T.textScale.button.phone == 18 and M0.textToken("windowTitle", true) == 22)
+	check("UI2-2 글자 크기 설정 = 보통 1.0 · 크게 1.15 · 아주 크게 1.3", M0.textMul("normal") == 1 and M0.textMul("large") == 1.15 and M0.textMul("xlarge") == 1.3)
+	check("UI2-2 PreferredTextSize와 안 겹침(큰 쪽 하나 - 1.3 × 1.3 아님)", M0.textMul("xlarge", "Larger") == 1.3 and M0.textMul("normal", "Largest") == 1.5 and M0.textMul("large", "Medium") == 1.15)
+	check("UI2-2 루트 배율 보정: 1080 = 토큰 그대로 · 592 창(0.548) = 화면 글자 ≥ 토큰 × 0.75", M0.textPx("cardInfo", false, "normal", "Medium", 1) == 18 and M0.textPx("cardInfo", false, "normal", "Medium", 0.548) * 0.548 >= 18 * 0.75 - 0.5)
 
 	-- 2. 좌표 표: 모든 rect = 숫자 4개 · 기준 화면 안 · 폰 버튼 44 이상
 	local bad, out, touch = {}, {}, {}
@@ -88,14 +94,81 @@ local okRun, err = pcall(function()
 	local SD = MODS.SettingsData
 	check("UI1F-1 설정 lastSeenNewsId = 계정 설정 · 순서 등록 · 기본 0", SD.keys.lastSeenNewsId and SD.keys.lastSeenNewsId.default == 0 and table.find(SD.order, "lastSeenNewsId") ~= nil)
 
+	-- UI2-2 버튼 손맛(shared/ButtonPress = 00 prototype 동작)
+	local BP = MODS.ButtonPress
+	local function count(b, steps)
+		local fired, last = 0, nil
+		for _, st in ipairs(steps) do
+			local r = b[st[1]](b, st[2], st[3], st[4])
+			if r.fire then fired += 1 end
+			if r.paint then last = r.paint end
+		end
+		return fired, last
+	end
+	local f1 = count(BP.new(), { { "pressBegan", 10, 10 }, { "pressMoved", 200, 10, false }, { "pressEnded", false } })
+	check("UI2-2 밖에서 떼기 = 발동 0", f1 == 0, tostring(f1))
+	local f2 = count(BP.new(), { { "pressBegan", 10, 10 }, { "pressEnded", true } })
+	check("UI2-2 안에서 떼기 = 발동 1", f2 == 1, tostring(f2))
+	local f3, p3 = count(BP.new(), { { "pressBegan", 10, 10 }, { "pressMoved", 200, 10, false }, { "pressMoved", 12, 10, true } })
+	local f3b = count(BP.new(), { { "pressBegan", 10, 10 }, { "pressMoved", 200, 10, false }, { "pressMoved", 12, 10, true }, { "pressEnded", true } })
+	check("UI2-2 밖 → 다시 안 = 누름 복귀 · 떼면 1", f3 == 0 and p3 == "pressed" and f3b == 1)
+	local held = BP.new()
+	local fh = count(held, { { "pressBegan", 10, 10 } })
+	for _ = 1, 100 do held:pressMoved(10, 10, true) end
+	local fh2 = count(held, { { "pressEnded", true } })
+	check("UI2-2 꾹 누름 = 누르는 동안 0 · 뗄 때 1", fh == 0 and fh2 == 1)
+	local f4 = count(BP.new({ inList = true }), { { "pressBegan", 10, 10 }, { "pressMoved", 10, 30, true }, { "pressEnded", true } })
+	check("UI2-2 스크롤 목록 안 끌기(8px 넘게) = 발동 0", f4 == 0, tostring(f4))
+	local f4b = count(BP.new({ inList = true }), { { "pressBegan", 10, 10 }, { "pressMoved", 10, 15, true }, { "pressEnded", true } })
+	check("UI2-2 스크롤 목록 안 조금 흔들림(8px 이하) = 발동 1", f4b == 1)
+	local cb = BP.new({ mode = "instant" })
+	local r5 = cb:pressBegan(1, 1)
+	local f5 = count(cb, { { "pressMoved", 300, 1, false }, { "pressEnded", false } })
+	check("UI2-2 전투 버튼 = 누르는 순간 1 · 떼기 · 밖 끌기 추가 0", r5.fire == true and r5.paint == "pressed" and f5 == 0)
+	local dis = BP.new()
+	dis:setDisabled(true)
+	local r6 = dis:pressBegan(1, 1)
+	local f6 = count(dis, { { "pressEnded", true } })
+	check("UI2-2 비활성 = 흔들림 · 발동 0", r6.shake == true and not r6.fire and f6 == 0)
+	local kb = BP.new()
+	local k1 = kb:keyBegan()
+	local k2 = kb:keyBegan()
+	local k3 = kb:keyEnded()
+	check("UI2-2 확인 키 = 누름 모양 · 뗄 때 1번(반복 입력 무시)", k1.paint == "pressed" and not k1.fire and not k2.fire and k3.fire == true)
+
 	-- 3. 아이콘 표
-	local noFallback = {}
+	local noFallback, noImage, oldMissing = {}, {}, {}
+	local A = MODS.ArtAssetIds
 	for id, d in pairs(I.icons) do
-		if not d.fallback or type(d.tint) ~= "boolean" or not d.file then
+		if not d.fallback or type(d.tint) ~= "boolean" then
 			table.insert(noFallback, id)
 		end
+		if not (d.asset and A[d.asset] and A[d.asset].image) then
+			table.insert(noImage, id)
+		end
+		if d.old and not A[d.old] then
+			table.insert(oldMissing, id)
+		end
 	end
-	check("아이콘 표: 모든 아이콘 = file · tint 스위치 · 임시 글자(그림 오기 전)", #noFallback == 0, table.concat(noFallback, ","))
+	check("아이콘 표: 모든 아이콘 = tint 스위치 · 임시 글자", #noFallback == 0, table.concat(noFallback, ","))
+	check("UI2-1 아이콘 v2 = 전부 업로드 + 이미지 id(ArtAssetIds 한 곳)", #noImage == 0, table.concat(noImage, ","))
+	check("UI2-1 옛 HUD 아이콘 키(old) = 지우지 않음(ArtAssetIds에 남아 있음)", #oldMissing == 0, table.concat(oldMissing, ","))
+	local badAlias = {}
+	for from, to in pairs(I.aliases) do
+		if not I.icons[to] then table.insert(badAlias, from) end
+	end
+	check("UI2-1 별칭 17개 = 00 아이콘 ID로 연결", #badAlias == 0 and (function() local n = 0 for _ in pairs(I.aliases) do n += 1 end return n end)() == 17, table.concat(badAlias, ","))
+	local noBtn = {}
+	for kind in pairs(T.slice) do
+		for _, st in ipairs({ "normal", "hover", "pressed", "disabled" }) do
+			local e = A["ui/ds/btn-" .. kind .. "-" .. st]
+			if not (e and e.image) then table.insert(noBtn, kind .. "-" .. st) end
+		end
+	end
+	for _, r in pairs(T.focusRing) do
+		if not (A[r.key] and A[r.key].image) then table.insert(noBtn, r.key) end
+	end
+	check("UI2-2 버튼 10종 × 상태 4 + 포커스 링 3 = 이미지 id 있음", #noBtn == 0, table.concat(noBtn, ","))
 	check("01 아이콘 9종 표에 있음", I.icons.close and I.icons.lock and I.icons.plus and I.icons.more and I.icons.archive and I.icons.back and I.icons.play and I.icons.info and I.icons.star and true or false)
 
 	-- 4. 배율

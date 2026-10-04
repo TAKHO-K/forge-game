@@ -196,10 +196,10 @@ function MainMenuV2.new(gui, deps)
 		end
 		UiKit.place(title, ex and L.titleExpanded or L.title)
 		UiKit.place(titleSub, ex and L.titleSubExpanded or L.titleSub)
-		title.TextSize = UiKit.size(ex and "titleExpanded" or "title")
+		UiKit.setTextSize(title, ex and "titleExpanded" or "title")
 		local bs = ex and "buttonExpanded" or "button"
 		for _, b in ipairs({ classBtn, settingsBtn, newsBtn }) do
-			b.title.TextSize = UiKit.size(bs)
+			UiKit.setTextSize(b.title, bs)
 		end
 	end
 
@@ -328,7 +328,7 @@ function MainMenuV2.new(gui, deps)
 		win.sub.Size = UDim2.new(0, 0, 1, 0)
 		win.sub.LayoutOrder = 2
 	end
-	local closeBtn = UiKit.closeButton({ parent = win.root, rect = L.slotClose, name = "Close", icon = phone and "back" or "close", colorToken = phone and "panel.slot" or "warning", ring = L.slotCloseRing, onActivated = function()
+	local closeBtn = UiKit.closeButton({ parent = win.root, rect = L.slotClose, name = "Close", icon = phone and "back" or "x", plate = phone, colorToken = phone and "panel.slot" or "warning", ring = L.slotCloseRing, onActivated = function()
 		self.closeSlots()
 	end })
 	closeBtn.ZIndex = 12
@@ -486,19 +486,10 @@ function MainMenuV2.new(gui, deps)
 			ht.Size = UDim2.new(0, 0, 1, 0)
 		end
 		UiKit.iconSlot({ parent = c.root, rect = L.slotWeapon, gradeId = UiModel.gradeId(s.weaponGrade), level = s.weaponLevel, transcendLevel = s.transcend, iconKey = UiModel.weaponIconKey(s.classId, s.weaponGrade), name = "Weapon" })
-		local more = Instance.new("TextButton")
-		more.Name = "More"
-		more.AutoButtonColor = false
-		more.Text = ""
-		more.BackgroundColor3 = UiKit.color("panel.slot")
-		UiKit.place(more, L.slotMore)
-		UiKit.corner(more, Tokens.corner.chip)
-		UiKit.icon(more, "more", phone and 20 or 24, { center = true })
-		more.Parent = c.root
-		more.Activated:Connect(function()
+		UiKit.closeButton({ parent = c.root, rect = L.slotMore, name = "More", plate = true, icon = "more", onActivated = function() -- 01 v2: 판 B + icon-more
 			askArchive(row)
-		end)
-		c.root.Activated:Connect(function()
+		end })
+		c.Activated:Connect(function()
 			if self.busy then
 				return
 			end
@@ -566,7 +557,7 @@ function MainMenuV2.new(gui, deps)
 				y += h + SL.gap
 			elseif row.kind == "empty" then
 				local e = UiKit.emptySlot(listFrame, { SL.x, y, SL.w, SL.emptyH }, Text.get("menu.v2.newChar"), Text.get("menu.v2.newCharSub"), "NewCharacter")
-				e.Activated:Connect(function()
+				UiKit.onActivated(e, function()
 					self.openClasses("new")
 				end)
 				y += SL.emptyH + SL.gap
@@ -642,7 +633,7 @@ function MainMenuV2.new(gui, deps)
 	clsDim.Parent = cls
 	local band = UiKit.band(cls, L.browseBand, Text.get("menu.v2.browseBand"))
 	local clsTitle = UiKit.label(cls, Text.get("menu.classSelect"), "windowTitle", "text.primary", { name = "ClassTitle", font = "korean" })
-	clsTitle.TextSize = math.floor(UiKit.size("title") * (phone and 0.6 or 0.5))
+	UiKit.setTextSize(clsTitle, "windowTitle")
 	clsTitle.AutomaticSize = Enum.AutomaticSize.X
 	clsTitle.TextTruncate = Enum.TextTruncate.None
 	UiKit.place(clsTitle, { L.classBack[1] + L.classBack[3] + 16, L.classBack[2], 0, L.classBack[4] })
@@ -734,7 +725,7 @@ function MainMenuV2.new(gui, deps)
 		end
 		local r = UiKit.label(c.root, Text.get("class.role." .. info.role), "cardInfo", "text.secondary", { name = "Role" })
 		UiKit.place(r, { fx, phone and 26 or 58, CL.w - fx - 12, phone and 20 or 28 })
-		c.root.Activated:Connect(function()
+		c.Activated:Connect(function()
 			self.pickClass(info.id)
 		end)
 		classCards[info.id] = c

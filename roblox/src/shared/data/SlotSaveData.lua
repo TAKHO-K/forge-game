@@ -33,6 +33,7 @@ return {
 	--   하네스 slot_save가 등록된 필드마다 "분리 → 합치기" 왕복에서 값이 그 범위로 가고 그대로 돌아오는지 본다(등록 없이 더한 필드 = 범위를 아무도 확인 안 함).
 	addedFields = {
 		{ path = { "settings", "lastSeenNewsId" }, scope = "account", sample = 7, note = "UI1F-1 소식 빨간 점(본 소식 id)" },
+		{ path = { "settings", "textScale" }, scope = "account", sample = "xlarge", note = "UI2-2 글자 크기(보통 · 크게 · 아주 크게)" },
 		{ path = { "classes", "*", "legacyPlayAdded" }, scope = "character", sample = true, note = "UI1F-1 옛 계정 플레이 시간을 이관 첫 캐릭터에 더함(한 번)" },
 	},
 	-- 진행이 없는 직업 칸은 캐릭터로 만들지 않는다: 경험치 0 · 최고 스테이지 ≤ 1 · 환생 0 · 무기 +0 · 등급 0 · 착용 장비 없음 · 보석 없음

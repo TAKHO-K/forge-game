@@ -123,6 +123,31 @@ function UiModel.josaRo(name)
 	return (jong == 0 or jong == 8) and "로" or "으로"
 end
 
+-- QUEUE-UI2 UI2-2 글자 크기: 토큰 이름 → 기준 px(PC/폰 · scale 이름 따라감)
+function UiModel.textToken(name, isPhone)
+	local t = Tokens.text[name]
+	if type(t) == "string" then
+		t = Tokens.textScale[t]
+	end
+	assert(type(t) == "table", "UiModel.textToken: UiTokens.text에 없는 글자 - " .. tostring(name))
+	return math.max(isPhone and t.phone or t.pc, isPhone and Tokens.minPhoneText or 0)
+end
+
+-- 글자 배율 = max(설정 글자 크기 단계, 로블록스 PreferredTextSize 배율) - 둘을 곱하지 않는다(두 번 커지지 않게)
+function UiModel.textMul(stepKey, platformName)
+	local user = Tokens.textScaleSteps[stepKey or "normal"] or 1
+	local platform = Tokens.platformTextScale[platformName or "Medium"] or 1
+	return math.max(user, platform)
+end
+
+-- 실제 TextSize(UiRoot UIScale 안): 토큰 × 글자 배율 × 루트 배율 보정(작은 창에서 글자만 덜 줄임 - 화면 글자 = 토큰 × max(루트, textMinRootScale))
+function UiModel.textPx(name, isPhone, stepKey, platformName, rootScale)
+	local base = UiModel.textToken(name, isPhone)
+	local s = tonumber(rootScale) or 1
+	local comp = s > 0 and math.max(1, Tokens.textMinRootScale / s) or 1
+	return math.floor(base * UiModel.textMul(stepKey, platformName) * comp + 0.5)
+end
+
 -- QUEUE-UI1F-1 소식 빨간 점: 가장 큰 소식 id · 본 id(설정 lastSeenNewsId - 옛 저장 = nil = 0)보다 크면 점
 function UiModel.newsLatestId(news)
 	local best = 0
