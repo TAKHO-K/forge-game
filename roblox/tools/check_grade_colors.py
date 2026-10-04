@@ -148,5 +148,63 @@ for parent, fg in pairs:
         fail.append("메뉴 %s 글자 %s 대비 %.2f" % (what, fg, c))
 print("[메뉴 대비] 배경 그림 위 글자(캡처 측정 항목): " + " · ".join(sorted(set(measured))))
 
+# ⑤ QUEUE-ALL10 0-6(결정 6) 버튼 글자 대비(4.5:1 이상)
+#   (가) 버튼 부품 ui/kit/Button.lua look()의 종류 × 상태 전부(fill · text 토큰을 코드에서 읽는다 - 반투명 slot은 뒤 흰색 최악 실효색)
+#   (나) 부품 밖 직접 만든 글자 객체: 밝은 채움(ember · success)을 BackgroundColor3로 쓰는 줄 ±12줄 안 같은 객체의 TextColor3 토큰으로 잰다(글자 없는 막대 · 밑줄은 TextColor3가 없어 건너뜀)
+BTN = os.path.join(SRC, "client", "ui", "kit", "Button.lua")
+btn = io.open(BTN, encoding="utf-8").read()
+btn_rows = 0
+for mm in re.finditer(r"fill = colors\.(\w+), fillTransparency = ([\w.]+), text = colors\.(\w+)", btn):
+    fill, tr, fg = mm.group(1), mm.group(2), mm.group(3)
+    alpha = slot_alpha if tr.endswith("slotTransparency") else 1 - float(tr)
+    bg = over(colors[fill], alpha, WHITE) if alpha < 1 else colors[fill]
+    c = contrast(colors[fg], bg)
+    btn_rows += 1
+    ok = c >= 4.5
+    print("[버튼 대비] 부품 %-10s 위 %-13s %.2f:1 %s" % (fill, fg, c, "O" if ok else "X"))
+    if not ok:
+        fail.append("버튼 부품 %s/%s 대비 %.2f" % (fill, fg, c))
+if btn_rows < 6:
+    fail.append("버튼 부품 look() 줄 못 읽음(%d)" % btn_rows)
+BRIGHT = ("ember", "success")
+direct = 0
+for dp, _, fs in os.walk(os.path.join(SRC, "client")):
+    for f in fs:
+        if not f.endswith(".lua") or f == "Button.lua":
+            continue
+        p = os.path.join(dp, f)
+        lines = io.open(p, encoding="utf-8", errors="replace").read().split("\n")
+        for i, line in enumerate(lines):
+            mm = re.match(r"\s*([\w.]+)\.BackgroundColor3 = .*?(?:UIColors|Theme\.colors|colors)\.(ember|success)\b|\s*([\w.]+)\.BackgroundColor3 = .*?Theme\.color\(\"(ember|success)\"\)", line)
+            if not mm:
+                continue
+            obj = mm.group(1) or mm.group(3)
+            fill = mm.group(2) or mm.group(4)
+            fg = None
+            for j in range(max(0, i - 12), min(len(lines), i + 13)):
+                tm = re.match(r"\s*" + re.escape(obj) + r"\.TextColor3 = (.*)", lines[j])
+                if tm:
+                    expr = tm.group(1)
+                    t2 = re.search(r"(?:UIColors|Theme\.colors|colors)\.(\w+)|Theme\.color\(\"(\w+)\"\)", expr)
+                    if "Color3.new(0, 0, 0)" in expr:
+                        fg = (0, 0, 0)
+                    elif "Color3.new(1, 1, 1)" in expr:
+                        fg = WHITE
+                    elif t2:
+                        name = t2.group(1) or t2.group(2)
+                        # 조건식(on and A or B)이면 채움이 켜진 쪽 = 첫 토큰
+                        fg = colors.get(name)
+                    break
+            if fg is None:
+                continue
+            direct += 1
+            c = contrast(fg, colors[fill])
+            rel = os.path.relpath(p, SRC)
+            ok = c >= 4.5
+            print("[버튼 대비] %s:%d %s 위 글자 %.2f:1 %s" % (rel, i + 1, fill, c, "O" if ok else "X"))
+            if not ok:
+                fail.append("%s:%d %s 위 글자 대비 %.2f" % (rel, i + 1, fill, c))
+print("[버튼 대비] 부품 %d줄 · 직접 만든 글자 객체 %d곳" % (btn_rows, direct))
+
 print("결과: " + ("통과" if not fail else "실패 - " + " · ".join(fail)))
 sys.exit(0 if not fail else 1)

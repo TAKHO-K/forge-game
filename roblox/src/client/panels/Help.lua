@@ -243,6 +243,7 @@ render = function()
 	for id, row in pairs(built.rows) do
 		local on = id == current.category
 		row.button.BackgroundColor3 = on and Theme.color("ember") or Theme.color("slot")
+		row.button.TextColor3 = on and Theme.color("textOnAccent") or Theme.color("textPrimary") -- QUEUE-ALL10 0-6
 		row.stroke.Transparency = on and 1 or Theme.colors.rimTransparency
 	end
 	local body = built.body

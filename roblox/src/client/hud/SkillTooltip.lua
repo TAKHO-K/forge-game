@@ -89,7 +89,7 @@ local function build()
 	guideButton.BackgroundColor3 = UIColors.ember
 	guideButton.Font = Theme.font
 	guideButton.TextSize = 14
-	guideButton.TextColor3 = UIColors.textPrimary
+	guideButton.TextColor3 = UIColors.textOnAccent -- QUEUE-ALL10 0-6
 	guideButton.Text = Text.get("skillCard.rebirthGuide")
 	guideButton.Visible = false
 	guideButton.Parent = root

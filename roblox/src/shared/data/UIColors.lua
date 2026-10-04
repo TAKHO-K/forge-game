@@ -40,6 +40,7 @@ return {
 	stealShield = Color3.fromRGB(170, 220, 255), -- 반사 연출 보호막 물결 · 튕겨 나가는 조각
 	ember = Color3.fromRGB(255, 122, 47), -- 강조 - 공격·강화(목업 --ember)
 	emberDim = Color3.fromRGB(168, 67, 26), -- ember의 어두운 짝(눌림·비활성)
+	textOnAccent = Color3.fromRGB(20, 16, 12), -- QUEUE-ALL10 0-6(결정 6): 밝은 채움(ember · success) 위 글자 - 밝은 글자는 2.2:1 · 1.7:1이었다(검사 check_grade_colors ⑤ ≥ 4.5:1)
 	hp = Color3.fromRGB(226, 59, 59), -- 체력(목업 --hp)
 	hpDark = Color3.fromRGB(92, 26, 26), -- 체력바 트랙 바닥색(목업 --hp-dark)
 	xp = Color3.fromRGB(242, 196, 61), -- 경험치(목업 --xp, 메이플식 노랑)

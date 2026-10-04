@@ -61,7 +61,7 @@ function Toggle.build(props)
 			box.BackgroundTransparency = 0
 			boxStroke.Color = Theme.colors.success
 			boxStroke.Transparency = 1
-			check.TextColor3 = Theme.colors.textPrimary
+			check.TextColor3 = Theme.colors.textOnAccent -- QUEUE-ALL10 0-6 초록 칸 위 ✓
 			label.TextColor3 = Theme.colors.textPrimary
 		else
 			box.BackgroundColor3 = Theme.colors.slot

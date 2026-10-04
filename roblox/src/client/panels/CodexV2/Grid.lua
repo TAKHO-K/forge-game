@@ -59,7 +59,7 @@ local function doneBadge(parent)
 	b.BackgroundColor3 = Theme.colors.success
 	b.Font = Theme.font
 	b.TextSize = 14
-	b.TextColor3 = Color3.new(1, 1, 1)
+	b.TextColor3 = Theme.colors.textOnAccent -- QUEUE-ALL10 0-6
 	b.Text = "✓"
 	b.ZIndex = 3
 	b.Parent = parent

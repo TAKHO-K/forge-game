@@ -18,13 +18,13 @@ local function look(kind, visual)
 	if visual == "pressed" then
 		return { fill = colors.emberDim, fillTransparency = 0, text = colors.textPrimary, stroke = colors.rim, strokeTransparency = colors.rimTransparency }
 	elseif visual == "disabled" then
-		return { fill = colors.lockedBg, fillTransparency = 0, text = colors.lockedIcon, stroke = colors.lockedRim, strokeTransparency = 0.3 }
+		return { fill = colors.lockedBg, fillTransparency = 0, text = colors.lockedText, stroke = colors.lockedRim, strokeTransparency = 0.3 } -- QUEUE-ALL10 0-6: 비활성 글자도 4.5:1(lockedIcon 2.1:1 → lockedText)
 	end
 	-- 기본 · 진행 중(같은 바탕, 글씨만 "…")
 	if kind == "primary" then
-		return { fill = colors.ember, fillTransparency = 0, text = colors.textPrimary, stroke = colors.ember, strokeTransparency = 1 }
+		return { fill = colors.ember, fillTransparency = 0, text = colors.textOnAccent, stroke = colors.ember, strokeTransparency = 1 } -- QUEUE-ALL10 0-6 주 버튼 글자 대비
 	elseif kind == "claim" then
-		return { fill = colors.success, fillTransparency = 0, text = colors.textPrimary, stroke = colors.success, strokeTransparency = 1 }
+		return { fill = colors.success, fillTransparency = 0, text = colors.textOnAccent, stroke = colors.success, strokeTransparency = 1 }
 	elseif kind == "danger" then
 		return { fill = colors.slot, fillTransparency = colors.slotTransparency, text = colors.textPrimary, stroke = colors.danger, strokeTransparency = 0 }
 	end
