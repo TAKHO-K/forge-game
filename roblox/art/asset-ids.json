@@ -47,6 +47,36 @@
   "assetId": 80540651899105,
   "status": "Approved"
  },
+ "armor/armor_bow_s1.fbx": {
+  "sha256": "423dd3da91e2a4cb8f2b775d2cb6c74c5d09f3165e5bea69a54530553d01e0c7",
+  "assetType": "Model",
+  "assetId": 117035816784095,
+  "status": "Approved"
+ },
+ "armor/armor_bow_s2.fbx": {
+  "sha256": "683786ce7b1a5d09fde1d345789b08a9fc96d03080bb2978de224f6d121eee39",
+  "assetType": "Model",
+  "assetId": 131562290284985,
+  "status": "Approved"
+ },
+ "armor/armor_bow_s3.fbx": {
+  "sha256": "3d011afcc3d94df63d93c0b1d2b689ee6c622510ff06b824927fa5bcc2dafc51",
+  "assetType": "Model",
+  "assetId": 83259082753851,
+  "status": "Approved"
+ },
+ "armor/armor_bow_s4.fbx": {
+  "sha256": "b30059351154336331d120fecb814374955b98df7c30dc1946967ec4dbfe01bc",
+  "assetType": "Model",
+  "assetId": 101834360066344,
+  "status": "Approved"
+ },
+ "armor/armor_bow_s5.fbx": {
+  "sha256": "a665c93822fc73422e0a7530fa249ffbfef26d8a14d93370bb432dbac26c92cf",
+  "assetType": "Model",
+  "assetId": 117628934306746,
+  "status": "Approved"
+ },
  "armor/armor_bow_transcendent.fbx": {
   "sha256": "7a366f97c68767f2f9834b1da55bc3c75b154a3acef312b2db65bbe943d9879d",
   "assetType": "Model",
@@ -63,6 +93,36 @@
   "sha256": "b5ddfdb072bb53d7a21ceb251d5a842638d95cf2580091e6ed649439bd3a5f71",
   "assetType": "Model",
   "assetId": 80972146295863,
+  "status": "Approved"
+ },
+ "armor/armor_dualblade_s1.fbx": {
+  "sha256": "4ae8669de2051154c3b1c6762eb12853b40aa95aa41823f868c1d51bed525432",
+  "assetType": "Model",
+  "assetId": 93722155014022,
+  "status": "Approved"
+ },
+ "armor/armor_dualblade_s2.fbx": {
+  "sha256": "112bcf4191a73655080bd3885991734ea67b98eaaeb64cf349b8fbfa1d23b85e",
+  "assetType": "Model",
+  "assetId": 120725396865124,
+  "status": "Approved"
+ },
+ "armor/armor_dualblade_s3.fbx": {
+  "sha256": "6e33072480243adee46b435010ff1012782b8a1a63f669a330504e7298e8c974",
+  "assetType": "Model",
+  "assetId": 73465666834972,
+  "status": "Approved"
+ },
+ "armor/armor_dualblade_s4.fbx": {
+  "sha256": "d584d907b0722473659b332db1b9b129337f41c60b9fc70ec69797e7af9d976b",
+  "assetType": "Model",
+  "assetId": 109322790908298,
+  "status": "Approved"
+ },
+ "armor/armor_dualblade_s5.fbx": {
+  "sha256": "c02d6e14f21a23e29910ea6bb68d8218c683201ba0a3f32ec06f66411514621c",
+  "assetType": "Model",
+  "assetId": 93356721222281,
   "status": "Approved"
  },
  "armor/armor_dualblade_transcendent.fbx": {
@@ -83,6 +143,36 @@
   "assetId": 96592857123013,
   "status": "Approved"
  },
+ "armor/armor_greatsword_s1.fbx": {
+  "sha256": "1a68145c7585e523328512f84937d0032d524ec50bfa17af0cea3488d16fc433",
+  "assetType": "Model",
+  "assetId": 139541089646227,
+  "status": "Approved"
+ },
+ "armor/armor_greatsword_s2.fbx": {
+  "sha256": "ba7512fd5fa120b7c517f624a7f614f933ce4c92f0001371c4a94b9d51d8b2ae",
+  "assetType": "Model",
+  "assetId": 96127015870920,
+  "status": "Approved"
+ },
+ "armor/armor_greatsword_s3.fbx": {
+  "sha256": "1bdafc18e3d5e9b5ca18696b0b1a192995ceaee28ebf99b1328a8b2306dc7989",
+  "assetType": "Model",
+  "assetId": 111251347239447,
+  "status": "Approved"
+ },
+ "armor/armor_greatsword_s4.fbx": {
+  "sha256": "4ef66ca612ee354df4c217771eee9a978fd37484e6707e41ebf93f847ca64abe",
+  "assetType": "Model",
+  "assetId": 132537087187944,
+  "status": "Approved"
+ },
+ "armor/armor_greatsword_s5.fbx": {
+  "sha256": "adf468508632e6cd6e67d069463e07ff4738fb2ef71b4c694658fc8e4837e9cf",
+  "assetType": "Model",
+  "assetId": 101673654576518,
+  "status": "Approved"
+ },
  "armor/armor_greatsword_transcendent.fbx": {
   "sha256": "df6e8bfa59a305c11897c81a9236703e1c53f4d1339f550a8352294337e6a770",
   "assetType": "Model",
@@ -99,6 +189,36 @@
   "sha256": "edf95b48a54dac31da74a043d996e827eb9510761056a98fd9e7257820b8a0a9",
   "assetType": "Model",
   "assetId": 135631335455508,
+  "status": "Approved"
+ },
+ "armor/armor_healer_s1.fbx": {
+  "sha256": "a988f46591898217e9cf1de1f5d10ac548002cb2026648f21c3a5e1160c586c0",
+  "assetType": "Model",
+  "assetId": 120520526171881,
+  "status": "Approved"
+ },
+ "armor/armor_healer_s2.fbx": {
+  "sha256": "c2e170c5141b266895d85079b2e7cebacf5328153c5d418b77beb7f502360f3d",
+  "assetType": "Model",
+  "assetId": 73432390409990,
+  "status": "Approved"
+ },
+ "armor/armor_healer_s3.fbx": {
+  "sha256": "12f9c905ab45cdfe7e300ca87eb573da504cd2fef0dd9693b7ec112c9475eb3c",
+  "assetType": "Model",
+  "assetId": 122339410022001,
+  "status": "Approved"
+ },
+ "armor/armor_healer_s4.fbx": {
+  "sha256": "62ba18fcef8bc6d1789f46e9b96113f6bee377a2b38d7b75a5ad9e651040ce64",
+  "assetType": "Model",
+  "assetId": 110426469960061,
+  "status": "Approved"
+ },
+ "armor/armor_healer_s5.fbx": {
+  "sha256": "4fa74643b66a19828428f0b0fb15c7f0957328133d0c74408e07ac7b31b00fe2",
+  "assetType": "Model",
+  "assetId": 77928861320713,
   "status": "Approved"
  },
  "armor/armor_healer_transcendent.fbx": {
@@ -215,6 +335,42 @@
   "assetId": 106498451186468,
   "status": "Approved"
  },
+ "armor/emblem_crystal.fbx": {
+  "sha256": "b578d67ab766fd6c6e699798ee7273416e881af954b103df07d6b50776aac240",
+  "assetType": "Model",
+  "assetId": 97726689078584,
+  "status": "Approved"
+ },
+ "armor/emblem_frost.fbx": {
+  "sha256": "f60d0ab64d36e675a96804e8720659317dbb1d0f632c49a61834ca3173be445e",
+  "assetType": "Model",
+  "assetId": 104429614180740,
+  "status": "Approved"
+ },
+ "armor/emblem_shell.fbx": {
+  "sha256": "76eb730a744e210dfece8d18db6866d446d57dec7460c66da70cb9f0c093d338",
+  "assetType": "Model",
+  "assetId": 94854407723543,
+  "status": "Approved"
+ },
+ "armor/emblem_stone.fbx": {
+  "sha256": "a0649c41765ed04705d00710621c70793b01de23b736c63f647f2fb6f8cf1789",
+  "assetType": "Model",
+  "assetId": 70468982943777,
+  "status": "Approved"
+ },
+ "armor/emblem_storm.fbx": {
+  "sha256": "6f264932895b8fc5d5dc4b74321d583905cd9b180e5184a0414d88dc776676e6",
+  "assetType": "Model",
+  "assetId": 112938141617322,
+  "status": "Approved"
+ },
+ "armor/emblem_sun.fbx": {
+  "sha256": "6595707ac91b0ba23f7a18a2b821913023ee1f4aa4b8f68161e209d3d8bc0ed1",
+  "assetType": "Model",
+  "assetId": 134438944291307,
+  "status": "Approved"
+ },
  "armor/gloves_bow_legendary.fbx": {
   "sha256": "06ada184d84dc60f839dae2e1d0136deb5da02985ad8e3754022b0e9ccddd0e2",
   "assetType": "Model",
@@ -225,6 +381,36 @@
   "sha256": "d01e1ea93ae3e1299badf5ca57288c1c9ccbdc6b1f8db373cf8cec2318886c52",
   "assetType": "Model",
   "assetId": 95344518100967,
+  "status": "Approved"
+ },
+ "armor/gloves_bow_s1.fbx": {
+  "sha256": "3686aeb8e42d88f2af5958eafc59374267b0b591de8afefaeeed60a12431874e",
+  "assetType": "Model",
+  "assetId": 133205081203356,
+  "status": "Approved"
+ },
+ "armor/gloves_bow_s2.fbx": {
+  "sha256": "47e22d18ee91d863b35340f9379d89751592d3a4dfe18402ef1718a08e63774f",
+  "assetType": "Model",
+  "assetId": 100268647569079,
+  "status": "Approved"
+ },
+ "armor/gloves_bow_s3.fbx": {
+  "sha256": "6471bb29d1f787a52bc86c8c1e8eec82f4ebc3350902b0cea10134516552d7c4",
+  "assetType": "Model",
+  "assetId": 84868555246061,
+  "status": "Approved"
+ },
+ "armor/gloves_bow_s4.fbx": {
+  "sha256": "71201d60bc09aa826c4a2db2ef3de2ea91b048674a5333bad628b19f60177484",
+  "assetType": "Model",
+  "assetId": 104717513404765,
+  "status": "Approved"
+ },
+ "armor/gloves_bow_s5.fbx": {
+  "sha256": "1faec330d234411f8e883f16e615cafdd8fe9786c0f2ba8badee0389b886437c",
+  "assetType": "Model",
+  "assetId": 122369181310261,
   "status": "Approved"
  },
  "armor/gloves_bow_transcendent.fbx": {
@@ -245,6 +431,36 @@
   "assetId": 136799864318414,
   "status": "Approved"
  },
+ "armor/gloves_dualblade_s1.fbx": {
+  "sha256": "dcb00e13754b56f27a7fee51699c639d8bd920c993cb43af3dd8abe4a64b4819",
+  "assetType": "Model",
+  "assetId": 89831124649082,
+  "status": "Approved"
+ },
+ "armor/gloves_dualblade_s2.fbx": {
+  "sha256": "634a6fccdb7a93d91f40c8198dfc52f590962fcc636334e71bdebaa3dbbf567c",
+  "assetType": "Model",
+  "assetId": 87777873851625,
+  "status": "Approved"
+ },
+ "armor/gloves_dualblade_s3.fbx": {
+  "sha256": "4468220c2a68395c3b502072eb2aca7dc8af8da31fb191cb2501be5cd9521def",
+  "assetType": "Model",
+  "assetId": 113089927154535,
+  "status": "Approved"
+ },
+ "armor/gloves_dualblade_s4.fbx": {
+  "sha256": "3e076baf3f6ee2e2258738d482491af6e5bcebf76fb11d6ca4380892bd0eee45",
+  "assetType": "Model",
+  "assetId": 124390624335693,
+  "status": "Approved"
+ },
+ "armor/gloves_dualblade_s5.fbx": {
+  "sha256": "dbe049c580f2686bcc96f00fa6d5444d7bef9387b994746530d1fffcc57a64da",
+  "assetType": "Model",
+  "assetId": 84273067267948,
+  "status": "Approved"
+ },
  "armor/gloves_dualblade_transcendent.fbx": {
   "sha256": "98568f87ed3110e2555f9f6958c440702eaa27490b183e9bebf409bdf94ba1e5",
   "assetType": "Model",
@@ -263,6 +479,36 @@
   "assetId": 92788930290684,
   "status": "Approved"
  },
+ "armor/gloves_greatsword_s1.fbx": {
+  "sha256": "85d56f5723a5f606f1fa171c395754c1532814cd78ae652360df91f3bd35ffe4",
+  "assetType": "Model",
+  "assetId": 128717339205649,
+  "status": "Approved"
+ },
+ "armor/gloves_greatsword_s2.fbx": {
+  "sha256": "949a0459be3e522c5eed2d84ac2f0b3ebc85fb8359bd0c1516219070f4ddcadf",
+  "assetType": "Model",
+  "assetId": 85778126914243,
+  "status": "Approved"
+ },
+ "armor/gloves_greatsword_s3.fbx": {
+  "sha256": "352f90745ff26341548280e5970bbca4bd2570bc2bdb36942ea27db5bdba4182",
+  "assetType": "Model",
+  "assetId": 78347880451973,
+  "status": "Approved"
+ },
+ "armor/gloves_greatsword_s4.fbx": {
+  "sha256": "17fc662bf6c0c1f1f53e0606f4a21648637939854eadec4cdb40562c8eabe4c4",
+  "assetType": "Model",
+  "assetId": 121407716758195,
+  "status": "Approved"
+ },
+ "armor/gloves_greatsword_s5.fbx": {
+  "sha256": "2d85bb650f97f4b0a9538822adbd2da85442172efa2545aeeae9e2d8a3c7a528",
+  "assetType": "Model",
+  "assetId": 97894685840530,
+  "status": "Approved"
+ },
  "armor/gloves_greatsword_transcendent.fbx": {
   "sha256": "e292e99df21f24b7abb24e718883c069e1bcd525a63a98a1e8e25719d5886b62",
   "assetType": "Model",
@@ -279,6 +525,36 @@
   "sha256": "efcd4c8d9a571671148ff4d86ce0dc50ae1157331f4dafef4b7f2f67bf28091d",
   "assetType": "Model",
   "assetId": 79626072939873,
+  "status": "Approved"
+ },
+ "armor/gloves_healer_s1.fbx": {
+  "sha256": "4466f5bb05b097f6ad00597866414460278d78943a5071fa39e54f8693f565e6",
+  "assetType": "Model",
+  "assetId": 74000328215395,
+  "status": "Approved"
+ },
+ "armor/gloves_healer_s2.fbx": {
+  "sha256": "362bdfc90bb7b20eb64a8357afec54185df5adc8644faae560f8864ce749ff8b",
+  "assetType": "Model",
+  "assetId": 105356265821498,
+  "status": "Approved"
+ },
+ "armor/gloves_healer_s3.fbx": {
+  "sha256": "3788d53a49113d079cf6a37ef34170943cf950cdfb70df532399616d61d3303d",
+  "assetType": "Model",
+  "assetId": 73258054559307,
+  "status": "Approved"
+ },
+ "armor/gloves_healer_s4.fbx": {
+  "sha256": "e71b92f4a5cff34c68482633251d7faf2a8c9b990ed86a7aee7be90370fd8668",
+  "assetType": "Model",
+  "assetId": 81773948544578,
+  "status": "Approved"
+ },
+ "armor/gloves_healer_s5.fbx": {
+  "sha256": "f390fe819764c92ccd2ba1b7148b2b40fd056c427f7444d455176bae1b488b3b",
+  "assetType": "Model",
+  "assetId": 127707734196337,
   "status": "Approved"
  },
  "armor/gloves_healer_transcendent.fbx": {
@@ -407,6 +683,36 @@
   "assetId": 125041958140126,
   "status": "Approved"
  },
+ "armor/shoes_bow_s1.fbx": {
+  "sha256": "0f84c2ef5a864a6e3ef1a69817fdefcea705619a61f7e109e40fa0208465c89e",
+  "assetType": "Model",
+  "assetId": 117699125936747,
+  "status": "Approved"
+ },
+ "armor/shoes_bow_s2.fbx": {
+  "sha256": "d3678c811577d701141557de512551aa65fb44402ac4b003746c36771936257a",
+  "assetType": "Model",
+  "assetId": 134557335743929,
+  "status": "Approved"
+ },
+ "armor/shoes_bow_s3.fbx": {
+  "sha256": "3fb116675f5804fe36613295ec7455024b358d80991eeae5bd7c106e3254c569",
+  "assetType": "Model",
+  "assetId": 96459738254004,
+  "status": "Approved"
+ },
+ "armor/shoes_bow_s4.fbx": {
+  "sha256": "933f8acd4c5aff31fe0c94e708910d3dc87199fc09f8d5d4a88094052f6ad6e4",
+  "assetType": "Model",
+  "assetId": 93847469229119,
+  "status": "Approved"
+ },
+ "armor/shoes_bow_s5.fbx": {
+  "sha256": "110d2073fe69a6c1c5572673b4d082cdefb2187a48fd8203888a68548806d62e",
+  "assetType": "Model",
+  "assetId": 83406695443642,
+  "status": "Approved"
+ },
  "armor/shoes_bow_transcendent.fbx": {
   "sha256": "58785a948323d9e2116ee1b8a76ae176b54b06db07473e3554858457bae636dd",
   "assetType": "Model",
@@ -423,6 +729,36 @@
   "sha256": "9c9a2a9e444e05d972df6c533deb89c9ac80a1fe96624caa9c015453d16dded5",
   "assetType": "Model",
   "assetId": 78011714877024,
+  "status": "Approved"
+ },
+ "armor/shoes_dualblade_s1.fbx": {
+  "sha256": "bc59b604eb2f2b467e38d72c1e339d293eb9fe7da9d18f39ac705128ab42a1c8",
+  "assetType": "Model",
+  "assetId": 74066005966405,
+  "status": "Approved"
+ },
+ "armor/shoes_dualblade_s2.fbx": {
+  "sha256": "c39549b006627521af7e99ec2ef23c1a52cc3cf7f8b34ab19f937036df318125",
+  "assetType": "Model",
+  "assetId": 95116176834691,
+  "status": "Approved"
+ },
+ "armor/shoes_dualblade_s3.fbx": {
+  "sha256": "3683e773438f46240b2b01735f62166a6cb651cf632b5d764c1515a36d7b3103",
+  "assetType": "Model",
+  "assetId": 99718146266949,
+  "status": "Approved"
+ },
+ "armor/shoes_dualblade_s4.fbx": {
+  "sha256": "5c70b332052a48ad8d924d93f8e8f843e82fa52ffee3e58bb1a74a7e09d5e214",
+  "assetType": "Model",
+  "assetId": 109613279934473,
+  "status": "Approved"
+ },
+ "armor/shoes_dualblade_s5.fbx": {
+  "sha256": "a0b624a125def7359a0ebd6d74f4840fcf3bae1660cb61eef9c6593d4ecadff1",
+  "assetType": "Model",
+  "assetId": 103692935919387,
   "status": "Approved"
  },
  "armor/shoes_dualblade_transcendent.fbx": {
@@ -443,6 +779,36 @@
   "assetId": 120588937651173,
   "status": "Approved"
  },
+ "armor/shoes_greatsword_s1.fbx": {
+  "sha256": "e58a5a8e2a583538a39d01881df1936ca8955d53b37a17728bf107173f8099c8",
+  "assetType": "Model",
+  "assetId": 79533312557549,
+  "status": "Approved"
+ },
+ "armor/shoes_greatsword_s2.fbx": {
+  "sha256": "39a10d4cf033956c0db5e9dceb40490aa8365a9d0f6c09c8d9c62cfc92d46297",
+  "assetType": "Model",
+  "assetId": 130736152456590,
+  "status": "Approved"
+ },
+ "armor/shoes_greatsword_s3.fbx": {
+  "sha256": "80b68849ad88fb65b422d804e3aea122bf5532a64fe38ce325dd10cbe72e6e50",
+  "assetType": "Model",
+  "assetId": 125455450445769,
+  "status": "Approved"
+ },
+ "armor/shoes_greatsword_s4.fbx": {
+  "sha256": "3afb9f58a353219d81044a823f7cc05a2996c04e337b960cdad7c4cb381ebdfd",
+  "assetType": "Model",
+  "assetId": 100988062545908,
+  "status": "Approved"
+ },
+ "armor/shoes_greatsword_s5.fbx": {
+  "sha256": "9df7a3fff3941878f2fe9daea1d9f3aaa1fcff155bb7cc90a8f69eefa551ff71",
+  "assetType": "Model",
+  "assetId": 85705765717727,
+  "status": "Approved"
+ },
  "armor/shoes_greatsword_transcendent.fbx": {
   "sha256": "fa03f4be0983b4c09badbe1884b1ce8ce3b432e8eb8d0dfec147842809d97739",
   "assetType": "Model",
@@ -459,6 +825,36 @@
   "sha256": "835c8e088c8493edd9c00fe3693e4d8c47c603af3c581def901fff1e9807756d",
   "assetType": "Model",
   "assetId": 116248976940193,
+  "status": "Approved"
+ },
+ "armor/shoes_healer_s1.fbx": {
+  "sha256": "d36f28f63bb85c7ccffc2f9f75b148c726cfefaf559643a47cc4dd1cc16d806d",
+  "assetType": "Model",
+  "assetId": 123338285009067,
+  "status": "Approved"
+ },
+ "armor/shoes_healer_s2.fbx": {
+  "sha256": "be60cd41a651e626ccd823c4a30d6c72e6af83f6bb4beef482dbc84a9668b0df",
+  "assetType": "Model",
+  "assetId": 83770430393081,
+  "status": "Approved"
+ },
+ "armor/shoes_healer_s3.fbx": {
+  "sha256": "a2b90460753204fd681c6ec2cf2a9efc0a95f013998d79c03f305a4e285e6806",
+  "assetType": "Model",
+  "assetId": 130550243027266,
+  "status": "Approved"
+ },
+ "armor/shoes_healer_s4.fbx": {
+  "sha256": "e306f1606ac6ca882a97b25f8618dd162a1224737c9da33427ffdb2726663b21",
+  "assetType": "Model",
+  "assetId": 77090111799818,
+  "status": "Approved"
+ },
+ "armor/shoes_healer_s5.fbx": {
+  "sha256": "d8d0c5016777b6e72b59fadc1d753274eedd0d07d61d77356e52f9ab307cf0bb",
+  "assetType": "Model",
+  "assetId": 135217032118333,
   "status": "Approved"
  },
  "armor/shoes_healer_transcendent.fbx": {
@@ -4768,6 +5164,36 @@
   "assetId": 126038807585701,
   "status": "Approved"
  },
+ "weapons/bow_s1.fbx": {
+  "sha256": "9cf440aadfc73862902dff421bb56cd682a6d37cb794a2fe7f9235592ca4fa92",
+  "assetType": "Model",
+  "assetId": 118745242521633,
+  "status": "Approved"
+ },
+ "weapons/bow_s2.fbx": {
+  "sha256": "3607b8dc149aca70c3d983c778e6bc4ad11638e40fa64e6c0fe2c6d39297e1a0",
+  "assetType": "Model",
+  "assetId": 102444702156564,
+  "status": "Approved"
+ },
+ "weapons/bow_s3.fbx": {
+  "sha256": "961b7f0a90b43c2089709f2de3b3e8091c1e3ff9c21ceeba96df5865d02b22b7",
+  "assetType": "Model",
+  "assetId": 108118321928879,
+  "status": "Approved"
+ },
+ "weapons/bow_s4.fbx": {
+  "sha256": "f1f47b4af89fcabd9edeac4a41a9bff762cfe024fa98df35536e67babeb6fe18",
+  "assetType": "Model",
+  "assetId": 131085394048490,
+  "status": "Approved"
+ },
+ "weapons/bow_s5.fbx": {
+  "sha256": "12b7478c34aec8c7bb2eda9b877361bc69ffa00a9fd42ab735d2a9bf7a7618a8",
+  "assetType": "Model",
+  "assetId": 97682646270678,
+  "status": "Approved"
+ },
  "weapons/bow_transcendent.fbx": {
   "sha256": "155129a59bfa414506ca9cb657ae8d77f9f313c239bb994a85b83cb6f61cd50c",
   "assetType": "Model",
@@ -4814,6 +5240,36 @@
   "sha256": "35fa0417185d6b3e3562a1d409f0608fe604ad77f108bf6eff82af0051ec8ade",
   "assetType": "Model",
   "assetId": 82952712526006,
+  "status": "Approved"
+ },
+ "weapons/dualblade_s1.fbx": {
+  "sha256": "9a9da440a554b0cb39e7449a94847593439dc113b7bdc2840ff08a2cd806bec7",
+  "assetType": "Model",
+  "assetId": 113954264720747,
+  "status": "Approved"
+ },
+ "weapons/dualblade_s2.fbx": {
+  "sha256": "1a5ce9be2b2b684b0fcc90853dcbbbf20eb1add833f94a3553ce61aa3c1e12c3",
+  "assetType": "Model",
+  "assetId": 99211928563063,
+  "status": "Approved"
+ },
+ "weapons/dualblade_s3.fbx": {
+  "sha256": "ed4664e64a44dccf961ef05b8027df5a9f5e6e4f98043c871162c3e572706707",
+  "assetType": "Model",
+  "assetId": 88902533524825,
+  "status": "Approved"
+ },
+ "weapons/dualblade_s4.fbx": {
+  "sha256": "1756b354ff38fe364cc7454c8d5752513c43f8ac1ff6a9b141ebd3aad3016e7d",
+  "assetType": "Model",
+  "assetId": 124017876480089,
+  "status": "Approved"
+ },
+ "weapons/dualblade_s5.fbx": {
+  "sha256": "365324036424a1b46cf4b76b40ee005e2c836b5196a6d2ef4b1e4cf415f59963",
+  "assetType": "Model",
+  "assetId": 88491131680333,
   "status": "Approved"
  },
  "weapons/dualblade_transcendent.fbx": {
@@ -4864,6 +5320,36 @@
   "assetId": 125404975816278,
   "status": "Approved"
  },
+ "weapons/greatsword_s1.fbx": {
+  "sha256": "4c70c0bc0b58442c413973e87cca0ac28e3b3871c874db36a07e52230d323c86",
+  "assetType": "Model",
+  "assetId": 100221747257092,
+  "status": "Approved"
+ },
+ "weapons/greatsword_s2.fbx": {
+  "sha256": "5a9a657f5adcf19b3cee31c16db8f831dd3dbf4280f1f1b33b8d59bdcc7bb801",
+  "assetType": "Model",
+  "assetId": 123541270032671,
+  "status": "Approved"
+ },
+ "weapons/greatsword_s3.fbx": {
+  "sha256": "4ef30d619cf72e430c22ff905ca0f83a225b22dce8e1a60a0918f5585346bcc5",
+  "assetType": "Model",
+  "assetId": 117032141438710,
+  "status": "Approved"
+ },
+ "weapons/greatsword_s4.fbx": {
+  "sha256": "792234048a83aa1c8bf369c33975fc41fac4d75c1d7976a370575145ca436e96",
+  "assetType": "Model",
+  "assetId": 86524094480504,
+  "status": "Approved"
+ },
+ "weapons/greatsword_s5.fbx": {
+  "sha256": "8c91e551862030556a9c0753e81ffe8da50c43eca06032230e49a1c7c220c027",
+  "assetType": "Model",
+  "assetId": 94002399025670,
+  "status": "Approved"
+ },
  "weapons/greatsword_transcendent.fbx": {
   "sha256": "5398642bb5ecd0b684a8bf4707dc3a9f878a0c9453b0c956ad4691fad238cae7",
   "assetType": "Model",
@@ -4910,6 +5396,36 @@
   "sha256": "6cbdbbc3e848f3fbe1a656bef9f5c09253312383f8c4124a112511d55c7ce5da",
   "assetType": "Model",
   "assetId": 86362610711387,
+  "status": "Approved"
+ },
+ "weapons/healer_s1.fbx": {
+  "sha256": "992ad644465f25f8bbcc69dfc8c30b7eb9df786772873772b655bb0e3e70c7dd",
+  "assetType": "Model",
+  "assetId": 91219960627293,
+  "status": "Approved"
+ },
+ "weapons/healer_s2.fbx": {
+  "sha256": "4d5bb0527c958388feab68c1609269354f14d64b1460168842af4aa393076920",
+  "assetType": "Model",
+  "assetId": 123062212850433,
+  "status": "Approved"
+ },
+ "weapons/healer_s3.fbx": {
+  "sha256": "834c65b3a83ac5a02f5cad59c55a3428cf5865ed65efc816b6024741a8f955dd",
+  "assetType": "Model",
+  "assetId": 123888851560446,
+  "status": "Approved"
+ },
+ "weapons/healer_s4.fbx": {
+  "sha256": "4a8c864a5680c9e3cafac88965a48a3a44b81a68188b2c38bcd8e6599cb1eb09",
+  "assetType": "Model",
+  "assetId": 127936667710269,
+  "status": "Approved"
+ },
+ "weapons/healer_s5.fbx": {
+  "sha256": "bc5521b2574dc593df20e4cebb43abe60fbf8d386683fb4a6b22cb11e4bd53a5",
+  "assetType": "Model",
+  "assetId": 72855305197948,
   "status": "Approved"
  },
  "weapons/healer_transcendent.fbx": {

@@ -7,7 +7,7 @@ return {
 	-- 등급 → 모양 단계(4절): S1 일반 / S2 희귀 · 영웅 / S3 전설 / S4 유물 · 고대 / S5 태초 · 초월
 	stageOfGrade = { normal = "s1", rare = "s2", epic = "s2", legendary = "s3", relic = "s4", ancient = "s4", primordial = "s5", transcendent = "s5" },
 	-- 문 = 같은 단계 안 위 등급 전용 부품(4절: 영웅 = 희귀 + 보석 2 · 이중 테두리 / 고대 = 유물 + 관 · 깃 층 / 초월 = 태초 + 균열 선)
-	gateGrade = { Ep = "epic", An = "ancient", Tr = "transcendent" },
+	gateGrade = { Ep = "epic", Re = "relic", An = "ancient", Tr = "transcendent" }, -- Re = 유물 루비 오벌(고대 = An 에메랄드 스텝 컷과 자리 공유)
 	-- 세트(구역 tier1 ~ 6) 부착물 색(3절 hex): color1 = 천 띠 · 테두리(Attach) · color2 = 보조 보석 · 장식(Gem · Emblem) · emblem = 문장 메시 키
 	sets = {
 		tier1 = { name = "석조 평원", color1 = { 102, 131, 74 }, color2 = { 168, 121, 69 }, emblem = "stone" }, -- #66834A · #A87945
@@ -28,6 +28,8 @@ return {
 		transcendent = { body = { 32, 33, 39 }, core = { 216, 185, 110 } }, -- #202127 · 균열 #D8B96E
 	},
 	crack = { 216, 185, 110 }, -- 초월 균열 · 부유(초월) Neon(#D8B96E)
+	-- 무기(세트 없음 · shared/GearV3.weaponColor): 날 = 강철 #E8ECF4(옛 무기 메타 날 색)에 등급 메인 bodyTint만큼 · 태초 · 초월 손잡이 = 흑요석 그늘
+	weapon = { steel = { 232, 236, 244 }, bodyTint = 0.25, darkGrip = { 38, 36, 42 } },
 	-- 착용(6절) · 예산(7절): 하네스 · 메시 스크립트가 같은 값(artlib 쪽 숫자는 make_gear_v3.py가 이 표를 미러 - 바뀌면 둘 다)
 	budget = { armor = 1500, glovesPair = 500, shoesPair = 500, weapon = 800, float = 300, coreGem = 120, meshPartsPerPlayer = 24 },
 }

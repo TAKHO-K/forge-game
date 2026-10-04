@@ -67,4 +67,11 @@ function ArmorColors.colorOfV3(pieceName, zone, grade)
 	return main, false
 end
 
+-- QUEUE-ALL9E1 1-1 장비 v3: 계산 = shared/GearV3(무기 · 하네스와 같은 함수) - 여기는 같은 이름으로 내보내기만
+local GearV3 = require(ReplicatedStorage.Shared.GearV3)
+ArmorColors.gearV3Enabled = GearV3.enabled
+ArmorColors.gearV3Zone = GearV3.zone
+ArmorColors.gearV3Visible = GearV3.visible
+ArmorColors.colorOfGearV3 = GearV3.armorColor
+
 return ArmorColors

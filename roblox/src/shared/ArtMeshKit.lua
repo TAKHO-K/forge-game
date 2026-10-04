@@ -13,6 +13,7 @@ local MeshSwap = require(ReplicatedStorage.Shared.MeshSwap)
 local MeshImportCheck = require(ReplicatedStorage.Shared.MeshImportCheck)
 local WeaponRigSpec = require(ReplicatedStorage.Shared.data.WeaponRigSpec)
 local WeaponRigCheck = require(ReplicatedStorage.Shared.WeaponRigCheck)
+local GearV3 = require(ReplicatedStorage.Shared.GearV3) -- QUEUE-ALL9E1 1-1 장비 v3 무기
 
 local ArtMeshKit = {}
 
@@ -211,20 +212,36 @@ function ArtMeshKit.weaponModel(classId, gradeId)
 		return nil
 	end
 	local look = Data.weaponGradeFile[gradeId] or "normal"
-	local src = ArtMeshKit.get("weapons/" .. classId .. "_" .. look)
+	-- QUEUE-ALL9E1 1-1 장비 v3: 스위치 GearV3Meshes · weapons/<직업>_<단계>(s1 ~ s5 - 같은 손잡이 원점 · 부착점 = 옛 메타) · 색 = GearV3.weaponColor(구역) · 문 부품(초월 균열 Tr) = 그 등급만
+	local stage = GearV3.enabled() and GearV3.data.stageOfGrade[gradeId]
+	local v3src = stage and ArtMeshKit.get("weapons/" .. classId .. "_" .. stage)
+	local src = v3src or ArtMeshKit.get("weapons/" .. classId .. "_" .. look)
 	local meta = metaFor(classId)
 	if not src or not meta then
 		return nil
 	end
 	local model = src:Clone()
 	local lookMeta = meta.looks and meta.looks[look]
-	local primary = model:FindFirstChild("Blade") or model:FindFirstChild("Head") or model:FindFirstChildWhichIsA("BasePart")
+	if v3src then
+		for _, p in ipairs(model:GetDescendants()) do
+			if p:IsA("BasePart") and not GearV3.visible(p.Name, gradeId) then
+				p:Destroy()
+			end
+		end
+	end
+	local primary = model:FindFirstChild(v3src and "Blade_Body" or "Blade") or model:FindFirstChild(v3src and "Head_Body" or "Head") or model:FindFirstChildWhichIsA("BasePart")
 	for _, p in ipairs(model:GetDescendants()) do
 		if p:IsA("BasePart") then
-			local pm = lookMeta and lookMeta.parts[p.Name]
-			if pm then
-				p.Color = hex(pm.color)
-				p.Material = pm.neon and Enum.Material.Neon or Enum.Material.SmoothPlastic
+			if v3src then
+				local color, neon = GearV3.weaponColor(p.Name, gradeId)
+				p.Color = color
+				p.Material = neon and Enum.Material.Neon or Enum.Material.SmoothPlastic
+			else
+				local pm = lookMeta and lookMeta.parts[p.Name]
+				if pm then
+					p.Color = hex(pm.color)
+					p.Material = pm.neon and Enum.Material.Neon or Enum.Material.SmoothPlastic
+				end
 			end
 			p.CastShadow = false
 		end
@@ -271,9 +288,10 @@ function ArtMeshKit.weaponModel(classId, gradeId)
 	primary.PivotOffset = primary.CFrame:Inverse()
 	model.WorldPivot = CFrame.identity
 	for _, name in ipairs(Data.weaponDropParts[classId] or {}) do -- 코드가 그리는 부분(활 시위)은 메시에서 뺀다
-		local d = model:FindFirstChild(name)
-		if d then
-			d:Destroy()
+		for _, d in ipairs(model:GetChildren()) do
+			if d.Name == name or d.Name:sub(1, #name + 1) == name .. "_" then -- v3 = <이름>_<구역>
+				d:Destroy()
+			end
 		end
 	end
 	local pieces = Data.weaponPieces[classId]

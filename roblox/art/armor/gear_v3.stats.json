@@ -419,48 +419,6 @@
    "visibleParts": 4,
    "coreGem": 0,
    "float": 0
-  },
-  "emblem_stone": {
-   "tris": 44,
-   "parts": 1,
-   "visibleParts": 1,
-   "coreGem": 0,
-   "float": 0
-  },
-  "emblem_crystal": {
-   "tris": 32,
-   "parts": 1,
-   "visibleParts": 1,
-   "coreGem": 0,
-   "float": 0
-  },
-  "emblem_shell": {
-   "tris": 48,
-   "parts": 1,
-   "visibleParts": 1,
-   "coreGem": 0,
-   "float": 0
-  },
-  "emblem_sun": {
-   "tris": 140,
-   "parts": 1,
-   "visibleParts": 1,
-   "coreGem": 0,
-   "float": 0
-  },
-  "emblem_storm": {
-   "tris": 40,
-   "parts": 1,
-   "visibleParts": 1,
-   "coreGem": 0,
-   "float": 0
-  },
-  "emblem_frost": {
-   "tris": 108,
-   "parts": 1,
-   "visibleParts": 1,
-   "coreGem": 0,
-   "float": 0
   }
  },
  "weapons": {

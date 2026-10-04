@@ -22,6 +22,8 @@ for path in glob.glob(os.path.join(SRC, "shared", "*.lua")) + glob.glob(os.path.
     mods[os.path.splitext(os.path.basename(path))[0]] = path
 for name in ["EconSim", "EconSimTables", "EconSimReport", "EconSimVerify"] + [x for x in os.environ.get("EXTRA_SERVER", "").split(",") if x]:
     mods[name] = os.path.join(SRC, "server", name + ".lua")
+for rel in [x for x in os.environ.get("EXTRA_FILES", "").split(",") if x]:  # QUEUE-ALL9E1 1-1: src 기준 상대 경로(client/ArmorColors.lua · shared/MeshMeta/armor_wear.lua) - 모듈 이름 = 파일 이름
+    mods[os.path.splitext(os.path.basename(rel))[0]] = os.path.join(SRC, rel)
 
 prelude = read(os.path.join(SP, os.environ.get("PRELUDE", "server_prelude.luau")))
 out = [prelude]

@@ -19,7 +19,10 @@
 ## 추가 항목(10-04 밤) - 보석 홈 화면 무기 그림 · 512 무기 · 보석 아이콘
 - 아이콘 블록(3)이 아직이라 블록 3에 합쳐 진행(상한 2.5h) · 원문 = 지시 파일 끝 "추가 항목(10-04 밤)".
 
-| 1 | 1-1 장비 v3 메시 | 진행 중 | (이 커밋) | make_gear_v3.py(60 + 문장 6 + 무기 20 생성 · 예산 안 - 방어구 최대 1,490 · 무기 최대 796 · 보이는 파트 최대 15) · GearV3Data · 아직 FBX 내보내기 · 업로드 · 게임 연결(ArmorWearView · 색 함수 · 스위치 GearV3Meshes) · 캡처 안 함 |
+| 1 | 1-1 장비 v3 메시 | 완료 | (이 커밋) | FBX 86 업로드(Approved 86) · MeshMeta 갱신 · shared/GearV3(구역 색 · 문 부품 · 스위치 GearV3Meshes) · ArmorWearView(v3 우선 · 세트 문장) · ArtMeshKit 무기 v3 · 하네스 gear_v3 8/8(48조합 · 1인 MeshPart 최대 23) · Play 캡처 4장(8등급 · 4직업 · 6세트 · 플레이어) · 무기 Grip/가림 = 1-2 |
+| - | P3 결정 판정(사용자 10-04 19:30) | 완료 | 41818c75 | 2-1 돌파 2.2 · 2-2 값 보류(조건 동시 불가) · 2-3 안전장치 · 2-4 기본값 · docs/design/all10-p3-decisions.md · 리뷰어 결함 없음 |
+| - | (사용자 추가) 불씨 시안 v3 .gitignore 예외 + 사양 문서 | 1-1 뒤 바로 | | docs/design/cosmetics-v3.md |
+| - | (사용자 추가) class_legend_*.png 예외 · warrior_v1만 커밋(나머지 3장 = MENU2 F블록) | 1-1 뒤 바로 | | |
 
 ## 정지 기록(2026-10-04 · 사용자 "지금 하는 항목까지만 마치고 멈춰")
 
@@ -34,7 +37,7 @@
 - 블록 1-1 나머지 · 1-2(착용 통과 시험 · 시안 비교 캡처) · 블록 2(보석 광채 · 초월 무기 이펙트 · 홈 광원) · 블록 3(아이콘 128 + 추가 항목: 보석 홈 화면 무기 그림 · 512 무기 · 보석 아이콘) · 블록 4(보고서 QUEUE-ALL9E1-report.md).
 
 ### 다음에 할 첫 작업
-- `bash roblox/tools/blender/bl.sh make_gear_v3.py --weapons --emblems --export` → `meta_to_luau.py`로 MeshMeta.armor_wear 갱신 → `--render`로 직업 4 × 단계 5 렌더 검수.
+- (10-04 밤 갱신) 1-1 완료 → 짧은 작업 2건(불씨 · class_legend) 커밋 → 1-2 착용 통과 시험(4직업 × Grip 3각도 · 달리기 · 공격 · 활강 · 체형 0.8/1.35 · 레이어드 옷 · 시안 비교 docs/art/ref/compare/). Play 더미 = 서버 execute_luau로 R15 모델 + Attribute ArmorWearDummy · ClassId · ArmorLook_<부위>="tierN|등급"(바꾼 직후 1 ~ 2초는 메시 로딩으로 검게 보임) · 카메라 = 클라 BindToRenderStep.
 
 ### 예산 초과 단순화 내역(make_gear_v3.py · 첫 생성 → 최종 · 삼각형)
 | 부위 · 단계 | 무엇을 줄였나 | 전 → 후 |

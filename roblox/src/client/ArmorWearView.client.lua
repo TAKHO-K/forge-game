@@ -19,6 +19,7 @@ local worn = {} -- [owner(Player | Model)] = { key = 문자열, pieces = { MeshP
 -- 조각 색 = client/ArmorColors(QUEUE-ALL9C 2-4: 직업 선택 무대 캐릭터(client/ClassStage)와 같은 함수 - 옮기기만 · 값 그대로)
 local ArmorColors = require(script.Parent.ArmorColors)
 local colorOf, colorOfV3 = ArmorColors.colorOf, ArmorColors.colorOfV3
+local GearV3 = require(ReplicatedStorage.Shared.data.GearV3Data)
 
 local function lookOf(owner)
 	local parts = { tostring(owner:GetAttribute(Data.armorClassAttribute)) }
@@ -42,7 +43,7 @@ local refresh
 local function build(owner, character)
 	local retries = worn[owner] and worn[owner].character == character and (worn[owner].retries or 0) or 0
 	clear(owner)
-	local key = lookOf(owner) .. "|" .. tostring(ArtMeshKit.enabled())
+	local key = lookOf(owner) .. "|" .. tostring(ArtMeshKit.enabled()) .. "|" .. tostring(ArmorColors.gearV3Enabled())
 	local w = { key = key, character = character, pieces = {}, retries = retries }
 	worn[owner] = w
 	task.defer(function()
@@ -73,13 +74,33 @@ local function build(owner, character)
 		if v3 then
 			modelKey = classKey
 		end
+		-- QUEUE-ALL9E1 1-1 장비 v3: 스위치 GearV3Meshes · <부위>_<직업>_<단계>(s1 ~ s5)가 있으면 그것(구역 색 · 문 부품 · 갑옷 = 세트 문장 메시) · 없으면 위 그대로
+		local stageKey = zone and type(classId) == "string" and GearV3.stageOfGrade[grade] and ("%s_%s_%s"):format(part, classId, GearV3.stageOfGrade[grade])
+		local g3 = stageKey and ArmorColors.gearV3Enabled() and ArtMeshKit.get("armor/" .. stageKey) and Wear.pieces[stageKey] and true or false
+		if g3 then
+			modelKey, v3 = stageKey, true
+		end
 		local src = modelKey and ArtMeshKit.get("armor/" .. modelKey)
 		local metaPieces = modelKey and Wear.pieces[modelKey]
 		if src and metaPieces then
+			local entries = {}
+			for _, piece in ipairs(src:GetChildren()) do
+				if not g3 or ArmorColors.gearV3Visible(piece.Name, grade) then
+					table.insert(entries, { piece = piece, meta = metaPieces })
+				end
+			end
+			local emblemKey = g3 and part == "armor" and GearV3.sets[zone] and "emblem_" .. GearV3.sets[zone].emblem
+			local emblemSrc = emblemKey and ArtMeshKit.get("armor/" .. emblemKey)
+			if emblemSrc and Wear.pieces[emblemKey] then
+				for _, piece in ipairs(emblemSrc:GetChildren()) do
+					table.insert(entries, { piece = piece, meta = Wear.pieces[emblemKey] })
+				end
+			end
 			-- A2-N4 P0-3 A안: 붙는 파트마다 묶어 그 파트 실측 크기에 맞춘다(옛 = 블록형 refSize 배율 0.8 ~ 1.35 자름 → 장갑 · 장화가 손 · 발의 1.7 ~ 2.3배)
 			local groups, order = {}, {}
-			for _, piece in ipairs(src:GetChildren()) do
-				local m = piece:IsA("BasePart") and metaPieces[piece.Name]
+			for _, entry in ipairs(entries) do
+				local piece = entry.piece
+				local m = piece:IsA("BasePart") and entry.meta[piece.Name]
 				local body = m and character:FindFirstChild(m.attach)
 				if m and not body then
 					w.missing = true -- 붙을 파트가 아직 안 옴(스트리밍 · 복제 중 - Play: 서버가 만든 더미에서 조각이 무작위로 빠졌다) → 아래에서 다시 입힌다
@@ -139,7 +160,7 @@ local function build(owner, character)
 					-- 묶음 가운데는 둘레(X · Z)만 파트 가운데로 모으고 높이는 비율대로(어깨판은 어깨 위 · 벨트는 허리 아래 그대로)
 					local at = Vector3.new((off.X - mid.X) * s.X, off.Y * s.Y, (off.Z - mid.Z) * s.Z)
 					p.CFrame = body.CFrame * CFrame.new(at) * R
-					local color, neon = (v3 and colorOfV3 or colorOf)(piece.Name, zone, grade)
+					local color, neon = (g3 and ArmorColors.colorOfGearV3 or v3 and colorOfV3 or colorOf)(piece.Name, zone, grade)
 					p.Color = color
 					p.Material = neon and Enum.Material.Neon or Enum.Material.SmoothPlastic
 					p.Anchored, p.Massless = false, true
@@ -159,7 +180,7 @@ end
 
 function refresh(owner, character, force)
 	local w = worn[owner]
-	local key = lookOf(owner) .. "|" .. tostring(ArtMeshKit.enabled())
+	local key = lookOf(owner) .. "|" .. tostring(ArtMeshKit.enabled()) .. "|" .. tostring(ArmorColors.gearV3Enabled())
 	if not force and w and w.key == key and w.character == character and #w.pieces > 0 and w.pieces[1].Parent then
 		return
 	end
@@ -250,6 +271,7 @@ local function refreshAll()
 	end
 end
 workspace:GetAttributeChangedSignal("ArtStyleV1"):Connect(refreshAll)
+ReplicatedStorage:GetAttributeChangedSignal("GearV3Meshes"):Connect(refreshAll) -- QUEUE-ALL9E1 1-1 스위치(Studio 덮기)
 task.spawn(function()
 	local cache = ReplicatedStorage:WaitForChild(Data.cacheFolder, 120)
 	if cache then
