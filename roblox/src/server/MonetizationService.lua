@@ -284,7 +284,7 @@ end
 -- ── ④ 게임패스 ──
 function MonetizationService.hasPass(player, passKey)
 	local s = PlayerProfile.getMonetizationState(player)
-	return s ~= nil and s.gamepasses[passKey] == true
+	return s ~= nil and Monetization.passOwned(MonetizationData, s.gamepasses, passKey) -- QUEUE-ALL10 0-3 세트 패스 includes
 end
 local function applyPassAttributes(player)
 	local s = PlayerProfile.getMonetizationState(player)
@@ -292,7 +292,7 @@ local function applyPassAttributes(player)
 		return
 	end
 	for key in pairs(MonetizationData.gamePasses) do
-		player:SetAttribute("Pass_" .. key, s.gamepasses[key] == true)
+		player:SetAttribute("Pass_" .. key, Monetization.passOwned(MonetizationData, s.gamepasses, key))
 	end
 	CosmeticService.applyAttributes(player) -- 이름표 색은 패스가 있어야 보인다
 end
@@ -327,7 +327,7 @@ function MonetizationService.view(player)
 	end
 	local passes = {}
 	for key, pass in pairs(MonetizationData.gamePasses) do
-		passes[key] = { robux = pass.robux, ready = pass.passId ~= 0, owned = s.gamepasses[key] == true, released = Monetization.isReleased(MonetizationData, key), passId = pass.passId }
+		passes[key] = { robux = pass.robux, ready = pass.passId ~= 0, owned = Monetization.passOwned(MonetizationData, s.gamepasses, key), released = Monetization.isReleased(MonetizationData, key), passId = pass.passId }
 	end
 	return {
 		shards = CosmeticService.shards(player),

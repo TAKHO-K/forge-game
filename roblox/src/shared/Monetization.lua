@@ -122,6 +122,23 @@ function Monetization.tokenBlocked(cosmetics, kind, id)
 	return nil
 end
 
+-- QUEUE-ALL10 0-3(AUDIT1 높음): 게임패스 소유 = 그 패스를 가졌거나, 그 키를 includes로 품은 패스(이름표 세트 = 색 + 배지)를 가졌을 때.
+--   서버 효과 판정(hasPass · 이름표 장착 · Attribute) · 화면 표가 모두 이 함수 하나를 쓴다.
+function Monetization.passOwned(data, gamepasses, key)
+	if type(gamepasses) ~= "table" then
+		return false
+	end
+	if gamepasses[key] == true then
+		return true
+	end
+	for passKey, pass in pairs(data.gamePasses) do
+		if gamepasses[passKey] == true and type(pass.includes) == "table" and table.find(pass.includes, key) then
+			return true
+		end
+	end
+	return false
+end
+
 -- QUEUE-ALL9C 1-6 출시 상품 순차 공개: key = 상품 키 또는 게임패스 키. 공개 = 그 키의 단계 ≤ 지금 단계.
 function Monetization.isReleased(data, key)
 	local stage = data.release and data.release[key] or data.releaseDefault or 1

@@ -93,8 +93,8 @@ function CosmeticService.applyAttributes(player)
 		player:SetAttribute("Cosmetic_" .. slot.id, s.cosmetics.equipped[slot.id])
 	end
 	local color = s.cosmetics.equipped.nameplateColor
-	player:SetAttribute("NameplateColor", s.gamepasses.nameplateColor and color or nil)
-	player:SetAttribute("NameplateBadge", s.gamepasses.nameplateBadge and s.cosmetics.equipped.nameplateBadge or nil) -- QUEUE-ALL1 P6 이름표 배지(패스 있을 때만)
+	player:SetAttribute("NameplateColor", Monetization.passOwned(MonetizationData, s.gamepasses, "nameplateColor") and color or nil) -- QUEUE-ALL10 0-3 세트 패스 포함
+	player:SetAttribute("NameplateBadge", Monetization.passOwned(MonetizationData, s.gamepasses, "nameplateBadge") and s.cosmetics.equipped.nameplateBadge or nil) -- QUEUE-ALL1 P6 이름표 배지(패스 있을 때만)
 end
 
 -- 지급(상품 · 시즌 줄 · 선물 공통). 반환: 새로 얻었나, 이유. 이미 있으면 false("owned") - 멱등(영수증 재시도가 두 번 불러도 같다).
@@ -163,14 +163,14 @@ function CosmeticService.equip(player, slot, id)
 		return false, "no_profile"
 	end
 	if slot == "nameplateColor" then
-		if not s.gamepasses.nameplateColor then
+		if not Monetization.passOwned(MonetizationData, s.gamepasses, "nameplateColor") then
 			return false, "no_pass"
 		end
 		if id ~= nil and not table.find(MonetizationData.gamePasses.nameplateColor.colors, id) then
 			return false, "unknown"
 		end
 	elseif slot == "nameplateBadge" then -- QUEUE-ALL1 P6
-		if not s.gamepasses.nameplateBadge then
+		if not Monetization.passOwned(MonetizationData, s.gamepasses, "nameplateBadge") then
 			return false, "no_pass"
 		end
 		if id ~= nil and not table.find(MonetizationData.gamePasses.nameplateBadge.badges, id) then

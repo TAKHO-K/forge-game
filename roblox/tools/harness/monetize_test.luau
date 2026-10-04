@@ -760,6 +760,19 @@ local ok3, err3 = pcall(function()
 	local c1 = MODS.InventorySync.capacity(p3)
 	s3.gamepasses.bagExpand = true
 	check("게임패스(가방 확장) 두 번 반영 = 칸 +20 한 번(소유 표시 bool · 영수증 없음)", c1 == MODS.InventorySync.capacity(p3) and c1 == 55, tostring(c1))
+	-- ALL10 0-3(AUDIT1 높음): 이름표 세트 패스 = 색 + 배지(includes) - 장착 · hasPass · 화면 표
+	local pN = load(2007, SaveSystem.migrate({}))
+	local sN = PlayerProfile.getMonetizationState(pN)
+	local Cosm = MODS.CosmeticService
+	local color, badge = Data.gamePasses.nameplateColor.colors[1], Data.gamePasses.nameplateBadge.badges[1]
+	local okNone, whyNone = Cosm.equip(pN, "nameplateColor", color)
+	sN.gamepasses.nameplateSet = true
+	local okC, whyC = Cosm.equip(pN, "nameplateColor", color)
+	local okB, whyB = Cosm.equip(pN, "nameplateBadge", badge)
+	local v = MS.view(pN)
+	check("ALL10 0-3 세트 패스만 = 색 · 배지 장착 O · hasPass(색 · 배지) O · 화면 owned · 패스 없음 = no_pass", not okNone and whyNone == "no_pass" and okC and okB
+		and MS.hasPass(pN, "nameplateColor") and MS.hasPass(pN, "nameplateBadge") and v.passes.nameplateColor.owned and v.passes.nameplateBadge.owned and not MS.hasPass(pN, "bagExpand"),
+		("%s · %s · %s"):format(tostring(whyNone), tostring(whyC), tostring(whyB)))
 	for key in pairs(ids) do
 		if Data.products[key] then Data.products[key].productId = 0 end
 	end
