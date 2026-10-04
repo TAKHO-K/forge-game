@@ -25,6 +25,7 @@ return {
 	},
 	groupRewardEnabled = false,
 	-- 허브 업데이트 게시판(새 소식 + 지금 유효한 코드 - 만료 지난 코드는 안 보인다)
+	nextUpdateKey = "update.board.next", -- QUEUE-ALL9E1-ADD C: 소식 "다음 업데이트" 한 줄(날짜 약속 없음 - 업데이트 때 이 키의 문구만 바꾼다)
 	news = { -- 글 = TextData textKey(ko/en)
 		{ date = "2026-10-01", textKey = "update.board.news1" },
 		{ date = "2026-10-01", textKey = "update.board.news2" },

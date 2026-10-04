@@ -8,6 +8,7 @@ local Text = require(ReplicatedStorage.Shared.Text)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local ItemDescribe = require(ReplicatedStorage.Shared.ItemDescribe)
 local All10Data = require(ReplicatedStorage.Shared.data.All10Data)
+local All10 = require(ReplicatedStorage.Shared.All10)
 local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
 local Button = require(script.Parent.Parent.Parent.ui.kit.Button)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
@@ -102,6 +103,33 @@ function TranscendView.build(parent, width, pad, footerHeight, buttonY, resultY,
 	refs.cells = {}
 	refs.slotsText = line("SlotText", 5, "caption", "textSecondary")
 	refs.note = line("TransNote", 6, "caption", "textSecondary")
+	-- QUEUE-ALL9E1-ADD D: 계승 뒤 "다음 쓸 곳" 1줄(순서 = All10Data.spendOrder · All10.nextSpend - EconSim 정책과 같은 함수 · 안내만 · [×]로 이번 접속 동안 숨김)
+	local nextRow = Instance.new("Frame")
+	nextRow.Name = "NextSpend"
+	nextRow.LayoutOrder = 6
+	nextRow.BackgroundTransparency = 1
+	nextRow.Size = UDim2.new(1, 0, 0, Theme.textSize("caption") + 8)
+	nextRow.Parent = scroll
+	local nextLabel = Theme.label(nextRow, "", "caption", "gold")
+	nextLabel.Name = "Text"
+	nextLabel.Size = UDim2.new(1, -28, 1, 0)
+	nextLabel.TextWrapped = true
+	local nextClose = Instance.new("TextButton")
+	nextClose.Name = "Close"
+	nextClose.Text = "×"
+	nextClose.Font = Enum.Font.GothamBold
+	nextClose.TextSize = Theme.textSize("body")
+	nextClose.TextColor3 = Theme.color("textSecondary")
+	nextClose.BackgroundTransparency = 1
+	nextClose.AnchorPoint = Vector2.new(1, 0.5)
+	nextClose.Position = UDim2.new(1, 0, 0.5, 0)
+	nextClose.Size = UDim2.fromOffset(24, 24)
+	nextClose.Parent = nextRow
+	nextClose.Activated:Connect(function()
+		TranscendView.nextHidden = true
+		nextRow.Visible = false
+	end)
+	refs.nextRow, refs.nextLabel = nextRow, nextLabel
 	refs.gemTitle = line("GemTitle", 7, "body", "textPrimary")
 	local gemBox = Instance.new("Frame")
 	gemBox.Name = "GemRows"
@@ -343,6 +371,7 @@ function TranscendView.render(refs)
 		return
 	end
 	if mode == "inherit" then
+		refs.nextRow.Visible = false
 		refs.title.Text = Text.get("transcend.inherit.title")
 		refs.body.Text = Text.get("transcend.inherit.body", { mult = ("%.2f"):format(v.inheritMult or All10Data.inherit.weaponMultiplier) })
 		refs.reward.Text = Text.get("transcend.inherit.reward", { n = tostring(v.rewardGems or All10Data.inherit.rewardGems) }) .. "\n"
@@ -368,6 +397,12 @@ function TranscendView.render(refs)
 			rebuildCells(refs, v.slots, slot)
 			refs.slotsText.Text = Text.get("transcend.enh.slots", { slot = tostring(slot), slots = tostring(v.slots) })
 			refs.note.Text = Text.get("transcend.enh.note")
+		end
+		local nextWhat = All10.nextSpend({ t = level, tCap = v.cap or v.maxLevel or 20, adv = v.advanced or 50, advCap = v.advancedCap or 50, guard = v.guard or 0,
+			guardOn = v.guardUnlocked == true, guardMax = v.guardMax })
+		refs.nextRow.Visible = nextWhat ~= nil and not TranscendView.nextHidden
+		if nextWhat then
+			refs.nextLabel.Text = Text.get("transcend.next.title", { what = Text.get("transcend.next." .. nextWhat, { level = tostring(nextWhat == "transcend" and level + 1 or nextWhat == "advanced" and (v.advanced or 50) + 1 or (v.guard or 0) + 1) }) })
 		end
 		if not maxed and v.cap and level >= v.cap then
 			refs.button.setText(Text.get("transcend.enh.max", { level = tostring(level) }))

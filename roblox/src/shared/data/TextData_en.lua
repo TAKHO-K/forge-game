@@ -74,6 +74,7 @@ return {
 	["update.board.close"] = "Close",
 	["update.board.news1"] = "Rift Time (2× daily · 20 min) · Server Co-op Goal · Weekly Challenge added!",
 	["update.board.news2"] = "Armor looks v3 - a new look for each class · new boss arena floors",
+	["update.board.next"] = "Next update: we are preparing a higher Transcend cap and new gear looks.",
 	["update.board.code.launch"] = "Launch gift",
 	["update.board.code.likes"] = "Thanks for the likes!",
 	["party.board.role1"] = "Anyone",

@@ -122,6 +122,8 @@ local function refresh()
 	OddsView.updateHint(built.hint, state)
 	OddsView.updateResetFloor(built.resetFloor, state)
 	OddsView.updateGuardHint(built.guardHint, state)
+	local lockedInherit = player:GetAttribute("All10On") == true and player:GetAttribute("TranscendLevel") == nil and not TranscendView.canInheritNow()
+	built.inheritHint.Text = lockedInherit and Text.get("transcend.inherit.lockedHint") or "" -- QUEUE-ALL9E1-ADD C
 	if state.maxed then
 		built.button.setPrice({ text = Text.get("forge.enhance.buttonMax") })
 		built.button.setEnabled(false, Text.get("forge.err.maxed"))
@@ -331,6 +333,8 @@ local function build()
 	refs.hint = OddsView.buildHint(scroll, PAD, y, innerWidth)
 	y += OddsView.hintHeight() + 2
 	refs.resetFloor = OddsView.buildHint(scroll, PAD, y, innerWidth, "ResetFloorHint") -- QUEUE-ALL9B G1 초기화 바닥
+	y += OddsView.hintHeight() + 4
+	refs.inheritHint = OddsView.buildHint(scroll, PAD, y, innerWidth, "InheritLockHint") -- QUEUE-ALL9E1-ADD C: 계승 해금 조건 1줄(+29 전)
 	y += OddsView.hintHeight() + 4
 	scroll.CanvasSize = UDim2.new(0, 0, 0, y)
 

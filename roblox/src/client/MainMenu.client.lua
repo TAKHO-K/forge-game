@@ -650,7 +650,7 @@ end })
 
 -- 소식 페이지(업데이트 한 줄 · 코드는 마을 게시판 그대로)
 local newsPage = makePage("NewsPage")
-local newsBox = panelBox(newsPage, 96, 1)
+local newsBox = panelBox(newsPage, 132, 1) -- QUEUE-ALL9E1-ADD C: 다음 업데이트 줄 자리(+36)
 newsBox.Name = "NewsBox"
 local newsLine = Theme.label(newsBox, "", "body", "textPrimary")
 newsLine.Position = UDim2.new(0, 12, 0, 8)
@@ -663,6 +663,16 @@ if latest then
 	bindText(newsLine, "update.board.newsLine", function()
 		return { date = latest.date, text = Text.get(latest.textKey) }
 	end)
+end
+local nextLine = Theme.label(newsBox, "", "caption", "textPrimary") -- QUEUE-ALL9E1-ADD C: 다음 업데이트(데이터 키 하나 - SocialRewardData.nextUpdateKey)
+nextLine.Name = "NextUpdate"
+nextLine.Position = UDim2.new(0, 12, 0, 60)
+nextLine.Size = UDim2.new(1, -24, 0, 36)
+nextLine.TextWrapped = true
+nextLine.TextTruncate = Enum.TextTruncate.None
+nextLine.TextYAlignment = Enum.TextYAlignment.Top
+if SocialRewardData.nextUpdateKey then
+	bindText(nextLine, SocialRewardData.nextUpdateKey)
 end
 local codeNote = Theme.label(newsBox, "", "caption", "textPrimary") -- QUEUE-N1004 A-2: 회색 4.48:1(뒤가 밝을 때) → 4.5 이상
 codeNote.Position = UDim2.new(0, 12, 1, -28)

@@ -79,6 +79,7 @@ local TextData = {
 		["update.board.close"] = "닫기",
 		["update.board.news1"] = "균열 시간(매일 2번 · 20분) · 전 서버 합동 목표 · 주간 도전 추가!",
 		["update.board.news2"] = "방어구 외형 v3 - 직업마다 다른 모습 · 보스 아레나 바닥 새 단장",
+		["update.board.next"] = "다음 업데이트: 초월 강화 천장 확장과 새 장비 모습을 준비하고 있습니다.", -- QUEUE-ALL9E1-ADD C(날짜 약속 없음 · 업데이트 때 이 문구만 교체)
 		["update.board.code.launch"] = "출시 기념",
 		["update.board.code.likes"] = "좋아요 목표 달성 감사",
 		["party.board.role1"] = "누구나", -- QUEUE-STUDIO 0-1: PartyConfig.board.roles 순서(label은 서버 · 옛 표시용으로 남김)
