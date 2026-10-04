@@ -366,6 +366,8 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer, 
 		if not entry.data.isBoss then -- C5-1 장비 뒤처짐 신호(잡몹만 - Player Attribute DealItemLevel = CombatPowerSync)
 			damage *= CombatFormula.gearLagMultiplier(attackerPlayer:GetAttribute("DealItemLevel"), gapStage)
 		end
+		-- QUEUE-ALL10 2-6 돌파(D3): 계승한 사람 = 그 사람 기준 몹 HP × breakFactor → 주는 피해 ÷ breakFactor(잡몹 · 보스 같은 자리 · 보스 기여도는 위 damageBeforeGap). 계승 스테이지 = Player Attribute TranscendInheritStage.
+		damage /= MonsterStats.breakFactor(gapStage, attackerPlayer:GetAttribute("TranscendInheritStage"))
 	end
 
 	if entry.data.isBoss then

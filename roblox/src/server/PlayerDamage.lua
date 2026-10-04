@@ -130,21 +130,23 @@ end
 
 -- C2 전투 공식 받는 피해 배율: 방어 ÷ 권장 방어(그 스테이지 · 때린 몹 공격 rawAttack) → CombatFormula 곡선. 스테이지 = 레벨차 계수와 같은 선택(보스전 = 보스 스테이지 · 잡몹 = 몹 기준).
 --   방어가 먹는 피해(applyHit · 체력바 눈금)만 - %최대체력 · 현재 체력 비율 피해는 방어 무시라 안 곱한다. 스위치가 꺼져 있거나 스탠드인이면 1.
+--   QUEUE-ALL10 2-3: 방어 수련(초월 무기 직업 · All10.defenseTakeMultiplier)을 같은 자리에서 곱한다 - 실제 피해(applyHit)와 체력바 눈금(MonsterAI)이 같은 값(전투 공식 스위치와 무관).
 function PlayerDamage.getCombatTakeMultiplier(targetPlayer, rawAttack, stageOverride)
+	local guard = typeof(targetPlayer) == "Instance" and PlayerProfile.getGuardTakeMultiplier(targetPlayer) or 1
 	if not CombatFormula.enabled() or typeof(targetPlayer) ~= "Instance" or type(rawAttack) ~= "number" then
-		return 1
+		return guard
 	end
 	local classId = PlayerProfile.getClassId(targetPlayer)
 	if not classId then
-		return 1
+		return guard
 	end
 	local bossStage = targetPlayer:GetAttribute("BossStage")
 	if bossStage and CombatFormula.bossExempt() then
-		return 1 -- 보스전 제외(CombatFormulaData.bossExempt)
+		return guard -- 보스전 제외(CombatFormulaData.bossExempt)
 	end
 	local stage = bossStage or stageOverride or PlayerProfile.getInfiniteStage(targetPlayer)
 	local defense = PlayerCombat.getDefense(classId, Loot.getArmorDefense(PlayerProfile.getEquippedArmor(targetPlayer)), PlayerProfile.getDefensePercentBonus(targetPlayer))
-	return CombatFormula.takeMultiplier(defense, stage, rawAttack)
+	return CombatFormula.takeMultiplier(defense, stage, rawAttack) * guard
 end
 
 function PlayerDamage.getNewbieMultiplier(targetPlayer)

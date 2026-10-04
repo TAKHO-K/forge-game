@@ -1755,6 +1755,7 @@ local ok, err = pcall(function()
 	end
 	local prefixById = {}
 	for _, p in ipairs(PD.prefixes) do prefixById[p.id] = p end
+	ATTR.All10Economy = false -- QUEUE-ALL10: 골든 표 = 스위치 끔(지금 곡선 그대로 - 3-4 "끄면 지금 게임과 같음")
 	local bad, cnt, stages = {}, 0, {}
 	local function f(v) return ("%.17g"):format(v) end
 	for k, want in pairs(golden) do
@@ -1798,6 +1799,39 @@ local ok, err = pcall(function()
 	end
 	check("서버 판정 = 시뮬 = 몹 정보 UI(4지점 × 6티어 HP · 공격)", same)
 	check("방어 필드 자리 = 0(몹 데이터에 방어 없음 · 피해 식이 아직 안 읽음)", MS.trash(MD.tier1, 100).defense == 0 and MS.defense(nil) == 0)
+	-- QUEUE-ALL10 2-6 · 3-2: 스위치 켬 = 끈 값 × 전역 재조정(16,000부터) · 사람별 돌파 계수 - 골든 31지점 전부 · 서버(피해 ÷ 계수 ≡ HP × 계수) = UI(MonsterStats.trash inheritStage) = 시뮬(BalanceSim)
+	local A10 = MODS.All10
+	local stageList = {}
+	for st in pairs(stages) do table.insert(stageList, st) end
+	table.sort(stageList)
+	local offVals = {}
+	for _, st in ipairs(stageList) do
+		offVals[st] = {}
+		for _, key in ipairs(MD.tierOrder) do
+			offVals[st][key] = { hp = MS.trashHp(MD[key].hp, st), atk = MS.trashAttack(MD[key].attack, st), boss = BR.buildInstanceData(st, "abyssal_lord", 1) }
+		end
+	end
+	ATTR.All10Economy = true
+	local onBad, pts = {}, 0
+	for _, st in ipairs(stageList) do
+		for _, key in ipairs(MD.tierOrder) do
+			local t, o = MD[key], offVals[st][key]
+			local hp, atk = MS.trashHp(t.hp, st), MS.trashAttack(t.attack, st)
+			local wantHp, wantAtk = o.hp * A10.hpCurveFactor(st), o.atk * A10.attackCurveFactor(st)
+			local S0 = math.max(1, st - 700) -- 계승 700 스테이지 전(돌파 중)
+			local ui = MS.trash(t, st, nil, S0).hp
+			local server = hp * MS.breakFactor(st, S0) -- MonsterState: 피해 ÷ breakFactor = 그 사람 기준 HP × breakFactor
+			local sim = BS.getMonsterHp(st, key) * MS.breakFactor(st, S0)
+			local boss = BR.buildInstanceData(st, "abyssal_lord", 1)
+			pts += 1
+			if f(hp) ~= f(wantHp) or f(atk) ~= f(wantAtk) or f(ui) ~= f(server) or f(sim) ~= f(server) or f(boss.hp) ~= f(o.boss.hp * A10.hpCurveFactor(st)) then
+				table.insert(onBad, ("%s@%d hp%s atk%s ui%s sim%s boss%s"):format(key, st, tostring(f(hp) == f(wantHp)), tostring(f(atk) == f(wantAtk)), tostring(f(ui) == f(server)), tostring(f(sim) == f(server)), tostring(f(boss.hp) == f(o.boss.hp * A10.hpCurveFactor(st)))))
+			end
+		end
+	end
+	check(("ALL10 켬: %d지점 × 6티어 = %d값 - 전역 재조정 × 끈 값 · 돌파 계수 서버 = UI = 시뮬 · 보스 HP 오차 0"):format(#stageList, pts), #onBad == 0 and #stageList >= 30, table.concat(onBad, " ", 1, math.min(5, #onBad)))
+	check("ALL10 켬 16,000 전은 끈 값 그대로(초반 곡선 불변)", f(MS.trashHp(MD.tier1.hp, 15999)) == f(offVals[15999] and offVals[15999].tier1.hp or MS.trashHp(MD.tier1.hp, 15999)) and A10.hpCurveFactor(15000) == 1)
+	ATTR.All10Economy = nil
 end)
 if not ok then print("[MSTAT] 하네스 에러 " .. tostring(err)) end
 print(("[MSTAT] 끝 %d/%d"):format(pass, total))

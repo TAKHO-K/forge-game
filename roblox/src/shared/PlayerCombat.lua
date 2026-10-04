@@ -24,6 +24,7 @@ local Enhance = require(ReplicatedStorage.Shared.Enhance)
 local EnhanceEffect = require(ReplicatedStorage.Shared.EnhanceEffect)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local Sanitize = require(ReplicatedStorage.Shared.Sanitize)
+local All10 = require(ReplicatedStorage.Shared.All10) -- QUEUE-ALL10 초월 무기 · 초월 강화
 
 -- 무기 등급 배율 - 갑옷·장갑·신발과 같은 단일 출처(ArmorData.gradeOrder로 index->id,
 -- ItemVisualData.gradeVisuals[id].statMultiplier로 배율)를 쓴다(20-1, WeaponData.lua
@@ -69,10 +70,18 @@ end
 function PlayerCombat.getAttackParts(weapon, classId, characterLevel, attackPercentBonus, optionFinalDamageBonus, permanentMultiplier, dealItemLevels)
 	local class = ClassData.classes[classId]
 	local weaponData = WeaponData.weapons[weapon.id]
+	-- QUEUE-ALL10 2-1 · 2-2: 초월 무기(계승) = 등급 줄이 태초 × inherit.weaponMultiplier(1.25) · 강화 줄 = +30 몫 × (1 + 초월 강화 몫) - 새 줄 없이 같은 두 줄에 얹는다(상세 스탯 · 시뮬 그대로).
+	--   스위치 끔이면 초월 무기도 태초 +30과 같다(이득 0 - 지금 게임과 같은 값).
+	local gradeValue = gradeMultiplierForIndex(weapon.grade)
+	local enhanceValue = Enhance.getDamageMultiplier(weapon.level)
+	if All10.isTranscendWeapon(weapon) then
+		gradeValue = gradeMultiplierForIndex(All10.data.inherit.fromGrade) * (All10.enabled() and All10.data.inherit.weaponMultiplier or 1)
+		enhanceValue *= 1 + All10.transcendEnhanceBonus(weapon.transcend)
+	end
 	return {
 		{ id = "weaponBase", value = weaponData.baseAttack },
-		{ id = "grade", value = gradeMultiplierForIndex(weapon.grade) },
-		{ id = "enhance", value = Enhance.getDamageMultiplier(weapon.level) },
+		{ id = "grade", value = gradeValue },
+		{ id = "enhance", value = enhanceValue },
 		{ id = "class", value = class.atk },
 		{ id = "level", value = CharacterLevel.getWeaponExpMultiplier(characterLevel) },
 		{ id = "dealGear", value = CharacterLevel.getDealGearMultiplier(dealItemLevels) },

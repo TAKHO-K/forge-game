@@ -206,8 +206,30 @@ local function syncMilestoneAttributes(player, profile)
 	local classState = activeClassState(profile)
 	local claimed = classState and classState.milestoneLevel or 0
 	player:SetAttribute("MilestoneLevel", claimed)
-	player:SetAttribute("MilestoneMultiplier", Milestone.attackMultiplier(claimed) + Training.bucketBonus(profile.training, classState and classState.abilities, profile.classId, "attack")) -- Q6: 수련 · 직업 능력 합연산
+	local advanced = classState and All10.isTranscendWeapon(classState.weapon) and All10.advancedBonus(profile.training and profile.training.advanced) or 0 -- QUEUE-ALL10 고급 수련(getMilestoneMultiplier와 같은 식)
+	player:SetAttribute("MilestoneMultiplier", Milestone.attackMultiplier(claimed) + Training.bucketBonus(profile.training, classState and classState.abilities, profile.classId, "attack") + advanced) -- Q6: 수련 · 직업 능력 합연산
 	player:SetAttribute("TrainingLevels", ("%d,%d,%d"):format(profile.training and profile.training.attack or 0, profile.training and profile.training.hp or 0, profile.training and profile.training.defense or 0)) -- Q6 수련 창 표시
+end
+
+-- QUEUE-ALL10 활성 직업의 초월 계승 상태 → Attribute(화면 · 몹 정보 UI가 읽는다 - 진실 = 저장):
+--   TranscendInheritStage = 계승 스테이지(돌파 계수 - 서버 MonsterState · 클라 TargetFocus 같은 값 · 초월 무기 아니면 nil) · TranscendLevel · TranscendSlot = 초월 강화 단계 · 칸
+--   AdvancedTraining · GuardTraining = 고급 · 방어 수련 단계 · TranscendGemCount = 초월 보석 수 · All10On = 스위치(화면이 기능을 숨길지)
+function PlayerProfile.syncTranscendAttributes(player)
+	local profile = profiles[player]
+	if not profile or typeof(player) ~= "Instance" then
+		return
+	end
+	local classState = activeClassState(profile)
+	local weapon = classState and classState.weapon
+	local transcend = All10.isTranscendWeapon(weapon) and weapon.transcend or nil
+	local rec = classState and classState.transcendInherit
+	player:SetAttribute("All10On", All10.enabled())
+	player:SetAttribute("TranscendInheritStage", transcend and All10.enabled() and type(rec) == "table" and rec.stage or nil)
+	player:SetAttribute("TranscendLevel", transcend and transcend.level or nil)
+	player:SetAttribute("TranscendSlot", transcend and transcend.slot or nil)
+	player:SetAttribute("AdvancedTraining", type(profile.training) == "table" and profile.training.advanced or nil)
+	player:SetAttribute("GuardTraining", type(profile.training) == "table" and profile.training.guard or nil)
+	player:SetAttribute("TranscendGemCount", type(profile.transcendGems) == "table" and #profile.transcendGems.list or 0)
 end
 
 -- 로드 직후(PlayerProfile.init)와 직업 전환 직후(setClassId) 둘 다 "지금 활성 직업의
@@ -230,6 +252,7 @@ local function syncActiveClassAttributes(player, profile)
 	-- 환생 횟수(23-2) - 환생 UI(레벨 상한 표시)가 이 Attribute로 판정한다(25-1까지는 ExpBar의
 	-- 곡선 분기도 봤지만, 곡선이 회차 무관 하나가 되면서 그 용도는 없어졌다).
 	player:SetAttribute("RebirthCount", classState.rebirthCount)
+	PlayerProfile.syncTranscendAttributes(player) -- QUEUE-ALL10
 	-- 캐릭터 레벨(13-2) - 저장에는 누적 경험치만 있고 레벨은 항상 여기서 파생시킨다(단일
 	-- 소스 원칙, InfiniteStage의 stage/multiplier 관계와 같은 구조).
 	player:SetAttribute("CharacterExp", classState.characterExp)

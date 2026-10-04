@@ -553,10 +553,10 @@ local function refresh()
 		local base = species and MonsterData.species[species] or nil
 		slot.stats.Visible = base ~= nil
 		if base then
-			local statsKey = species .. "|" .. tostring(c.model:GetAttribute("MobPrefix")) .. "|" .. stage
+			local statsKey = species .. "|" .. tostring(c.model:GetAttribute("MobPrefix")) .. "|" .. stage .. "|" .. tostring(player:GetAttribute("TranscendInheritStage")) -- QUEUE-ALL10 계승하면 다시 계산
 			if slot.statsKey ~= statsKey then
 				slot.statsKey = statsKey
-				local st = MonsterStats.trash(base, stage, prefixById[c.model:GetAttribute("MobPrefix")])
+				local st = MonsterStats.trash(base, stage, prefixById[c.model:GetAttribute("MobPrefix")], player:GetAttribute("TranscendInheritStage")) -- QUEUE-ALL10 2-6: 보는 사람의 돌파 계수(서버 피해 ÷ 계수와 같은 값)
 				slot.stats.Text = Text.get("nameplate.mob.stats", { hp = NumberFormat.format(st.hp), attack = NumberFormat.format(st.attack) })
 			end
 		end

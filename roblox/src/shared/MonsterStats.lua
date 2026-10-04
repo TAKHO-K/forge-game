@@ -5,25 +5,33 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
 local BossCurveData = require(ReplicatedStorage.Shared.data.BossCurveData)
+local All10 = require(ReplicatedStorage.Shared.All10) -- QUEUE-ALL10 2-6 몹 곡선(전역 재조정 · 사람별 돌파 계수 - 스위치 끔 = 1)
 
 local MonsterStats = {}
 
 -- 잡몹(구간 배율 포함). base = MonsterData tier 표(hp · attack · defense?) · prefix = 접두사 표(hpMultiplier) 또는 nil
+-- QUEUE-ALL10 2-6(D3 · D11): 전역 재조정 = All10.hpCurveFactor · attackCurveFactor(16,000부터) - 스위치 끄면 1이라 지금 곡선(골든 표 그대로).
 function MonsterStats.trashHp(baseHp, stage)
-	return InfiniteStage.getTrashHp(baseHp, stage)
+	return InfiniteStage.getTrashHp(baseHp, stage) * All10.hpCurveFactor(stage)
 end
 
 function MonsterStats.trashAttack(baseAttack, stage)
-	return InfiniteStage.getTrashAttack(baseAttack, stage)
+	return InfiniteStage.getTrashAttack(baseAttack, stage) * All10.attackCurveFactor(stage)
+end
+
+-- 사람별 돌파 계수(계승한 사람에게만 · 몹 HP에 곱하는 값): 서버는 그 사람이 주는 피해 ÷ 이 값(MonsterState - 레벨차 계수와 같은 자리) · 몹 정보 UI는 HP × 이 값 · EconSim도 같은 함수.
+function MonsterStats.breakFactor(stage, inheritStage)
+	return All10.breakFactor(stage, inheritStage)
 end
 
 function MonsterStats.defense(base)
 	return type(base) == "table" and tonumber(base.defense) or 0
 end
 
-function MonsterStats.trash(base, stage, prefix)
+-- inheritStage(선택 · QUEUE-ALL10) = 보는 사람의 계승 스테이지 → 그 사람 기준 HP(돌파 계수)
+function MonsterStats.trash(base, stage, prefix, inheritStage)
 	return {
-		hp = MonsterStats.trashHp(base.hp, stage) * (prefix and prefix.hpMultiplier or 1),
+		hp = MonsterStats.trashHp(base.hp, stage) * (prefix and prefix.hpMultiplier or 1) * MonsterStats.breakFactor(stage, inheritStage),
 		attack = MonsterStats.trashAttack(base.attack, stage),
 		defense = MonsterStats.defense(base),
 	}
@@ -31,11 +39,11 @@ end
 
 -- 보스(구간 배율 없음 · tier 압축 전 HP). BossRules.buildInstanceDataFrom이 부른다 - 인원 배수(partyHpMultiplier)는 BossRules가 계산해 넘긴다.
 function MonsterStats.bossHp(trashBase, stage, boss, hpMultiplierExtra, partyHpMultiplier)
-	return InfiniteStage.getMonsterHp(trashBase.hpUnscaled or trashBase.hp, stage) * boss.hpMultiplier * hpMultiplierExtra * partyHpMultiplier
+	return InfiniteStage.getMonsterHp(trashBase.hpUnscaled or trashBase.hp, stage) * boss.hpMultiplier * hpMultiplierExtra * partyHpMultiplier * All10.hpCurveFactor(stage)
 end
 
 function MonsterStats.bossAttack(trashBase, stage, boss)
-	return InfiniteStage.getMonsterAttack(trashBase.attack, stage) * boss.attackMultiplier * InfiniteStage.interpBand(BossCurveData.attackEase, stage)
+	return InfiniteStage.getMonsterAttack(trashBase.attack, stage) * boss.attackMultiplier * InfiniteStage.interpBand(BossCurveData.attackEase, stage) * All10.attackCurveFactor(stage)
 end
 
 return MonsterStats
