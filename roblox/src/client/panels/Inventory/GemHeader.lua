@@ -11,6 +11,8 @@ local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local Text = require(ReplicatedStorage.Shared.Text)
 local ItemIcons = require(script.Parent.Parent.Parent.ItemIcons)
+local WeaponFx = require(ReplicatedStorage.Shared.WeaponFx)
+local player = game:GetService("Players").LocalPlayer
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 local HelpToggle = require(script.Parent.Parent.Parent.ui.kit.HelpToggle)
 
@@ -187,6 +189,10 @@ function GemHeader.createWeaponArt(parent, size)
 			-- QUEUE-ALL9E1 추가 항목 1: 장착 무기(직업 × 등급) 아이콘 = 장비 탭 무기 칸과 같은 소스(ItemIcons.keyFor) · 그림이 없으면 도형
 			local key = ItemIcons.keyFor("weapon", weaponGrade, nil, classId)
 			holder:SetAttribute("WeaponIconKey", key or "")
+			-- QUEUE-ALL9E1 2-2 아이콘 쪽 연결 지점: 3D 이펙트와 같은 단계 판정(WeaponFx.stepOf) - 단계별 아이콘 장식은 디자인 묶음(DESIGN-BACKLOG 9)
+			local fx = WeaponFx.stepOf(weaponGrade, player:GetAttribute("WeaponLevel"), player:GetAttribute("TranscendLevel"))
+			holder:SetAttribute("WeaponFxStep", fx and fx.step or nil)
+			holder:SetAttribute("WeaponFxKind", fx and fx.kind or nil)
 			if not ItemIcons.image(art, size, key) then
 				ItemIcons.weapon(art, size, iconColor)
 			end

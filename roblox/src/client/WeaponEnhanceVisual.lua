@@ -16,8 +16,7 @@ local Workspace = game:GetService("Workspace")
 
 local EnhanceEffect = require(ReplicatedStorage.Shared.EnhanceEffect)
 local EnhanceVisualData = require(ReplicatedStorage.Shared.data.EnhanceVisualData)
-local All10 = require(ReplicatedStorage.Shared.All10)
-local All10Data = require(ReplicatedStorage.Shared.data.All10Data)
+local WeaponFx = require(ReplicatedStorage.Shared.WeaponFx)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local RareMonsterConfig = require(ReplicatedStorage.Shared.data.RareMonsterConfig)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
@@ -241,15 +240,17 @@ end
 
 -- 무기에 level 단계의 모습을 입힌다(멱등 - 같은 단계로 다시 불러도 · 단계가 내려가도 그 단계의 모습이 된다).
 function WeaponEnhanceVisual.apply(weapon, level)
-	-- QUEUE-ALL9E1 2-2(연결 지점만): 초월 무기 = 초월 강화 단계 → 이펙트 단계 번호(All10.transcendFxTier) · 실제 단계별 효과 전까지 = 기존 강화 연출(tempVisualLevel) 재사용
-	local isTranscendent = ArmorData.gradeOrder[(player:GetAttribute("WeaponGrade") or 0) + 1] == "transcendent"
-	local tier = isTranscendent and All10.transcendFxTier(player:GetAttribute("TranscendLevel") or 0) or nil
-	if tier then
-		level = math.max(level, All10Data.transcendEnhance.tempVisualLevel)
+	-- QUEUE-ALL9E1 2-2(연결 지점만 · 사용자 10-04 밤): 단계 판정 = WeaponFx.stepOf(초월 +0 ~ +25 → 0 ~ 25 · 계승 전 +20 ~ +30 색 띠) - 아이콘과 같은 표.
+	--   실제 단계별 모양 전까지 초월 무기 = 기존 강화 연출(transcendTempVisualLevel) 재사용 · 무기에 WeaponFxKind · WeaponFxStep · WeaponFxBand 기록
+	local fx = WeaponFx.stepOf(ArmorData.gradeOrder[(player:GetAttribute("WeaponGrade") or 0) + 1], level, player:GetAttribute("TranscendLevel"))
+	if fx and fx.kind == "transcend" then
+		level = math.max(level, WeaponFx.data.transcendTempVisualLevel)
 	end
-	local tierHolder = effectParent(weapon)
-	if tierHolder then
-		tierHolder:SetAttribute("TranscendFxTier", tier)
+	local stepHolder = weapon.folder or effectParent(weapon) -- 무기 폴더(Weapon_<직업>) = 모든 무기 종류에 있다(절차 생성 무기는 effectParent가 없을 수 있다)
+	if stepHolder then
+		stepHolder:SetAttribute("WeaponFxKind", fx and fx.kind or nil)
+		stepHolder:SetAttribute("WeaponFxStep", fx and fx.step or nil)
+		stepHolder:SetAttribute("WeaponFxBand", fx and fx.band and fx.band.band or nil)
 	end
 	local state = EnhanceEffect.resolveVisual(level)
 	local fx = weapon.instances.fx
@@ -359,7 +360,7 @@ end
 -- getWeapon() = WeaponVisual의 지금 무기(없으면 nil). WeaponLevel이 바뀔 때마다 그 무기에 다시 apply하고, 단계에 도달하는 순간의 빛기둥(+25)을 세운다.
 function WeaponEnhanceVisual.init(getWeapon)
 	local lastLevel = player:GetAttribute("WeaponLevel") or 0
-	for _, attr in ipairs({ "TranscendLevel", "WeaponGrade" }) do -- QUEUE-ALL9E1 2-2: 초월 강화 · 계승 = 이펙트 단계 다시 판정
+	for _, attr in ipairs({ "TranscendLevel", "WeaponGrade" }) do -- QUEUE-ALL9E1 2-2: 초월 강화 · 계승 · 캐릭터 전환 = 이펙트 단계 다시 판정(WeaponLevel은 아래 원래 신호)
 		player:GetAttributeChangedSignal(attr):Connect(function()
 			local weapon = getWeapon()
 			if weapon then

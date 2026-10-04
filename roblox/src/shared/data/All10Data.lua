@@ -42,17 +42,6 @@ return {
 			{ fromLevel = 18, toLevel = 20, chance = 0.10, ceiling = 30 },
 			{ fromLevel = 21, toLevel = 25, chance = 0.10, ceiling = 30 }, -- extendStage 이상
 		},
-		-- QUEUE-ALL9E1 블록 2-2(기능만 · 모양 = DESIGN-BACKLOG 9): 초월 강화 단계 → 무기 이펙트 단계 번호(fromLevel 이상이면 그 tier · 위에서 아래로 높은 쪽).
-		--   tempVisualLevel = 실제 효과가 나오기 전까지 쓰는 기존 강화 연출 단계(WeaponEnhanceVisual - 지금 = +30 모습 그대로 재사용)
-		fxTiers = {
-			{ fromLevel = 0, tier = 1 }, -- +0 흑금 균열 은은한 빛 + 금빛 반짝
-			{ fromLevel = 5, tier = 2 }, -- +5 휘두를 때 흑금 검기
-			{ fromLevel = 10, tier = 3 }, -- +10 흑금 연기 오라 + 타격 금빛 파편
-			{ fromLevel = 15, tier = 4 }, -- +15 몸 주위 작은 오라(≤ 1.5 stud) + 긴 검기 + 걸음 금가루
-			{ fromLevel = 20, tier = 5 }, -- +20 금빛 번개 균열 + 금 · 흑 이중 검기 + 미세 무지개
-			{ fromLevel = 21, tier = 6 }, -- +21 ~ +25 = +20 위 작은 추가 장식(자리)
-		},
-		tempVisualLevel = 30,
 	},
 
 	-- QUEUE-ALL9E1 0-5(P3-5): 초월 강화 최초 달성 - levels 각 단계 "전 서버 최초 1명" = 전 서버 배너 + 명예의 전당 "초월 강화" 줄 + 칭호(titleIds).

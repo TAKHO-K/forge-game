@@ -65,20 +65,6 @@ function All10.transcendBand(nextLevel)
 	return nil
 end
 
--- QUEUE-ALL9E1 2-2: 초월 강화 단계(0 ~ 25) → 무기 이펙트 단계 번호(All10Data.transcendEnhance.fxTiers) · 초월 무기가 아니면 nil
-function All10.transcendFxTier(level)
-	if type(level) ~= "number" then
-		return nil
-	end
-	local tier = nil
-	for _, t in ipairs(All10Data.transcendEnhance.fxTiers) do
-		if level >= t.fromLevel then
-			tier = t.tier
-		end
-	end
-	return tier
-end
-
 -- 기대 시도 수(천장 N번째 확정): Σ_{k=1..N} (1 − p)^(k−1) = (1 − (1 − p)^N) / p
 function All10.transcendExpectedAttempts(band)
 	return (1 - (1 - band.chance) ^ band.ceiling) / band.chance

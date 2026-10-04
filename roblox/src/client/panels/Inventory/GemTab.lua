@@ -597,7 +597,7 @@ task.spawn(function()
 	end
 end)
 
-for _, attr in ipairs({ "RebirthCount", "InfiniteStage", "AccountBestStage", "ClassId", "WeaponGrade", "WeaponLevel" }) do -- QUEUE-ALL9E1 추가 항목 1: 무기 그림 = 장착 변경 · 계승 · 캐릭터 전환 · 강화 즉시
+for _, attr in ipairs({ "RebirthCount", "InfiniteStage", "AccountBestStage", "ClassId", "WeaponGrade", "WeaponLevel", "TranscendLevel" }) do -- QUEUE-ALL9E1 추가 항목 1: 무기 그림 = 장착 변경 · 계승 · 캐릭터 전환 · 강화 즉시
 	player:GetAttributeChangedSignal(attr):Connect(updateGemTab)
 end
 

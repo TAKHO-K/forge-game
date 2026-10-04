@@ -13,7 +13,7 @@
 | 6 | 512 큰 무기 그림(보석 홈 화면 전용) | QUEUE-ALL9E1 · 추가 항목(10-04 밤) 2번 | `QUEUE-ALL9E1-prompt.md` "추가 항목(10-04 밤)" 2 | 안 함 - 기능(장착 무기로 자동 교체)은 지금 아이콘으로 진행 |
 | 7 | 보석 아이콘 새 그림(종류 × 등급 · 광채 규격) | QUEUE-ALL9E1 · 추가 항목 3번 | 같은 곳 3 | 안 함 - 아이콘 id 한 소스 연결 로직 · 임시 아이콘은 기능으로 진행 |
 | 8 | 보석 광채(유물 ~ 초월 · 방법 3개 비교) | QUEUE-ALL9E1 · 블록 2-1 | `QUEUE-ALL9E1-prompt.md` 블록 2-1 | 안 함 |
-| 9 | 무기 이펙트 실제 모양(+0 ~ +25 · 직업별 타격 · +30 증표 이펙트) | QUEUE-ALL9E1 · 블록 2-2 | `QUEUE-ALL9E1-prompt.md` 블록 2-2 | 안 함 - 단계 판정 · 연결 지점은 기능으로 진행(효과는 기존 것 재사용) |
+| 9 | 무기 이펙트 실제 모양(+0 ~ +25 · 직업별 타격 · +30 증표 이펙트) | QUEUE-ALL9E1 · 블록 2-2 | `QUEUE-ALL9E1-prompt.md` 블록 2-2 | 안 함 - 단계표 `WeaponFxStepData`(초월 0 ~ 25 · 계승 전 +20 ~ +30 띠 · 색 hex 임시) · 판정 `WeaponFx.stepOf` · 연결 지점(3D · 아이콘) 완료 → 모양은 이 표를 읽어 만든다(효과는 지금 기존 +30 재사용) |
 | 10 | 보석 홈 광원(등급 · 홈 위치별) | QUEUE-ALL9E1 · 블록 2-3 | `QUEUE-ALL9E1-prompt.md` 블록 2-3 | 안 함 |
 | 11 | generate_mesh 메시 생성 시험 | QUEUE-ALL9E1 · LOOK3 판정 뒤 | `QUEUE-ALL9E1-prompt.md` "LOOK3 판정" [메시 생성 시험] | 완료 · 보고서 `QUEUE-ALL9E1-MESHGEN-report.md`(추가 시험은 보류) |
 | 12 | 전갈 여왕 외형 | QUEUE-ALL9E1-ADD · 블록 F | `QUEUE-ALL9E1-ADD-prompt.md` 83줄 "F. 전갈 여왕 외형 개선" | 안 함 |

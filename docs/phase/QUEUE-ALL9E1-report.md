@@ -20,10 +20,10 @@
 |---|---|---|
 | F1 | 보석 탭 무기 그림 = 장착 무기(직업 × 등급) - 장비 탭 무기 칸과 같은 소스(`ItemIcons.keyFor` → 그림 · 없으면 도형). `ClassId` · `WeaponGrade` · `WeaponLevel`이 바뀌면 창이 열린 채로 즉시 다시 그림(장착 · 환생 등급 · 강화 · 계승 · 캐릭터 전환 모두 이 속성으로 온다) | Play: 쌍검 유물 → 활 유물 → 활 태초 → +7 → 활 초월 → 치유사 초월 → 원복, 키 · 그림 id 전부 장착 무기와 일치 · 하네스 32조합 키 + 장면 6 |
 | F2 | 보석 아이콘 한 소스 `ItemIcons.gem`: 키 = `icons/gems/<등급>_<옵션 id>` → `icons/gems/<등급>` → 없으면 임시(등급색 원). 홈 · 가방 칸 연결 · 박힌 채 등급이 오르면 GemSync 뒤 다시 칠함 | 하네스: 8등급 × 16옵션 = 빠진 칸 0(지금 전부 임시 128) · 등급 상승 키 변화 · Play: 홈 4 · 가방 1 = `GemIconKey` 기록 |
-| F3 | 초월 무기 이펙트 단계 = `All10Data.transcendEnhance.fxTiers`(+0 → 1 · +5 → 2 · +10 → 3 · +15 → 4 · +20 → 5 · +21 ~ 25 → 6) · `All10.transcendFxTier` · `WeaponEnhanceVisual`이 `TranscendLevel` · `WeaponGrade` 변화에 다시 판정해 무기에 `TranscendFxTier` 기록 · 효과 = 기존 +30 연출 재사용(`tempVisualLevel`) | Play: +0/5/10/15/20/21 → 1 ~ 6 · 태초로 내리면 단계 없음 |
+| F3 | 무기 이펙트 단계(사용자 변경 10-04 밤): 표 하나 `WeaponFxStepData`(아이콘 · 3D 공용) - 초월 +0 ~ +25 → 단계 0 ~ 25(누적 요소: 균열 줄 · 불티 · 빛살 · 맥동 · 빛 고리 조각 · 프리즘 · 별자리 점 + 큰 변화 +5 검기 · +10 연기 오라/파편 · +15 몸 오라 ≤ 1.5/긴 검기/금가루 · +20 번개/이중 검기) · 계승 전 +20 ~ +30 색 띠(은 · 민트 · 하늘 · 아쿠아 · 흰하늘 · 백금 - 2단계씩 · 백금 = +30 · 색 hex 임시) · 규칙(오라 ≤ 1.5 · 화면 오라/바닥 금지 · 보스전 남 ×0.5 · 폰 이미터 상한). 판정 = `WeaponFx.stepOf` 한 곳 → 3D(`WeaponEnhanceVisual` → 무기 폴더 `WeaponFxKind/Step/Band`) · 아이콘(보석 탭 무기 그림 `WeaponFxStep`). 효과 = 기존 +30 연출 재사용 | 하네스 10줄(연속 26 · 큰 변화 위치 · +1 ~ 4 = +0 · +5부터 매 단계 다름 · 감소 없음 · 띠 · 장면 6) · Play: 태초 +29 → +30 → 계승 +0 → +7 → +8 → +21 → 활 전설 → 치유사 초월 +15 → 원복, 3D · 아이콘 모두 일치 |
 
 ## 검증
-- `run_all` 전부 통과(새 `gem_home` 13/13 포함) · Play 로그 게임 에러 0 · luau-compile 9파일 통과 · luau-analyze 새 경고 0(WeaponEnhanceVisual 78줄 UnreachableCode = 9-28 기존 코드).
+- `run_all` 전부 통과(새 `gem_home` 23/23 포함) · Play 로그 게임 에러 0 · luau-compile 9파일 통과 · luau-analyze 새 경고 0(WeaponEnhanceVisual 78줄 UnreachableCode = 9-28 기존 코드).
 
 ## 사용자 실기 확인(선택)
 - 보석 탭(가방 G → 보석)에서 무기 그림이 내 직업 무기로 나오는지 · 가방 보석 칸에 등급색 원이 생긴 것.

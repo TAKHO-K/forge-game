@@ -9,7 +9,7 @@ local function check(label, ok, detail)
 end
 
 local ok, err = pcall(function()
-	local Icons, Armor, Ids, GemData, All10, All10Data, OptionData = MODS.ItemIcons, MODS.ArmorData, MODS.ArtAssetIds, MODS.GemData, MODS.All10, MODS.All10Data, MODS.OptionData
+	local Icons, Armor, Ids, GemData, OptionData = MODS.ItemIcons, MODS.ArmorData, MODS.ArtAssetIds, MODS.GemData, MODS.OptionData
 	local classes = { "greatsword", "dualblade", "bow", "healer" }
 
 	-- ① 무기 그림 키 = 장비 탭과 같은 소스 · 장착 변경 · 계승 · 캐릭터 전환 · 강화 장면에서 장착 무기와 일치
@@ -60,15 +60,62 @@ local ok, err = pcall(function()
 	local after = Icons.gemKey(gem)
 	check("박힌 채 등급 상승 → 키 바뀜", before ~= after and after:find("ancient", 1, true) ~= nil, before .. " → " .. after)
 
-	-- ③ 초월 이펙트 단계
-	local expect = { [0] = 1, [4] = 1, [5] = 2, [9] = 2, [10] = 3, [14] = 3, [15] = 4, [19] = 4, [20] = 5, [21] = 6, [25] = 6 }
-	local bad = {}
-	for lv, t in pairs(expect) do
-		if All10.transcendFxTier(lv) ~= t then table.insert(bad, ("+%d→%s"):format(lv, tostring(All10.transcendFxTier(lv)))) end
+	-- ③ 무기 이펙트 단계(사용자 10-04 밤): 초월 +0 ~ +25 → 0 ~ 25 · 요소 표 하나(WeaponFxStepData) · 계승 전 +20 ~ +30 색 띠
+	local Fx, FxD = MODS.WeaponFx, MODS.WeaponFxStepData
+	local T = FxD.transcend
+	local contiguous = #T == 26
+	for i, row in ipairs(T) do
+		if row.step ~= i - 1 then contiguous = false end
 	end
-	check("초월 +0/5/10/15/20/21 → 단계 1 ~ 6", #bad == 0, table.concat(bad, ","))
-	check("초월 아님(nil) → 단계 없음", All10.transcendFxTier(nil) == nil)
-	check("임시 효과 = 기존 강화 연출 +30 재사용", All10Data.transcendEnhance.tempVisualLevel == 30)
+	check("초월 표 0 ~ 25 연속(26줄)", contiguous, tostring(#T))
+	local majors = {}
+	for _, row in ipairs(T) do
+		if row.major then table.insert(majors, row.step) end
+	end
+	check("큰 변화 = +0 · 5 · 10 · 15 · 20", table.concat(majors, ",") == "0,5,10,15,20", table.concat(majors, ","))
+	local KEYS = { "crackLines", "embers", "rays", "pulse", "ringShards", "prism", "constellation", "trail", "smokeAura", "hitShards", "bodyAura", "goldDust", "lightning" }
+	local TRAIL = { none = 0, short = 1, long = 2, dual = 3 }
+	local function num(v)
+		if type(v) == "boolean" then return v and 1 or 0 end
+		if type(v) == "string" then return TRAIL[v] end
+		return v
+	end
+	local same, changes, decrease = {}, {}, {}
+	for i = 2, #T do
+		local diff = false
+		for _, k in ipairs(KEYS) do
+			if T[i][k] ~= T[i - 1][k] then diff = true end
+			if num(T[i][k]) < num(T[i - 1][k]) then table.insert(decrease, ("+%d %s"):format(i - 1, k)) end
+		end
+		if diff then table.insert(changes, i - 1) else table.insert(same, i - 1) end
+	end
+	check("+1 ~ +4 = +0과 같다 · +5부터 매 단계 달라진다", table.concat(same, ",") == "1,2,3,4", "같음 " .. table.concat(same, ","))
+	check("값 감소 없음(누적)", #decrease == 0, table.concat(decrease, ","))
+	check("+21 ~ 25 별자리 점 1 ~ 5", T[22].constellation == 1 and T[26].constellation == 5)
+	local bands = {}
+	for lv = 19, 30 do
+		local f = Fx.stepOf("primordial", lv, nil)
+		table.insert(bands, ("%d=%s"):format(lv, f and f.band.band or "-"))
+	end
+	check("계승 전 +20 ~ +30 띠(은 · 민트 · 하늘 · 아쿠아 · 흰하늘 · 백금)", table.concat(bands, ",") == "19=-,20=silver,21=silver,22=mint,23=mint,24=sky,25=sky,26=aqua,27=aqua,28=whiteSky,29=whiteSky,30=platinum", table.concat(bands, ","))
+	local function stepOfAttrs(a)
+		local f = Fx.stepOf(Armor.gradeOrder[(a.WeaponGrade or 0) + 1], a.WeaponLevel, a.TranscendLevel)
+		return f and (f.kind .. ":" .. tostring(f.step)) or "nil"
+	end
+	local scenes2 = {
+		{ "태초 +29", { WeaponGrade = 6, WeaponLevel = 29 }, "enhanceHigh:29" },
+		{ "강화 성공 +30(백금)", { WeaponGrade = 6, WeaponLevel = 30 }, "enhanceHigh:30" },
+		{ "계승 → 초월 +0", { WeaponGrade = 7, WeaponLevel = 30, TranscendLevel = 0 }, "transcend:0" },
+		{ "초월 강화 성공 +7 → +8", { WeaponGrade = 7, WeaponLevel = 30, TranscendLevel = 8 }, "transcend:8" },
+		{ "캐릭터 전환(전설 +12)", { WeaponGrade = 3, WeaponLevel = 12 }, "nil" },
+		{ "범위 밖 +40 → 25", { WeaponGrade = 7, WeaponLevel = 30, TranscendLevel = 40 }, "transcend:25" },
+	}
+	for _, sc in ipairs(scenes2) do
+		local got = stepOfAttrs(sc[2])
+		check("단계 장면 " .. sc[1], got == sc[3], got)
+	end
+	local R = FxD.rules
+	check("이펙트 규칙(오라 ≤ 1.5 · 화면 오라/바닥 금지 · 보스전 남 ×0.5)", R.auraMaxStuds <= 1.5 and R.screenAura == false and R.groundFx == false and R.othersInBossMultiplier == 0.5)
 end)
 if not ok then
 	print("하네스 에러 " .. tostring(err))
