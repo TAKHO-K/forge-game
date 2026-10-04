@@ -4,6 +4,8 @@
 
 ## 사용자 판정 필요(맨 위)
 
+> **판정 받음(10-04 밤)**: 1 = 임시 확정(장비 3D 반복 수정 중단) · 2 = 예 · 3 = 갑옷만 LOOK3 아이콘 · 4 = 사용자가 PERF1 때 측정(1벌 텍스처 7.9MB 주의). 기록 = `docs/design/gear-art-v3.md` 3-3절.
+
 1. **LOOK3 3D - 이 정도면 충분한가?** (의견: **"갑옷은 충분 · 장갑/신발은 다음 손질 대상"**)
    - 3칸 비교(아이콘 | LOOK2 | LOOK3 · 4직업 × 영웅 · 전설 · 태초 · 초월): `docs/phase/all9e1/captures/look3/look3_compare_icon_look2_look3_4classes.jpg`
    - 8등급 앞 · 뒤(대검): `look3_ladder_8grades_front_back.jpg` · 간단 메시 단계: `look3_lod_near_far.jpg`

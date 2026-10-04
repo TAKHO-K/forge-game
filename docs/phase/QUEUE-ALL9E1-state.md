@@ -28,8 +28,11 @@
 | + | LOOK1 장비 마감 | LOOK2로 대체 | | 0번 조사만 함(docs/design/look1-survey.md) |
 | + | LOOK2 장비 마감 + 색 배치 + 바닥층 · 토글(상한 7h) | 완료 · 판정 받음(→ LOOK3) | 781c8c37 · 6530ea2b · (보고서 커밋) | 보고서 docs/phase/QUEUE-ALL9E1-LOOK2-report.md(맨 위 판정 4건) · 저장 v73 · 리뷰어 2회(결함 1건 반영) |
 | A | LOOK2 · P3 판정 기록 + 캐주얼 남는 골드 재측정 | 완료 | (이 커밋) | 남는 골드 캐주얼 0.01h(≤ 6h 통과) · EconSim 초월 +1 ~ +5 칸 즉시 납입으로 고침(25,300 영향 ±1.2%) · run_all 전부 |
-| B | LOOK3 3D를 아이콘 수준으로(상한 8h) | 완료 · 사용자 판정 대기 | (이 커밋) | 보고서 docs/phase/QUEUE-ALL9E1-LOOK3-report.md(맨 위 판정 4건) · 등급 메시 96 · 1벌 11파트 · 최대 7,760삼각형 · 색 지도 + 발광 마스크 164 업로드 · LOD 2단 · gear_v3 10/10 · run_all 전부 |
-| C | 아이콘 다시 굽기 · 비교 시트(B 뒤) | 완료 · 사용자 선택 대기 | (이 커밋) | roblox/art/icons/gear_v3_look3 96장(업로드 · 연결 안 함) · 시트 docs/art/ref/compare/icons-look3-vs-current.png · 추천 = 갑옷만 교체 |
+| B | LOOK3 3D를 아이콘 수준으로(상한 8h) | 완료 · 임시 확정(10-04 밤) | (이 커밋) | 보고서 docs/phase/QUEUE-ALL9E1-LOOK3-report.md(맨 위 판정 4건) · 등급 메시 96 · 1벌 11파트 · 최대 7,760삼각형 · 색 지도 + 발광 마스크 164 업로드 · LOD 2단 · gear_v3 10/10 · run_all 전부 |
+| C | 아이콘 다시 굽기 · 비교 시트(B 뒤) | 완료 · 사용자 선택 받음(갑옷만 교체 - 블록 3에서 연결) | (이 커밋) | roblox/art/icons/gear_v3_look3 96장(업로드 · 연결 안 함) · 시트 docs/art/ref/compare/icons-look3-vs-current.png · 추천 = 갑옷만 교체 |
+| - | LOOK3 판정 기록(임시 확정 · 어깨 UpperTorso 예 · 갑옷 아이콘만 교체 · 프레임 = PERF1 사용자) | 완료 | (이 커밋) | gear-art-v3.md 3-3 · 6절 · all10-p3-decisions.md 끝 |
+| T | 메시 생성 시험(generate_mesh · 상한 1.5h · 게임 적용 금지) | 진행 | | 대검 전설 갑옷 · 2,000/4,000/8,000 · 2회 생성 비교 · Creator Store 금지 |
+| D | 순서: 1-2 남은 부분 → 2 → 3(+보석 홈 · 갑옷 LOOK3 아이콘 연결) → 4 → ADD F → MENU2(기능만 · 꾸밈은 Claude Design 목업 뒤) | 남음 | | |
 
 ## 정지 기록(2026-10-04 · 사용자 "지금 하는 항목까지만 마치고 멈춰")
 
