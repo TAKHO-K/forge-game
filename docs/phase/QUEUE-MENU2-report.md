@@ -57,3 +57,11 @@
 
 ## 커밋
 617cf053(B 핵심) · 1bc5acef(B2) · e8216486(D 런타임) · b3cda5c4(D · E) · fc37f1b5(C · F) · 399be538(메뉴 배경 v2) · (이 커밋) 보고서
+
+## 끼워 넣기(10-05) - 메인 메뉴가 안 뜨고 바로 게임으로 들어가던 버그 (475ee833)
+- **원인**(의심 ①): `roblox/src/client/MainMenu.client.lua` `devSkip()`(옛 920 ~ 925줄) - Studio에서 `VerifyArmedUntil`(검증 무장 30분)이나 `DevSkipMainMenu`(참/거짓 속성)만 있으면 메뉴를 건너뛰었다. 검증 Play마다 무장하므로 "Play 검증마다" 메뉴가 안 떴다. 더해 서버가 접속 즉시 캐릭터를 자동 스폰(`CharacterAutoLoads` 기본 켬)해 메뉴 뒤 월드에 캐릭터가 이미 있었다. ②(옛 저장값 skipMenu)는 MENU2 C에서 이미 무시 중이었고(숨은 토글 초기값만 읽음 → 이제 그것도 스위치 뒤로), ③ 자동 이어하기는 없었지만 맨 위 카드가 미리 선택돼 **한 번** 누르면 시작됐다(고침), ④ 스위치로 꺼진 화면은 없었다.
+- **고침**: 메뉴는 모든 접속에서 표시 · 건너뛰기 = 테스트 플래그 하나(`shared/MenuGate`) · 접속 = 메뉴(InMainMenu) + 캐릭터 미스폰(서버 `SlotServer` - `CharacterAutoLoads = false` · 쓰러짐 뒤 부활은 직접 `Players.RespawnTime` 뒤) · 입장(이어하기 카드 두 번 · 새 캐릭터 · 옛 경로) 때 스폰(`SlotRequest enterWorld`) · 이어하기 = 같은 카드 두 번.
+- **테스트 플래그**: `TestSkipMainMenuUntil`(ReplicatedStorage 속성 · 만료 시각 숫자 · Studio에서만). 켜기(Edit): `game:GetService("ReplicatedStorage"):SetAttribute("TestSkipMainMenuUntil", os.time() + 1800)` · 끄기 = `nil`(잊어도 만료). 검증 Play는 `VerifyArmedUntil`과 **같이** 켠다(안 켜면 DevTools가 경고 1줄 - (나) 체인은 캐릭터가 필요). 옛 `DevSkipMainMenu`는 더는 읽지 않는다(켜 둔 채 남으면 메뉴가 계속 안 뜨는 위험).
+- **확인**: 하네스 `menu_gate` 10/10(플래그 꺼짐 200회 접속 건너뛰기 0 · 만료 · 라이브 무시 · 접속 미스폰 · 입장 스폰 · 메뉴 왕복) · `menu_gate_static.py` 10/10(옛 저장값 · 검증 무장 · DevSkipMainMenu 안 읽음 · 자동 스폰 끔 · 두 번 눌러 시작) · run_all 전부. Play: 접속 15초 뒤 캐릭터 0 · 메뉴(PC · 폰 800×360) · 카드 한 번 = 시작 안 함 · 두 번 = 스폰 · 설정 [메인 메뉴로] → 메뉴 → 이어하기 = 옮긴 자리(90, 4, −74) 복원 · 쓰러짐 → 3초 뒤 부활 · 새 계정 = [시작하기] → + 새 캐릭터 → 직업 고르기. 로그 게임 에러 0.
+- 캡처: `docs/phase/menu2/captures/menubug_join_menu_pc.jpg` · `menubug_join_menu_phone_800x360_continue.jpg` · `menubug_join_menu_phone_800x360_start.jpg` · `menubug_tomenu_reopen_pc.jpg`.
+- 참고: 새 캐릭터는 [+ 새 캐릭터]를 누르는 순간 스폰되고 직업 고르기 창이 그 위에 뜬다(직업 고르기가 게임 안 창이라 - 기존 구조 그대로).
