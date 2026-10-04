@@ -25,6 +25,7 @@ local OddsView = require(script.OddsView)
 local RebirthView = require(script.RebirthView)
 local TicketView = require(script.TicketView)
 local ResultFx = require(script.ResultFx)
+local TranscendView = require(script.TranscendView) -- QUEUE-ALL10 2-7 초월 모드(계승 · 초월 강화 · 초월 보석)
 
 local EnhancePanel = {}
 
@@ -95,7 +96,13 @@ local function refresh()
 		return
 	end
 	local state = Controller.getState()
-	if built.tab == "enhance" then
+	local transMode = TranscendView.mode() -- QUEUE-ALL10: 태초 +30 = 계승 모드 · 초월 무기 = 초월 강화 모드(강화 탭 본문을 바꿔 끼운다)
+	built.enhanceBody.Visible = built.tab == "enhance" and transMode == nil
+	built.transcendBody.Visible = built.tab == "enhance" and transMode ~= nil
+	if built.tab == "enhance" and transMode then
+		built.panel.titleLabel.Text = transMode == "inherit" and Text.get("transcend.inherit.title") or Text.get("transcend.enh.title", { level = tostring(player:GetAttribute("TranscendLevel") or 0) })
+		TranscendView.render(built.transcend)
+	elseif built.tab == "enhance" then
 		if not ResultFx.rolling() then -- QUEUE-ALL2 P4: 하락 · 초기화 숫자 굴림 중에는 굴림이 제목을 쓴다(끝나면 다시 refresh)
 			built.panel.titleLabel.Text = titleText(state.gradeName, state.level, state.maxed)
 		end
@@ -260,7 +267,7 @@ local function build()
 			refs.tab = id
 			refs.enhanceBody.Visible = id == "enhance"
 			refs.rebirthBody.Visible = id == "rebirth"
-			refresh()
+			refresh() -- QUEUE-ALL10: 강화 탭이면 refresh가 초월 모드 본문으로 바꿔 끼운다
 		end,
 	})
 	local bodyTop = Theme.tabHeight
@@ -276,6 +283,8 @@ local function build()
 	refs.enhanceBody = newBody("EnhanceBody")
 	refs.rebirthBody = newBody("RebirthBody")
 	refs.rebirthBody.Visible = false
+	refs.transcendBody = newBody("TranscendBody") -- QUEUE-ALL10 2-7
+	refs.transcendBody.Visible = false
 	refs.tabs = tabs
 
 	-- 강화 탭 = 위쪽 스크롤 본문(비용 2줄 → 확률표 → 불씨 → 방지권 2줄 → 한 줄 안내) + 아래 고정(강화 버튼 → 결과 줄). 본문 높이는 행 수로 계산해 CanvasSize에 넣는다.
@@ -375,6 +384,8 @@ local function build()
 
 	-- 환생 탭(옛 EnhanceUI 그대로).
 	refs.rebirth = RebirthView.build(refs.rebirthBody, panel.screenGui)
+	-- QUEUE-ALL10 2-7 초월 모드 본문(같은 고정 영역 배치)
+	refs.transcend = TranscendView.build(refs.transcendBody, width, PAD, footerHeight, buttonY, resultY, EnhancePanel.id)
 
 	-- 연결(다시 지을 때 끊는다).
 	local function connect(connection)
@@ -384,6 +395,14 @@ local function build()
 		connect(player:GetAttributeChangedSignal(name):Connect(refresh))
 	end
 	connect(player:GetAttributeChangedSignal("RebirthCount"):Connect(refs.rebirth.update))
+	for _, name in ipairs({ "All10On", "TranscendLevel", "TranscendSlot", "TranscendGemCount", "WeaponGrade", "Gold" }) do -- QUEUE-ALL10: 초월 상태가 바뀌면 표를 다시 받는다
+		connect(player:GetAttributeChangedSignal(name):Connect(function()
+			if name ~= "Gold" then
+				refs.transcend.view = nil
+			end
+			refresh()
+		end))
+	end
 	connect(player:GetAttributeChangedSignal("CharacterLevel"):Connect(refs.rebirth.update))
 	connect(Controller.connectResult(function(data)
 		local text, colorName = resultLine(data)

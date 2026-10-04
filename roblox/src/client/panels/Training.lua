@@ -38,6 +38,9 @@ end
 
 local built, view
 local hintShown = false
+local transView -- QUEUE-ALL10 2-7: 초월 표(TranscendRequest "view") - 고급 · 방어 수련 줄
+local transRemote = ReplicatedStorage:WaitForChild("TranscendRequest")
+local fetchTrans -- 아래에서 정의(build의 onOpen이 먼저 참조)
 
 local function rowsOf(v)
 	local list = {}
@@ -60,6 +63,7 @@ local function build()
 			task.defer(function()
 				TrainingPanel.render()
 				requestRemote:FireServer("view")
+				fetchTrans() -- QUEUE-ALL10
 			end)
 		end })
 	local content = panel.content
@@ -129,6 +133,80 @@ local function row(t, order)
 	b.setEnabled(not atCap)
 end
 
+-- QUEUE-ALL10 2-7 고급 수련(51 ~ 100) · 방어 수련: 같은 창 아래 줄 · 초월 무기가 없으면 잠금 안내(★스테이지만으로 열리지 않는다) · 결과 = 서버(TranscendRequest)
+fetchTrans = function()
+	task.spawn(function()
+		local ok, res = pcall(function()
+			return transRemote:InvokeServer("view")
+		end)
+		if ok and type(res) == "table" and res.view then
+			transView = res.view
+			TrainingPanel.render()
+		end
+	end)
+end
+
+local function transRow(kind, order)
+	local v = transView
+	local adv = kind == "advanced"
+	local unlocked = adv and v.transcend or (not adv and v.guardUnlocked)
+	local level = adv and v.advanced or v.guard
+	local cap = adv and v.advancedCap or v.guardMax
+	local cost = adv and v.advancedCost or v.guardCost
+	local f = Instance.new("Frame")
+	f.Name = adv and "Train_advanced" or "Train_guard"
+	f.LayoutOrder = order
+	f.BackgroundColor3 = Theme.color("slot")
+	f.BackgroundTransparency = 0.35
+	f.Size = UDim2.new(1, -6, 0, ROW_H)
+	f.Parent = built.scroll
+	Theme.corner(f, 10)
+	local icon = ArtImage.label(f, adv and "icons/codex/tab_class" or "icons/codex/tab_equipment", UDim2.fromOffset(40, 40), utf8.char(utf8.codepoint(Text.get(adv and "training.adv.name" or "training.guard.name"), 1)))
+	icon.Position = UDim2.fromOffset(8, 8)
+	local name = Theme.label(f, Text.get(adv and "training.adv.name" or "training.guard.name") .. (adv and (" " .. level .. " / " .. v.advancedMax) or (" " .. level .. " / " .. v.guardMax)), "body", "textPrimary")
+	name.Position = UDim2.fromOffset(56, 4)
+	name.Size = UDim2.new(0.5, 0, 0, 22)
+	local atCap = unlocked and level >= cap
+	local text
+	if not unlocked then
+		text = adv and Text.get("training.adv.locked") or Text.get("training.guard.locked", { stage = NumberFormat.commas(v.guardUnlockStage) })
+	elseif adv then
+		local now, nxt = (level - 50) * v.advancedPerLevel * 100, (level - 49) * v.advancedPerLevel * 100
+		text = atCap and Text.get("training.valueCap", { now = ("%.2f"):format(now) }) or Text.get("training.value", { now = ("%.2f"):format(now), next = ("%.2f"):format(nxt) })
+	else
+		local now, nxt = (1 - (1 - v.guardPerLevel) ^ level) * 100, (1 - (1 - v.guardPerLevel) ^ (level + 1)) * 100
+		text = atCap and Text.get("training.guard.valueCap", { now = ("%.2f"):format(now) }) or Text.get("training.guard.value", { now = ("%.2f"):format(now), next = ("%.2f"):format(nxt) })
+	end
+	local change = Theme.label(f, text, unlocked and "body" or "caption", unlocked and (atCap and "textSecondary" or "success") or "textSecondary")
+	change.Name = "Change"
+	change.Position = UDim2.fromOffset(56, 28)
+	change.Size = UDim2.new(1, -230, 0, 22)
+	change.TextWrapped = true
+	local ok = unlocked and not atCap and cost and (player:GetAttribute("Gold") or 0) >= cost
+	local b = Button.build({ parent = f, kind = ok and "primary" or "secondary", width = 150, height = 44,
+		text = (not unlocked) and Text.get("quests.trainCap") or atCap and Text.get("quests.trainCap") or Text.get("training.button", { cost = NumberFormat.currency(cost or 0, Text.languageFor()) }),
+		position = UDim2.new(1, -8, 0.5, 0), anchorPoint = Vector2.new(1, 0.5), onActivated = function()
+			task.spawn(function()
+				local okCall, res = pcall(function()
+					return transRemote:InvokeServer(adv and "advanced" or "guard")
+				end)
+				if okCall and type(res) == "table" then
+					if res.view then
+						transView = res.view
+					end
+					if not res.ok and res.why then
+						local key = "transcend.why." .. tostring(res.why)
+						local msg = Text.get(key)
+						Toast.push("TC", { text = (msg ~= key and msg) or Text.get("transcend.why.generic", { why = tostring(res.why) }), colorName = "danger" })
+					end
+				end
+				TrainingPanel.render()
+			end)
+		end })
+	b.root.Name = "TrainButton"
+	b.setEnabled(unlocked and not atCap)
+end
+
 function TrainingPanel.render()
 	if not built or not UIManager.isOpen(TrainingPanel.id) then
 		return
@@ -138,8 +216,14 @@ function TrainingPanel.render()
 			child:Destroy()
 		end
 	end
+	local n = 0
 	for i, t in ipairs(rowsOf(view)) do
 		row(t, i)
+		n = i
+	end
+	if transView and transView.enabled then
+		transRow("advanced", n + 1)
+		transRow("guard", n + 2)
 	end
 end
 
@@ -167,6 +251,13 @@ function TrainingPanel.init()
 		refreshReady()
 		TrainingPanel.render()
 	end)
+	for _, name in ipairs({ "AdvancedTraining", "GuardTraining", "TranscendLevel", "InfiniteStageBest" }) do -- QUEUE-ALL10 고급 · 방어 수련 줄 표 다시 받기
+		player:GetAttributeChangedSignal(name):Connect(function()
+			if UIManager.isOpen(TrainingPanel.id) then
+				fetchTrans()
+			end
+		end)
+	end
 end
 
 function TrainingPanel.toggle()
