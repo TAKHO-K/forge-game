@@ -284,6 +284,8 @@ return {
 	["extras/vfx/WarnPillar"] = { id = 115551353990807, kind = "Model", status = "Approved" },
 	["fx/jelly_bubble"] = { id = 99754566334551, kind = "Decal", image = 113003755273709, status = "Approved" },
 	["fx/soft_glow"] = { id = 95819361311277, kind = "Decal", image = 105594125885210, status = "Approved" },
+	["gear/pilot/A/pilotA_armor_greatsword_legendary_stoneplains"] = { id = 96891752692714, kind = "Model", status = "Approved" },
+	["gear/pilot/A/pilotA_palette"] = { id = 89564742244284, kind = "Decal", status = "Approved" },
 	["icons/armor/armor_tier1_ancient"] = { id = 123419041939493, kind = "Decal", image = 86677813601405, status = "Approved" },
 	["icons/armor/armor_tier1_epic"] = { id = 85843749493195, kind = "Decal", image = 134576817896008, status = "Approved" },
 	["icons/armor/armor_tier1_legendary"] = { id = 126460466561416, kind = "Decal", image = 96601658403015, status = "Approved" },
