@@ -14,6 +14,8 @@ docs/art/ref/*
 !docs/art/ref/compare/
 # QUEUE-ALL9C 2-3: 메인 메뉴 안전 영역 안내(우리 키 아트 · roblox/tools/blender/menu_safe_zone.py)
 !docs/art/ref/menu-safe-zone.png
+# QUEUE-ALL9E1(사용자 10-04): 치장 시안 v2(우리 GPT 콘셉트 - 읽기만 · 구현은 사용자 검수 뒤)
+!docs/art/ref/cosmetics_concept_v2.png
 
 # Python 캐시(Blender 스크립트 실행 산출물)
 __pycache__/
