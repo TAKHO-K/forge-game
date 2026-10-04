@@ -37,6 +37,11 @@ end
 -- accountBestStage가 nil이면 표의 기본 비용(몬테카를로 기대 비용표 · 옛 검증처럼 스테이지와 무관한 계산용).
 -- QUEUE-ALL9B G: useDrop · useReset = 강화 창 방지 옵션(resolveProtectionFlags가 고른 값). 그 구간에서 하나라도 켜면 × guardBands.costMultiplier.
 --   +26 이상 비용 · 방지를 켠 비용은 GoldCost.niceReward(끝자리 0).
+-- QUEUE-ALL9E1 0-3: 구간 방지 배수 k(스위치 ResetMinus4를 끄면 그 구간의 옛 값 costMultiplierOff)
+function Enhance.getGuardMultiplier(band)
+	return (not Enhance.resetMinusOn() and band.costMultiplierOff) or band.costMultiplier
+end
+
 function Enhance.getCost(level, accountBestStage, useDrop, useReset)
 	if level >= EnhanceConfig.maxLevel then
 		return nil
@@ -45,14 +50,14 @@ function Enhance.getCost(level, accountBestStage, useDrop, useReset)
 	local band = Enhance.getGuardBand(level)
 	local guarded = band ~= nil and ((useDrop and band.guards.drop) or (useReset and band.guards.reset))
 	if level >= EnhanceConfig.ceilingDiscount.toEnhanceLevel + 1 then
-		return GoldCost.niceReward(cost * (guarded and band.costMultiplier or 1))
+		return GoldCost.niceReward(cost * (guarded and Enhance.getGuardMultiplier(band) or 1))
 	end
 	local discount = EnhanceConfig.ceilingDiscount
 	if discount and level >= discount.fromEnhanceLevel and level <= (discount.toEnhanceLevel or math.huge) and accountBestStage then
 		cost = math.max(math.floor(cost * Enhance.getCeilingCostFactor(accountBestStage)), 1)
 	end
 	if guarded then
-		return GoldCost.niceReward(cost * band.costMultiplier)
+		return GoldCost.niceReward(cost * Enhance.getGuardMultiplier(band))
 	end
 	return cost
 end
@@ -116,20 +121,36 @@ function Enhance.getOutcomeTable(level, gaugeFull, useDropTicket, useResetTicket
 end
 
 -- QUEUE-ALL9B G1: 시도하는 단계에서 초기화되면 가는 단계(EnhanceConfig.resetToByLevel - +22 ~ +26 → 17 · +27 ~ +29 → 22). 표 밖이면 nil(그 단계엔 초기화가 없다).
+--   QUEUE-ALL9E1 0-3(P3-3 · 스위치 ResetMinus4 = EnhanceConfig.resetMinus.enabled · Studio에서만 ReplicatedStorage Attribute "ResetMinus4"가 덮는다):
+--   켜면 도착점 = 시도 단계 − resetMinus.steps(+28 → +24). 초기화가 있는 단계(표 범위)는 그대로 - 표 범위 밖이면 nil.
+function Enhance.resetMinusOn()
+	if game:GetService("RunService"):IsStudio() then
+		local override = ReplicatedStorage:GetAttribute("ResetMinus4")
+		if type(override) == "boolean" then
+			return override
+		end
+	end
+	return EnhanceConfig.resetMinus.enabled == true
+end
+
 function Enhance.getResetToLevel(level)
 	for _, band in ipairs(EnhanceConfig.resetToByLevel) do
 		if level >= band.fromLevel and level <= band.toLevel then
-			return band.resetTo
+			return Enhance.resetMinusOn() and level - EnhanceConfig.resetMinus.steps or band.resetTo
 		end
 	end
 	return nil
 end
 
 -- 초기화 바닥 문구의 인자(a1 ~ a2 → t1 · b1 이상 → t2 - 문구 "forge.enhance.resetFloor" · 도움말이 같은 표를 읽는다).
+--   QUEUE-ALL9E1 0-3: floor = 스위치에 맞는 문장(floorMinus | floorTable) - 문구 세 곳이 {floor}로 받는다.
 function Enhance.getResetFloorArgs()
 	local bands = EnhanceConfig.resetToByLevel
 	local first, last = bands[1], bands[#bands]
-	return { a1 = ("%d"):format(first.fromLevel), a2 = ("%d"):format(first.toLevel), t1 = ("%d"):format(first.resetTo), b1 = ("%d"):format(last.fromLevel), t2 = ("%d"):format(last.resetTo) }
+	local args = { a1 = ("%d"):format(first.fromLevel), a2 = ("%d"):format(first.toLevel), t1 = ("%d"):format(first.resetTo), b1 = ("%d"):format(last.fromLevel), t2 = ("%d"):format(last.resetTo),
+		n = ("%d"):format(EnhanceConfig.resetMinus.steps), ex = ("%d"):format(28 - EnhanceConfig.resetMinus.steps) }
+	args.floor = require(ReplicatedStorage.Shared.Text).get(Enhance.resetMinusOn() and "forge.enhance.floorMinus" or "forge.enhance.floorTable", args)
+	return args
 end
 
 -- 결과가 만드는 다음 단계. 하락은 어디서 시작해도 downFloorLevel(18)에서 멈추고, 초기화는 getResetToLevel(시도 단계)로 간다(옛 "math.max(1, …)" ·

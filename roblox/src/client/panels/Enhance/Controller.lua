@@ -72,7 +72,7 @@ local function optionState(kind, level, gaugeFull, maxed)
 	elseif gaugeFull then
 		reason = Text.get("forge.enhance.ticket.gaugeFull")
 	end
-	local k = band and band.guards[kind] and band.costMultiplier
+	local k = band and band.guards[kind] and Enhance.getGuardMultiplier(band)
 	local label = k and Text.get(kind == "drop" and "forge.enhance.guard.dropToggle" or "forge.enhance.guard.toggle", { k = ("%.1f"):format(k) })
 		or Text.get(kind == "drop" and "forge.enhance.guard.dropName" or "forge.enhance.guard.resetName") -- 이 단계에서 못 켜면 배수 없이 이름만
 	return { label = label,
@@ -117,7 +117,7 @@ function Controller.getState()
 		guardInfo = band and {
 			off = Enhance.getCost(level, stage, false, false), on = Enhance.getCost(level, stage, band.guards.drop, band.guards.reset),
 			resetChance = Enhance.getOutcomeTable(level, false, false, false).reset,
-			k = band.costMultiplier, -- QUEUE-ALL9C 0-9: 같은 줄에 "방지 켬(×k)"
+			k = Enhance.getGuardMultiplier(band), -- QUEUE-ALL9C 0-9: 같은 줄에 "방지 켬(×k)"
 		} or nil,
 	}
 	for _, kind in ipairs(Controller.ticketKinds) do

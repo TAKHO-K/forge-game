@@ -201,7 +201,9 @@ return {
 		["forge.enhance.gauge.value"] = "{now} (실패 시 +{gain})",
 		["forge.enhance.gauge.hint"] = "불씨가 가득 차면 다음 시도는 반드시 성공합니다 · 가득까지 약 {n}회", -- QUEUE-ALL9B G2
 		["forge.enhance.gauge.hintFull"] = "불씨가 가득 찼습니다. 다음 시도는 반드시 성공합니다",
-		["forge.enhance.resetFloor"] = "초기화되어도 +{a1} ~ +{a2}은 +{t1}에서, +{b1} 이상은 +{t2}에서 멈춥니다. 불씨는 그대로 남습니다.", -- QUEUE-ALL9B G1(숫자 = EnhanceConfig.resetToByLevel)
+		["forge.enhance.resetFloor"] = "{floor} 불씨는 그대로 남습니다.", -- QUEUE-ALL9B G1 · QUEUE-ALL9E1 0-3: {floor} = 아래 두 문장 중 스위치 ResetMinus4가 고른 것(Enhance.getResetFloorArgs)
+		["forge.enhance.floorTable"] = "초기화되어도 +{a1} ~ +{a2}은 +{t1}에서, +{b1} 이상은 +{t2}에서 멈춥니다.", -- 옛 고정 바닥(스위치 끔)
+		["forge.enhance.floorMinus"] = "초기화되면 시도한 단계에서 {n}단계만 내려갑니다(예: +28 → +{ex}).",
 		["forge.enhance.worst"] = "최악의 경우: +{level}강 · 방지를 켜면 그 결과는 유지로 바뀝니다",
 		["forge.rebirth.success"] = "환생 성공! {count}회차",
 		["forge.rebirth.err.max"] = "이미 최대 환생 회차입니다",
@@ -411,7 +413,9 @@ return {
 		["forge.enhance.gauge.value"] = "{now} (+{gain} on fail)",
 		["forge.enhance.gauge.hint"] = "When Ember is full, your next try always succeeds · about {n} more tries",
 		["forge.enhance.gauge.hintFull"] = "Ember is full. Your next try always succeeds",
-		["forge.enhance.resetFloor"] = "Even after a reset, +{a1}~+{a2} stops at +{t1} and +{b1} or higher stops at +{t2}. Your Ember stays.",
+		["forge.enhance.resetFloor"] = "{floor} Your Ember stays.",
+		["forge.enhance.floorTable"] = "Even after a reset, +{a1}~+{a2} stops at +{t1} and +{b1} or higher stops at +{t2}.",
+		["forge.enhance.floorMinus"] = "A reset only drops you {n} levels from the level you tried (e.g. +28 → +{ex}).",
 		["forge.enhance.worst"] = "Worst: +{level} · A guard turns that result into a keep",
 		["forge.rebirth.success"] = "Rebirth done! #{count}",
 		["forge.rebirth.err.max"] = "Already at max Rebirth",

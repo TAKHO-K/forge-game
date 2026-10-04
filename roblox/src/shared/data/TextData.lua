@@ -121,7 +121,7 @@ local TextData = {
 		["help.enhance.safe"] = "0~{safeTo}강은 실패해도 단계가 그대로예요.", -- safeTo · dropFrom · resetFrom · resetTo = Enhance.getRiskStartLevels · EnhanceConfig(창이 넘긴다)
 		["help.enhance.drop"] = "{dropFrom}강부터 실패하면 내려갈 수 있어요.",
 		["help.enhance.reset"] = "{resetFrom}강부터 실패하면 초기화될 수 있어요.",
-		["help.enhance.resetFloor"] = "초기화되어도 +{a1} ~ +{a2}은 +{t1}에서, +{b1} 이상은 +{t2}에서 멈춥니다. 불씨는 그대로 남습니다.", -- QUEUE-ALL9B G1(사용자 문구 그대로 - 합쇼체)
+		["help.enhance.resetFloor"] = "{floor} 불씨는 그대로 남습니다.", -- QUEUE-ALL9B G1(사용자 문구 그대로 - 합쇼체)
 		["help.enhance.pity"] = "실패하면 불씨가 차고, 가득 차면 꼭 성공해요.",
 		["help.stealLock.see"] = "회색 체력바와 자물쇠는 남이 먼저 사냥 중이에요.",
 		["help.stealLock.bounce"] = "공격하면 튕겨 나가요(피해 없음).",
@@ -225,7 +225,7 @@ local TextData = {
 
 		-- 강화대
 		["enhance.help.short"] = "실패할 때마다 불씨가 차고, 가득 차면 다음 강화는 반드시 성공합니다.",
-		["enhance.help.detail"] = "0~{safeTo}강은 실패해도 단계가 그대로입니다. {dropFrom}강부터 실패하면 단계가 내려갈 수 있고(+26부터는 하락이 없습니다), {resetFrom}강부터는 실패 시 초기화될 수 있습니다. 초기화되어도 +{a1} ~ +{a2}은 +{t1}에서, +{b1} 이상은 +{t2}에서 멈춥니다. 불씨는 그대로 남습니다.",
+		["enhance.help.detail"] = "0~{safeTo}강은 실패해도 단계가 그대로입니다. {dropFrom}강부터 실패하면 단계가 내려갈 수 있고(+26부터는 하락이 없습니다), {resetFrom}강부터는 실패 시 초기화될 수 있습니다. {floor} 불씨는 그대로 남습니다.",
 		["enhance.odds.headResult"] = "결과",
 		["enhance.odds.headProb"] = "확률",
 		["enhance.odds.headLevel"] = "단계",

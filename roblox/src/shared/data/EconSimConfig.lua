@@ -103,8 +103,10 @@ return {
 			gearCheckMinutes = 5, gemReroll = true, gemRoll = 1.1,
 		},
 		-- QUEUE-ALL9C 0-3(ALL10 대비): 운 나쁜 P90 = 상위 1%와 같은 사람 · 강화 굴림 시드만 다름. 시드 20개(20260923 + i × 7919) 중 +30 도달 90번째 백분위(18번째 = 620.0h · 기본 시드는 160.8h로 20개 중 2번째 빠름 · 중앙 약 334h).
+		--   QUEUE-ALL9E1 0-3: 계승 = +29(P3-2) · 초기화 = 현재 − 4(ResetMinus4)로 다시 고름 - 같은 20시드의 태초 +29 도달 90번째 = 20316356(359.1h · 중앙 206.9h · 1.74배).
+		--   옛 시드 20292599는 새 규칙에서 +29 500.8h(20개 중 가장 늦음). 옛 규칙(+30 · 고정 바닥) 값은 위 줄.
 		unluckyP90 = {
-			displayName = "운 나쁜 P90", hoursPerDay = 12, classId = "bow", huntTierMax = 6, seed = 20292599,
+			displayName = "운 나쁜 P90", hoursPerDay = 12, classId = "bow", huntTierMax = 6, seed = 20316356,
 			targetKillSeconds = 1.125, minSurviveHits = 3, dpsEfficiency = 0.95, moveOverheadSeconds = 0.6, earlyTargetKillSeconds = nil, gemCritSlots = { 1 },
 			bossDpsEfficiency = 0.9, bossKillLimitSeconds = 60, bossAttemptsPerClear = 1.1, bossOverheadSeconds = 10,
 			partySize = 4, partyExpBonus = true, partyHuntsTogether = false,

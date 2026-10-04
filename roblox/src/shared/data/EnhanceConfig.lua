@@ -73,6 +73,9 @@ local config = {
 		{ fromLevel = 22, toLevel = 26, resetTo = 17 },
 		{ fromLevel = 27, toLevel = 29, resetTo = 22 },
 	},
+	-- QUEUE-ALL9E1 0-3(P3-3 · 사용자 10-04): 기능 스위치 ResetMinus4 - 켜면 초기화 도착점 = 시도 단계 − steps(+28 → +24 · 위 표는 범위만 쓴다). 끄면 위 고정 바닥.
+	--   하락(1단계) · 불씨 유지 · +26 이상 하락 없음 · 초기화 확률은 그대로.
+	resetMinus = { enabled = true, steps = 4 },
 
 	-- 천장("불씨", PRD 20.72 [1-6] 3번). 모든 실패(유지 · 하락 · 초기화)가 게이지를 채운다: 실패 1회당
 	-- += round(시도한 단계의 성공률 × gainPerSuccessRate)(천분율 정수, weapon.enhanceGauge에 저장). 게이지 ≥ max면 다음 시도는 성공 100%,
@@ -110,7 +113,7 @@ local config = {
 	guardBands = {
 		{ fromLevel = 19, toLevel = 21, guards = { drop = true }, costMultiplier = 1.7 },
 		{ fromLevel = 22, toLevel = 25, guards = { drop = true, reset = true }, costMultiplier = 3.0 },
-		{ fromLevel = 26, toLevel = 29, guards = { reset = true }, costMultiplier = 2.1 },
+		{ fromLevel = 26, toLevel = 29, guards = { reset = true }, costMultiplier = 1.9, costMultiplierOff = 2.1 }, -- QUEUE-ALL9E1 0-3: ResetMinus4 켬 재탐색(표본 2만) 2.1 = ×1.35(범위 밖) → 1.9 = ×1.23 · 끄면 2.1이 ×1.13
 	},
 
 	-- P2.5a R5(사용자 확정): 강화 1회 성공마다 ① 최종 데미지 +finalDamagePerLevel(3.5% - 합연산 버킷, Enhance.getFinalDamageBonus → PlayerCombat) ②

@@ -11,6 +11,20 @@ local ok, err = pcall(function()
 	local Enhance, Cfg, GoldCost = MODS.Enhance, MODS.EnhanceConfig, MODS.GoldCost
 	local SaveSystem, PlayerProfile, WorldConfig = MODS.SaveSystem, MODS.PlayerProfile, MODS.WorldConfig
 
+	-- ══ QUEUE-ALL9E1 0-3 스위치 ResetMinus4 켬: 도착점 = 시도 단계 − 4 · 불씨 유지 · 표 밖 nil ══
+	ATTR.ResetMinus4 = true
+	local m = {}
+	for L = 22, 29 do m[L] = Enhance.getResetToLevel(L) end
+	local m28 = Enhance.tryEnhance(28, 300, { false, false }, 0.999999)
+	local args = Enhance.getResetFloorArgs()
+	check("0-3 ResetMinus4 켬: +22 → 18 · +26 → 22 · +28 → 24 · +29 → 25 · +21 nil · +28 초기화 = 24(불씨 += 실패분) · 문구 = floorMinus", m[22] == 18 and m[26] == 22 and m[28] == 24 and m[29] == 25
+		and Enhance.getResetToLevel(21) == nil and m28.result == "reset" and m28.level == 24 and m28.gauge == 300 + Enhance.getGaugeGain(28) and args.n == "4" and args.ex == "24" and args.floor ~= nil,
+		("%s %d · %s"):format(m28.result, m28.level, tostring(args.floor)))
+	local k3on = Enhance.getGuardMultiplier(Cfg.guardBands[3])
+	ATTR.ResetMinus4 = false -- 아래 = 옛 고정 바닥(스위치 끔 = 지금 게임)
+	check("0-3 방지 배수 k 재탐색: 켬 = 1.7 · 3.0 · 1.9 / 끔 = 1.7 · 3.0 · 2.1(옛 값)", k3on == 1.9 and Enhance.getGuardMultiplier(Cfg.guardBands[3]) == 2.1
+		and Enhance.getGuardMultiplier(Cfg.guardBands[1]) == 1.7 and Enhance.getGuardMultiplier(Cfg.guardBands[2]) == 3.0)
+
 	-- ══ G1 초기화 도착점 ══
 	local resetTo = {}
 	for L = 22, 29 do resetTo[L] = Enhance.getResetToLevel(L) end

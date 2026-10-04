@@ -116,7 +116,7 @@ return {
 	["help.enhance.safe"] = "At +0~{safeTo}, a fail keeps your level.",
 	["help.enhance.drop"] = "From +{dropFrom}, a fail can drop a level.",
 	["help.enhance.reset"] = "From +{resetFrom}, a fail can reset your level.",
-	["help.enhance.resetFloor"] = "Even after a reset, +{a1}~+{a2} stops at +{t1} and +{b1} or higher stops at +{t2}. Your Ember stays.",
+	["help.enhance.resetFloor"] = "{floor} Your Ember stays.",
 	["help.enhance.pity"] = "Fails fill the Ember. Full = success!",
 	["help.stealLock.see"] = "Gray bar + lock = another player's hunt.",
 	["help.stealLock.bounce"] = "Your hits bounce off (no damage).",
@@ -220,7 +220,7 @@ return {
 
 	-- 강화대
 	["enhance.help.short"] = "Each fail fills the Ember. When full, the next Enhance always succeeds.",
-	["enhance.help.detail"] = "At +0~{safeTo}, a fail keeps your level. From +{dropFrom}, a fail can drop your level (no drops from +26). From +{resetFrom}, a fail can reset it. Even after a reset, +{a1}~+{a2} stops at +{t1} and +{b1} or higher stops at +{t2}. Your Ember stays.",
+	["enhance.help.detail"] = "At +0~{safeTo}, a fail keeps your level. From +{dropFrom}, a fail can drop your level (no drops from +26). From +{resetFrom}, a fail can reset it. {floor} Your Ember stays.",
 	["enhance.odds.headResult"] = "Result",
 	["enhance.odds.headProb"] = "Chance",
 	["enhance.odds.headLevel"] = "Level",
