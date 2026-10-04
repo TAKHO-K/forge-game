@@ -336,6 +336,7 @@ local function rebuildGrid()
 			stroke.Color = UIColors.rim
 			stroke.Transparency = 0.55
 			stroke.Parent = cell
+			ItemCell.cardSkin(cell) -- 03 v2: 빈 칸 = btn-card 9-slice(스위치 꺼짐 · 그림 없음 = 위 색 칸 그대로)
 		end
 	end
 
@@ -397,7 +398,7 @@ function R.layoutBag(L)
 	column.Size = UDim2.new(0, L.bagW, 0, math.max(0, viewHeight))
 	column.BackgroundTransparency = phone and 1 or 0.55
 
-	local pillsHere = not phone and L.bagW >= 400
+	local pillsHere = not phone and L.pillsInRow == true -- Layout.compute 판정(재화 자리도 이 값으로 정한다)
 	local chipHere = not phone and L.bagW >= 540
 	local pillParent = pillsHere and refs.filterRow or R.headerRight
 	for _, pill in ipairs({ sortButton, cutoffButton, bulkSellButton }) do

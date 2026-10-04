@@ -9,6 +9,8 @@
 -- 폰: 창은 메뉴바 오른쪽부터 화면 오른쪽 끝(여백 8)까지 · 1단. 상단 탭 [장비 · 전체 · 갑옷 · 장갑 · 신발 · 보석] · 내용은 세로 스크롤 · 아이템 상세는 아래에서 올라오는 시트(높이는 DetailSheet가 버튼 줄 수로 정한다 · 닫기 44). 모든 버튼 · 칸 터치 44 이상.
 
 local Layout = {}
+local BAG_V2 = require(game:GetService("ReplicatedStorage").Shared.data.UiLayoutData).bag -- QUEUE-UI2 UI2-5 2차(03 v2 겉모습 - lookV2 끄면 옛 값)
+Layout.lookV2 = BAG_V2 ~= nil and BAG_V2.lookV2 == true
 
 Layout.phoneWidthBelow = 720
 Layout.phoneHeightBelow = 400
@@ -50,6 +52,10 @@ function Layout.compute(screenWidth, screenHeight, touch, hudReserve)
 		L.headerH, L.tabH = 52, 44
 		L.currencyH = Layout.currencyH -- QUEUE-ALL9B R3 헤더 아래 재화 줄
 		L.pillH, L.closeSize, L.actionH, L.tabButtonH = 44, 44, 44, 44
+		if Layout.lookV2 then -- 03 v2: 머리 48 + 노랑 줄 4 · 그림 탭 44 + 위아래 4
+			L.headerH, L.tabH = BAG_V2.phone.headH + BAG_V2.phone.line, BAG_V2.phone.tabSize + 8
+			L.closeSize, L.tabButtonH = BAG_V2.phone.close, BAG_V2.phone.tabSize
+		end
 		L.tabs = { "gear", "all", "armor", "gloves", "shoes", "gem" }
 		L.tabX, L.tabY, L.tabW = 0, L.headerH + L.currencyH, L.winW
 		L.bodyTop = L.headerH + L.currencyH + L.tabH
@@ -68,11 +74,21 @@ function Layout.compute(screenWidth, screenHeight, touch, hudReserve)
 		L.headerH, L.tabH = 48, 36
 		L.currencyH = Layout.currencyH -- QUEUE-ALL9B R3
 		L.pillH, L.closeSize, L.actionH, L.tabButtonH = 30, 32, 44, 30
+		if Layout.lookV2 then -- 03 v2: 머리 64 + 노랑 줄 4(재화 = 머리 오른쪽 - 줄 없음) · 탭 44 · 정렬 줄 44 · 닫기 44
+			L.headerH, L.currencyH = BAG_V2.pc.headH + BAG_V2.pc.line, 0
+			L.tabH, L.tabButtonH, L.pillH, L.closeSize = BAG_V2.pc.tabH + 8, BAG_V2.pc.tabH, BAG_V2.pc.rowH, BAG_V2.pc.close
+		end
 		L.tabs = { "all", "armor", "gloves", "shoes", "gem" }
 		L.wide = L.winW >= Layout.wideWidth
 		local pad, gap = Layout.pad, Layout.colGap
 		local leftW = L.wide and (L.winW >= Layout.pcWidth and Layout.pc.leftW or 260) or 190
 		local rightW = L.wide and (L.winW >= Layout.pcWidth and Layout.pc.rightW or 360) or 290
+		-- 정렬 · 일괄 버튼 자리: 가운데 단이 넓으면(400) 가방 위 줄 · 아니면 머리 오른쪽(BagTab.layoutBag와 같은 판정)
+		L.pillsInRow = L.winW - 2 * pad - 2 * gap - leftW - rightW >= 400
+		L.currencyInHeader = Layout.lookV2 and L.pillsInRow -- 03 v2: 재화 = 머리 오른쪽(버튼이 머리에 있으면 옛처럼 머리 아래 줄)
+		if Layout.lookV2 and not L.currencyInHeader then
+			L.currencyH = Layout.currencyH
+		end
 		local colTop = L.headerH + L.currencyH + pad
 		local colH = L.winH - colTop - pad
 		local midMin = Layout.cellSize + 2 * Layout.gridPad

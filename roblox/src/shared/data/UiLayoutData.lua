@@ -131,4 +131,13 @@ return {
 			lockedBubble = { w = 148, h = 34, seconds = 1.5 },
 		},
 	},
+	-- 03 가방 · 장비창 v2(03_bag-equip/v2 spec "화면 규칙") - 기존 장비창(panels/Inventory)의 겉모습 값. 장비창은 배율 1(화면 px - Inventory/Layout.compute)이라 좌표 대신 크기만 둔다.
+	--   lookV2 = false → 옛 겉모습(금색 머리 띠 · 색 탭 · 색 칸)으로 되돌림(기능은 같음).
+	bag = {
+		lookV2 = true,
+		pc = { headH = 64, line = 4, tabW = 107, tabH = 44, tabGap = 7, rowH = 44, close = 44, cardSlice = true },
+		phone = { headH = 48, line = 4, tabSize = 44, tabGap = 8, close = 44, cardSlice = true },
+		-- 폰 그림 탭(44) 아이콘: ui = UiIconData 아이콘 ID · part = 게임 장비 아이콘(ItemIcons 부위) · gem = 보석 몸통(GemData.iconBodyByGrade 등급)
+		tabIcons = { gear = { part = "weapon" }, all = { ui = "bag" }, armor = { part = "armor" }, gloves = { part = "gloves" }, shoes = { part = "shoes" }, gem = { gem = "legendary" }, codex = { ui = "book" } },
+	},
 }

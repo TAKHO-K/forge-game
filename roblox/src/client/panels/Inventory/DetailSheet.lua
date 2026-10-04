@@ -101,6 +101,11 @@ local STYLES = {
 	plain = { bg = UIColors.slot, bgT = 0.05, text = UIColors.textPrimary, stroke = UIColors.rim, strokeT = UIColors.rimTransparency },
 	gold = { bg = UIColors.panel, bgT = UIColors.panelTransparency, text = UIColors.gold, stroke = UIColors.gold, strokeT = 0.58 },
 }
+-- QUEUE-UI2 UI2-5 2차(03 v2): 스타일 → 버튼 그림 종류(UiTokens.slice) · 글자 색(노랑 · 흰 바탕 위 = 진한 글자)
+local UiTokens = require(ReplicatedStorage.Shared.data.UiTokens)
+local UiKit = require(script.Parent.Parent.Parent.ui.v2.UiKit)
+local V2_KIND = require(script.Parent.Layout).lookV2 and { primary = "pri", awaken = "primal", inherit = "sec", plain = "sec", gold = "sec" } or {}
+local V2_TEXT = { pri = "accent.text", primal = "bg.deep" }
 local function makeActionButton(order, width, style)
 	local look = STYLES[style] or STYLES.plain
 	local btn = Instance.new("TextButton")
@@ -123,6 +128,25 @@ local function makeActionButton(order, width, style)
 	stroke.Color = look.stroke
 	stroke.Transparency = look.strokeT
 	stroke.Parent = btn
+	local kind = V2_KIND[style]
+	local image = kind and UiKit.stateImage(kind, "normal")
+	if image then -- 03 v2: 버튼 그림 9-slice(장착 = 노랑 pri 1개 · 각성 = 태초 primal · 나머지 = 남색 보조 sec) - 그림은 버튼 아래 z(글자를 가리지 않게)
+		local c = UiTokens.slice[kind].center
+		local skin = Instance.new("ImageLabel")
+		skin.Name = "Skin"
+		skin.BackgroundTransparency = 1
+		skin.Size = UDim2.fromScale(1, 1)
+		skin.Image = image
+		skin.ScaleType = Enum.ScaleType.Slice
+		skin.SliceCenter = Rect.new(c[1], c[2], c[3], c[4])
+		skin.SliceScale = UiTokens.sliceScale
+		skin.ZIndex = btn.ZIndex
+		skin.Parent = btn
+		btn.ZIndex += 1
+		btn.BackgroundTransparency = 1
+		stroke.Enabled = false
+		btn.TextColor3 = Color3.fromHex(UiTokens.colors[V2_TEXT[kind] or "text.primary"])
+	end
 	return btn, stroke
 end
 
@@ -143,6 +167,12 @@ local function addLockMark(btn)
 	holder.Visible = false
 	holder.Parent = btn
 	ItemIcons.lock(holder, 12, UIColors.xp)
+	for _, d in ipairs(holder:GetDescendants()) do -- 03 v2: 버튼 그림(Skin) 위로
+		if d:IsA("GuiObject") then
+			d.ZIndex = btn.ZIndex + 1
+		end
+	end
+	holder.ZIndex = btn.ZIndex + 1
 	return holder
 end
 

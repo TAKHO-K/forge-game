@@ -13,6 +13,9 @@ local ArtImage = require(script.Parent.Parent.Parent.ui.ArtImage)
 local GradeColor = require(ReplicatedStorage.Shared.GradeColor)
 local ItemVisualData = require(ReplicatedStorage.Shared.data.ItemVisualData)
 local FRAME = require(ReplicatedStorage.Shared.data.ArtV1UiData).iconFrameV3 -- QUEUE-ALL9C 2-5 칸 틀 ⑥
+local UiTokens = require(ReplicatedStorage.Shared.data.UiTokens)
+local UiKit = require(script.Parent.Parent.Parent.ui.v2.UiKit)
+local V2 = require(script.Parent.Layout).lookV2 -- QUEUE-UI2 UI2-5 2차(03 v2): 빈 칸 = btn-card 9-slice · 찬 칸 = 모서리 12 + 등급 테두리 3
 
 local ItemCell = {}
 
@@ -137,11 +140,37 @@ function ItemCell.newDot(parent, visible)
 	return dot
 end
 
+-- 03 v2 빈 칸 · 칸 바탕 = btn-card 9-slice 그림(그림 없으면 옛 색 칸 그대로). 반환: 그림(없으면 nil)
+function ItemCell.cardSkin(cell)
+	local image = V2 and UiKit.stateImage("card", "normal")
+	if not image then
+		return nil
+	end
+	local c = UiTokens.slice.card.center
+	local skin = Instance.new("ImageLabel")
+	skin.Name = "CardSkin"
+	skin.BackgroundTransparency = 1
+	skin.Size = UDim2.fromScale(1, 1)
+	skin.Image = image
+	skin.ScaleType = Enum.ScaleType.Slice
+	skin.SliceCenter = Rect.new(c[1], c[2], c[3], c[4])
+	skin.SliceScale = UiTokens.sliceScale
+	skin.ZIndex = cell.ZIndex
+	skin.Parent = cell
+	cell.BackgroundTransparency = 1
+	for _, child in ipairs(cell:GetChildren()) do
+		if child:IsA("UIStroke") then
+			child.Enabled = false -- 테두리는 그림 안에 있다
+		end
+	end
+	return skin
+end
+
 -- cell(TextButton · Frame)을 칠한다. spec = { gradeId, part, iconKey, iconColor, iconSize, topLeft = { text, color } | nil, level = number | nil, locked, isNew, setZone }
 -- applyGradeVisual = S.applyGradeVisual. 반환 { gradeStroke, glow, newDot }
 function ItemCell.paint(cell, spec, applyGradeVisual)
 	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 8)
+	corner.CornerRadius = UDim.new(0, V2 and UiTokens.corner.card or 8)
 	corner.Parent = cell
 
 	-- 은은한 발광(희귀 이상) - 칸보다 살짝 큰 별도 프레임을 뒤에 깐다(box-shadow 대체).
@@ -164,6 +193,11 @@ function ItemCell.paint(cell, spec, applyGradeVisual)
 	gradeStroke.Parent = cell
 	if spec.gradeId then
 		applyGradeVisual(cell, gradeStroke, glow, spec.gradeId)
+		if V2 then
+			gradeStroke.Thickness = math.max(gradeStroke.Thickness, UiTokens.stroke.cardSelected) -- 03 v2 등급 테두리 3
+		end
+	elseif V2 and ItemCell.cardSkin(cell) then
+		gradeStroke.Enabled = false -- 빈 착용 칸 = 카드 그림
 	else
 		gradeStroke.Color = UIColors.rim
 		gradeStroke.Transparency = 0.4

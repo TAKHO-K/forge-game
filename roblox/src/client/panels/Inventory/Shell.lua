@@ -18,6 +18,15 @@ local TOP_MARGIN = 30 -- 지시 "조금만 더 위로" - 60에서 줄였다.
 local HEADER_HEIGHT = 44 -- 초기값(applyLayout이 Layout의 값으로 다시 정한다)
 local HEADER_INK = Color3.fromRGB(34, 24, 10) -- 금색 제목줄 위 글씨(어두운 갈색)
 local Text = require(ReplicatedStorage.Shared.Text)
+-- QUEUE-UI2 UI2-5 2차(03 v2 겉모습): 창 = 남색 몸통 + 머리 64(폰 48) + 노랑 줄 4 · 탭 = btn-tab 9-slice(폰 = 그림 탭 44) · 닫기 = btn-close 원 · 재화 = 머리 오른쪽(PC). Layout.lookV2 = false면 옛 겉모습.
+local UiTokens = require(ReplicatedStorage.Shared.data.UiTokens)
+local BAG_V2 = require(ReplicatedStorage.Shared.data.UiLayoutData).bag
+local UiKit = require(script.Parent.Parent.Parent.ui.v2.UiKit)
+local ItemIcons = require(script.Parent.Parent.Parent.ItemIcons)
+local function tok(name)
+	return Color3.fromHex(UiTokens.colors[name])
+end
+local V2 = Layout.lookV2
 
 function Shell.create(S, R)
 local player = S.player
@@ -88,7 +97,7 @@ winCorner.Parent = win
 local winBackground = Instance.new("Frame")
 winBackground.Name = "Background"
 winBackground.Size = UDim2.new(1, 0, 1, 0)
-winBackground.BackgroundColor3 = UIColors.panel
+winBackground.BackgroundColor3 = V2 and tok("panel.window") or UIColors.panel
 winBackground.BackgroundTransparency = 1 -- 닫힌 상태. panel-2(불투명0.86 -> Transparency0.14)로 트윈.
 winBackground.BorderSizePixel = 0
 winBackground.Parent = win
@@ -97,7 +106,8 @@ winBackgroundCorner.CornerRadius = UDim.new(0, 10)
 winBackgroundCorner.Parent = winBackground
 
 local winStroke = Instance.new("UIStroke")
-winStroke.Color = UIColors.rim
+winStroke.Color = V2 and tok("line") or UIColors.rim
+winStroke.Thickness = V2 and UiTokens.stroke.window or 1
 winStroke.Transparency = 1
 winStroke.Parent = winBackground
 
@@ -167,17 +177,17 @@ end
 local header = Instance.new("Frame")
 header.Name = "Header"
 header.Size = UDim2.new(1, 0, 0, HEADER_HEIGHT)
-header.BackgroundColor3 = UIColors.gold -- QUEUE-ALL2 P2(ref 17): 제목줄 = 금색 띠 + 어두운 제목
-header.BackgroundTransparency = 0.12
+header.BackgroundColor3 = V2 and tok("panel.section") or UIColors.gold -- QUEUE-ALL2 P2(ref 17): 제목줄 = 금색 띠 + 어두운 제목 · 03 v2 = 남색 머리 + 아래 노랑 줄
+header.BackgroundTransparency = V2 and 0 or 0.12
 header.BorderSizePixel = 0
 header.Parent = content
 
 local headerBottomLine = Instance.new("Frame")
 headerBottomLine.AnchorPoint = Vector2.new(0, 1)
 headerBottomLine.Position = UDim2.new(0, 0, 1, 0)
-headerBottomLine.Size = UDim2.new(1, 0, 0, 1)
-headerBottomLine.BackgroundColor3 = UIColors.rim
-headerBottomLine.BackgroundTransparency = UIColors.rimTransparency
+headerBottomLine.Size = UDim2.new(1, 0, 0, V2 and BAG_V2.pc.line or 1)
+headerBottomLine.BackgroundColor3 = V2 and tok("accent") or UIColors.rim
+headerBottomLine.BackgroundTransparency = V2 and 0 or UIColors.rimTransparency
 headerBottomLine.BorderSizePixel = 0
 headerBottomLine.Parent = header
 
@@ -267,9 +277,18 @@ title.AutomaticSize = Enum.AutomaticSize.X
 title.Size = UDim2.new(0, 0, 1, 0)
 title.Font = Enum.Font.GothamBold
 title.TextSize = Theme.textSize("title")
-title.TextColor3 = HEADER_INK
+title.TextColor3 = V2 and tok("text.primary") or HEADER_INK
 title.Text = Text.get("gear.bag.title")
 title.Parent = headerLeft
+if V2 then -- 03 v2: 제목 앞 가방 아이콘(아이콘 v2)
+	local iconBox = Instance.new("Frame")
+	iconBox.Name = "TitleIcon"
+	iconBox.LayoutOrder = 0
+	iconBox.BackgroundTransparency = 1
+	iconBox.Size = UDim2.fromOffset(36, 36)
+	iconBox.Parent = headerLeft
+	UiKit.icon(iconBox, "bag", 36, { center = true })
+end
 
 local countLabel = Instance.new("TextLabel")
 countLabel.LayoutOrder = 2
@@ -278,8 +297,8 @@ countLabel.AutomaticSize = Enum.AutomaticSize.X
 countLabel.Size = UDim2.new(0, 0, 1, 0)
 countLabel.Font = Enum.Font.Gotham
 countLabel.TextSize = Theme.textSize("caption") -- 16-6 [4]: 12px 미만 금지.
-countLabel.TextColor3 = HEADER_INK
-countLabel.TextTransparency = 0.25
+countLabel.TextColor3 = V2 and tok("text.secondary") or HEADER_INK
+countLabel.TextTransparency = V2 and 0 or 0.25
 countLabel.Text = "0 / 0"
 countLabel.Parent = headerLeft
 
@@ -332,6 +351,32 @@ local function makeHeaderPill(text, order, widthPadding, dropdown)
 	if dropdown then
 		addChevron(pill)
 	end
+	local image = V2 and UiKit.stateImage("sec", "normal")
+	if image then -- 03 v2: 보조 버튼 그림(남색 sec 9-slice) - 그림은 버튼 아래 z
+		local c = UiTokens.slice.sec.center
+		local skin = Instance.new("ImageLabel")
+		skin.Name = "Skin"
+		skin.BackgroundTransparency = 1
+		local padL, padR = padding.PaddingLeft.Offset, padding.PaddingRight.Offset -- UIPadding은 자식 크기에도 걸린다 → 그림은 패딩 바깥까지
+		skin.Position = UDim2.fromOffset(-padL, 0)
+		skin.Size = UDim2.new(1, padL + padR, 1, 0)
+		skin.Image = image
+		skin.ScaleType = Enum.ScaleType.Slice
+		skin.SliceCenter = Rect.new(c[1], c[2], c[3], c[4])
+		skin.SliceScale = UiTokens.sliceScale
+		skin.ZIndex = pill.ZIndex
+		skin.Parent = pill
+		pill.ZIndex += 1
+		pill.BackgroundTransparency = 1
+		stroke.Enabled = false
+		pill.TextColor3 = tok("text.primary")
+		local chevron = pill:FindFirstChild("Chevron")
+		if chevron then
+			for _, d in ipairs(chevron:GetDescendants()) do
+				d.ZIndex = pill.ZIndex
+			end
+		end
+	end
 
 	return pill
 end
@@ -373,6 +418,24 @@ do
 		bar.BorderSizePixel = 0
 		bar.Parent = closeButton
 	end
+	local closeImage = V2 and UiKit.stateImage("close", "normal")
+	if closeImage then -- 03 v2: btn-close 원 그림(88 → 44) + 흰 X 아이콘 · 옛 원 · 막대는 숨김
+		closeButton.BackgroundTransparency = 1
+		stroke.Enabled = false
+		for _, child in ipairs(closeButton:GetChildren()) do
+			if child:IsA("Frame") then
+				child.Visible = false
+			end
+		end
+		local skin = Instance.new("ImageLabel")
+		skin.Name = "Skin"
+		skin.BackgroundTransparency = 1
+		skin.Size = UDim2.fromScale(1, 1)
+		skin.Image = closeImage
+		skin.Parent = closeButton
+		local x = UiKit.icon(skin, "x", 22, { center = true })
+		x.Size = UDim2.fromScale(0.5, 0.5)
+	end
 end
 
 -- QUEUE-ALL9B R3 헤더 아래 재화 줄(모든 재화 · client/ui/CurrencyBar - 서버 Attribute만 · 판매 · 분해 · 강화 직후 바로 바뀐다 · 칸이 모자라면 두 줄)
@@ -387,10 +450,27 @@ currencyStrip.Position = UDim2.new(0, 14, 0, HEADER_HEIGHT)
 currencyStrip:SetAttribute("HudSlot", "currencyBag")
 
 -- 헤더 · 탭 줄 배치가 배치(L)마다 바뀌는 크기(폰 = 터치 44)
+local currencyLayout = currencyStrip:FindFirstChildOfClass("UIListLayout")
 local function layoutHeader(L)
 	header.Size = UDim2.new(1, 0, 0, L.headerH)
-	currencyStrip.Position = UDim2.new(0, 14, 0, L.headerH)
-	currencyStrip.Size = UDim2.new(1, -28, 0, L.currencyH)
+	local inHeader = L.currencyInHeader == true -- 03 v2 PC(가방 위 줄에 버튼 자리가 있을 때): 재화 = 머리 오른쪽(닫기 왼쪽) · 그 밖 = 머리 아래 줄 그대로
+	currencyStrip.Parent = inHeader and header or content
+	if currencyLayout then
+		currencyLayout.HorizontalAlignment = inHeader and Enum.HorizontalAlignment.Right or Enum.HorizontalAlignment.Left
+		currencyLayout.Wraps = not inHeader
+	end
+	if inHeader then
+		currencyStrip.AnchorPoint = Vector2.new(1, 0.5)
+		currencyStrip.Position = UDim2.new(1, -(14 + L.closeSize + 16), 0, (L.headerH - BAG_V2.pc.line) / 2)
+		currencyStrip.Size = UDim2.new(0.55, 0, 0, 32)
+	else
+		currencyStrip.AnchorPoint = Vector2.new(0, 0)
+		currencyStrip.Position = UDim2.new(0, 14, 0, L.headerH)
+		currencyStrip.Size = UDim2.new(1, -28, 0, L.currencyH)
+	end
+	headerBottomLine.Size = UDim2.new(1, 0, 0, V2 and (L.mode == "phone" and BAG_V2.phone.line or BAG_V2.pc.line) or 1)
+	headerRight.Position = UDim2.new(1, -14, 0, (L.headerH - (V2 and BAG_V2.pc.line or 0)) / 2)
+	headerLeft.Position = UDim2.new(0, 14, 0, (L.headerH - (V2 and BAG_V2.pc.line or 0)) / 2)
 	headerRight.Size = UDim2.new(0, 0, 0, L.pillH)
 	for _, pill in ipairs({ sortButton, cutoffButton, bulkSellButton }) do
 		pill.Size = UDim2.new(0, 0, 0, L.pillH)
@@ -419,6 +499,7 @@ tabRowLine.Size = UDim2.new(1, 0, 0, 1)
 tabRowLine.BackgroundColor3 = UIColors.rim
 tabRowLine.BackgroundTransparency = UIColors.rimTransparency
 tabRowLine.BorderSizePixel = 0
+tabRowLine.Visible = not V2 -- 03 v2: 탭 아래 줄 없음
 tabRowLine.Parent = tabRow
 
 -- 옛 탭 이름 → id(폰의 "장비"는 장비 칸 · PC의 "장비"는 3단 전체 보기)
@@ -443,6 +524,15 @@ local function selectTab(name)
 	activeTab = name
 	for tabName, btn in pairs(tabButtons) do
 		local selected = tabName == name
+		local skin = btn:FindFirstChild("Skin")
+		if skin then -- 03 v2: btn-tab-on/off 9-slice + 글자(노랑 위 = 진한 글자)
+			skin.Image = UiKit.stateImage(selected and "tab-on" or "tab-off", "normal") or ""
+			local label = btn:FindFirstChild("Label")
+			if label then
+				label.TextColor3 = selected and tok("accent.text") or tok("text.secondary")
+			end
+			continue
+		end
 		btn.BackgroundColor3 = selected and UIColors.gold or UIColors.slot
 		btn.BackgroundTransparency = selected and 0.05 or 0.2
 		btn.TextColor3 = selected and HEADER_INK or UIColors.textSecondary
@@ -496,6 +586,95 @@ local function rebuildTabs(L)
 	local gap = 6
 	local inner = L.mode == "phone" and (L.tabW - 28) or L.tabW
 	local buttonWidth = math.clamp(math.floor((inner - (count - 1) * gap) / count), 56, L.mode == "phone" and 110 or 96)
+	if V2 then -- 03 v2: PC = 글자 탭 107 × 44(간격 7) · 폰 = 그림 탭 44 × 44(간격 8)
+		local phone = L.mode == "phone"
+		local w = phone and BAG_V2.phone.tabSize or math.min(BAG_V2.pc.tabW, math.floor((L.tabW - (count - 1) * BAG_V2.pc.tabGap) / count))
+		local h = phone and BAG_V2.phone.tabSize or BAG_V2.pc.tabH
+		local g = phone and BAG_V2.phone.tabGap or BAG_V2.pc.tabGap
+		local sliceCenter = UiTokens.slice["tab-off"].center
+		for i, id in ipairs(L.tabNames) do
+			local btn = Instance.new("TextButton")
+			btn.Name = "Tab_" .. id
+			btn.AutoButtonColor = false
+			btn.Text = ""
+			btn.BackgroundTransparency = 1
+			btn.Size = UDim2.fromOffset(w, h)
+			btn.Position = UDim2.new(0, (phone and 14 or 0) + (i - 1) * (w + g), 0, (L.tabH - h) / 2)
+			btn.Parent = tabRow
+			local skin = Instance.new("ImageLabel")
+			skin.Name = "Skin"
+			skin.BackgroundTransparency = 1
+			skin.Size = UDim2.fromScale(1, 1)
+			skin.ScaleType = Enum.ScaleType.Slice
+			skin.SliceCenter = Rect.new(sliceCenter[1], sliceCenter[2], sliceCenter[3], sliceCenter[4])
+			skin.SliceScale = UiTokens.sliceScale
+			skin.Image = UiKit.stateImage("tab-off", "normal") or ""
+			skin.ZIndex = btn.ZIndex
+			skin.Parent = btn
+			local text = id == "codex" and R.codexTabName or Text.get("inv.tab." .. id)
+			local icon = phone and BAG_V2.tabIcons[id]
+			if icon then -- 폰 그림 탭: 아이콘(ui = 아이콘 v2 · part = 게임 장비 그림 · gem = 보석 몸통)
+				local holder = Instance.new("Frame")
+				holder.Name = "TabIcon"
+				holder.BackgroundTransparency = 1
+				holder.AnchorPoint = Vector2.new(0.5, 0.5)
+				holder.Position = UDim2.new(0.5, 0, 0.5, -1)
+				holder.Size = UDim2.fromOffset(28, 28)
+				holder.ZIndex = btn.ZIndex + 1
+				holder.Parent = btn
+				if icon.ui then
+					UiKit.icon(holder, icon.ui, 28, { center = true }).ZIndex = btn.ZIndex + 1
+				elseif icon.part then
+					ItemIcons.byPart[icon.part](holder, 28, tok("text.primary"))
+				elseif icon.gem then
+					ItemIcons.gem(holder, { grade = icon.gem })
+				end
+				for _, d in ipairs(holder:GetDescendants()) do
+					if d:IsA("GuiObject") then
+						d.ZIndex = btn.ZIndex + 1
+					end
+				end
+				btn:SetAttribute("TabText", text) -- 글자 없는 그림 탭 - 자체 점검 · 접근성용 이름
+			else
+				local label = Instance.new("TextLabel")
+				label.Name = "Label"
+				label.BackgroundTransparency = 1
+				label.Size = UDim2.new(1, 0, 1, -4)
+				label.Font = Enum.Font.GothamBold
+				label.TextSize = Theme.textSize("body")
+				label.TextTruncate = Enum.TextTruncate.AtEnd
+				label.TextColor3 = tok("text.secondary")
+				label.Text = text
+				label.ZIndex = btn.ZIndex + 1
+				label.Parent = btn
+			end
+			if Layout.filterTabs[id] or id == "gem" then
+				local dot = Instance.new("Frame") -- 새 항목 = 빨간 점(오른쪽 위 바깥으로 걸침)
+				dot.Name = "NewDot"
+				dot.AnchorPoint = Vector2.new(0.5, 0.5)
+				dot.Position = UDim2.new(1, -2, 0, 2)
+				dot.Size = UDim2.new(0, 14, 0, 14)
+				dot.BackgroundColor3 = tok("warning")
+				dot.BorderSizePixel = 0
+				dot.Visible = false
+				dot.ZIndex = btn.ZIndex + 2
+				dot.Parent = btn
+				local dotCorner = Instance.new("UICorner")
+				dotCorner.CornerRadius = UDim.new(1, 0)
+				dotCorner.Parent = dot
+				local ring = Instance.new("UIStroke")
+				ring.Color = Color3.new(1, 1, 1)
+				ring.Thickness = 2
+				ring.Parent = dot
+			end
+			tabButtons[id] = btn
+			btn.Activated:Connect(function()
+				selectTab(id)
+			end)
+		end
+		R.paintTabDots()
+		return
+	end
 	for i, id in ipairs(L.tabNames) do
 		local btn = Instance.new("TextButton")
 		btn.Name = "Tab_" .. id
@@ -569,6 +748,28 @@ function R.applyLayout()
 	rebuildTabs(L)
 	for _, fn in ipairs(R.layouts) do
 		fn(L)
+	end
+	if V2 and L.mode ~= "phone" then -- 03 v2 PC 3구역 = 남색 구역 판(panel.section) + 테두리(line 2) + 모서리 12 - 각 모듈 배치가 정한 투명도 위에 덮어쓴다
+		for _, frame in ipairs({ R.gearFrame, R.bagFrame, R.detail, R.gemFrame }) do
+			if frame then
+				frame.BackgroundColor3 = tok("panel.section")
+				frame.BackgroundTransparency = 0
+				local corner = frame:FindFirstChildOfClass("UICorner") or Instance.new("UICorner")
+				corner.CornerRadius = UDim.new(0, UiTokens.corner.card)
+				corner.Parent = frame
+				for _, child in ipairs(frame:GetChildren()) do
+					if child:IsA("UIStroke") and child.Name ~= "SectionStroke" then
+						child.Enabled = false -- 옛 테두리(흰 · 금) 대신 구역 테두리 하나
+					end
+				end
+				local edge = frame:FindFirstChild("SectionStroke") or Instance.new("UIStroke")
+				edge.Name = "SectionStroke"
+				edge.Color = tok("line")
+				edge.Thickness = UiTokens.stroke.card
+				edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+				edge.Parent = frame
+			end
+		end
 	end
 	selectTab(activeTab)
 	return L
