@@ -60,18 +60,15 @@ local function sendResult(player, slot, payload)
 	end
 end
 
--- [Player][slot] = os.clock() 마지막 캐스트 시각.
-local lastCastTick = {}
+-- QUEUE-MENU2 D: 쿨 기록 = SkillCooldowns(서버 공용 시각 · 캐릭터 저장으로 유지 - 옛 lastCastTick[player][slot] = os.clock()).
+local SkillCooldowns = require(script.Parent.SkillCooldowns)
 
 local function isOnCooldown(player, slot, cooldownSeconds)
-	local perPlayer = lastCastTick[player]
-	local last = perPlayer and perPlayer[slot]
-	return last ~= nil and (os.clock() - last) < cooldownSeconds
+	return SkillCooldowns.isOnCooldown(player, slot, cooldownSeconds)
 end
 
 local function markCast(player, slot)
-	lastCastTick[player] = lastCastTick[player] or {}
-	lastCastTick[player][slot] = os.clock()
+	SkillCooldowns.mark(player, slot)
 end
 
 local function reject(player, slot, reason)
@@ -783,7 +780,7 @@ if game:GetService("RunService"):IsStudio() then
 	debugCast.Name = "SkillCastDebug"
 	debugCast.Parent = game:GetService("ServerStorage")
 	debugCast.OnInvoke = function(player, slot, aimPoint)
-		lastCastTick[player] = nil
+		SkillCooldowns.clear(player)
 		debugCapture[player] = {}
 		local ok, err = pcall(handleSkill, player, slot, aimPoint) -- K1: T는 클릭 지점(위조 검사)
 		local captured = debugCapture[player]
@@ -799,7 +796,6 @@ Players.PlayerRemoving:Connect(function(player)
 		end
 	end
 	traps[player] = nil
-	lastCastTick[player] = nil
 	debugCapture[player] = nil
 end)
 

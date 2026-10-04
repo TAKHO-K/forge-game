@@ -698,6 +698,30 @@ driveCooldownLoop("q")
 driveCooldownLoop("e")
 driveCooldownLoop("dash")
 
+-- QUEUE-MENU2 D: 쿨 복원(메뉴 왕복 · 재접속 · 캐릭터 전환) - 서버가 Player Attribute SkillCooldowns(JSON { [칸] = { e = 끝 서버 시각, t = 길이 } })로 한 번 알린다
+local function applyRestoredCooldowns()
+	local raw = player:GetAttribute("SkillCooldowns")
+	local ok, view = pcall(function()
+		return game:GetService("HttpService"):JSONDecode(raw or "{}")
+	end)
+	if not ok or type(view) ~= "table" then
+		return
+	end
+	for _, slotId in ipairs({ "q", "e", "dash" }) do
+		local e = view[slotId:upper()] or view[slotId]
+		if type(e) == "table" and tonumber(e.e) and tonumber(e.t) and e.t > 0 then
+			local remaining = e.e - workspace:GetServerTimeNow()
+			if remaining > 0 then
+				activeCooldown[slotId] = { startTick = os.clock() - (e.t - remaining), totalSeconds = e.t }
+			end
+		else
+			activeCooldown[slotId] = nil
+		end
+	end
+end
+player:GetAttributeChangedSignal("SkillCooldowns"):Connect(applyRestoredCooldowns)
+applyRestoredCooldowns()
+
 -- 낙관적 시작(지시 [1] "클라 UI는 낙관적으로 먼저 돌아도 된다") - SkillInput.client.lua가
 -- 키를 누른 그 순간(네트워크 왕복 전) 이 BindableEvent를 쏜다.
 skillCastLocal.Event:Connect(function(slot, cooldownSeconds)

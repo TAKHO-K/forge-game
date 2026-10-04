@@ -10,7 +10,7 @@
 | A 조사 | 완료 | (이 커밋) | docs/design/menu2-survey.md(저장 v73 · migrate = SaveSystem.lua:479 · 결정 필요 목록 = 10절) |
 | B 캐릭터 칸 저장 | 핵심 완료 · 남음(결제 하네스 추가 3 · EconSim 판단 · 운영 도구 키) | (이 커밋) | 설계 docs/design/menu2-slot-save.md · SlotSaveData · SlotSave(순수) · SaveSystem 슬롯 경로(계정 Acct_ + 캐릭터 Char_ · 옛 Player_ 읽기만) · v74(playSeconds · runtime) · 스위치 끔 = 합쳐 읽기(손실 0) · legacyRecheck · 하네스 slot_save 37/37 · 옛 저장 하네스 4개 = 끔 고정 · Studio Play 이관 4캐릭터 + 자동 저장 확인 · C 서버 직업 변경 거절(srv.class.newCharOnly) |
 | C 메뉴 건너뛰기 제거 | 남음 | | |
-| D 메인 메뉴로 · 쿨/게이지 | 남음 | | |
+| D 메인 메뉴로 · 쿨/게이지 | 진행(쿨 · 게이지 · 위치 유지 완료 · 메뉴로 버튼 · 금지 상태 · 파티 해제 남음) | (이 커밋) | SkillCooldowns(서버 공용 시각) · CharacterRuntime(capture = 저장 훅 · restore) · ProfileBoot(접속 · 전환 공용) · 클라 SkillCooldowns 표시 · Studio 접미사 키 첫 쓰기 비움(이관 stale 고침) |
 | E 이어하기 창 | 남음 | | |
 | F 직업 선택 두 화면 | 남음 | | 그림 2/4 들어옴(class_legend_warrior_v1 · class_legend_archer_v1, 10-04) · 치유사 · 도적은 사용자가 나중에 넣음 - 없으면 임시 실루엣 유지. 궁수 배경 제거 주의: 옷 · 망토 · 잎 문양이 초록 → #00FF00와의 색 거리로 좁게 키(밝고 채도 높은 순수 초록만) · despill은 외곽 몇 px에만 · 결과를 확대 캡처로 망토 가장자리 · 잎 문양 · 화살 깃이 지워지거나 회색으로 안 변했는지 확인 |
 | G 검증 · 보고 | 남음 | | |

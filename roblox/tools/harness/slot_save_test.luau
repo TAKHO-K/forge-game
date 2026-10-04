@@ -381,6 +381,28 @@ local function main()
 		check("SLOT", "도감: 옛 기록(doneBy 없음) = 누구나", CR.cellMine({ done = { a = 1 } }, "a", 3))
 	end
 
+	-- ═══ 쿨 · 궁 게이지 유지(D) - 서버 공용 시각 기준 export → import(다른 서버 · 재접속 같은 값) ═══
+	do
+		local oldWs = workspace
+		workspace = setmetatable({ GetServerTimeNow = function() return 5000 + NOW end }, { __index = oldWs })
+		local SC = LOADERS["SkillCooldowns"]()
+		local pp = { Name = "CD", UserId = 900, SetAttribute = function(self, k, v) self[k] = v end }
+		SC.isOnCooldown(pp, "Q", 30)
+		SC.mark(pp, "Q")
+		SC.isOnCooldown(pp, "E", 4)
+		SC.mark(pp, "E")
+		NOW += 10
+		local saved = SC.export(pp)
+		check("SLOT", "쿨 저장: 도는 쿨만(Q 남음 · E 끝남 = 버림)", saved.Q ~= nil and saved.E == nil and math.abs(saved.Q.endsAt - (5000 + NOW + 20)) < 0.01, saved.Q and ("Q 끝 %.1f"):format(saved.Q.endsAt - (5000 + NOW)) or "nil")
+		local SC2 = LOADERS["SkillCooldowns"]() -- 다른 서버(새 사본)
+		NOW += 5
+		SC2.import(pp, saved)
+		check("SLOT", "쿨 복원(다른 서버 · 15초 뒤): Q 아직 쿨 · E 없음(표시 Attribute = 실제 Player만 - Play 확인)", SC2.isOnCooldown(pp, "Q", 30) and not SC2.isOnCooldown(pp, "E", 4))
+		NOW += 16
+		check("SLOT", "쿨 복원 뒤 시간 지나면 풀림", not SC2.isOnCooldown(pp, "Q", 30))
+		workspace = oldWs
+	end
+
 	-- ═══ 7. 새 계정 ═══
 	local pn = mkPlayer(777)
 	local fresh = SaveA.loadSlotProfile(pn)

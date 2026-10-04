@@ -7,10 +7,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)
 local SaveSystem = require(script.Parent.SaveSystem)
+SaveSystem.runtimeHook = require(script.Parent.CharacterRuntime).capture -- QUEUE-MENU2 D: 저장 직전 쿨 · 게이지 · 위치
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local SaveCoordinator = require(script.Parent.SaveCoordinator)
 local ImmediateSave = require(script.Parent.ImmediateSave)
-local InventorySync = require(script.Parent.InventorySync)
 local AcquisitionAudit = require(script.Parent.AcquisitionAudit)
 AcquisitionAudit.start()
 local QuestService = require(script.Parent.QuestService) -- Q6 G3 퀘스트 · 수련 Remote
@@ -21,7 +21,7 @@ local CommunityGoalService = require(script.Parent.CommunityGoalService) -- QUEU
 CommunityGoalService.start()
 local WeeklyChallengeService = require(script.Parent.WeeklyChallengeService) -- QUEUE-ALL1 P4 §3 주간 도전
 WeeklyChallengeService.start()
-local CodexService = require(script.Parent.CodexService) -- QUEUE-ALL1 P5 도감 v2
+require(script.Parent.CodexService) -- QUEUE-ALL1 P5 도감 v2(불러오는 순간 Remote 준비 - onLoaded = ProfileBoot)
 local SocialRewardService = require(script.Parent.SocialRewardService) -- QUEUE-ALL1 P4 §1 · §2 초대 보상 · 코드
 SocialRewardService.start()
 local SettingsService = require(script.Parent.SettingsService) -- Q14 설정 저장 Remote
@@ -53,45 +53,8 @@ local function loadForPlayer(player)
 			require(script.Parent.Telemetry).custom(player, "SaveQuarantineRestored", loadInfo.quarantineRestored)
 		end
 	end
-	if not profile then
-		warn(("[forge-game] 저장 데이터 불러오기 실패: %s - %s"):format(player.Name, tostring(err)))
-		profile = SaveSystem.defaultProfile()
-		PlayerProfile.init(player, profile)
-		SaveCoordinator.notify(player, "저장 데이터를 불러오지 못했습니다. 이번 접속에서의 변경사항은 저장되지 않습니다.")
-	else
-		PlayerProfile.init(player, profile)
-	end
-	-- 인벤토리 UI(InventoryUI.client.lua)는 Attribute가 아니라 이 이벤트로 초기 상태를
-	-- 받는다 - 접속 직후에도 한 번 밀어준다(이후 변경은 PlayerProfile의 각 뮤테이터가 push).
-	InventorySync.push(player, profile)
-	-- A2-N3 버그 수정(가방 보석 탭 0 vs 서버 1): 클라 보석 탭의 첫 GemFetch가 로드 전에 돌면 빈 스냅샷(무기 없음)을 받고, 접속 때 보석은 밀지 않아 다음 보석 변경 전까지 0에 머물렀다.
-	require(script.Parent.GemSync).push(player)
-	if PlayerProfile.grantComebackIfAway(player) then -- C5-5 복귀 부스트(7일 이상 뒤 접속 → 60분 ×1.5) - 토스트
-		require(script.Parent.Telemetry).custom(player, "Comeback", 1) -- Q15 T1: 복귀(7일 이상 뒤 접속)
-		task.spawn(function() -- 묶음 A 리뷰: AutoStage.server가 SystemNotice를 만들기 전 첫 접속자 경합 - 로드를 막지 않고 기다린다
-			local notice = ReplicatedStorage:WaitForChild("SystemNotice", 10)
-			if notice and player.Parent then
-				notice:FireClient(player, require(ReplicatedStorage.Shared.Text).get("comeback.welcome"))
-			end
-		end)
-	end
-	task.spawn(AcquisitionAudit.auditProfile, player) -- S1: 원장 없는 태초 격리 · 확률 검사(자동 제재 없음)
-	QuestService.onLoaded(player) -- Q6: 날짜 넘김 · 화면 표
-	PetService.onLoaded(player) -- Q11: 데리고 다니는 펫 Attribute · 화면 표
-	CommunityGoalService.onLoaded(player) -- QUEUE-ALL1 P3 §4: 내 기여 · 받은 칸 Attribute
-	WeeklyChallengeService.onLoaded(player) -- QUEUE-ALL1 P4 §3: 지난주 순위 보상
-	SocialRewardService.onLoaded(player) -- QUEUE-ALL1 P4 §1: 초대받은 첫 접속 보상
-	CodexService.onLoaded(player) -- QUEUE-ALL1 P5: 도감 칸 판정 · 고른 칭호 Attribute
-	if PlayerProfile.isFreshProfile(player) then -- QUEUE-ALL1 R1: 신규 첫 스폰 = 밝은 허브 광장(첫 캐릭터만)
-		task.spawn(function()
-			local character = player.Character or player.CharacterAdded:Wait()
-			character:WaitForChild("HumanoidRootPart", 10)
-			task.wait(0.5)
-			require(script.Parent.Travel).placeFirstSpawn(player)
-		end)
-	end
-	SettingsService.onLoaded(player) -- Q14: 저장된 설정을 Attribute로
-	MonetizationService.onLoaded(player) -- QUEUE-B1 B2: 시즌 넘김 · 치장 Attribute · 게임패스 · 정책 · 선물함 팝업
+	-- QUEUE-MENU2: 로드 뒤 처리 = ProfileBoot(캐릭터 전환과 같은 길) · 이어하기 위치 = 그 캐릭터 마지막 자리(첫 접속 계정은 허브 첫 스폰)
+	require(script.Parent.ProfileBoot).apply(player, profile, err, { restorePosition = profile ~= nil and (tonumber(profile.savedAt) or 0) > 0 })
 end
 
 Players.PlayerAdded:Connect(loadForPlayer)

@@ -18,7 +18,7 @@ run save_launch res_launch.txt SaveSystem,SlotSave,SaveCoordinator,ImmediateSave
 run save_lock res_lock.txt SaveSystem,SlotSave save_lock_test.luau
 run migrate_curve res_curve.txt SaveSystem,SlotSave migrate_curve_test.luau
 run id_quarantine res_quar.txt SaveSystem,SlotSave id_quarantine_test.luau
-run slot_save res_slot.txt SaveSystem,SlotSave slot_save_test.luau # QUEUE-MENU2 B 캐릭터 칸 저장(이관 · 분리 · 중복 · 상한 · 보관 · 두 서버 · 스위치 끔/켬 · 크기 · 새 계정)
+run slot_save res_slot.txt SaveSystem,SlotSave,SkillCooldowns slot_save_test.luau # QUEUE-MENU2 B 캐릭터 칸 저장(이관 · 분리 · 중복 · 상한 · 보관 · 두 서버 · 스위치 끔/켬 · 크기 · 새 계정)
 run monetize res_mon.txt "$(python deps.py MonetizationService,SaveSystem,OpsServer.server,InventorySync)" monetize_test.luau
 run dupe res_dupe.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem,MonetizationService)" dupe_test.luau
 run multiplayer res_multi.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem)" multiplayer_test.luau

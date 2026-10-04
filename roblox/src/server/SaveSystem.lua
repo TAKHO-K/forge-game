@@ -2255,6 +2255,11 @@ end
 -- 키 하나 쓰기(낙관적 동시성 - 저장값 savedAt이 baseline보다 새롭고 내 메아리가 아니면 취소) → true, nil, 새 savedAt | false, 이유
 local function updateKey(player, base, baselineSavedAt, payloadFn)
 	local key = base .. (studioSuffix() or "")
+	if studioSuffix() and not seededKeys[key] then
+		pcall(function()
+			store:RemoveAsync(key) -- Studio: 이 서버가 처음 만지는 접미사 키 = 지난 Play 값(읽기 시드와 같은 규칙 - 안 비우면 이관 쓰기가 stale)
+		end)
+	end
 	seededKeys[key] = true
 	local newSavedAt = os.time()
 	local lastErr
@@ -2443,6 +2448,9 @@ function SaveSystem.saveSlotProfile(player, profile)
 			warn(("[SaveSystem] 캐릭터 직업 고정 - 프로필 직업 %s ≠ 캐릭터 %s(%s) · 캐릭터 직업으로 저장"):format(tostring(profile.classId), tostring(sess.classId), player.Name))
 		end
 		local cs = profile.classes and profile.classes[sess.classId]
+		if type(cs) == "table" and SaveSystem.runtimeHook then
+			pcall(SaveSystem.runtimeHook, player, cs) -- QUEUE-MENU2 D: 쿨 · 궁 게이지 · 마지막 위치(CharacterRuntime.capture - 서버가 시작 때 건다 · 하네스는 없음)
+		end
 		if type(cs) == "table" then
 			cs.playSeconds = (tonumber(cs.playSeconds) or 0) + math.max(0, now - (sess.playMark or now))
 			sess.playMark = now
