@@ -38,6 +38,7 @@
 | F1 | 기능: 보석 탭 무기 그림 = 장착 무기(직업 × 등급) 자동 교체 | 완료 | (이 커밋) | GemHeader → ItemIcons.keyFor/image(장비 탭과 한 소스 · 그림 없으면 도형) · GemTab이 ClassId · WeaponGrade · WeaponLevel 변화에 즉시 다시 그림 · Play 확인(직업 전환 · 태초 · 강화 · 계승 · 원복) · 512 그림 · 강화 표시 꾸밈 = DESIGN-BACKLOG 6 |
 | F2 | 기능: 보석 아이콘 한 소스(종류 × 등급) | 완료 | (이 커밋) | GemData.iconKeyByKind/ByGrade + ItemIcons.gem(그림 없으면 등급색 원 = 임시 · GemIconKey 기록) · 홈 · 가방 칸 연결 · 박힌 채 등급 상승 = GemSync 다시 칠함 · 8 × 16 = 임시 128 · 보석함 · 판매 창 · 우편함 연결은 그림 들어올 때(DESIGN-BACKLOG 7) |
 | F3 | 기능: 초월 무기 이펙트 단계 판정 + 연결 지점 | 완료 | (이 커밋) | All10Data.transcendEnhance.fxTiers(+0/5/10/15/20/21 → 1 ~ 6) · All10.transcendFxTier · WeaponEnhanceVisual = TranscendLevel · WeaponGrade 신호 → TranscendFxTier 속성 기록 · 효과 = 기존 +30 연출 재사용(tempVisualLevel) · 하네스 gem_home 13/13 · run_all 전부 |
+| F3' | 사용자 변경(10-04 밤): 초월 +0 ~ +25 → 단계 번호 0 ~ 25 · 단계마다 요소 표 하나(아이콘 · 3D 공용) · 계승 전 +20 ~ +30(은 · 민트 · 하늘 · 아쿠아 · 흰하늘 · 백금) 포함 | 진행 | | MENU2 B 잠시 멈춤(SlotSaveData.lua 작성 중 · 미커밋) |
 | 1-2 | 달리기 · 강공격 · 활강 × 4직업(LOOK3 초월) 캡처 | 완료(디자인 판정 없음) | (이 커밋) | look3/look3_1-2_run_attack_glide_4classes_transcendent.jpg · 무기 손잡이 · 활시위 가림 0 · 활강 = 윗팔이 어깨판 속(판정 2 허용) · 로그 게임 에러 0 |
 
 ## 정지 기록(2026-10-04 · 사용자 "지금 하는 항목까지만 마치고 멈춰")
