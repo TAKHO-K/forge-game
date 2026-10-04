@@ -112,11 +112,11 @@ end
 -- 여기서 새 공식을 만들지 않고 PlayerProfile과 같은 지점에 합류시킨다).
 -- permanentMultiplier · permanentHpMultiplier(P2.5b D - 선택, 기본 1) = 환생 후 레벨 마일스톤 영구 배율 - 게임과 같이 공격력(PlayerCombat.getAttack) · 최대체력에 곱한다
 -- (최대체력 몫은 MilestoneData.stat = "survival"일 때만 1이 아니다 - 호출부가 Milestone.maxHpMultiplier로 넘긴다).
-local function buildLoadoutCore(classId, level, weaponLevel, weaponGrade, armorItem, glovesItem, shoesItem, gems, permanentMultiplier, permanentHpMultiplier, rebirthCount)
+local function buildLoadoutCore(classId, level, weaponLevel, weaponGrade, armorItem, glovesItem, shoesItem, gems, permanentMultiplier, permanentHpMultiplier, rebirthCount, weaponTranscend)
 	local class = ClassData.classes[classId]
 	assert(class, "알 수 없는 classId: " .. tostring(classId))
 
-	local weapon = { id = WeaponData.starterId, level = weaponLevel or 0, grade = weaponGrade or 0 }
+	local weapon = { id = WeaponData.starterId, level = weaponLevel or 0, grade = weaponGrade or 0, transcend = weaponTranscend } -- QUEUE-ALL10: 초월 무기 칸(PlayerCombat이 등급 · 강화 줄에 얹는다 - 게임과 같은 함수)
 	local gemBonus = gemBonusesFor(classId, armorItem, glovesItem, shoesItem, gems)
 	-- C4-2 · C4-3: 치명 확률 = 직업 + 레벨 곡선 + 환생 보상 + 옵션(100%에서 자름) · 넘친 몫 = 위력 버킷(게임 PlayerProfile과 같은 함수 PlayerCombat.resolveCrit)
 	local critRateBonus, overCritAttack = PlayerCombat.resolveCrit(classId, level, rebirthCount, gemBonus.critRate)
@@ -164,7 +164,7 @@ function BalanceSim.buildLoadout(spec)
 	return buildLoadoutCore(
 		spec.classId, spec.level, spec.weaponLevel, spec.weaponGrade,
 		buildItem("armor", gear.armor), buildItem("gloves", gear.gloves), buildItem("shoes", gear.shoes),
-		spec.gems, spec.permanentMultiplier, spec.permanentHpMultiplier, spec.rebirth
+		spec.gems, spec.permanentMultiplier, spec.permanentHpMultiplier, spec.rebirth, spec.weaponTranscend
 	)
 end
 

@@ -33,6 +33,8 @@ local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
 local MonsterStats = require(ReplicatedStorage.Shared.MonsterStats) -- QUEUE-N1004 C-4 몹 체력 · 공격 한 곳
+local All10 = require(ReplicatedStorage.Shared.All10) -- QUEUE-ALL10 3-1 초월 계승(스위치 All10Economy - 끄면 옛 시뮬과 같다)
+local All10Data = require(ReplicatedStorage.Shared.data.All10Data)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
 local BalanceSim = require(ReplicatedStorage.Shared.BalanceSim)
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
@@ -332,7 +334,7 @@ EconSim.tierData = tierData
 -- G1-3: 레벨차 계수(주는 피해)가 있으면 그 스테이지의 실효 HP = HP ÷ 계수(게임 MonsterState.applyDamage와 같은 함수). HP ÷ 계수는 스테이지에 단조 증가.
 -- C2: 전투 공식 배율(전투력 ÷ 권장 - 게임 MonsterState.applyDamage와 같은 함수 · 꺼져 있으면 1)도 나눈다. 배율은 스테이지에 단조 감소라 단조성 유지.
 local function effectiveMonsterHp(loadout, baseHp, stage)
-	local hp = MonsterStats.trashHp(baseHp, stage) -- C4-1 잡몹 구간 배율 · QUEUE-N1004 C-4 공용 함수
+	local hp = MonsterStats.trashHp(baseHp, stage) * MonsterStats.breakFactor(stage, loadout.inheritStage) -- C4-1 잡몹 구간 배율 · QUEUE-N1004 C-4 공용 함수 · QUEUE-ALL10 돌파 계수(게임 MonsterState 피해 ÷ 계수와 같다)
 	return hp / CharacterLevel.levelGapDealMultiplier(loadout.level, stage) / CombatFormula.dealMultiplier(CombatFormula.offensePower(loadout), stage, baseHp)
 		/ CombatFormula.gearLagMultiplier(loadout.dealItemLevelBest, stage) -- C5-1 뒤처짐 신호(게임 MonsterState.applyDamage와 같은 함수)
 end
@@ -346,11 +348,46 @@ function EconSim.highestStageByKill(loadout, tierIndex, seconds, efficiency, max
 		stage = math.floor(1 + math.log(hpLimit / baseHp) / math.log(InfiniteStageConfig.growthRate))
 	end
 	stage = math.clamp(stage, 1, maxStage)
-	while stage < maxStage and effectiveMonsterHp(loadout, baseHp, stage + 1) <= hpLimit do
-		stage += 1
+	-- QUEUE-ALL10: 한 칸씩 걷던 탐색을 "두 배 걸음 + 이분"으로(실효 HP는 스테이지에 단조 증가라 결과가 같다 - 돌파 계수가 첫 추정을 수천 스테이지 아래로 둘 때 느렸다)
+	local function fits(s)
+		return effectiveMonsterHp(loadout, baseHp, s) <= hpLimit
 	end
-	while stage > 1 and effectiveMonsterHp(loadout, baseHp, stage) > hpLimit do
-		stage -= 1
+	if stage < maxStage and fits(stage + 1) then
+		local lo, step = stage + 1, 1
+		while lo < maxStage and fits(math.min(lo + step, maxStage)) do
+			lo = math.min(lo + step, maxStage)
+			step *= 2
+		end
+		local hi = math.min(lo + step, maxStage + 1)
+		while hi - lo > 1 do
+			local mid = (lo + hi) // 2
+			if fits(mid) then
+				lo = mid
+			else
+				hi = mid
+			end
+		end
+		stage = lo
+	end
+	if stage > 1 and not fits(stage) then
+		local hi, step = stage, 1
+		while hi - step > 1 and not fits(hi - step) do
+			hi -= step
+			step *= 2
+		end
+		local lo = math.max(1, hi - step)
+		if not fits(lo) then
+			return 1
+		end
+		while hi - lo > 1 do
+			local mid = (lo + hi) // 2
+			if fits(mid) then
+				lo = mid
+			else
+				hi = mid
+			end
+		end
+		stage = lo
 	end
 	return stage
 end
@@ -361,7 +398,7 @@ function EconSim.highestStageBySurvive(loadout, tierIndex, minHits, maxStage)
 	local newbie = PlayerCombat.getNewbieDamageMultiplier(maxStage + 1) -- P2.5c 신규 보호: 게임과 같이 최고 스테이지(= reach = maxStage + 1) 기준
 	local function ok(stage)
 		return BalanceSim.getSurviveHits(loadout, MonsterStats.trashAttack(attackBase, stage), newbie * CharacterLevel.levelGapTakeMultiplier(loadout.level, stage)
-			* CombatFormula.takeMultiplier(loadout.defense, stage, MonsterStats.trashAttack(attackBase, stage))) >= minHits -- C5-3 잡몹 공격 구간 배율(게임 MonsterState.getMonsterAttack과 같다) -- G1-3: 받는 피해 계수 · C2 받는 피해 배율
+			* CombatFormula.takeMultiplier(loadout.defense, stage, MonsterStats.trashAttack(attackBase, stage)) * (loadout.guardTake or 1)) >= minHits -- C5-3 잡몹 공격 구간 배율(게임 MonsterState.getMonsterAttack과 같다) -- G1-3: 받는 피해 계수 · C2 받는 피해 배율
 	end
 	if not ok(1) then
 		return 1
@@ -537,9 +574,11 @@ local function newState(profile)
 		bossPartTurn = 0,
 		awakenCount = 0, -- D1: 각성 횟수(태초 보유 what-if)
 		awakenGold = 0,
-		training = { attack = 0, hp = 0, defense = 0 }, -- Q6 G3 수련(계정) · 능력(직업)
+		training = { attack = 0, hp = 0, defense = 0, advanced = 50, guard = 0 }, -- Q6 G3 수련(계정) · 능력(직업) · QUEUE-ALL10 고급 · 방어 수련
 		abilities = {},
-		spend = { enhance = 0, protection = 0, gem = 0, awaken = 0, training = 0, ability = 0 }, -- Q6 골드 사용처 집계
+		spend = { enhance = 0, protection = 0, gem = 0, awaken = 0, training = 0, ability = 0, transcend = 0, advanced = 0, guard = 0 }, -- Q6 골드 사용처 집계 · QUEUE-ALL10 초월 강화 · 고급 · 방어 수련
+		transcend = nil, -- QUEUE-ALL10: 계승 뒤 { level, slot }(게임 weapon.transcend)
+		inheritStage = nil, -- QUEUE-ALL10: 계승 스테이지(= 그때 reach - 게임 = 계정 최고)
 		sparkleTally = {}, -- D1-2: 반짝이 장비 누적 기대 도착(등급마다)
 		sparkleGot = {}, -- D1-2: 반짝이 장비 누적 기대 개수(공급 표 - 등급마다)
 		sparkles = 0,
@@ -547,6 +586,12 @@ local function newState(profile)
 		reclaimLevel = 0, -- C5-2 되찾기 기준(게임 classState.reclaimLevel)
 		reclaimKills = 0, -- C5-2: 환생 뒤 되찾기까지 처치 수(보고)
 	}
+end
+
+local function attachAll10(loadout, state)
+	loadout.inheritStage = state.transcend and All10.enabled() and state.inheritStage or nil -- 돌파 계수 기준(게임 Attribute TranscendInheritStage와 같은 조건)
+	loadout.guardTake = state.transcend and All10.defenseTakeMultiplier(state.training.guard) or 1 -- 방어 수련(게임 PlayerProfile.getGuardTakeMultiplier)
+	return loadout
 end
 
 local function loadoutFor(state)
@@ -567,10 +612,16 @@ local function loadoutFor(state)
 		weaponGrade = state.weaponGrade,
 		gear = gear,
 		gems = state.gems,
-		permanentMultiplier = Milestone.attackMultiplier(state.milestoneLevel) + (EconSimConfig.modelTraining and Training.bucketBonus(state.training, state.abilities, state.classId, "attack") or 0), -- P2.5c B2: 마일스톤 버킷 · Q6 수련 · 직업 능력(합연산 - 게임 PlayerProfile.getMilestoneMultiplier와 같은 식)
+		permanentMultiplier = Milestone.attackMultiplier(state.milestoneLevel) + (EconSimConfig.modelTraining and Training.bucketBonus(state.training, state.abilities, state.classId, "attack") or 0)
+			+ (state.transcend and All10.advancedBonus(state.training.advanced) or 0), -- P2.5c B2: 마일스톤 버킷 · Q6 수련 · 직업 능력(합연산 - 게임 PlayerProfile.getMilestoneMultiplier와 같은 식) · QUEUE-ALL10 고급 수련(초월 무기만)
+		weaponTranscend = state.transcend, -- QUEUE-ALL10 초월 무기(등급 × 1.25 · 강화 줄 × (1 + 초월 강화))
 		permanentHpMultiplier = Milestone.maxHpMultiplier(state.milestoneLevel) + (EconSimConfig.modelTraining and Training.bucketBonus(state.training, state.abilities, state.classId, "hp") or 0),
 		rebirth = state.rebirth, -- C4-2 환생 보상 치명
 	})
+end
+local loadoutBase = loadoutFor
+loadoutFor = function(state)
+	return attachAll10(loadoutBase(state), state)
 end
 EconSim.loadoutFor = loadoutFor
 
@@ -841,6 +892,70 @@ local function tryTrainWithGold(state)
 	end
 end
 
+-- QUEUE-ALL10 3-1 계승(게임 TranscendService.confirm과 같은 조건 · 결과): 태초 +30 → 초월 +0 · 계승 스테이지 = reach · 보상 초월 보석 1개 = 1번 홈(태초 상한 홈)
+local function tryInherit(state, profile, run)
+	if state.transcend or not All10.canInherit({ grade = state.weaponGrade, level = state.weaponLevel }) then
+		return
+	end
+	state.weaponGrade = All10Data.inherit.toGrade
+	state.transcend = { level = 0, slot = 0 }
+	state.inheritStage = state.reach
+	state.gems[1] = EconSim.makeGem("attackPercent", "transcendent", state.reach, math.min((profile.gemRoll or 1) * (profile.optionRoll or 1), OptionData.rollMax))
+	if run then
+		run.inheritAt = { seconds = state.seconds, stage = state.reach }
+	end
+end
+
+-- 계승 뒤 골드: 가장 싼 것부터(초월 강화 칸 · 고급 수련 · 방어 수련 - 게임과 같은 가격 · 상한 함수 shared/All10)
+local function tryAll10Spend(state, run)
+	if not state.transcend or not All10.enabled() then
+		return
+	end
+	local d = All10Data
+	local guard = 0
+	while guard < 4000 do
+		guard += 1
+		local best, bestCost
+		if state.transcend.level < d.transcendEnhance.maxLevel then
+			best, bestCost = "transcend", All10.transcendSlotCost(state.reach)
+		end
+		if state.training.advanced < All10.advancedCap(state.reach, true) then
+			local c = All10.advancedCost(state.training.advanced, state.reach)
+			if not bestCost or c < bestCost then
+				best, bestCost = "advanced", c
+			end
+		end
+		if All10.defenseUnlocked(state.reach, true) and state.training.guard < d.defenseTraining.maxLevel then
+			local c = All10.defenseCost(state.training.guard, state.reach)
+			if not bestCost or c < bestCost then
+				best, bestCost = "guard", c
+			end
+		end
+		if not best or state.gold < bestCost then
+			return
+		end
+		state.gold -= bestCost
+		state.spend[best] += bestCost
+		if best == "transcend" then
+			state.transcend.slot += 1
+			if state.transcend.slot >= d.transcendEnhance.slots then
+				state.transcend.level += 1
+				state.transcend.slot = 0
+				if run and state.transcend.level == d.transcendEnhance.maxLevel then
+					run.transcendDoneAt = { seconds = state.seconds, stage = state.reach }
+				end
+			end
+		elseif best == "advanced" then
+			state.training.advanced += 1
+			if run and state.training.advanced == d.advancedTraining.maxLevel then
+				run.advancedDoneAt = { seconds = state.seconds, stage = state.reach }
+			end
+		else
+			state.training.guard += 1
+		end
+	end
+end
+
 -- QUEUE-ALL9B 보완 6-1: 시즌 패스 무료 줄 성장 보상(매일 접속 가정 - EconSimConfig.seasonPassDaily). 지난 플레이 날마다 경험치 → 새로 닿은 칸의 골드 · 강화석 · 하락 방지권(40칸 뒤 = 반복 보너스 골드 · 상한까지).
 local function seasonPassIncome(state, profile)
 	if not EconSimConfig.modelSeasonPass then
@@ -952,11 +1067,11 @@ local function fightBosses(state, profile, loadout, run)
 		local bossStage = state.reach
 		local data = BossRules.buildInstanceData(bossStage, BossRules.bossIdForStage(bossStage), profile.partySize)
 		-- 파티 딜 = 인원 × 내 딜(같은 수준의 파티원 가정 - [가정]). 보스 HP는 BossRules가 이미 인원 배율(N^p)을 곱했다.
-		local effectiveHp = data.hp / (profile.bossDpsEfficiency * profile.partySize) / CharacterLevel.levelGapDealMultiplier(loadout.level, bossStage) -- G1-3: 레벨차 계수
+		local effectiveHp = data.hp * MonsterStats.breakFactor(bossStage, loadout.inheritStage) / (profile.bossDpsEfficiency * profile.partySize) / CharacterLevel.levelGapDealMultiplier(loadout.level, bossStage) -- G1-3: 레벨차 계수 · QUEUE-ALL10 돌파 계수
 			/ ((EconSimConfig.c2NoBoss or CombatFormula.bossExempt()) and 1 or CombatFormula.dealMultiplier(CombatFormula.offensePower(loadout), bossStage)) -- C2: 보스 = 스테이지 권장(기준 구역) · 보스전 제외면 1
 		-- 생존: 보스 평타(BossRules가 계산한 attack)에 최소 생존 타수를 버텨야 도전한다(잡몹과 같은 minSurviveHits).
 		if BalanceSim.getSurviveHits(loadout, data.attack, PlayerCombat.getNewbieDamageMultiplier(bossStage) * CharacterLevel.levelGapTakeMultiplier(loadout.level, bossStage)
-			* (CombatFormula.bossExempt() and 1 or CombatFormula.takeMultiplier(loadout.defense, bossStage, data.attack))) < profile.minSurviveHits then -- P2.5c 신규 보호 · G1-3 레벨차 · C2 받는 피해 배율
+			* (CombatFormula.bossExempt() and 1 or CombatFormula.takeMultiplier(loadout.defense, bossStage, data.attack)) * (loadout.guardTake or 1)) < profile.minSurviveHits then -- P2.5c 신규 보호 · G1-3 레벨차 · C2 받는 피해 배율
 			break
 		end
 		local seconds = EconSim.killSeconds(loadout, effectiveHp, profile.bossKillLimitSeconds)
@@ -976,6 +1091,9 @@ local function fightBosses(state, profile, loadout, run)
 		state.bossGold += grantGold
 		state.bossClears += 1
 		cleared += 1
+		if state.transcend and bossStage >= All10Data.transcendGem.dropMinStage then
+			state.tgDrops = (state.tgDrops or 0) + All10Data.transcendGem.dropChance -- QUEUE-ALL10 초월 보석 기대 드랍(보고 - 홈은 1개라 전투 몫은 계승 보상 1개)
+		end
 		-- D1: 보스 첫 클리어 장비(영웅 이상 보장 표 - DropTable.bossFirstClearGradeTable) - 희귀 등급도 오래 하면 오도록 "누적 기대 도착"으로 센다
 		-- (잡몹 모형의 "점검 한 번에 기대 1개 이상" 규칙은 0.39% 같은 확률을 영영 못 잡는다). itemLevel = 보스 스테이지(편차 +0 · 보수적).
 		if EconSimConfig.modelBossDrops then
@@ -1180,8 +1298,12 @@ local function stepLevel(state, profile, run, rng, whatIf)
 			replaced += changed
 			tryEnhanceWithGold(state, profile, rng)
 			tryTrainWithGold(state) -- Q6
+			local transBefore = state.transcend and (state.transcend.level * 100 + state.transcend.slot + state.training.advanced * 10000) or -1
+			tryInherit(state, profile, run) -- QUEUE-ALL10
+			tryAll10Spend(state, run)
+			local transChanged = (state.transcend and (state.transcend.level * 100 + state.transcend.slot + state.training.advanced * 10000) or -1) ~= transBefore
 			-- 아무것도 안 바뀐 점검이면 사냥 선택 · 보스 판정이 그대로라 다시 계산하지 않는다(긴 레벨에서 점검 수백 번 - 계산 시간).
-			if anyChange or state.gearMode ~= modeBefore or state.weaponLevel ~= weaponBefore then
+			if anyChange or state.gearMode ~= modeBefore or state.weaponLevel ~= weaponBefore or transChanged then
 				refresh()
 			end
 		end
@@ -1189,6 +1311,8 @@ local function stepLevel(state, profile, run, rng, whatIf)
 	state.exp = -need -- 넘친 경험치는 다음 레벨로
 	tryEnhanceWithGold(state, profile, rng)
 	tryTrainWithGold(state) -- Q6
+	tryInherit(state, profile, run) -- QUEUE-ALL10
+	tryAll10Spend(state, run)
 	local levelBefore = state.level
 	state.level += 1
 	state.reclaimKills += kills
@@ -1223,6 +1347,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 		primordial = primordial, -- P2 E5: 이 청크 사냥의 태초 장비 기대 개수
 		goldBalance = state.gold, goldPerKill = goldPerKill, -- P2 C2: 보유 골드 대비 처치 1회 골드(상대 정밀도)
 		spend = table.clone(state.spend), training = table.clone(state.training), -- QUEUE-ALL9B: 청크 끝 누적 골드 사용처 · 수련 단계(구간 표)
+		transcendLevel = state.transcend and (state.transcend.level + state.transcend.slot / All10Data.transcendEnhance.slots) or nil, inheritStage = state.inheritStage, tgDrops = state.tgDrops, -- QUEUE-ALL10
 		gemShare = 1 - BalanceSim.buildLoadout({ classId = state.classId, level = state.level, weaponLevel = state.weaponLevel, weaponGrade = state.weaponGrade, gear = state.gear, gems = {}, permanentMultiplier = Milestone.attackMultiplier(state.milestoneLevel), permanentHpMultiplier = Milestone.maxHpMultiplier(state.milestoneLevel) }).atk / loadoutFor(state).atk, -- P2 D1: 보석이 공격력에서 차지하는 비중
 		milestoneLevel = state.milestoneLevel, -- P2.5c B2: 청크 끝의 받은 마지막 능력치 마일스톤 레벨(버킷 = Milestone.bonusFor)
 		armorGrade = state.gear.armor and state.gear.armor.grade or "-", armorLevel = state.gear.armor and state.gear.armor.itemLevel or 0,
