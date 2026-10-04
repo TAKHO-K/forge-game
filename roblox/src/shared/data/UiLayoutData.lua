@@ -21,6 +21,7 @@ return {
 			lore = { 96, 690, 460, 110 }, -- 첫 실행 설정 문구(3초 뒤 페이드)
 			slotWindow = { 432, 92, 580, 920 }, -- 이어하기 창
 			slotWindowNarrow = { 24, 92, 580, 920 }, -- 01 v3 좁은 창 모드(빈 구역 < 키 아트 지킬 영역): 메뉴 숨김 + 창 왼쪽
+			narrowMinGapPx = 24, -- 판정 10-05: 왼쪽 묶음(펼친 메뉴 · 제목 글 끝) ↔ 이어하기 창 간격이 이보다 작으면 좁은 창 모드(화면 px)
 			slotWindowSlide = 40, -- 펼침: X −40 → 0
 			slotList = { x = 19, y = 91, w = 542, selectedH = 158, cardH = 128, emptyH = 92, lockedH = 76, gap = 10 }, -- 창 안 좌표
 			slotClose = { 521, 15, 44, 44 }, -- 창 안

@@ -149,6 +149,32 @@ function UiModel.textPx(name, isPhone, stepKey, platformName, rootScale)
 	return math.floor(base * UiModel.textMul(stepKey, platformName) * comp + 0.5)
 end
 
+-- QUEUE-UI2 판정(10-05) 카드 줄바꿈: 숫자 + 단위 = 한 덩어리("1분 전" · "스테이지 21" · "환생 4회"). 덩어리 구분 = 두 칸 띄움("  " - 글 데이터 cardLine 형식).
+--   measure(글) → 폭 px · maxWidth 안에 덩어리 단위로 채우고 넘치면 다음 줄 → 줄 목록(덩어리 안에서는 끊지 않는다)
+function UiModel.wrapChunks(text, maxWidth, measure)
+	local chunks = {}
+	for part in (tostring(text) .. "  "):gmatch("(.-)  ") do
+		part = part:match("^%s*(.-)%s*$")
+		if part ~= "" then
+			table.insert(chunks, part)
+		end
+	end
+	local lines, cur = {}, nil
+	for _, c in ipairs(chunks) do
+		local try = cur and (cur .. "  " .. c) or c
+		if cur and measure(try) > maxWidth then
+			table.insert(lines, cur)
+			cur = c
+		else
+			cur = try
+		end
+	end
+	if cur then
+		table.insert(lines, cur)
+	end
+	return lines
+end
+
 -- QUEUE-UI1F-1 소식 빨간 점: 가장 큰 소식 id · 본 id(설정 lastSeenNewsId - 옛 저장 = nil = 0)보다 크면 점
 function UiModel.newsLatestId(news)
 	local best = 0

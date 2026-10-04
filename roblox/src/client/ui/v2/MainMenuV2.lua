@@ -348,18 +348,38 @@ function MainMenuV2.new(gui, deps)
 		win.sub.LayoutOrder = 2
 	end
 	-- UI2-3 키 아트(01 v3 "키 아트 초점"): 가장 넓은 UI = 이어하기 창 오른쪽 화면 px → MenuBoot가 그림 자리 · 좁은 창 모드(KeyArtNarrow) 계산(열고 닫아도 그림은 같은 자리)
+	-- 좁은 창 모드 창 배율(판정 10-05 "창 폭 = 16:9와 같게"): 화면 높이 기준 16:9 배율 ÷ 지금 배율(≥ 1) - 창이 16:9일 때와 같은 화면 크기
+	local function narrowWindowScale()
+		local s = math.max(ui.scale.Scale, 0.01)
+		local h = gui.AbsoluteSize.Y
+		return phone and 1 or math.max(1, (h / Tokens.base.pc.h) / s)
+	end
 	local function reportUiRight()
 		local s = ui.scale.Scale
 		local x0 = ui.frame.AbsolutePosition.X
 		local n = L.slotWindowNarrow or L.slotWindow
 		gui:SetAttribute("KeyArtUiRight", x0 + (L.slotWindow[1] + L.slotWindow[3]) * s)
-		gui:SetAttribute("KeyArtUiRightNarrow", x0 + (n[1] + n[3]) * s)
+		gui:SetAttribute("KeyArtUiRightNarrow", x0 + n[1] * s + n[3] * s * narrowWindowScale())
 	end
 	ui.scale:GetPropertyChangedSignal("Scale"):Connect(reportUiRight)
 	ui.frame:GetPropertyChangedSignal("AbsolutePosition"):Connect(reportUiRight)
 	task.defer(reportUiRight)
+	-- 좁은 창 모드 = 키 아트(얼굴 · 대검)를 가림(MenuBoot KeyArtNarrow) 또는 왼쪽 묶음(펼친 메뉴 · 제목 글 끝) ↔ 이어하기 창 간격 < narrowMinGapPx(화면 px · 판정 10-05)
+	local function leftEdgeGapPx()
+		local s = ui.scale.Scale
+		local size = UiKit.size("titleExpanded")
+		local ok, v = pcall(function()
+			return TextService:GetTextSize(title.Text, size, title.Font, Vector2.new(10000, 1000))
+		end)
+		local titleRight = L.titleExpanded[1] + (ok and v.X or 0)
+		local menuRight = M.x + M.widthExpanded
+		return (L.slotWindow[1] - math.max(titleRight, menuRight)) * s
+	end
 	local function narrowMode()
-		return not phone and gui:GetAttribute("KeyArtNarrow") == true
+		if phone then
+			return false
+		end
+		return gui:GetAttribute("KeyArtNarrow") == true or leftEdgeGapPx() < (L.narrowMinGapPx or 24)
 	end
 
 	local closeBtn = UiKit.closeButton({ parent = win.root, rect = L.slotClose, name = "Close", icon = phone and "back" or "x", plate = phone, colorToken = phone and "panel.slot" or "warning", ring = L.slotCloseRing, onActivated = function()
@@ -480,6 +500,17 @@ function MainMenuV2.new(gui, deps)
 
 	-- 카드 글 줄 배치(UI2-3 · 00 v2 "글자 크기 = 글자만 · 잘림 금지"): 줄 높이 = 실제 글 높이(TextService - 좁으면 줄바꿈) · 카드 높이 = 기준 + 늘어난 만큼(목록은 스크롤)
 	local CARD = phone and { top = 8, name = 20, gap1 = 2, line = 16, gap2 = 2, gap3 = 4, hint = 22 } or { top = 14, name = 30, gap1 = 4, line = 26, gap2 = 2, gap3 = 2, hint = 30 }
+	-- 덩어리 줄바꿈(판정 10-05): 숫자 + 단위를 한 덩어리로 · 넘치면 덩어리째 다음 줄 → 줄바꿈 문자로 이은 글
+	local function chunkWrap(text, sizeName, fontKind, width)
+		local size, font = UiKit.size(sizeName), UiKit.font(fontKind)
+		local lines = UiModel.wrapChunks(text, width, function(t)
+			local ok, v = pcall(function()
+				return TextService:GetTextSize(t, size, font, Vector2.new(10000, 1000))
+			end)
+			return ok and v.X or 0
+		end)
+		return table.concat(lines, "\n")
+	end
 	local function textH(text, sizeName, fontKind, width)
 		local ok, v = pcall(function()
 			return TextService:GetTextSize(text, UiKit.size(sizeName), UiKit.font(fontKind), Vector2.new(width, 10000))
@@ -496,6 +527,8 @@ function MainMenuV2.new(gui, deps)
 		local text2 = Text.get("menu.v2.cardLine2", { rebirth = tostring(s.rebirth or 0), hours = tostring(hours), ago = agoText(s.lastPlayedAt) })
 		local armedHint = selected and self.armed == row.slot
 		local nameH = math.max(CARD.name, math.ceil(UiKit.size("cardName") * 1.2))
+		text1 = chunkWrap(text1, "cardInfo", "number", infoW)
+		text2 = chunkWrap(text2, "cardInfo", nil, infoW)
 		local h1 = math.max(CARD.line, math.ceil(textH(text1, "cardInfo", "number", infoW)))
 		local h2 = math.max(CARD.line, math.ceil(textH(text2, "cardInfo", nil, infoW)))
 		local hintH = math.max(CARD.hint, math.ceil(UiKit.size("cardInfo") * 1.25))
@@ -541,8 +574,10 @@ function MainMenuV2.new(gui, deps)
 			pad.Parent = badge
 		end
 		local line1 = UiKit.label(c.root, text1, "cardInfo", "text.primary", { name = "Line1", font = "number", wrap = true, alignY = Enum.TextYAlignment.Top })
+		line1.TextWrapped = false -- 줄은 chunkWrap이 나눴다(덩어리 안 끊김)
 		UiKit.place(line1, { x0, G.line1[1], infoW, G.line1[2] })
 		local line2 = UiKit.label(c.root, text2, "cardInfo", "text.secondary", { name = "Line2", wrap = true, alignY = Enum.TextYAlignment.Top })
+		line2.TextWrapped = false
 		UiKit.place(line2, { x0, G.line2[1], infoW, G.line2[2] })
 		if armedHint then
 			local hint = Instance.new("Frame")
@@ -677,14 +712,29 @@ function MainMenuV2.new(gui, deps)
 		placeMenu()
 		win.root.Visible = true
 		local rect = narrow and L.slotWindowNarrow or L.slotWindow
-		local target = UDim2.fromOffset(rect[1], rect[2])
-		win.root.Position = UDim2.fromOffset(rect[1] - L.slotWindowSlide, rect[2])
+		local k = narrow and narrowWindowScale() or 1
+		local winScale = win.root:FindFirstChild("NarrowScale") or Instance.new("UIScale")
+		winScale.Name = "NarrowScale"
+		winScale.Scale = k
+		winScale.Parent = win.root
+		local y = rect[2]
+		if k > 1 then -- 화면 위에서 16:9와 같은 자리(루트가 세로 가운데라 위 여백만큼 빼고 배율로 나눔)
+			local s = math.max(ui.scale.Scale, 0.01)
+			local frameTop = ui.frame.AbsolutePosition.Y - gui.AbsolutePosition.Y
+			y = math.floor((rect[2] * gui.AbsoluteSize.Y / Tokens.base.pc.h - frameTop) / s)
+		end
+		local target = UDim2.fromOffset(rect[1], y)
+		win.root.Position = UDim2.fromOffset(rect[1] - L.slotWindowSlide, y)
 		TweenService:Create(win.root, TweenInfo.new(Tokens.tweenSeconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = target }):Play()
 		return true
 	end
 
 	function self.closeSlots()
 		win.root.Visible = false
+		local winScale = win.root:FindFirstChild("NarrowScale")
+		if winScale then
+			winScale.Scale = 1
+		end
 		self.expanded = false
 		self.selected, self.armed = nil, nil
 		listFrame.CanvasPosition = Vector2.zero
