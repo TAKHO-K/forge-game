@@ -141,14 +141,29 @@ function All10.attackCurveFactor(stage)
 	return math.exp(d.attackKappa * LN * math.max(0, (stage or 0) - d.curveStart))
 end
 
--- 돌파 계수(그 사람에게만 · 몹 HP에 곱함): 계승 스테이지 S0부터 breakLength 동안 1.02^(−(1 − 1/R) · min(s − S0, L)) - 계승 안 했으면 1
+-- 기준 빌드 배수(D11 "몹 스탯 = 기준 빌드 표 + 돌파 계수"): 그 스테이지의 중앙값 계승자가 가진 초월 성장 배수 - 무기(× weaponMultiplier) ×
+--   고급 수련(상한까지 산다고 봄 - advancedCap) × 초월 강화(계승 스테이지 → refEndStage 사이 일정하게 +0 → +maxLevel). 공격 줄 구조는 PlayerCombat · 영구 버킷과 같은 꼴.
+function All10.referenceBuild(stage, inheritStage)
+	local d = All10Data
+	local adv = All10.advancedCap(stage, true)
+	local span = math.max(1, d.monsterCurve.refEndStage - inheritStage)
+	local tLevel = d.transcendEnhance.maxLevel * math.clamp(((stage or 0) - inheritStage) / span, 0, 1)
+	return d.inherit.weaponMultiplier * (1 + d.advancedTraining.perLevel * (adv - (d.advancedTraining.fromLevel - 1))) * (1 + d.transcendEnhance.perLevel * tLevel)
+end
+
+-- 돌파 계수(그 사람에게만 · 몹 HP에 곱함) - 계승 안 했으면 1:
+--   기준 빌드 배수 × (계승 스테이지 S0부터 L 동안 1 / breakRatio) × 1.02^(followKappa · x) · x = max(0, s − S0)
+--   QUEUE-ALL10 3-1(실제 EconSim): 이 게임은 처치 시간 목표가 일정해 진행 속도가 "몹 HP 대비 힘" 배수에 그대로 비례한다 →
+--     몹 HP를 기준 빌드만큼 올리면 기준 빌드인 사람은 정상 속도 · 돌파 구간만 HP ÷ 2.4 = 속도 2.4배(D3) · 빨리 산 사람은 그만큼 빠르다.
+--     (P1 근사 모형의 1.02^(−0.583x) 꼴은 실제 시뮬에서 앞선 몫이 1.02^875배로 쌓여 폭주 - 보고서 3절)
 function All10.breakFactor(stage, inheritStage)
 	if not All10.enabled() or type(inheritStage) ~= "number" or inheritStage <= 0 then
 		return 1
 	end
 	local d = All10Data.monsterCurve
-	local x = math.clamp((stage or 0) - inheritStage, 0, d.breakLength)
-	return math.exp(-(1 - 1 / d.breakRatio) * LN * x)
+	local x = math.max(0, (stage or 0) - inheritStage)
+	local window = x < d.breakLength and (1 / d.breakRatio) or 1
+	return All10.referenceBuild(stage, inheritStage) * window * math.exp((d.followKappa or 0) * x * LN)
 end
 
 return All10

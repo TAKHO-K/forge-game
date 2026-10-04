@@ -4,14 +4,13 @@ SP = os.path.dirname(os.path.abspath(__file__))
 prof, mode = sys.argv[1], sys.argv[2]
 tag = sys.argv[3] if len(sys.argv) > 3 else ""
 sets = os.environ.get("A10_SET", "")
-setLua = "
-".join("MODS.All10Data.%s" % kv for kv in sets.split(";") if kv.strip())
+setLua = chr(10).join("MODS.All10Data.%s" % kv for kv in sets.split(";") if kv.strip())
 test = setLua + """
 ATTR.All10Economy = %s
 local PROF = "%s"
 local M = MODS
 local t0 = os.clock()
-local run = M.EconSim.runProgress(PROF, {})
+local run = M.EconSim.runProgress(PROF, %s)
 local t = run.tutorialSeconds or 0
 local prevBal, prevSp = 0, 0
 print("HDR|t_h|reach|bal|inc|spend|sec|perKill|wlv|grade|trans|adv|guard|sp_trans|sp_adv|sp_guard|tg")
@@ -30,7 +29,7 @@ print(("INH|%%s"):format(run.inheritAt and ("%%.4f|%%d"):format(((run.tutorialSe
 print(("ADV|%%s"):format(run.advancedDoneAt and ("%%.4f|%%d"):format(((run.tutorialSeconds or 0) + run.advancedDoneAt.seconds) / 3600, run.advancedDoneAt.stage) or "-"))
 print(("TRD|%%s"):format(run.transcendDoneAt and ("%%.4f|%%d"):format(((run.tutorialSeconds or 0) + run.transcendDoneAt.seconds) / 3600, run.transcendDoneAt.stage) or "-"))
 print(("CPU|%%.1f"):format(os.clock() - t0))
-""" % ("true" if mode == "on" else "false", prof)
+""" % ("true" if mode == "on" else "false", prof, os.environ.get("A10_WHATIF", "{}"))
 name = "a10_%s_%s%s.luau" % (prof, mode, tag)
 open(os.path.join(SP, name), "w", encoding="utf-8").write(test)
 env = dict(os.environ, ECON_OUT="o_" + name, ECON_RES="r_a10_%s_%s%s.txt" % (prof, mode, tag), EXTRA_SERVER=os.environ.get("EXTRA_SERVER", "PlayerProfile,PartyState"))

@@ -19,7 +19,7 @@ local ok, err = pcall(function()
 	-- ① 스위치 끔 = 지금 게임
 	ATTR.All10Economy = false
 	local offOk = not All10.enabled() and All10.hpCurveFactor(25300) == 1 and All10.attackCurveFactor(25300) == 1 and All10.breakFactor(12000, 10000) == 1
-		and All10.advancedBonus(100) == 0 and All10.advancedCap(25300, true) == 50 and All10.transcendEnhanceBonus({ level = 20, slot = 0 }) == 0
+		and All10.advancedBonus(100) == 0 and All10.advancedCap(25300, true) == 50 and All10.breakFactor(10750, 10000) == 1 and All10.transcendEnhanceBonus({ level = 20, slot = 0 }) == 0
 		and All10.defenseTakeMultiplier(30) == 1 and not All10.defenseUnlocked(25300, true) and All10.evolutionCapBonus(25300) == 0
 		and not All10.canInherit({ grade = 6, level = 30 }) and not All10.transcendGemUnlocked({ at = 1 })
 	check("스위치 끔 = 계수 1 · 보너스 0 · 해금 없음(몹 곡선 · 돌파 · 고급 · 방어 · 초월 강화 · 진화 · 계승 · 보석)", offOk)
@@ -28,25 +28,25 @@ local ok, err = pcall(function()
 	ATTR.All10Economy = true
 	local mc = Data.monsterCurve
 	local hp25 = All10.hpCurveFactor(25300)
-	check("전역 재조정 HP: 16,000 전 = 1 · 25,300 = 1.02^(0.12 × 9,300) ≈ 3.96e9", All10.hpCurveFactor(15999) == 1 and All10.hpCurveFactor(16000) == 1
-		and near(hp25, math.exp(0.12 * LN * 9300), 1e-12) and hp25 > 3.9e9 and hp25 < 4.0e9, ("%.4g"):format(hp25))
+	check("전역 재조정 HP: 16,000 전 = 1 · 25,300 = 1.02^(kappa × 9,300)", All10.hpCurveFactor(15999) == 1 and All10.hpCurveFactor(16000) == 1
+		and near(hp25, math.exp(mc.curveKappa * LN * 9300), 1e-12), ("%.4g"):format(hp25))
 	local atk25 = All10.attackCurveFactor(25300)
 	check("전역 재조정 공격: 25,300 ≈ ×1.35(방어 수련 30단계 0.99^30 = 0.74가 상쇄)", near(atk25, 1.35, 0.01) and near(atk25 * All10.defenseTakeMultiplier(30), 1.0, 0.02), ("%.4f · %.4f"):format(atk25, atk25 * All10.defenseTakeMultiplier(30)))
-	local b0, b750, b1500, b3000 = All10.breakFactor(10000, 10000), All10.breakFactor(10750, 10000), All10.breakFactor(11500, 10000), All10.breakFactor(13000, 10000)
-	local beta = 1 - 1 / mc.breakRatio
-	check("돌파 계수: 계승 지점 1 · 750 = 1.02^(−0.583 × 750) · 1,500 = 끝 · 그 뒤 유지(앞선 몫) · 계승 전 스테이지 = 1 · 계승 안 함 = 1",
-		b0 == 1 and near(b750, math.exp(-beta * LN * 750), 1e-12) and near(b1500, math.exp(-beta * LN * 1500), 1e-12) and b3000 == b1500
-		and All10.breakFactor(9000, 10000) == 1 and All10.breakFactor(12000, nil) == 1, ("%.4g · %.4g"):format(b750, b1500))
-	-- 돌파 속도: 같은 공격력에서 처치 시간 ∝ HP → 1,500 구간을 지나는 데 드는 "HP 성장 지수" = 기준선의 1/2.4
-	check("돌파 2.4배: 1,500 구간 HP 성장 지수(ln) = 기준선 × 1/2.4", near((1500 * LN + math.log(b1500)) / (1500 * LN), 1 / mc.breakRatio, 1e-12))
-
+	-- 돌파 계수 = 기준 빌드 × (1,500 구간 1/2.4) - 진행 속도 ∝ 상대 힘이라 기준 빌드인 사람은 구간 안 2.4배 · 뒤 정상
+	local S0 = 10000
+	local ref0, ref750, ref1500 = All10.referenceBuild(10000, S0), All10.referenceBuild(10750, S0), All10.referenceBuild(11500, S0)
+	local wantRef750 = Data.inherit.weaponMultiplier * (1 + Data.advancedTraining.perLevel * 7) * (1 + Data.transcendEnhance.perLevel * Data.transcendEnhance.maxLevel * 750 / (mc.refEndStage - S0))
+	check("기준 빌드: 계승 지점 = ×1.25 · 10,750 = 1.25 × (1 + 고급 7%) × (1 + 초월 기대치) · 스테이지에 단조 증가", near(ref0, Data.inherit.weaponMultiplier) and near(ref750, wantRef750, 1e-12) and ref1500 > ref750, ("%.4f · %.4f"):format(ref0, ref750))
+	check("돌파 계수: 구간 안 = 기준 빌드 ÷ 2.4 · 1,500부터 = 기준 빌드(정상 복귀) · 계승 전 · 계승 안 함 = 기준 빌드/1", near(All10.breakFactor(10750, S0), ref750 / mc.breakRatio, 1e-12)
+		and near(All10.breakFactor(11500, S0), ref1500, 1e-12) and near(All10.breakFactor(9000, S0), All10.referenceBuild(9000, S0) / mc.breakRatio, 1e-12) and All10.breakFactor(12000, nil) == 1)
+	check("돌파 2.4배: 기준 빌드인 사람의 상대 힘(빌드 ÷ 돌파 계수) = 구간 안 2.4 · 뒤 1.0", near(ref750 / All10.breakFactor(10750, S0), mc.breakRatio, 1e-12) and near(ref1500 / All10.breakFactor(11500, S0), 1, 1e-12))
 	-- 초월 강화(10칸): 칸마다 효과 1/10 · +20 = +100% · 칸 가격 = 단계 비용 ÷ 10 · 효율 일정(공격 1%당 비용 = 단계 무관)
 	local te = Data.transcendEnhance
 	check("초월 강화: +0 칸 3 = +1.5% · +7 칸 0 = +35% · +20 = +100%(칸 무시)", near(All10.transcendEnhanceBonus({ level = 0, slot = 3 }), 0.015) and near(All10.transcendEnhanceBonus({ level = 7, slot = 0 }), 0.35)
 		and near(All10.transcendEnhanceBonus({ level = 20, slot = 5 }), 1.0))
 	local slot10k = All10.transcendSlotCost(10000)
 	local want10k = GoldCost.cost(MonsterData.tier1.goldDrop * te.levelKills / te.slots * Data.killUnitScale, 10000, "transcend")
-	check("초월 칸 가격 = tier1 골드 × 28만 ÷ 10 × 1.76 × GoldCost(최고 스테이지) · 스테이지 오르면 수입과 같은 율", slot10k == want10k and near(All10.transcendSlotCost(12000) / slot10k, 1.001 ^ 2000, 1e-6), ("%.4g"):format(slot10k))
+	check("초월 칸 가격 = tier1 골드 × levelKills ÷ 10 × 1.76 × GoldCost(최고 스테이지) · 스테이지 오르면 수입과 같은 율", slot10k == want10k and near(All10.transcendSlotCost(12000) / slot10k, 1.001 ^ 2000, 1e-6), ("%.4g"):format(slot10k))
 
 	-- 고급 수련: 초월 무기 없으면 50(스테이지만으로 안 열림) · 있으면 50 + (s − 10,000) ÷ 100 · 15,000 = 100 · 51 ~ 60 비용 × 0.4
 	check("고급 수련 상한: 초월 없음 25,300 = 50 · 초월 9,000 = 50 · 10,150 = 51 · 15,000 = 100 · 30,000 = 100", All10.advancedCap(25300, false) == 50 and All10.advancedCap(9000, true) == 50
@@ -285,4 +285,48 @@ local okT, errT = pcall(function()
 	TS.deps = nil
 end)
 if not okT then print("[A10] 에러 " .. tostring(errT)) end
+
+-- 3-1 고스테이지 골드 점 검증(도감 끔 · 균열 끔): 잡몹 = 게임 식(InfiniteStage.getGoldReward × 접두사 보상 · 반짝이 = 0.5배 + 기본형 125마리분)을 20만 마리 굴린 평균 vs
+--   EconSim 기대(처치당 골드 × 반짝이 계수) - 마리당 · HP당(시간당) 둘 다 · 보스 = BossRules 골드(게임 · EconSim 같은 함수) · ALL10 켜도 골드 식은 그대로(스위치 끔 = 켬)
+local okG, errG = pcall(function()
+	local InfiniteStage, MD, PD, RC, BR = MODS.InfiniteStage, MODS.MonsterData, MODS.MonsterPrefixData, MODS.RareMonsterConfig, MODS.BossRules
+	local rng = Random.new(20261004)
+	local rows, worst = {}, 0
+	for _, stage in ipairs({ 10000, 15000, 20000, 25300 }) do
+		for _, key in ipairs({ "tier1", "tier6" }) do
+			local t = MD[key]
+			local base = InfiniteStage.getGoldReward(t.goldDrop, stage)
+			local N, gold, hp = 200000, 0, 0
+			for _ = 1, N do
+				local r = rng:NextNumber()
+				local prefix, acc = nil, 0
+				for _, p in ipairs(PD.prefixes) do
+					acc += p.chance
+					if r < acc then
+						prefix = p
+						break
+					end
+				end
+				local g = base * PD.getRewardMultiplier(prefix)
+				if rng:NextNumber() < RC.sparkleChance then
+					g = g * RC.goldMultiplier + base * RC.goldBonusKillEquivalent -- CombatResolution 반짝이 식
+				end
+				gold += g
+				hp += prefix and prefix.hpMultiplier or 1
+			end
+			local expected = base * (1 + RC.sparkleChance * (RC.goldMultiplier - 1 + RC.goldBonusKillEquivalent)) -- EconSim.sparkleGoldFactor(도감 · 균열 끔)
+			local perKill, perHp = (gold / N) / expected, (gold / hp) / expected
+			worst = math.max(worst, math.abs(perHp - 1))
+			table.insert(rows, ("%d %s 마리당 %.3f HP당 %.3f"):format(stage, key, perKill, perHp))
+		end
+	end
+	check("고스테이지 골드 점 검증 10,000 · 15,000 · 20,000 · 25,300 × tier1 · tier6 × 20만 마리: HP당(시간당) 실제 ÷ 기대 ±10% 안(마리당은 접두사 보상 +6% 포함)", worst <= 0.10, table.concat(rows, " / "))
+	ATTR.All10Economy = false
+	local offBoss, offTrash = BR.buildInstanceData(25300, BR.bossIdForStage(25300), 1).goldDrop, InfiniteStage.getGoldReward(MD.tier6.goldDrop, 25300)
+	ATTR.All10Economy = true
+	local onBoss, onTrash = BR.buildInstanceData(25300, BR.bossIdForStage(25300), 1).goldDrop, InfiniteStage.getGoldReward(MD.tier6.goldDrop, 25300)
+	ATTR.All10Economy = nil
+	check("보스 · 잡몹 골드: 스위치 끔 = 켬(ALL10은 골드 식을 바꾸지 않음 - 계승자도 같은 골드)", offBoss == onBoss and offTrash == onTrash, ("보스 %.4g · 잡몹 %.4g"):format(onBoss, onTrash))
+end)
+if not okG then print("[A10] 에러 " .. tostring(errG)) end
 print(("[A10] 끝 %d/%d"):format(pass, total))
