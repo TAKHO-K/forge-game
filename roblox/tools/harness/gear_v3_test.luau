@@ -119,6 +119,37 @@ local ok, err = pcall(function()
 	end
 	check("메시 메타 60 + 문장 6 키 있음 · 조각 구역 = 규격 10개 안(LOOK2 Band 포함)", nMissing == 0 and #badZone == 0, ("빠짐 %d · 구역 밖 %d"):format(nMissing, #badZone))
 	check("1인 방어구 MeshPart ≤ 24(문 부품은 그 등급만 · 문장 포함)", worst <= G.budget.meshPartsPerPlayer, ("최대 %d(%s)"):format(worst, worstKey))
+	-- QUEUE-ALL9E1 LOOK3: 등급 메시 96벌(look3_<부위>_<직업>_<등급>) · 부위당 MeshPart ≤ 4 · 1벌(문장 포함) ≤ 16 · 삼각형(부위 = 등급대 상한 · 1벌 ≤ 15,000 · 메시 1개 ≤ 20,000)
+	local B = G.look3.budget
+	local l3Missing, l3Bad, l3WorstParts, l3WorstTris, l3WorstKey = 0, {}, 0, 0, ""
+	local REFP = { UpperTorso = true, LowerTorso = true, LeftHand = true, RightHand = true, LeftLowerArm = true, RightLowerArm = true, LeftFoot = true, RightFoot = true, LeftLowerLeg = true, RightLowerLeg = true }
+	for _, cls in ipairs({ "greatsword", "dualblade", "bow", "healer" }) do
+		for gi, grade in ipairs(Armor.gradeOrder) do
+			local cap = gi <= 3 and B.trisNormalToEpic or gi <= 6 and B.trisLegendaryToAncient or B.trisPrimordialTranscendent
+			local outfitParts, outfitTris = 1, 0 -- 1 = 세트 문장
+			for _, part in ipairs({ "armor", "gloves", "shoes" }) do
+				local key = ("look3_%s_%s_%s"):format(part, cls, grade)
+				local pieces = Wear.pieces[key]
+				if not pieces then
+					l3Missing += 1
+				else
+					local n, tris = 0, 0
+					for name, m in pairs(pieces) do
+						n += 1
+						tris += m.tris or math.huge
+						if not REFP[m.attach] or (m.tris or math.huge) > B.trisMesh then table.insert(l3Bad, key .. "/" .. name) end
+					end
+					if n > B.partsPerSlot or tris > cap then table.insert(l3Bad, ("%s(%d파트 · %d)"):format(key, n, tris)) end
+					outfitParts += n
+					outfitTris += tris
+				end
+			end
+			if outfitTris > B.trisOutfit or outfitParts > B.partsPerOutfit then table.insert(l3Bad, ("%s/%s 1벌 %d파트 · %d"):format(cls, grade, outfitParts, outfitTris)) end
+			if outfitTris > l3WorstTris then l3WorstTris, l3WorstParts, l3WorstKey = outfitTris, outfitParts, cls .. "/" .. grade end
+		end
+	end
+	check("LOOK3 메시 96벌 · 부위당 MeshPart ≤ 4 · 1벌 ≤ 16(문장 포함) · 삼각형 부위 상한(등급대) · 1벌 ≤ 15,000 · 메시 ≤ 20,000", l3Missing == 0 and #l3Bad == 0,
+		("빠짐 %d · 위반 %d %s · 1벌 최대 %d삼각형 %d파트(%s)"):format(l3Missing, #l3Bad, table.concat(l3Bad, ", "), l3WorstTris, l3WorstParts, l3WorstKey))
 end)
 if not ok then
 	print("[GV3] 에러 " .. tostring(err))

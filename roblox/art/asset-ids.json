@@ -671,6 +671,582 @@
   "assetId": 125238128059074,
   "status": "Approved"
  },
+ "armor/look3_armor_bow_ancient.fbx": {
+  "sha256": "e1dde304257b50bfd1291ba862efd44634d00241b888c13b229bfb5cbb4c0b0b",
+  "assetType": "Model",
+  "assetId": 75391808691891,
+  "status": "Approved"
+ },
+ "armor/look3_armor_bow_epic.fbx": {
+  "sha256": "9e33be1e6a0ec2a7276a8e7a525eab25d38084c4bc97dcc9e4bca7e960352c84",
+  "assetType": "Model",
+  "assetId": 113209081465763,
+  "status": "Approved"
+ },
+ "armor/look3_armor_bow_legendary.fbx": {
+  "sha256": "0b620c48ea2c1547beba81b75f3d6fd709d901f6e338d4f41c3fab1e3c3cd5b3",
+  "assetType": "Model",
+  "assetId": 134987310352630,
+  "status": "Approved"
+ },
+ "armor/look3_armor_bow_normal.fbx": {
+  "sha256": "8584132e7ca459218c46434115057d42e611dcf74494cb8a3040c564cd218958",
+  "assetType": "Model",
+  "assetId": 123052254932496,
+  "status": "Approved"
+ },
+ "armor/look3_armor_bow_primordial.fbx": {
+  "sha256": "b6fc7e4410bdb6bbb6e09697b081e1097e9ec5bdb0f08f55957f4212b72e18da",
+  "assetType": "Model",
+  "assetId": 103145138990596,
+  "status": "Approved"
+ },
+ "armor/look3_armor_bow_rare.fbx": {
+  "sha256": "baceaff3c29dc5378e9e250aa27bb74164df33f86fc7f3c2e3d756658b8908cb",
+  "assetType": "Model",
+  "assetId": 105020454995322,
+  "status": "Approved"
+ },
+ "armor/look3_armor_bow_relic.fbx": {
+  "sha256": "7d3fa369e6999234b4193a4751bfdb1a0e981f34a3998c4a29567f98d8f18571",
+  "assetType": "Model",
+  "assetId": 115354135883873,
+  "status": "Approved"
+ },
+ "armor/look3_armor_bow_transcendent.fbx": {
+  "sha256": "6c8da6b00319fa1227a933dae2f0029a541352b0aa5a880f33702d6aac8f94db",
+  "assetType": "Model",
+  "assetId": 85471853409879,
+  "status": "Approved"
+ },
+ "armor/look3_armor_dualblade_ancient.fbx": {
+  "sha256": "b1d1a4b253f86437d0582987e33b086fadbf0430d2c27add53ef8e2fbaf69c48",
+  "assetType": "Model",
+  "assetId": 75675530535755,
+  "status": "Approved"
+ },
+ "armor/look3_armor_dualblade_epic.fbx": {
+  "sha256": "b6190df7e69ab030694bf75efd043cd357cbd2b93149c0000a600130d6f9756d",
+  "assetType": "Model",
+  "assetId": 113629066049542,
+  "status": "Approved"
+ },
+ "armor/look3_armor_dualblade_legendary.fbx": {
+  "sha256": "70d62b293d3131b1defe7805c5c98489583bb558804ad5da421a431f52b322a6",
+  "assetType": "Model",
+  "assetId": 121312961739789,
+  "status": "Approved"
+ },
+ "armor/look3_armor_dualblade_normal.fbx": {
+  "sha256": "e5734986496531bc67864e84f309dcffced1ade3cdb667a2b1d7f053d1e2e6ca",
+  "assetType": "Model",
+  "assetId": 92361246521020,
+  "status": "Approved"
+ },
+ "armor/look3_armor_dualblade_primordial.fbx": {
+  "sha256": "ade741b1a85e620246bec3b5e87392a30310cfae058fa95a612fe70bd0b54512",
+  "assetType": "Model",
+  "assetId": 111540219278735,
+  "status": "Approved"
+ },
+ "armor/look3_armor_dualblade_rare.fbx": {
+  "sha256": "04aaa8634604301f5c865a1d431503cf18924da45dd709a0b607c80e5eb5eedd",
+  "assetType": "Model",
+  "assetId": 82054566050188,
+  "status": "Approved"
+ },
+ "armor/look3_armor_dualblade_relic.fbx": {
+  "sha256": "9fb268de70d0d80e02c45b62f9a61cfc1060ae113c1619f8cc9bc3d63959e629",
+  "assetType": "Model",
+  "assetId": 112602693851618,
+  "status": "Approved"
+ },
+ "armor/look3_armor_dualblade_transcendent.fbx": {
+  "sha256": "b828f2b3621d23e5ee4c9ed2091c50533723ce842b0abdcc65931e89f144384f",
+  "assetType": "Model",
+  "assetId": 135523758972838,
+  "status": "Approved"
+ },
+ "armor/look3_armor_greatsword_ancient.fbx": {
+  "sha256": "5fad16b253295de010b3ec932a0d2856c6c7dab2d0e43b06a9f51b4212e80b83",
+  "assetType": "Model",
+  "assetId": 127279946036126,
+  "status": "Approved"
+ },
+ "armor/look3_armor_greatsword_epic.fbx": {
+  "sha256": "7dda679a7cb134dec6037744bd3f420ea8494453f5beb9e8e9d40dd9639c336a",
+  "assetType": "Model",
+  "assetId": 137807016190260,
+  "status": "Approved"
+ },
+ "armor/look3_armor_greatsword_legendary.fbx": {
+  "sha256": "1f57a61d5c74735cea4687e3305ca0b00412535d74f8bd3bb2e7ff74a6555294",
+  "assetType": "Model",
+  "assetId": 132752566170067,
+  "status": "Approved"
+ },
+ "armor/look3_armor_greatsword_normal.fbx": {
+  "sha256": "8e73e4e7533d7f237f4715c5dec37a5378565fbe8fd8518eb140794ef3d375a4",
+  "assetType": "Model",
+  "assetId": 120071242142135,
+  "status": "Approved"
+ },
+ "armor/look3_armor_greatsword_primordial.fbx": {
+  "sha256": "025acb68a0a9c470f1b7ba502aec461accac5131c4511c56c5ce74e521831094",
+  "assetType": "Model",
+  "assetId": 82003944662143,
+  "status": "Approved"
+ },
+ "armor/look3_armor_greatsword_rare.fbx": {
+  "sha256": "9333bab1271c1c0e9ac449fda12a8c113e6defd484e6ae960c18f74ac9a3f922",
+  "assetType": "Model",
+  "assetId": 109318165398268,
+  "status": "Approved"
+ },
+ "armor/look3_armor_greatsword_relic.fbx": {
+  "sha256": "fc49b81df017ca187812a643629c05db51593e64063a700c252611908cfa9c69",
+  "assetType": "Model",
+  "assetId": 97770804252925,
+  "status": "Approved"
+ },
+ "armor/look3_armor_greatsword_transcendent.fbx": {
+  "sha256": "81b5afaebbc64b87e2389b7083d61f4ae43a753973f4e8e0729b9be86c7b814b",
+  "assetType": "Model",
+  "assetId": 97164852782854,
+  "status": "Approved"
+ },
+ "armor/look3_armor_healer_ancient.fbx": {
+  "sha256": "a1980817e24c71e67f02f6dcc66f8ce9f46a52633bc72a381fe8a27151334c70",
+  "assetType": "Model",
+  "assetId": 116801797309184,
+  "status": "Approved"
+ },
+ "armor/look3_armor_healer_epic.fbx": {
+  "sha256": "3def2f3ebb1795420940e2742c9a418809823b887e0ef4ba092ff400b1ed460f",
+  "assetType": "Model",
+  "assetId": 73855592485378,
+  "status": "Approved"
+ },
+ "armor/look3_armor_healer_legendary.fbx": {
+  "sha256": "e1f4f40810c44df2a2f49172f8a3712ca1e3ba7b8a92dbe370423341c9384cc7",
+  "assetType": "Model",
+  "assetId": 121069662825948,
+  "status": "Approved"
+ },
+ "armor/look3_armor_healer_normal.fbx": {
+  "sha256": "de6f9acdffe6789ac55801c8caa98764df0cafaa33b5e2a470e97740ba2b5da2",
+  "assetType": "Model",
+  "assetId": 73351857930757,
+  "status": "Approved"
+ },
+ "armor/look3_armor_healer_primordial.fbx": {
+  "sha256": "cd2f1cbf188bbd8441281749766d89aaecca4d956ab4df037949b1f00e75a6c4",
+  "assetType": "Model",
+  "assetId": 82400372207801,
+  "status": "Approved"
+ },
+ "armor/look3_armor_healer_rare.fbx": {
+  "sha256": "cc292ea014c74c9948472f0b6de716536cc3dfd120ce8a237ad637c37227034c",
+  "assetType": "Model",
+  "assetId": 97712255613482,
+  "status": "Approved"
+ },
+ "armor/look3_armor_healer_relic.fbx": {
+  "sha256": "3d999e64dab706f1460049e26fbc6bacc55d09f620d149fa61d33c1a0de2a53f",
+  "assetType": "Model",
+  "assetId": 133874791547455,
+  "status": "Approved"
+ },
+ "armor/look3_armor_healer_transcendent.fbx": {
+  "sha256": "8c1c1cc92ff187f08860b679b24903f345681d66bf21521a73c4baa99aaf37bd",
+  "assetType": "Model",
+  "assetId": 111658518661095,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_bow_ancient.fbx": {
+  "sha256": "53dce7af4625a7c92857981c52b892bb087626e98208bbb04ec775fa16010e07",
+  "assetType": "Model",
+  "assetId": 90312859028879,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_bow_epic.fbx": {
+  "sha256": "2c1d5c89e11d92214b23ed0549c84cd118b0f12198e55078288242b1a8ba04f8",
+  "assetType": "Model",
+  "assetId": 116851496016592,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_bow_legendary.fbx": {
+  "sha256": "dc67188ade992e102fcb49227b05cbadae1dc8547e4e21e311a5a8c62c0b40c8",
+  "assetType": "Model",
+  "assetId": 119072075513360,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_bow_normal.fbx": {
+  "sha256": "2c4d4b79e210cfe7ec2153a9bb96fef4d5b4210ba5fea485fbf06b54909230a6",
+  "assetType": "Model",
+  "assetId": 92593663969697,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_bow_primordial.fbx": {
+  "sha256": "2e03a835da5d24302acb041fc556ef3e6e4ef65128a15e450b596ceacb8e74db",
+  "assetType": "Model",
+  "assetId": 82565460861029,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_bow_rare.fbx": {
+  "sha256": "29011966b3569c41b9d3c86a0c35170ee4cb8a6b88258a99b2946dd0b00ee13e",
+  "assetType": "Model",
+  "assetId": 113346710420000,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_bow_relic.fbx": {
+  "sha256": "d5ed5ea40d2f6cebde60cb15f15597edd1d6b55bde10d4460e527d6f5e04be49",
+  "assetType": "Model",
+  "assetId": 128669683037087,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_bow_transcendent.fbx": {
+  "sha256": "568aa92381748a22db2bac73a4d7ab5dda20342c999a8d67416761179c5ed92f",
+  "assetType": "Model",
+  "assetId": 116759573196937,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_dualblade_ancient.fbx": {
+  "sha256": "03e221af6b46bcb0e10fbd81d6ea208f40512cd3928399e071a600de2e309bb4",
+  "assetType": "Model",
+  "assetId": 113836640391657,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_dualblade_epic.fbx": {
+  "sha256": "e366545de0cd3920770f2d752555a5e4128630ff32149ccaab081d3a559394d5",
+  "assetType": "Model",
+  "assetId": 87102714211596,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_dualblade_legendary.fbx": {
+  "sha256": "ee1e107a9ce37ec6fb88d2da10933cea34cc2bd7729268542c025609a0c6d7f8",
+  "assetType": "Model",
+  "assetId": 82129696575770,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_dualblade_normal.fbx": {
+  "sha256": "74b2b246e1b0b9aa3be4dd07a4bb482790d9be28b31cd8ef116de83703635bbb",
+  "assetType": "Model",
+  "assetId": 124854093708191,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_dualblade_primordial.fbx": {
+  "sha256": "c835ff4d0e3279ac66baf2faa936fccaf39326381330c109d4eb7395bc396d78",
+  "assetType": "Model",
+  "assetId": 73537540532653,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_dualblade_rare.fbx": {
+  "sha256": "03faba7c3107b0f46e03f671d55717b5e68cd0fae666f09bf19d3eea1a9cec8f",
+  "assetType": "Model",
+  "assetId": 112166191520137,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_dualblade_relic.fbx": {
+  "sha256": "2c5eae1ec0f1d60886f82815c313f88c492f9ca67d3c098719bb352a273da2b3",
+  "assetType": "Model",
+  "assetId": 124169501020321,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_dualblade_transcendent.fbx": {
+  "sha256": "c2264dbd9011ed22a945a29e31ee55e743140603a27940250b488504a5f71936",
+  "assetType": "Model",
+  "assetId": 82789231501833,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_greatsword_ancient.fbx": {
+  "sha256": "d9432993d35c0a81182bd471f3e16f597b24e0b3f34bc2c1601b1c4d6d4cb398",
+  "assetType": "Model",
+  "assetId": 100793032561676,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_greatsword_epic.fbx": {
+  "sha256": "23862dc10b835a89fc658ec04f84e3cbe4cab345587818a975dd7d7d1c1361de",
+  "assetType": "Model",
+  "assetId": 87183998174666,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_greatsword_legendary.fbx": {
+  "sha256": "425ae77f9d7025df9f6511ebc8b3d898305bed3366004d7387b9dac5ab4f85d8",
+  "assetType": "Model",
+  "assetId": 135123408314201,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_greatsword_normal.fbx": {
+  "sha256": "a70974a4134d90a2baa2a7a3ea834ac0ff3e01d48a21042f60386318360876d6",
+  "assetType": "Model",
+  "assetId": 98077523273521,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_greatsword_primordial.fbx": {
+  "sha256": "5c3b55abaab8e94cc6bea8f37720ec6f7b7f0f7bdd9e29467bf4a2fc64ecca05",
+  "assetType": "Model",
+  "assetId": 80625416259578,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_greatsword_rare.fbx": {
+  "sha256": "54f6a0b47298104fa5f7298d59f75678f86361e4f775aca93bf7f40cb4e6b729",
+  "assetType": "Model",
+  "assetId": 86293680707976,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_greatsword_relic.fbx": {
+  "sha256": "55527cc5d4ab186d7d1f3d22408dbb0602a1c6a7c29cca6a95a353667c0d995a",
+  "assetType": "Model",
+  "assetId": 101206912002191,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_greatsword_transcendent.fbx": {
+  "sha256": "4baec2f098c1a9cbf0aa26336b1b010bffddefdf374605711860113d7e95be8a",
+  "assetType": "Model",
+  "assetId": 117040251270248,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_healer_ancient.fbx": {
+  "sha256": "b24c534c800eaad33c2a41b4d99406521928a601612038bd4e05a47a1aca0761",
+  "assetType": "Model",
+  "assetId": 87289745561827,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_healer_epic.fbx": {
+  "sha256": "59f3539c3716270a7ef3014b82ec1bc0049fb6f1a39e01747a9633afdaba4ad2",
+  "assetType": "Model",
+  "assetId": 139484755762645,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_healer_legendary.fbx": {
+  "sha256": "a3b7a1ce3640c3dcf007f607c4efb425a7c4ce29a828804b4b0ac98be3719795",
+  "assetType": "Model",
+  "assetId": 70817572643403,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_healer_normal.fbx": {
+  "sha256": "f8dfaba898cc840ee4dcb97315a504e7aa741f0aad0762d1b278a266840d315e",
+  "assetType": "Model",
+  "assetId": 135403265301898,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_healer_primordial.fbx": {
+  "sha256": "7e8f878c84c37753e9e7f94361f0b9ba48393cbb52400fc6dbae826757165548",
+  "assetType": "Model",
+  "assetId": 126740643187565,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_healer_rare.fbx": {
+  "sha256": "8713a293e32d0ebc982e2cf19138e6a789ecb0838396caf3bf3908f754a7354d",
+  "assetType": "Model",
+  "assetId": 116895880505519,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_healer_relic.fbx": {
+  "sha256": "b331071f5bea7a49238f81cd7928354caba3b06c64370b1a83fb9745d2fdba5a",
+  "assetType": "Model",
+  "assetId": 76120588233503,
+  "status": "Approved"
+ },
+ "armor/look3_gloves_healer_transcendent.fbx": {
+  "sha256": "f181e2766e61ae3ea0214c6b84477b7307ba918c80a415f569943f24eb0bc5ae",
+  "assetType": "Model",
+  "assetId": 122836001910152,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_bow_ancient.fbx": {
+  "sha256": "96cf4cd6e4a9730ee3fcc6acadc76f8cd4b95f07e3edc75f79460d71fba6cb74",
+  "assetType": "Model",
+  "assetId": 80403811460607,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_bow_epic.fbx": {
+  "sha256": "efc989a57ece037802aecb029d51e3e9b6a31c64c577342c0c86aa1b433eb864",
+  "assetType": "Model",
+  "assetId": 70525016860467,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_bow_legendary.fbx": {
+  "sha256": "36fb84298e470637e52a3c84541486191b9a43d0e55df57a033dfef3b0ca012a",
+  "assetType": "Model",
+  "assetId": 131687137877311,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_bow_normal.fbx": {
+  "sha256": "8d41fa48dc72b2aa5114bbd678c6238afdedc06f1ee0a22204cb95c6f6081f56",
+  "assetType": "Model",
+  "assetId": 82928076163259,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_bow_primordial.fbx": {
+  "sha256": "2e3f0f480185ce4920b9862f992b6e86279fb7b15d195a4c6449daff214d6bdb",
+  "assetType": "Model",
+  "assetId": 103651952832154,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_bow_rare.fbx": {
+  "sha256": "239017d5331ebdb354b16daeede24245ac5685b2eafeea51b065017734748faf",
+  "assetType": "Model",
+  "assetId": 134125321272703,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_bow_relic.fbx": {
+  "sha256": "7913c29f7f3d920489dd9ee6bb9ca9ea202231db2f3b34385753e8aa8b81ea60",
+  "assetType": "Model",
+  "assetId": 93085102741527,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_bow_transcendent.fbx": {
+  "sha256": "3a4132e7fcf0e38dbdec72f7156a6220170b76e431faf2d6107294bea197e3f2",
+  "assetType": "Model",
+  "assetId": 124687711237337,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_dualblade_ancient.fbx": {
+  "sha256": "7b6bc89161f4d8298caa062549ddf02e38938d28a09adc388895c36dab81cd53",
+  "assetType": "Model",
+  "assetId": 86235364158153,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_dualblade_epic.fbx": {
+  "sha256": "2ddf32ee1bfd8f62ed99cfc5dc101518d19db07c26979b83f5f67d746ffb3f95",
+  "assetType": "Model",
+  "assetId": 96458752651985,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_dualblade_legendary.fbx": {
+  "sha256": "ef5c8b3ea17ace5da3e000ac638d5ebc6351602a1ec299ee18543e16a1532e7f",
+  "assetType": "Model",
+  "assetId": 112335810936541,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_dualblade_normal.fbx": {
+  "sha256": "34256b69682dde6d6793729ac01268bca33e17f269d5bf9bcf572ee4c15033d7",
+  "assetType": "Model",
+  "assetId": 70548440112561,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_dualblade_primordial.fbx": {
+  "sha256": "4a216628f155323a32b35367fcc867807f28b8574d34493f62a0bd8fd0d631bd",
+  "assetType": "Model",
+  "assetId": 92657541582785,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_dualblade_rare.fbx": {
+  "sha256": "696ee72d5dff136b1a50478ae88bd4f0eba0e6e4b3511aebde7e294390fefb2d",
+  "assetType": "Model",
+  "assetId": 130720539169839,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_dualblade_relic.fbx": {
+  "sha256": "b3e07af64211f60e0b414b92fbb5d59b2414355ce0da85bcd6254a4e9a79f434",
+  "assetType": "Model",
+  "assetId": 127211914054593,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_dualblade_transcendent.fbx": {
+  "sha256": "7e1fd1e76627b9c164fa19f3c920848247265e12ed8d8e620a7b372c998bae1f",
+  "assetType": "Model",
+  "assetId": 71241645560703,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_greatsword_ancient.fbx": {
+  "sha256": "30f2d6bee825357f703752f65d9b0f71939d6d92613b3ace17716f167926e5be",
+  "assetType": "Model",
+  "assetId": 109698314163865,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_greatsword_epic.fbx": {
+  "sha256": "cd1a9b2a59cf94e061f304958ea6d29a82f653681d1b637d9761b1f3ece72507",
+  "assetType": "Model",
+  "assetId": 90512056170732,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_greatsword_legendary.fbx": {
+  "sha256": "0ec1db8deb37523aaece5e120add96abbbf357d41e65bc4e6dc6ad66f8d53386",
+  "assetType": "Model",
+  "assetId": 91553760717486,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_greatsword_normal.fbx": {
+  "sha256": "d5a3795ab16c8f6df97a0662f8f16ad0dce790631754273b492b7fa7cd3e1f61",
+  "assetType": "Model",
+  "assetId": 126162170380668,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_greatsword_primordial.fbx": {
+  "sha256": "102d833fd51c0bcfb86c10fe0a0a71048f1cad72e031ac76f1e29bf618b4fe2b",
+  "assetType": "Model",
+  "assetId": 90628963783794,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_greatsword_rare.fbx": {
+  "sha256": "8686993ccd08ec87f2912d4a2064420d5acd0374918ee248a2ffca029e84fe8d",
+  "assetType": "Model",
+  "assetId": 91993373757102,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_greatsword_relic.fbx": {
+  "sha256": "f79c37ce260003de6a7551dd654685865d7816b605a5f2621c78bd5be51ab9ca",
+  "assetType": "Model",
+  "assetId": 93045598389389,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_greatsword_transcendent.fbx": {
+  "sha256": "e5c604688aca4ebb5a857e45933fc0d184f3c2e341130519d737cd1fb7bc1a30",
+  "assetType": "Model",
+  "assetId": 75994986902998,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_healer_ancient.fbx": {
+  "sha256": "b5dd56dec95cef0e0020d0206aa40fb101c4f4143b371bea80d9527e69dc5077",
+  "assetType": "Model",
+  "assetId": 121125176505450,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_healer_epic.fbx": {
+  "sha256": "166316c75acedab414f77ca79f30bd08b6a9cfd12aa46dd5bdf550754f0d13a1",
+  "assetType": "Model",
+  "assetId": 132601805102060,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_healer_legendary.fbx": {
+  "sha256": "18fe806c01fb5125517df03c9849746f558beaeeafe3117bebb025217b647726",
+  "assetType": "Model",
+  "assetId": 80394894645362,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_healer_normal.fbx": {
+  "sha256": "e984a17b22462089e19b800d9b02e7289e4b923090fde7f720c197fd91d7cda2",
+  "assetType": "Model",
+  "assetId": 107609721318745,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_healer_primordial.fbx": {
+  "sha256": "0c4cc7a02c25243251afdfe53c0159bf9112335ca6ac2ad2d872f4f14c228966",
+  "assetType": "Model",
+  "assetId": 103097305534068,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_healer_rare.fbx": {
+  "sha256": "2f802500b0a2eab06c40ba9de3907fbe4578a7527bbda7a3e36d7b167d61b634",
+  "assetType": "Model",
+  "assetId": 88590749458901,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_healer_relic.fbx": {
+  "sha256": "23e8a89d8b8f836e94bbb537895bd7e32fe1fd5c9ff0530280f28ea2e81dacb7",
+  "assetType": "Model",
+  "assetId": 112939804860272,
+  "status": "Approved"
+ },
+ "armor/look3_shoes_healer_transcendent.fbx": {
+  "sha256": "6a7b3050c64091c43e22ee704dd7252162b68df9a9551bc115fce8a345c363b4",
+  "assetType": "Model",
+  "assetId": 78443656496956,
+  "status": "Approved"
+ },
  "armor/shoes_bow_legendary.fbx": {
   "sha256": "8549a0ba345c1fd435ab6d7006f779541409c311586f7224eb7d3411090e36ef",
   "assetType": "Model",
@@ -5093,6 +5669,1154 @@
   "assetId": 101129953331759,
   "status": "Approved",
   "imageId": 134973797264472
+ },
+ "textures/gear_v3/look3/look3_armor_bow_ancient.png": {
+  "sha256": "c57715d051870572c959a84ea2a4ba4305b3bfe4968260039ffd400d196dbf7b",
+  "assetType": "Decal",
+  "assetId": 100659084811862,
+  "status": "Approved",
+  "imageId": 125642477759501
+ },
+ "textures/gear_v3/look3/look3_armor_bow_ancient_e.png": {
+  "sha256": "972d47d3025f6ea3fd0945684bb2e33a01d35f368d530eaad5210a8d5bf63511",
+  "assetType": "Decal",
+  "assetId": 121746854789202,
+  "status": "Approved",
+  "imageId": 74098162429225
+ },
+ "textures/gear_v3/look3/look3_armor_bow_epic.png": {
+  "sha256": "d3f4116b3af6386562ad8a09416fa355ceddb6315a240b833115e4c2feaf27df",
+  "assetType": "Decal",
+  "assetId": 129618576697505,
+  "status": "Approved",
+  "imageId": 107233024508517
+ },
+ "textures/gear_v3/look3/look3_armor_bow_epic_e.png": {
+  "sha256": "21f20fbd370c973d26e444395e49d2d12b22081b3d00f697288292e11f247612",
+  "assetType": "Decal",
+  "assetId": 124337090437785,
+  "status": "Approved",
+  "imageId": 135030818565548
+ },
+ "textures/gear_v3/look3/look3_armor_bow_legendary.png": {
+  "sha256": "fc3b3a722be0e3c47a2678a9bb0c7f26662a80358809fc27335b26036f58f4e9",
+  "assetType": "Decal",
+  "assetId": 126840544026674,
+  "status": "Approved",
+  "imageId": 114519389013176
+ },
+ "textures/gear_v3/look3/look3_armor_bow_legendary_e.png": {
+  "sha256": "688f43cc4d69e4e73957e544092df8bb19fb2b0404e68161e5ac7d3fa0cf233b",
+  "assetType": "Decal",
+  "assetId": 120376127614178,
+  "status": "Approved",
+  "imageId": 97125728802006
+ },
+ "textures/gear_v3/look3/look3_armor_bow_normal.png": {
+  "sha256": "fe41084933090ab0230f946e4c06394bd61beacf96b490e9065721f2d43f6169",
+  "assetType": "Decal",
+  "assetId": 94846118697751,
+  "status": "Approved",
+  "imageId": 71116122394414
+ },
+ "textures/gear_v3/look3/look3_armor_bow_primordial.png": {
+  "sha256": "b7946825852709e739528382e05e4966d7f9a527f3382cda6eb4f295d9880c49",
+  "assetType": "Decal",
+  "assetId": 108295253747809,
+  "status": "Approved",
+  "imageId": 133599978863234
+ },
+ "textures/gear_v3/look3/look3_armor_bow_primordial_e.png": {
+  "sha256": "8804884857f8a98ce30abbcfc6ba29333ad52a984dd79634e9cce975548abbdd",
+  "assetType": "Decal",
+  "assetId": 98272221782518,
+  "status": "Approved",
+  "imageId": 125656607480118
+ },
+ "textures/gear_v3/look3/look3_armor_bow_rare.png": {
+  "sha256": "88afefd887e84014191c8138928274bc8c81bff47df1b02f46b074eece4de738",
+  "assetType": "Decal",
+  "assetId": 84804710247849,
+  "status": "Approved",
+  "imageId": 139210425055400
+ },
+ "textures/gear_v3/look3/look3_armor_bow_rare_e.png": {
+  "sha256": "996ce6426c5c07fbc68894e857312368cdc55880e606c61e1cd897c38bb499d1",
+  "assetType": "Decal",
+  "assetId": 84539484502885,
+  "status": "Approved",
+  "imageId": 101491244767912
+ },
+ "textures/gear_v3/look3/look3_armor_bow_relic.png": {
+  "sha256": "636ac7f14dbe3383dbebb673c74bb8598a38e1993117e1f218e7bf52d58c48d8",
+  "assetType": "Decal",
+  "assetId": 76646242372609,
+  "status": "Approved",
+  "imageId": 127359943811184
+ },
+ "textures/gear_v3/look3/look3_armor_bow_relic_e.png": {
+  "sha256": "2073fe05a0d6cc1c5978040f963d7387476b42c1a3a31c6117b0363524cffa99",
+  "assetType": "Decal",
+  "assetId": 125712773049659,
+  "status": "Approved",
+  "imageId": 94188413690828
+ },
+ "textures/gear_v3/look3/look3_armor_bow_transcendent.png": {
+  "sha256": "d805948c46d629751c17cd085044746b68d008424c19eb69257636f80c54d5b0",
+  "assetType": "Decal",
+  "assetId": 77145960215603,
+  "status": "Approved",
+  "imageId": 134761445021115
+ },
+ "textures/gear_v3/look3/look3_armor_bow_transcendent_e.png": {
+  "sha256": "526c42d13aaa857b313a918fdfaf1ba7e63d4432b051c5708287cea4e6b96fc5",
+  "assetType": "Decal",
+  "assetId": 130056819613063,
+  "status": "Approved",
+  "imageId": 121538475370835
+ },
+ "textures/gear_v3/look3/look3_armor_dualblade_ancient.png": {
+  "sha256": "c02a449fc549e9d5cfc59667c13e001df1a0ab5ffeb480f3cc454b1d5c12411f",
+  "assetType": "Decal",
+  "assetId": 106667881775353,
+  "status": "Approved",
+  "imageId": 128344795795365
+ },
+ "textures/gear_v3/look3/look3_armor_dualblade_ancient_e.png": {
+  "sha256": "8a33652b91d1a0fa801f52b3956bae7ccff323ea868820f618c1ae4e9cae8425",
+  "assetType": "Decal",
+  "assetId": 76064013501277,
+  "status": "Approved",
+  "imageId": 107932073405382
+ },
+ "textures/gear_v3/look3/look3_armor_dualblade_epic.png": {
+  "sha256": "16991761b7181108abd033feba43e91c1668ee47ab61798a332a9b54a36db5b3",
+  "assetType": "Decal",
+  "assetId": 76252036509559,
+  "status": "Approved",
+  "imageId": 99418282903918
+ },
+ "textures/gear_v3/look3/look3_armor_dualblade_epic_e.png": {
+  "sha256": "66b84b48a54737bc8f2b8ba6654e78b76a4850f17372b76a6ca7c86b7dc2b1c5",
+  "assetType": "Decal",
+  "assetId": 128393591403063,
+  "status": "Approved",
+  "imageId": 136911046795695
+ },
+ "textures/gear_v3/look3/look3_armor_dualblade_legendary.png": {
+  "sha256": "5d776d4cda9aaeb7c6bcf3acd72f24c55c712dac445aab14e2259abda8cec385",
+  "assetType": "Decal",
+  "assetId": 87770194303530,
+  "status": "Approved",
+  "imageId": 74027874258835
+ },
+ "textures/gear_v3/look3/look3_armor_dualblade_legendary_e.png": {
+  "sha256": "3d1c78bc63944369b7a1ca3ba5eb68402dbb2a5e5b99b6d482675f125f49d9b9",
+  "assetType": "Decal",
+  "assetId": 137793602318369,
+  "status": "Approved",
+  "imageId": 95073996733965
+ },
+ "textures/gear_v3/look3/look3_armor_dualblade_normal.png": {
+  "sha256": "2c04a6ba6d39260fc9ec823bbacf58d51549470a7fda0c56782cd7389732c7e2",
+  "assetType": "Decal",
+  "assetId": 133790920190631,
+  "status": "Approved",
+  "imageId": 110637359624639
+ },
+ "textures/gear_v3/look3/look3_armor_dualblade_primordial.png": {
+  "sha256": "4ee1ed6dba4366e15fad25d2bfe66f5ff4347789f0444467700d320b1817d41e",
+  "assetType": "Decal",
+  "assetId": 112957400485707,
+  "status": "Approved",
+  "imageId": 103391080816260
+ },
+ "textures/gear_v3/look3/look3_armor_dualblade_primordial_e.png": {
+  "sha256": "14b108a09bc2d9c955d3374cd00c1fe84f1f56467e3dbf6567cfebc59d20b457",
+  "assetType": "Decal",
+  "assetId": 100929005768709,
+  "status": "Approved",
+  "imageId": 114493526935363
+ },
+ "textures/gear_v3/look3/look3_armor_dualblade_rare.png": {
+  "sha256": "f0998efd679eef6931762b8fb9504258d8dcf9887114ae36a7b4abd32c680f70",
+  "assetType": "Decal",
+  "assetId": 132891160725153,
+  "status": "Approved",
+  "imageId": 107407957277084
+ },
+ "textures/gear_v3/look3/look3_armor_dualblade_rare_e.png": {
+  "sha256": "8015de9f41d47368b8b81ac31e9f645152ed20cd60a81600c3dec18c69b86827",
+  "assetType": "Decal",
+  "assetId": 127100571596470,
+  "status": "Approved",
+  "imageId": 79637387019284
+ },
+ "textures/gear_v3/look3/look3_armor_dualblade_relic.png": {
+  "sha256": "13883c62c9a9195af2c7929fbd58b82abd1dfadd2f37e8eb7ea58da24672e67c",
+  "assetType": "Decal",
+  "assetId": 103550152860928,
+  "status": "Approved",
+  "imageId": 84740022813729
+ },
+ "textures/gear_v3/look3/look3_armor_dualblade_relic_e.png": {
+  "sha256": "1b50cd6dc05f8888dc6f2594951bc6417089d71cc23134f0ed1f83c48317b794",
+  "assetType": "Decal",
+  "assetId": 106535203167716,
+  "status": "Approved",
+  "imageId": 109043590149307
+ },
+ "textures/gear_v3/look3/look3_armor_dualblade_transcendent.png": {
+  "sha256": "e49d987dd18f3e8f88f248ae200ed45804ce69ea7aeb7f7af982e986461646b6",
+  "assetType": "Decal",
+  "assetId": 95335235862708,
+  "status": "Approved",
+  "imageId": 115241018363339
+ },
+ "textures/gear_v3/look3/look3_armor_dualblade_transcendent_e.png": {
+  "sha256": "f2c90a2dbf57fa147120641ae55b4b0541584624d6bfd94e52b2727d20386aed",
+  "assetType": "Decal",
+  "assetId": 130671249841562,
+  "status": "Approved",
+  "imageId": 115584604319102
+ },
+ "textures/gear_v3/look3/look3_armor_greatsword_ancient.png": {
+  "sha256": "7a0022340e6df63bd564fe0464a77e29532cccea35694bc630bb9285884f2ebb",
+  "assetType": "Decal",
+  "assetId": 74653604810498,
+  "status": "Approved",
+  "imageId": 77257671006379
+ },
+ "textures/gear_v3/look3/look3_armor_greatsword_ancient_e.png": {
+  "sha256": "15adfba38713130907a66d6d953552389741e0a500fa4c5aad26737bea8d1e96",
+  "assetType": "Decal",
+  "assetId": 110993083297358,
+  "status": "Approved",
+  "imageId": 82664666807450
+ },
+ "textures/gear_v3/look3/look3_armor_greatsword_epic.png": {
+  "sha256": "573a347dbd6145ac71bab6a13e88691f89d631e90423e3720abf934f129b585d",
+  "assetType": "Decal",
+  "assetId": 115632514508661,
+  "status": "Approved",
+  "imageId": 95160798832582
+ },
+ "textures/gear_v3/look3/look3_armor_greatsword_epic_e.png": {
+  "sha256": "1c7353a4962b72de74733b8a34473c3709704cda243f0c93dbb28bde6b257a1c",
+  "assetType": "Decal",
+  "assetId": 97087882441718,
+  "status": "Approved",
+  "imageId": 82582838754321
+ },
+ "textures/gear_v3/look3/look3_armor_greatsword_legendary.png": {
+  "sha256": "daf6a6a6107a659bc950b9253b80cd253a5663a1c8e8dca2997dae0a666e609e",
+  "assetType": "Decal",
+  "assetId": 118196392246527,
+  "status": "Approved",
+  "imageId": 117501104973312
+ },
+ "textures/gear_v3/look3/look3_armor_greatsword_legendary_e.png": {
+  "sha256": "4dae7c9fe0f747f52969049bf2bfeaaaf83684300f47d9868d9ffbc849416eaf",
+  "assetType": "Decal",
+  "assetId": 132087497478518,
+  "status": "Approved",
+  "imageId": 114703893609365
+ },
+ "textures/gear_v3/look3/look3_armor_greatsword_normal.png": {
+  "sha256": "4f76a5224f910565a5d89aa42c7eb19d5eb7a3af1a31b5badac132f566f1227d",
+  "assetType": "Decal",
+  "assetId": 132241591930783,
+  "status": "Approved",
+  "imageId": 127722403234549
+ },
+ "textures/gear_v3/look3/look3_armor_greatsword_primordial.png": {
+  "sha256": "4ee69795080332489e125fbd2d0b58da01ff981cdc87fbbc6566c05f40a3db49",
+  "assetType": "Decal",
+  "assetId": 82014425883179,
+  "status": "Approved",
+  "imageId": 82161578490709
+ },
+ "textures/gear_v3/look3/look3_armor_greatsword_primordial_e.png": {
+  "sha256": "b92d1282959ab6bf886f23b59b12890115a5fa4924447ae15b48e2a5057e0ce1",
+  "assetType": "Decal",
+  "assetId": 75335627965397,
+  "status": "Approved",
+  "imageId": 129387542466899
+ },
+ "textures/gear_v3/look3/look3_armor_greatsword_rare.png": {
+  "sha256": "97b5a2650552de6747fc8f25729bffd3d4d69609fd0278442f02eaab9f84f16b",
+  "assetType": "Decal",
+  "assetId": 139522865128420,
+  "status": "Approved",
+  "imageId": 129807760313199
+ },
+ "textures/gear_v3/look3/look3_armor_greatsword_rare_e.png": {
+  "sha256": "400e0aee586a00f113b092b1148601c521b743988911efccca08eb4b579bc250",
+  "assetType": "Decal",
+  "assetId": 82029574430546,
+  "status": "Approved",
+  "imageId": 137734509555997
+ },
+ "textures/gear_v3/look3/look3_armor_greatsword_relic.png": {
+  "sha256": "a2a40d74878da7f43301a97cc3dd40a85e315667b7500420903accf77e28f6ad",
+  "assetType": "Decal",
+  "assetId": 98415203569794,
+  "status": "Approved",
+  "imageId": 103060748366018
+ },
+ "textures/gear_v3/look3/look3_armor_greatsword_relic_e.png": {
+  "sha256": "fe18c5848887da06ccbcae10adf35da888af0bc604f670adaf919ec75a569c99",
+  "assetType": "Decal",
+  "assetId": 79666026546006,
+  "status": "Approved",
+  "imageId": 91142877355201
+ },
+ "textures/gear_v3/look3/look3_armor_greatsword_transcendent.png": {
+  "sha256": "582c1c953d4a1815e445bc5e6f603b4f7f72dd290bb46b3199d1d94851eccbf8",
+  "assetType": "Decal",
+  "assetId": 118110227621472,
+  "status": "Approved",
+  "imageId": 131730469436511
+ },
+ "textures/gear_v3/look3/look3_armor_greatsword_transcendent_e.png": {
+  "sha256": "bc4b793c7a0f9021c67060029fadff43feb5f2338bdbca3dcbd8bba535a6be95",
+  "assetType": "Decal",
+  "assetId": 132648929121484,
+  "status": "Approved",
+  "imageId": 76212410370432
+ },
+ "textures/gear_v3/look3/look3_armor_healer_ancient.png": {
+  "sha256": "85fcc0f1d9b0783a7ac2ef71642cf37662b90f8b3b8ccc79f4237de797b2dc12",
+  "assetType": "Decal",
+  "assetId": 76841525619475,
+  "status": "Approved",
+  "imageId": 107827430920914
+ },
+ "textures/gear_v3/look3/look3_armor_healer_ancient_e.png": {
+  "sha256": "4d9b0109d08294b12a6a26b2e31ad25548682b2631f9fa80fef517c7359dddf5",
+  "assetType": "Decal",
+  "assetId": 82807243201294,
+  "status": "Approved",
+  "imageId": 132926202922240
+ },
+ "textures/gear_v3/look3/look3_armor_healer_epic.png": {
+  "sha256": "2c06cafd5d00a6f159884986e4dfc7fec2843a00b588d4721cd7ba052071500d",
+  "assetType": "Decal",
+  "assetId": 124195714600440,
+  "status": "Approved",
+  "imageId": 121709037636915
+ },
+ "textures/gear_v3/look3/look3_armor_healer_epic_e.png": {
+  "sha256": "5d666a5e7ddd1f714002816fadbfc1848e21bbfd23109419e9faf14fa6580572",
+  "assetType": "Decal",
+  "assetId": 77878567504573,
+  "status": "Approved",
+  "imageId": 71338567740061
+ },
+ "textures/gear_v3/look3/look3_armor_healer_legendary.png": {
+  "sha256": "cdadc61ce41f61e04e1654ced0fbbcd34b0aba333f15b1f817818a8eea34d2b3",
+  "assetType": "Decal",
+  "assetId": 77160528374825,
+  "status": "Approved",
+  "imageId": 104374949163605
+ },
+ "textures/gear_v3/look3/look3_armor_healer_legendary_e.png": {
+  "sha256": "d7a80d2a1aacb6261f8563a8013e44a92139632e3b17fe5eb5dc8b145e31a521",
+  "assetType": "Decal",
+  "assetId": 108139783975404,
+  "status": "Approved",
+  "imageId": 78636636323730
+ },
+ "textures/gear_v3/look3/look3_armor_healer_normal.png": {
+  "sha256": "fa2bd18196ca62e7343d3981b19eb686f96282e64b3dd02e1104c8bd96038f09",
+  "assetType": "Decal",
+  "assetId": 112784225945927,
+  "status": "Approved",
+  "imageId": 116665736662419
+ },
+ "textures/gear_v3/look3/look3_armor_healer_primordial.png": {
+  "sha256": "3377171c81fd9e8192987eeabd358f0cc2a563ac2f16d2c004b761c5fc6ed86f",
+  "assetType": "Decal",
+  "assetId": 140320496907685,
+  "status": "Approved",
+  "imageId": 73384288107066
+ },
+ "textures/gear_v3/look3/look3_armor_healer_primordial_e.png": {
+  "sha256": "0aa2608016c601ec2930bd003742269867a0ec7043b215a5ef0a85f1c06454b3",
+  "assetType": "Decal",
+  "assetId": 112344877247442,
+  "status": "Approved",
+  "imageId": 73630781490687
+ },
+ "textures/gear_v3/look3/look3_armor_healer_rare.png": {
+  "sha256": "fe44ad032eb856b841bc0a891f735675fd0d0d30b0431dda56259a352b7a62b6",
+  "assetType": "Decal",
+  "assetId": 98399422031955,
+  "status": "Approved",
+  "imageId": 130854543010682
+ },
+ "textures/gear_v3/look3/look3_armor_healer_rare_e.png": {
+  "sha256": "08f15cd761b6e94745bd3c9833fdda1520ed248b4cd60d56863b3dfcaa73c7c3",
+  "assetType": "Decal",
+  "assetId": 138184607683301,
+  "status": "Approved",
+  "imageId": 79289117091627
+ },
+ "textures/gear_v3/look3/look3_armor_healer_relic.png": {
+  "sha256": "0e2f62add5251990abb01b0a3f0a466663098a42584eddb147ffc2fd83f1065f",
+  "assetType": "Decal",
+  "assetId": 109272756080648,
+  "status": "Approved",
+  "imageId": 80856554138230
+ },
+ "textures/gear_v3/look3/look3_armor_healer_relic_e.png": {
+  "sha256": "28745386d30235536fdf71b42683d6e508f4a4f527376e166fd2f32354f7257e",
+  "assetType": "Decal",
+  "assetId": 94132306006475,
+  "status": "Approved",
+  "imageId": 137881450005378
+ },
+ "textures/gear_v3/look3/look3_armor_healer_transcendent.png": {
+  "sha256": "2357ecf3a4c9d3d48c42eb4cd9fdef5f2c36472aedd9268e7732f271053c5659",
+  "assetType": "Decal",
+  "assetId": 80621515392345,
+  "status": "Approved",
+  "imageId": 80862630373959
+ },
+ "textures/gear_v3/look3/look3_armor_healer_transcendent_e.png": {
+  "sha256": "4803c0473445db1ab7f1e7b45dfc163efbb0dca46e8467f561b0c13c3cc022e4",
+  "assetType": "Decal",
+  "assetId": 109462942473664,
+  "status": "Approved",
+  "imageId": 78138783403998
+ },
+ "textures/gear_v3/look3/look3_gloves_bow_ancient.png": {
+  "sha256": "7cdf3247e13e5eaa05552ff716c9451d358b7188c1fdfb2f434e28c06aa54b46",
+  "assetType": "Decal",
+  "assetId": 74408855059323,
+  "status": "Approved",
+  "imageId": 102612858140422
+ },
+ "textures/gear_v3/look3/look3_gloves_bow_ancient_e.png": {
+  "sha256": "ec8e7bd3d868aa9828bc4afbbb15ce67248e9518eb9f84e1e4efca625759639d",
+  "assetType": "Decal",
+  "assetId": 98370354348113,
+  "status": "Approved",
+  "imageId": 137168530619101
+ },
+ "textures/gear_v3/look3/look3_gloves_bow_epic.png": {
+  "sha256": "e31d39bc0f134b5817823e79348e96694dd9c156b2366285bb51676d7a5cd8a5",
+  "assetType": "Decal",
+  "assetId": 133573730004704,
+  "status": "Approved",
+  "imageId": 125577587690052
+ },
+ "textures/gear_v3/look3/look3_gloves_bow_epic_e.png": {
+  "sha256": "f15aa9e6c7e3e0fa87064993d4394da679ea4aacdfc9e704c30a054fa34e69c2",
+  "assetType": "Decal",
+  "assetId": 137254813590885,
+  "status": "Approved",
+  "imageId": 95136509836065
+ },
+ "textures/gear_v3/look3/look3_gloves_bow_legendary.png": {
+  "sha256": "97a5d3eae5208f7110260349957d46eb5a3977042d4c662af546519bf2020353",
+  "assetType": "Decal",
+  "assetId": 127619838028982,
+  "status": "Approved",
+  "imageId": 124744520928493
+ },
+ "textures/gear_v3/look3/look3_gloves_bow_legendary_e.png": {
+  "sha256": "88928d23416e184e06d5275804a8e05c637acc80c06bf32a08b49ca4bcd72c52",
+  "assetType": "Decal",
+  "assetId": 128031882158788,
+  "status": "Approved",
+  "imageId": 92356497204296
+ },
+ "textures/gear_v3/look3/look3_gloves_bow_normal.png": {
+  "sha256": "a0b81025d1cb88d36625dd839b10dd8c9d30882926ab3988323df225b6fcb683",
+  "assetType": "Decal",
+  "assetId": 137840856699145,
+  "status": "Approved",
+  "imageId": 137265961103212
+ },
+ "textures/gear_v3/look3/look3_gloves_bow_primordial.png": {
+  "sha256": "4026bc76541ddde3b3355f130a0f3f9bd8c9e51e572a88410b02789944d9beb6",
+  "assetType": "Decal",
+  "assetId": 80824539591518,
+  "status": "Approved",
+  "imageId": 71077108832034
+ },
+ "textures/gear_v3/look3/look3_gloves_bow_primordial_e.png": {
+  "sha256": "50237f7e76ff82ff4a3aeba9e98b0d7af6445f9410118e473b931c4533b90549",
+  "assetType": "Decal",
+  "assetId": 125653477431960,
+  "status": "Approved",
+  "imageId": 93637557807819
+ },
+ "textures/gear_v3/look3/look3_gloves_bow_rare.png": {
+  "sha256": "8ca3c5d6f2e080b698383d42b42cabf1185d9f06c98a41a4307ad72b25dbd610",
+  "assetType": "Decal",
+  "assetId": 87295485810233,
+  "status": "Approved",
+  "imageId": 105061452006801
+ },
+ "textures/gear_v3/look3/look3_gloves_bow_relic.png": {
+  "sha256": "be745bf84da2c8ae3173812dce7231382af9e4d331e9bc35085480e2f76502b5",
+  "assetType": "Decal",
+  "assetId": 78867536764310,
+  "status": "Approved",
+  "imageId": 125761180630725
+ },
+ "textures/gear_v3/look3/look3_gloves_bow_relic_e.png": {
+  "sha256": "2a0f81ac8a3e931f46c67821d0523e0f263eec957a93b39b6ae580f375c81708",
+  "assetType": "Decal",
+  "assetId": 108287466243310,
+  "status": "Approved",
+  "imageId": 139208511943479
+ },
+ "textures/gear_v3/look3/look3_gloves_bow_transcendent.png": {
+  "sha256": "f672acc730c5480098c6af9eaebd14183027551ed0b98591f6d77b61bada93c2",
+  "assetType": "Decal",
+  "assetId": 140348241333908,
+  "status": "Approved",
+  "imageId": 97514921454647
+ },
+ "textures/gear_v3/look3/look3_gloves_bow_transcendent_e.png": {
+  "sha256": "6341a42ab864e3a3321271b754e6c8f961eb72bef72dd9cabe455dc9f3190bd2",
+  "assetType": "Decal",
+  "assetId": 116916238092958,
+  "status": "Approved",
+  "imageId": 112798153433506
+ },
+ "textures/gear_v3/look3/look3_gloves_dualblade_ancient.png": {
+  "sha256": "7cdf3247e13e5eaa05552ff716c9451d358b7188c1fdfb2f434e28c06aa54b46",
+  "assetType": "Decal",
+  "assetId": 106531509760023,
+  "status": "Approved",
+  "imageId": 114618415553469
+ },
+ "textures/gear_v3/look3/look3_gloves_dualblade_ancient_e.png": {
+  "sha256": "ec8e7bd3d868aa9828bc4afbbb15ce67248e9518eb9f84e1e4efca625759639d",
+  "assetType": "Decal",
+  "assetId": 101250037773220,
+  "status": "Approved",
+  "imageId": 103248222901365
+ },
+ "textures/gear_v3/look3/look3_gloves_dualblade_epic.png": {
+  "sha256": "e31d39bc0f134b5817823e79348e96694dd9c156b2366285bb51676d7a5cd8a5",
+  "assetType": "Decal",
+  "assetId": 94387748008070,
+  "status": "Approved",
+  "imageId": 108146493746537
+ },
+ "textures/gear_v3/look3/look3_gloves_dualblade_epic_e.png": {
+  "sha256": "f15aa9e6c7e3e0fa87064993d4394da679ea4aacdfc9e704c30a054fa34e69c2",
+  "assetType": "Decal",
+  "assetId": 104942205247182,
+  "status": "Approved",
+  "imageId": 124335825040200
+ },
+ "textures/gear_v3/look3/look3_gloves_dualblade_legendary.png": {
+  "sha256": "97a5d3eae5208f7110260349957d46eb5a3977042d4c662af546519bf2020353",
+  "assetType": "Decal",
+  "assetId": 127824688378390,
+  "status": "Approved",
+  "imageId": 84825152512415
+ },
+ "textures/gear_v3/look3/look3_gloves_dualblade_legendary_e.png": {
+  "sha256": "88928d23416e184e06d5275804a8e05c637acc80c06bf32a08b49ca4bcd72c52",
+  "assetType": "Decal",
+  "assetId": 72023581647192,
+  "status": "Approved",
+  "imageId": 83753139973677
+ },
+ "textures/gear_v3/look3/look3_gloves_dualblade_normal.png": {
+  "sha256": "a0b81025d1cb88d36625dd839b10dd8c9d30882926ab3988323df225b6fcb683",
+  "assetType": "Decal",
+  "assetId": 71605864439960,
+  "status": "Approved",
+  "imageId": 122258495569186
+ },
+ "textures/gear_v3/look3/look3_gloves_dualblade_primordial.png": {
+  "sha256": "4026bc76541ddde3b3355f130a0f3f9bd8c9e51e572a88410b02789944d9beb6",
+  "assetType": "Decal",
+  "assetId": 84705727224608,
+  "status": "Approved",
+  "imageId": 78565815271541
+ },
+ "textures/gear_v3/look3/look3_gloves_dualblade_primordial_e.png": {
+  "sha256": "50237f7e76ff82ff4a3aeba9e98b0d7af6445f9410118e473b931c4533b90549",
+  "assetType": "Decal",
+  "assetId": 79048959691659,
+  "status": "Approved",
+  "imageId": 126306119058854
+ },
+ "textures/gear_v3/look3/look3_gloves_dualblade_rare.png": {
+  "sha256": "8ca3c5d6f2e080b698383d42b42cabf1185d9f06c98a41a4307ad72b25dbd610",
+  "assetType": "Decal",
+  "assetId": 92683354890060,
+  "status": "Approved",
+  "imageId": 98999077476235
+ },
+ "textures/gear_v3/look3/look3_gloves_dualblade_relic.png": {
+  "sha256": "be745bf84da2c8ae3173812dce7231382af9e4d331e9bc35085480e2f76502b5",
+  "assetType": "Decal",
+  "assetId": 95360201103936,
+  "status": "Approved",
+  "imageId": 129484582422261
+ },
+ "textures/gear_v3/look3/look3_gloves_dualblade_relic_e.png": {
+  "sha256": "2a0f81ac8a3e931f46c67821d0523e0f263eec957a93b39b6ae580f375c81708",
+  "assetType": "Decal",
+  "assetId": 122622936551497,
+  "status": "Approved",
+  "imageId": 87793738814054
+ },
+ "textures/gear_v3/look3/look3_gloves_dualblade_transcendent.png": {
+  "sha256": "f672acc730c5480098c6af9eaebd14183027551ed0b98591f6d77b61bada93c2",
+  "assetType": "Decal",
+  "assetId": 81452725864507,
+  "status": "Approved",
+  "imageId": 140593916544949
+ },
+ "textures/gear_v3/look3/look3_gloves_dualblade_transcendent_e.png": {
+  "sha256": "6341a42ab864e3a3321271b754e6c8f961eb72bef72dd9cabe455dc9f3190bd2",
+  "assetType": "Decal",
+  "assetId": 129583555948378,
+  "status": "Approved",
+  "imageId": 73464255682281
+ },
+ "textures/gear_v3/look3/look3_gloves_greatsword_ancient.png": {
+  "sha256": "7cdf3247e13e5eaa05552ff716c9451d358b7188c1fdfb2f434e28c06aa54b46",
+  "assetType": "Decal",
+  "assetId": 126650890072023,
+  "status": "Approved",
+  "imageId": 83661798917278
+ },
+ "textures/gear_v3/look3/look3_gloves_greatsword_ancient_e.png": {
+  "sha256": "ec8e7bd3d868aa9828bc4afbbb15ce67248e9518eb9f84e1e4efca625759639d",
+  "assetType": "Decal",
+  "assetId": 118296129258114,
+  "status": "Approved",
+  "imageId": 116257735472938
+ },
+ "textures/gear_v3/look3/look3_gloves_greatsword_epic.png": {
+  "sha256": "e31d39bc0f134b5817823e79348e96694dd9c156b2366285bb51676d7a5cd8a5",
+  "assetType": "Decal",
+  "assetId": 132584723605125,
+  "status": "Approved",
+  "imageId": 102972046737708
+ },
+ "textures/gear_v3/look3/look3_gloves_greatsword_epic_e.png": {
+  "sha256": "f15aa9e6c7e3e0fa87064993d4394da679ea4aacdfc9e704c30a054fa34e69c2",
+  "assetType": "Decal",
+  "assetId": 107816938351559,
+  "status": "Approved",
+  "imageId": 102349238515262
+ },
+ "textures/gear_v3/look3/look3_gloves_greatsword_legendary.png": {
+  "sha256": "97a5d3eae5208f7110260349957d46eb5a3977042d4c662af546519bf2020353",
+  "assetType": "Decal",
+  "assetId": 120332718392354,
+  "status": "Approved",
+  "imageId": 81593653416251
+ },
+ "textures/gear_v3/look3/look3_gloves_greatsword_legendary_e.png": {
+  "sha256": "88928d23416e184e06d5275804a8e05c637acc80c06bf32a08b49ca4bcd72c52",
+  "assetType": "Decal",
+  "assetId": 81323506586689,
+  "status": "Approved",
+  "imageId": 126226643007176
+ },
+ "textures/gear_v3/look3/look3_gloves_greatsword_normal.png": {
+  "sha256": "a0b81025d1cb88d36625dd839b10dd8c9d30882926ab3988323df225b6fcb683",
+  "assetType": "Decal",
+  "assetId": 99807198027029,
+  "status": "Approved",
+  "imageId": 116514296313280
+ },
+ "textures/gear_v3/look3/look3_gloves_greatsword_primordial.png": {
+  "sha256": "4026bc76541ddde3b3355f130a0f3f9bd8c9e51e572a88410b02789944d9beb6",
+  "assetType": "Decal",
+  "assetId": 100420841619997,
+  "status": "Approved",
+  "imageId": 116818728554125
+ },
+ "textures/gear_v3/look3/look3_gloves_greatsword_primordial_e.png": {
+  "sha256": "50237f7e76ff82ff4a3aeba9e98b0d7af6445f9410118e473b931c4533b90549",
+  "assetType": "Decal",
+  "assetId": 74107620370163,
+  "status": "Approved",
+  "imageId": 80798888920492
+ },
+ "textures/gear_v3/look3/look3_gloves_greatsword_rare.png": {
+  "sha256": "8ca3c5d6f2e080b698383d42b42cabf1185d9f06c98a41a4307ad72b25dbd610",
+  "assetType": "Decal",
+  "assetId": 92405360880911,
+  "status": "Approved",
+  "imageId": 89886931048786
+ },
+ "textures/gear_v3/look3/look3_gloves_greatsword_relic.png": {
+  "sha256": "be745bf84da2c8ae3173812dce7231382af9e4d331e9bc35085480e2f76502b5",
+  "assetType": "Decal",
+  "assetId": 72284426418232,
+  "status": "Approved",
+  "imageId": 108133103312903
+ },
+ "textures/gear_v3/look3/look3_gloves_greatsword_relic_e.png": {
+  "sha256": "2a0f81ac8a3e931f46c67821d0523e0f263eec957a93b39b6ae580f375c81708",
+  "assetType": "Decal",
+  "assetId": 111581042843605,
+  "status": "Approved",
+  "imageId": 112558557269776
+ },
+ "textures/gear_v3/look3/look3_gloves_greatsword_transcendent.png": {
+  "sha256": "f672acc730c5480098c6af9eaebd14183027551ed0b98591f6d77b61bada93c2",
+  "assetType": "Decal",
+  "assetId": 112176627842194,
+  "status": "Approved",
+  "imageId": 103506488121394
+ },
+ "textures/gear_v3/look3/look3_gloves_greatsword_transcendent_e.png": {
+  "sha256": "6341a42ab864e3a3321271b754e6c8f961eb72bef72dd9cabe455dc9f3190bd2",
+  "assetType": "Decal",
+  "assetId": 76587737702282,
+  "status": "Approved",
+  "imageId": 97938886967048
+ },
+ "textures/gear_v3/look3/look3_gloves_healer_ancient.png": {
+  "sha256": "7cdf3247e13e5eaa05552ff716c9451d358b7188c1fdfb2f434e28c06aa54b46",
+  "assetType": "Decal",
+  "assetId": 104186762055445,
+  "status": "Approved",
+  "imageId": 120335311759274
+ },
+ "textures/gear_v3/look3/look3_gloves_healer_ancient_e.png": {
+  "sha256": "ec8e7bd3d868aa9828bc4afbbb15ce67248e9518eb9f84e1e4efca625759639d",
+  "assetType": "Decal",
+  "assetId": 127440794784016,
+  "status": "Approved",
+  "imageId": 139367757960065
+ },
+ "textures/gear_v3/look3/look3_gloves_healer_epic.png": {
+  "sha256": "e31d39bc0f134b5817823e79348e96694dd9c156b2366285bb51676d7a5cd8a5",
+  "assetType": "Decal",
+  "assetId": 89251998592004,
+  "status": "Approved",
+  "imageId": 81540898091719
+ },
+ "textures/gear_v3/look3/look3_gloves_healer_epic_e.png": {
+  "sha256": "f15aa9e6c7e3e0fa87064993d4394da679ea4aacdfc9e704c30a054fa34e69c2",
+  "assetType": "Decal",
+  "assetId": 79259115134062,
+  "status": "Approved",
+  "imageId": 106291179651599
+ },
+ "textures/gear_v3/look3/look3_gloves_healer_legendary.png": {
+  "sha256": "97a5d3eae5208f7110260349957d46eb5a3977042d4c662af546519bf2020353",
+  "assetType": "Decal",
+  "assetId": 129908878400269,
+  "status": "Approved",
+  "imageId": 91215512415987
+ },
+ "textures/gear_v3/look3/look3_gloves_healer_legendary_e.png": {
+  "sha256": "88928d23416e184e06d5275804a8e05c637acc80c06bf32a08b49ca4bcd72c52",
+  "assetType": "Decal",
+  "assetId": 115722668605939,
+  "status": "Approved",
+  "imageId": 85122074237720
+ },
+ "textures/gear_v3/look3/look3_gloves_healer_normal.png": {
+  "sha256": "a0b81025d1cb88d36625dd839b10dd8c9d30882926ab3988323df225b6fcb683",
+  "assetType": "Decal",
+  "assetId": 102295841831475,
+  "status": "Approved",
+  "imageId": 96930763329879
+ },
+ "textures/gear_v3/look3/look3_gloves_healer_primordial.png": {
+  "sha256": "4026bc76541ddde3b3355f130a0f3f9bd8c9e51e572a88410b02789944d9beb6",
+  "assetType": "Decal",
+  "assetId": 94156294726745,
+  "status": "Approved",
+  "imageId": 110839493222385
+ },
+ "textures/gear_v3/look3/look3_gloves_healer_primordial_e.png": {
+  "sha256": "50237f7e76ff82ff4a3aeba9e98b0d7af6445f9410118e473b931c4533b90549",
+  "assetType": "Decal",
+  "assetId": 112113414980104,
+  "status": "Approved",
+  "imageId": 130410564331755
+ },
+ "textures/gear_v3/look3/look3_gloves_healer_rare.png": {
+  "sha256": "8ca3c5d6f2e080b698383d42b42cabf1185d9f06c98a41a4307ad72b25dbd610",
+  "assetType": "Decal",
+  "assetId": 92761490032189,
+  "status": "Approved",
+  "imageId": 70921378026160
+ },
+ "textures/gear_v3/look3/look3_gloves_healer_relic.png": {
+  "sha256": "be745bf84da2c8ae3173812dce7231382af9e4d331e9bc35085480e2f76502b5",
+  "assetType": "Decal",
+  "assetId": 102543936893066,
+  "status": "Approved",
+  "imageId": 72051030529996
+ },
+ "textures/gear_v3/look3/look3_gloves_healer_relic_e.png": {
+  "sha256": "2a0f81ac8a3e931f46c67821d0523e0f263eec957a93b39b6ae580f375c81708",
+  "assetType": "Decal",
+  "assetId": 109640886366538,
+  "status": "Approved",
+  "imageId": 139422114360517
+ },
+ "textures/gear_v3/look3/look3_gloves_healer_transcendent.png": {
+  "sha256": "f672acc730c5480098c6af9eaebd14183027551ed0b98591f6d77b61bada93c2",
+  "assetType": "Decal",
+  "assetId": 125717333437819,
+  "status": "Approved",
+  "imageId": 110034350108712
+ },
+ "textures/gear_v3/look3/look3_gloves_healer_transcendent_e.png": {
+  "sha256": "6341a42ab864e3a3321271b754e6c8f961eb72bef72dd9cabe455dc9f3190bd2",
+  "assetType": "Decal",
+  "assetId": 96798420414467,
+  "status": "Approved",
+  "imageId": 83182505591328
+ },
+ "textures/gear_v3/look3/look3_shoes_bow_ancient.png": {
+  "sha256": "d515ec5b6a71bd6cadaca453220cf5d7c97264f50315501bf9507dff3805dfc9",
+  "assetType": "Decal",
+  "assetId": 117728843480681,
+  "status": "Approved",
+  "imageId": 108917606732438
+ },
+ "textures/gear_v3/look3/look3_shoes_bow_ancient_e.png": {
+  "sha256": "8e840b3bf306e359e2468e8b43046d795e2ed26729c617692b1c32eeb7f2e70e",
+  "assetType": "Decal",
+  "assetId": 126672496106872,
+  "status": "Approved",
+  "imageId": 106025261342943
+ },
+ "textures/gear_v3/look3/look3_shoes_bow_epic.png": {
+  "sha256": "70eb8a0665c0906d29a018d6753dc37ca2753f71033420aaf55400c8d8e413cd",
+  "assetType": "Decal",
+  "assetId": 118522900337162,
+  "status": "Approved",
+  "imageId": 125541469192658
+ },
+ "textures/gear_v3/look3/look3_shoes_bow_legendary.png": {
+  "sha256": "95f1fb5de284cbbba566fc408954a08b5d88706c060f2be477583282ed822b96",
+  "assetType": "Decal",
+  "assetId": 72952948583387,
+  "status": "Approved",
+  "imageId": 124663071013933
+ },
+ "textures/gear_v3/look3/look3_shoes_bow_normal.png": {
+  "sha256": "ded0ae2b7f30026d2374cfead0fdbb1123a0c27fd6d07d22b9dcb51af07aa6af",
+  "assetType": "Decal",
+  "assetId": 96555847843168,
+  "status": "Approved",
+  "imageId": 105975905720549
+ },
+ "textures/gear_v3/look3/look3_shoes_bow_primordial.png": {
+  "sha256": "c66af4d1bd8a4698145b59d2f15a767cbc709aa3186fead6bd3feaae5c36283f",
+  "assetType": "Decal",
+  "assetId": 71752621513901,
+  "status": "Approved",
+  "imageId": 106638066402642
+ },
+ "textures/gear_v3/look3/look3_shoes_bow_primordial_e.png": {
+  "sha256": "8df9e305248b40d97d9da465677dc622812558b6fbe66979d47bc8e993bce226",
+  "assetType": "Decal",
+  "assetId": 105958665100588,
+  "status": "Approved",
+  "imageId": 119882617222998
+ },
+ "textures/gear_v3/look3/look3_shoes_bow_rare.png": {
+  "sha256": "6d2ba3e1f48d31688a5834ddbd10afa59ced045b4246ae9dfccdd554e7d8a115",
+  "assetType": "Decal",
+  "assetId": 86168793527672,
+  "status": "Approved",
+  "imageId": 86020947934467
+ },
+ "textures/gear_v3/look3/look3_shoes_bow_relic.png": {
+  "sha256": "833b075caab08aae64857dde6123fa2fcdba16a5ffcbabd3b647d1629e923979",
+  "assetType": "Decal",
+  "assetId": 112406048972000,
+  "status": "Approved",
+  "imageId": 111408481150082
+ },
+ "textures/gear_v3/look3/look3_shoes_bow_relic_e.png": {
+  "sha256": "d57c2d026788a17126e0dbee0c5f56ac694c187126346749edfefdef3c0569f7",
+  "assetType": "Decal",
+  "assetId": 79947258921850,
+  "status": "Approved",
+  "imageId": 90667094268868
+ },
+ "textures/gear_v3/look3/look3_shoes_bow_transcendent.png": {
+  "sha256": "73237f98b5221b21b0b242acf41afb3e906e50dd5ed449e5a88f54fb61d84aa5",
+  "assetType": "Decal",
+  "assetId": 106208320354476,
+  "status": "Approved",
+  "imageId": 124863825146866
+ },
+ "textures/gear_v3/look3/look3_shoes_bow_transcendent_e.png": {
+  "sha256": "e31e8e5c6fcbe886a3952b41d8f868b3c5a0f7e0643c1234a0afc1894ab6ad41",
+  "assetType": "Decal",
+  "assetId": 92744179117821,
+  "status": "Approved",
+  "imageId": 88652888532778
+ },
+ "textures/gear_v3/look3/look3_shoes_dualblade_ancient.png": {
+  "sha256": "d515ec5b6a71bd6cadaca453220cf5d7c97264f50315501bf9507dff3805dfc9",
+  "assetType": "Decal",
+  "assetId": 94073447152984,
+  "status": "Approved",
+  "imageId": 79914543667611
+ },
+ "textures/gear_v3/look3/look3_shoes_dualblade_ancient_e.png": {
+  "sha256": "8e840b3bf306e359e2468e8b43046d795e2ed26729c617692b1c32eeb7f2e70e",
+  "assetType": "Decal",
+  "assetId": 120502522833643,
+  "status": "Approved",
+  "imageId": 70639264826095
+ },
+ "textures/gear_v3/look3/look3_shoes_dualblade_epic.png": {
+  "sha256": "70eb8a0665c0906d29a018d6753dc37ca2753f71033420aaf55400c8d8e413cd",
+  "assetType": "Decal",
+  "assetId": 133111179540660,
+  "status": "Approved",
+  "imageId": 103994212764621
+ },
+ "textures/gear_v3/look3/look3_shoes_dualblade_legendary.png": {
+  "sha256": "95f1fb5de284cbbba566fc408954a08b5d88706c060f2be477583282ed822b96",
+  "assetType": "Decal",
+  "assetId": 117226777292493,
+  "status": "Approved",
+  "imageId": 72695922367198
+ },
+ "textures/gear_v3/look3/look3_shoes_dualblade_normal.png": {
+  "sha256": "ded0ae2b7f30026d2374cfead0fdbb1123a0c27fd6d07d22b9dcb51af07aa6af",
+  "assetType": "Decal",
+  "assetId": 126905533442717,
+  "status": "Approved",
+  "imageId": 97769948304715
+ },
+ "textures/gear_v3/look3/look3_shoes_dualblade_primordial.png": {
+  "sha256": "c66af4d1bd8a4698145b59d2f15a767cbc709aa3186fead6bd3feaae5c36283f",
+  "assetType": "Decal",
+  "assetId": 134711509609422,
+  "status": "Approved",
+  "imageId": 76935079040861
+ },
+ "textures/gear_v3/look3/look3_shoes_dualblade_primordial_e.png": {
+  "sha256": "8df9e305248b40d97d9da465677dc622812558b6fbe66979d47bc8e993bce226",
+  "assetType": "Decal",
+  "assetId": 75931028241118,
+  "status": "Approved",
+  "imageId": 124535115820054
+ },
+ "textures/gear_v3/look3/look3_shoes_dualblade_rare.png": {
+  "sha256": "6d2ba3e1f48d31688a5834ddbd10afa59ced045b4246ae9dfccdd554e7d8a115",
+  "assetType": "Decal",
+  "assetId": 79684585153398,
+  "status": "Approved",
+  "imageId": 138713072174995
+ },
+ "textures/gear_v3/look3/look3_shoes_dualblade_relic.png": {
+  "sha256": "833b075caab08aae64857dde6123fa2fcdba16a5ffcbabd3b647d1629e923979",
+  "assetType": "Decal",
+  "assetId": 136960976852413,
+  "status": "Approved",
+  "imageId": 111737857346153
+ },
+ "textures/gear_v3/look3/look3_shoes_dualblade_relic_e.png": {
+  "sha256": "d57c2d026788a17126e0dbee0c5f56ac694c187126346749edfefdef3c0569f7",
+  "assetType": "Decal",
+  "assetId": 79338531529281,
+  "status": "Approved",
+  "imageId": 86033823501922
+ },
+ "textures/gear_v3/look3/look3_shoes_dualblade_transcendent.png": {
+  "sha256": "73237f98b5221b21b0b242acf41afb3e906e50dd5ed449e5a88f54fb61d84aa5",
+  "assetType": "Decal",
+  "assetId": 122678517473878,
+  "status": "Approved",
+  "imageId": 121634740745199
+ },
+ "textures/gear_v3/look3/look3_shoes_dualblade_transcendent_e.png": {
+  "sha256": "e31e8e5c6fcbe886a3952b41d8f868b3c5a0f7e0643c1234a0afc1894ab6ad41",
+  "assetType": "Decal",
+  "assetId": 92732927124791,
+  "status": "Approved",
+  "imageId": 139346901917526
+ },
+ "textures/gear_v3/look3/look3_shoes_greatsword_ancient.png": {
+  "sha256": "d515ec5b6a71bd6cadaca453220cf5d7c97264f50315501bf9507dff3805dfc9",
+  "assetType": "Decal",
+  "assetId": 74900590044278,
+  "status": "Approved",
+  "imageId": 104032771655556
+ },
+ "textures/gear_v3/look3/look3_shoes_greatsword_ancient_e.png": {
+  "sha256": "8e840b3bf306e359e2468e8b43046d795e2ed26729c617692b1c32eeb7f2e70e",
+  "assetType": "Decal",
+  "assetId": 139720230957361,
+  "status": "Approved",
+  "imageId": 85852417064112
+ },
+ "textures/gear_v3/look3/look3_shoes_greatsword_epic.png": {
+  "sha256": "70eb8a0665c0906d29a018d6753dc37ca2753f71033420aaf55400c8d8e413cd",
+  "assetType": "Decal",
+  "assetId": 89983884408386,
+  "status": "Approved",
+  "imageId": 110575317231457
+ },
+ "textures/gear_v3/look3/look3_shoes_greatsword_legendary.png": {
+  "sha256": "95f1fb5de284cbbba566fc408954a08b5d88706c060f2be477583282ed822b96",
+  "assetType": "Decal",
+  "assetId": 135066201930037,
+  "status": "Approved",
+  "imageId": 104529950401354
+ },
+ "textures/gear_v3/look3/look3_shoes_greatsword_normal.png": {
+  "sha256": "ded0ae2b7f30026d2374cfead0fdbb1123a0c27fd6d07d22b9dcb51af07aa6af",
+  "assetType": "Decal",
+  "assetId": 124209733243415,
+  "status": "Approved",
+  "imageId": 107679985824143
+ },
+ "textures/gear_v3/look3/look3_shoes_greatsword_primordial.png": {
+  "sha256": "c66af4d1bd8a4698145b59d2f15a767cbc709aa3186fead6bd3feaae5c36283f",
+  "assetType": "Decal",
+  "assetId": 86999642652374,
+  "status": "Approved",
+  "imageId": 127640380162024
+ },
+ "textures/gear_v3/look3/look3_shoes_greatsword_primordial_e.png": {
+  "sha256": "8df9e305248b40d97d9da465677dc622812558b6fbe66979d47bc8e993bce226",
+  "assetType": "Decal",
+  "assetId": 79964135005113,
+  "status": "Approved",
+  "imageId": 89699131106712
+ },
+ "textures/gear_v3/look3/look3_shoes_greatsword_rare.png": {
+  "sha256": "6d2ba3e1f48d31688a5834ddbd10afa59ced045b4246ae9dfccdd554e7d8a115",
+  "assetType": "Decal",
+  "assetId": 128633772917908,
+  "status": "Approved",
+  "imageId": 124211748315854
+ },
+ "textures/gear_v3/look3/look3_shoes_greatsword_relic.png": {
+  "sha256": "833b075caab08aae64857dde6123fa2fcdba16a5ffcbabd3b647d1629e923979",
+  "assetType": "Decal",
+  "assetId": 127567510321395,
+  "status": "Approved",
+  "imageId": 76359009877590
+ },
+ "textures/gear_v3/look3/look3_shoes_greatsword_relic_e.png": {
+  "sha256": "d57c2d026788a17126e0dbee0c5f56ac694c187126346749edfefdef3c0569f7",
+  "assetType": "Decal",
+  "assetId": 72947271259515,
+  "status": "Approved",
+  "imageId": 129898136239035
+ },
+ "textures/gear_v3/look3/look3_shoes_greatsword_transcendent.png": {
+  "sha256": "73237f98b5221b21b0b242acf41afb3e906e50dd5ed449e5a88f54fb61d84aa5",
+  "assetType": "Decal",
+  "assetId": 88484946631081,
+  "status": "Approved",
+  "imageId": 98720396944601
+ },
+ "textures/gear_v3/look3/look3_shoes_greatsword_transcendent_e.png": {
+  "sha256": "e31e8e5c6fcbe886a3952b41d8f868b3c5a0f7e0643c1234a0afc1894ab6ad41",
+  "assetType": "Decal",
+  "assetId": 72710632775995,
+  "status": "Approved",
+  "imageId": 114725035029317
+ },
+ "textures/gear_v3/look3/look3_shoes_healer_ancient.png": {
+  "sha256": "d515ec5b6a71bd6cadaca453220cf5d7c97264f50315501bf9507dff3805dfc9",
+  "assetType": "Decal",
+  "assetId": 77994655780331,
+  "status": "Approved",
+  "imageId": 139138936861565
+ },
+ "textures/gear_v3/look3/look3_shoes_healer_ancient_e.png": {
+  "sha256": "8e840b3bf306e359e2468e8b43046d795e2ed26729c617692b1c32eeb7f2e70e",
+  "assetType": "Decal",
+  "assetId": 106589554098749,
+  "status": "Approved",
+  "imageId": 85671680343708
+ },
+ "textures/gear_v3/look3/look3_shoes_healer_epic.png": {
+  "sha256": "70eb8a0665c0906d29a018d6753dc37ca2753f71033420aaf55400c8d8e413cd",
+  "assetType": "Decal",
+  "assetId": 75187742075844,
+  "status": "Approved",
+  "imageId": 136468087941784
+ },
+ "textures/gear_v3/look3/look3_shoes_healer_legendary.png": {
+  "sha256": "95f1fb5de284cbbba566fc408954a08b5d88706c060f2be477583282ed822b96",
+  "assetType": "Decal",
+  "assetId": 121573360725788,
+  "status": "Approved",
+  "imageId": 112230356629409
+ },
+ "textures/gear_v3/look3/look3_shoes_healer_normal.png": {
+  "sha256": "ded0ae2b7f30026d2374cfead0fdbb1123a0c27fd6d07d22b9dcb51af07aa6af",
+  "assetType": "Decal",
+  "assetId": 76875680680951,
+  "status": "Approved",
+  "imageId": 97178273556126
+ },
+ "textures/gear_v3/look3/look3_shoes_healer_primordial.png": {
+  "sha256": "c66af4d1bd8a4698145b59d2f15a767cbc709aa3186fead6bd3feaae5c36283f",
+  "assetType": "Decal",
+  "assetId": 109716696811401,
+  "status": "Approved",
+  "imageId": 82921482211583
+ },
+ "textures/gear_v3/look3/look3_shoes_healer_primordial_e.png": {
+  "sha256": "8df9e305248b40d97d9da465677dc622812558b6fbe66979d47bc8e993bce226",
+  "assetType": "Decal",
+  "assetId": 108575226127119,
+  "status": "Approved",
+  "imageId": 100391229817446
+ },
+ "textures/gear_v3/look3/look3_shoes_healer_rare.png": {
+  "sha256": "6d2ba3e1f48d31688a5834ddbd10afa59ced045b4246ae9dfccdd554e7d8a115",
+  "assetType": "Decal",
+  "assetId": 133202267040659,
+  "status": "Approved",
+  "imageId": 111917272513550
+ },
+ "textures/gear_v3/look3/look3_shoes_healer_relic.png": {
+  "sha256": "833b075caab08aae64857dde6123fa2fcdba16a5ffcbabd3b647d1629e923979",
+  "assetType": "Decal",
+  "assetId": 102269321630481,
+  "status": "Approved",
+  "imageId": 96606241725327
+ },
+ "textures/gear_v3/look3/look3_shoes_healer_relic_e.png": {
+  "sha256": "d57c2d026788a17126e0dbee0c5f56ac694c187126346749edfefdef3c0569f7",
+  "assetType": "Decal",
+  "assetId": 83942312685976,
+  "status": "Approved",
+  "imageId": 124071979115715
+ },
+ "textures/gear_v3/look3/look3_shoes_healer_transcendent.png": {
+  "sha256": "73237f98b5221b21b0b242acf41afb3e906e50dd5ed449e5a88f54fb61d84aa5",
+  "assetType": "Decal",
+  "assetId": 126364661059314,
+  "status": "Approved",
+  "imageId": 94639082767627
+ },
+ "textures/gear_v3/look3/look3_shoes_healer_transcendent_e.png": {
+  "sha256": "e31e8e5c6fcbe886a3952b41d8f868b3c5a0f7e0643c1234a0afc1894ab6ad41",
+  "assetType": "Decal",
+  "assetId": 135108532453132,
+  "status": "Approved",
+  "imageId": 135848405166557
  },
  "textures/gear_v3/maps/armor_bow_s1.png": {
   "sha256": "0225d9137968eb780f791cb2a9a6b67da5fa20f8753760e3760453fe8a5ae372",

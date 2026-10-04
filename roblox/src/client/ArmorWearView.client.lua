@@ -22,8 +22,46 @@ local colorOf, colorOfV3 = ArmorColors.colorOf, ArmorColors.colorOfV3
 local GearV3Data = require(ReplicatedStorage.Shared.data.GearV3Data)
 local GearV3 = require(ReplicatedStorage.Shared.GearV3)
 
+-- QUEUE-ALL9E1 LOOK3 간단 메시(LOD 2단): 그래픽 품질 낮음 · 폰 · 남의 캐릭터가 lodDistance 밖 → LOOK2 단계 메시(같은 색 구역 · 바닥층 · 토글은 서버라 같다)
+local UserInputService = game:GetService("UserInputService")
+local L3 = GearV3Data.look3
+local function deviceSimple()
+	if L3.phoneSimple and UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+		return true
+	end
+	local ok, level = pcall(function()
+		return UserSettings():GetService("UserGameSettings").SavedQualityLevel.Value -- 0 = 자동(높음 취급) · 1 ~ 10
+	end)
+	return ok and level > 0 and level <= L3.lowQualityMax
+end
+
+local lodState = {} -- [owner] = "hi" | "lo"(거리 히스테리시스)
+local function lodOf(owner)
+	if not GearV3.look3Enabled() or deviceSimple() then
+		return "lo"
+	end
+	if owner == Players.LocalPlayer then
+		return "hi"
+	end
+	local character = owner:IsA("Player") and owner.Character or owner
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local cam = workspace.CurrentCamera
+	if not (root and cam) then
+		return lodState[owner] or "hi"
+	end
+	local d = (root.Position - cam.CFrame.Position).Magnitude
+	local prev = lodState[owner] or "hi"
+	if prev == "hi" and d > L3.lodDistance then
+		prev = "lo"
+	elseif prev == "lo" and d < L3.lodDistance - L3.lodHysteresis then
+		prev = "hi"
+	end
+	lodState[owner] = prev
+	return prev
+end
+
 local function lookOf(owner)
-	local parts = { tostring(owner:GetAttribute(Data.armorClassAttribute)) }
+	local parts = { tostring(owner:GetAttribute(Data.armorClassAttribute)), lodOf(owner) }
 	for _, part in ipairs(PARTS) do
 		table.insert(parts, tostring(owner:GetAttribute(Data.armorLookAttribute .. part)))
 	end
@@ -40,12 +78,83 @@ local function clear(owner)
 	worn[owner] = nil
 end
 
+-- LOOK3: 조각마다 붙는 파트 실측 ÷ 기준 체형(축마다 · fitClamp)으로 늘려 offset 자리에 용접 · 색 = 등급 색 지도(천 = 알파 → 파트 Color = 세트 색1)
+local function weldPiece(w, body, p)
+	p.Anchored, p.Massless = false, true
+	p.CanCollide, p.CanQuery, p.CanTouch = false, false, false
+	p.CastShadow = false
+	p:SetAttribute("ArmorFitBody", body.Name)
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0, weld.Part1 = body, p
+	weld.Parent = p
+	p.Parent = folder
+	table.insert(w.pieces, p)
+end
+
+local function placeScaled(piece, m, body, forward)
+	local ref = m.refSize and Vector3.new(m.refSize[1], m.refSize[2], m.refSize[3]) or body.Size
+	local c = L3.fitClamp
+	local s = Vector3.new(math.clamp(body.Size.X / ref.X, c[1], c[2]), math.clamp(body.Size.Y / ref.Y, c[1], c[2]), math.clamp(body.Size.Z / ref.Z, c[1], c[2]))
+	local R = piece.CFrame.Rotation
+	local sl = Vector3.new(
+		math.abs(R.RightVector.X) * s.X + math.abs(R.RightVector.Y) * s.Y + math.abs(R.RightVector.Z) * s.Z,
+		math.abs(R.UpVector.X) * s.X + math.abs(R.UpVector.Y) * s.Y + math.abs(R.UpVector.Z) * s.Z,
+		math.abs(R.LookVector.X) * s.X + math.abs(R.LookVector.Y) * s.Y + math.abs(R.LookVector.Z) * s.Z)
+	local p = piece:Clone()
+	p.Size = piece.Size * sl
+	local off = Vector3.new(m.offset[1], m.offset[2], m.offset[3] - (forward or 0)) * s
+	p.CFrame = body.CFrame * CFrame.new(off) * R
+	return p
+end
+
+local function buildLook3(w, character, part, key, src, meta, zone, grade, classId)
+	local cloth = ArmorColors.colorOfGearV3("Cape_Attach", zone, grade, classId) -- 세트 색1(같은 계열 밝기 포함 - 천 = 지도 알파로 비침)
+	for _, piece in ipairs(src:GetChildren()) do
+		local m = piece:IsA("BasePart") and meta[piece.Name]
+		local body = m and character:FindFirstChild(m.attach)
+		if m and not body then
+			w.missing = true
+		end
+		if body and body:IsA("BasePart") then
+			local p = placeScaled(piece, m, body)
+			p.Color = cloth
+			p.Material = Enum.Material.SmoothPlastic
+			local sa = GearV3.look3Surface(key)
+			if sa then
+				sa.Parent = p
+			end
+			weldPiece(w, body, p)
+		end
+	end
+	local emblemKey = part == "armor" and GearV3Data.sets[zone] and "emblem_" .. GearV3Data.sets[zone].emblem
+	local emblemSrc = emblemKey and ArtMeshKit.get("armor/" .. emblemKey)
+	local em = emblemKey and Wear.pieces[emblemKey]
+	if emblemSrc and em then
+		for _, piece in ipairs(emblemSrc:GetChildren()) do
+			local m = piece:IsA("BasePart") and em[piece.Name]
+			local body = m and character:FindFirstChild(m.attach)
+			if body and body:IsA("BasePart") then
+				local p = placeScaled(piece, m, body, L3.emblemForward)
+				local color = ArmorColors.colorOfGearV3("Emblem_Emblem", zone, grade, classId) -- 조각 이름 "Emblem"엔 구역 접미사가 없어 등급색이 나왔다(가슴판에 묻힘) → 세트 색2
+				p.Color = color
+				p.Material = Enum.Material.SmoothPlastic
+				local sa = GearV3.surfaceFor(emblemKey, piece.Name, grade)
+				if sa then
+					sa.Color = color
+					sa.Parent = p
+				end
+				weldPiece(w, body, p)
+			end
+		end
+	end
+end
+
 local refresh
 local function build(owner, character)
 	local retries = worn[owner] and worn[owner].character == character and (worn[owner].retries or 0) or 0
 	clear(owner)
 	local key = lookOf(owner) .. "|" .. tostring(ArtMeshKit.enabled()) .. "|" .. tostring(ArmorColors.gearV3Enabled())
-	local w = { key = key, character = character, pieces = {}, retries = retries }
+	local w = { key = key, character = character, pieces = {}, retries = retries, lod = lodOf(owner) }
 	worn[owner] = w
 	task.defer(function()
 		if w.missing and worn[owner] == w and retries < 10 then
@@ -65,6 +174,14 @@ local function build(owner, character)
 		local zone, grade
 		if type(v) == "string" then
 			zone, grade = v:match("^(tier%d)|(%w+)$") -- (`a and f()`는 값 하나로 잘려 grade가 nil이 된다 - 분리)
+		end
+		-- QUEUE-ALL9E1 LOOK3: 가까이 · 보통 이상 품질 = 등급 메시(look3_<부위>_<직업>_<등급>) · 아니면 아래(LOOK2 단계 메시 = 간단 메시)
+		local classId3 = owner:GetAttribute(Data.armorClassAttribute)
+		local key3 = zone and type(classId3) == "string" and grade and GearV3.look3Key(part, classId3, grade)
+		local src3 = key3 and w.lod == "hi" and ArtMeshKit.get("armor/" .. key3)
+		if src3 and Wear.pieces[key3] then
+			buildLook3(w, character, part, key3, src3, Wear.pieces[key3], zone, grade, classId3)
+			continue
 		end
 		local look = Data.armorLookOfGrade[grade] or "normal"
 		local modelKey = zone and ("%s_%s_%s"):format(part, zone, look)
@@ -280,6 +397,18 @@ local function refreshAll()
 end
 workspace:GetAttributeChangedSignal("ArtStyleV1"):Connect(refreshAll)
 ReplicatedStorage:GetAttributeChangedSignal("GearV3Meshes"):Connect(refreshAll) -- QUEUE-ALL9E1 1-1 스위치(Studio 덮기)
+ReplicatedStorage:GetAttributeChangedSignal("GearV3Look3"):Connect(refreshAll) -- QUEUE-ALL9E1 LOOK3 스위치(Studio 덮기)
+-- LOOK3 LOD: 주기마다 거리 판정 → 단계가 바뀐 주인만 다시 입힌다(refresh가 키 비교 - 키에 LOD 단계가 들어 있다)
+task.spawn(function()
+	while true do
+		task.wait(L3.lodCheckSeconds)
+		for owner, w in pairs(worn) do
+			if w.character and w.lod ~= lodOf(owner) then
+				refresh(owner, w.character)
+			end
+		end
+	end
+end)
 task.spawn(function()
 	local cache = ReplicatedStorage:WaitForChild(Data.cacheFolder, 120)
 	if cache then

@@ -21617,6 +21617,4998 @@
     "tris": 108,
     "neon": false
    }
+  },
+  "look3_armor_greatsword_normal": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -0.666,
+     -0.023
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 1474,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.6,
+     -0.215
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 188,
+    "neon": false
+   }
+  },
+  "look3_armor_greatsword_rare": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.004,
+     -0.658,
+     -0.021
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 1744,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.6,
+     -0.215
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 208,
+    "neon": false
+   }
+  },
+  "look3_armor_greatsword_epic": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.004,
+     -0.647,
+     -0.025
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 2236,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.6,
+     -0.215
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 208,
+    "neon": false
+   }
+  },
+  "look3_armor_greatsword_legendary": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -0.625,
+     -0.005
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 2956,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.612,
+     -0.222
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 320,
+    "neon": false
+   }
+  },
+  "look3_armor_greatsword_relic": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -0.425,
+     0.031
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 3184,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.612,
+     -0.222
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 320,
+    "neon": false
+   }
+  },
+  "look3_armor_greatsword_ancient": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -0.425,
+     0.015
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 3452,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.612,
+     -0.222
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 420,
+    "neon": false
+   }
+  },
+  "look3_armor_greatsword_primordial": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -0.345,
+     0.035
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 3952,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.612,
+     -0.093
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 432,
+    "neon": false
+   }
+  },
+  "look3_armor_greatsword_transcendent": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -0.345,
+     0.035
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 3784,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.612,
+     -0.222
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 492,
+    "neon": false
+   }
+  },
+  "look3_gloves_greatsword_normal": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.092,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 256,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.092,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 256,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 320,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 320,
+    "neon": false
+   }
+  },
+  "look3_gloves_greatsword_rare": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.092,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 256,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.092,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 256,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 360,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 360,
+    "neon": false
+   }
+  },
+  "look3_gloves_greatsword_epic": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.057,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 288,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.057,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 288,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 360,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 360,
+    "neon": false
+   }
+  },
+  "look3_gloves_greatsword_legendary": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.057,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 288,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.057,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 288,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 420,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 420,
+    "neon": false
+   }
+  },
+  "look3_gloves_greatsword_relic": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 352,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 352,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 420,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 420,
+    "neon": false
+   }
+  },
+  "look3_gloves_greatsword_ancient": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 352,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 352,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     -0.042,
+     -0.305,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 452,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.045,
+     -0.305,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 452,
+    "neon": false
+   }
+  },
+  "look3_gloves_greatsword_primordial": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 352,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 352,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     -0.078,
+     -0.303,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 508,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.081,
+     -0.303,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 508,
+    "neon": false
+   }
+  },
+  "look3_gloves_greatsword_transcendent": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 388,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 388,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     -0.042,
+     -0.305,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 488,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.045,
+     -0.337,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 488,
+    "neon": false
+   }
+  },
+  "look3_shoes_greatsword_normal": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 132,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 132,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 364,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 364,
+    "neon": false
+   }
+  },
+  "look3_shoes_greatsword_rare": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 144,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 144,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 364,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 364,
+    "neon": false
+   }
+  },
+  "look3_shoes_greatsword_epic": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 144,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 144,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 428,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 428,
+    "neon": false
+   }
+  },
+  "look3_shoes_greatsword_legendary": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 164,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 164,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 468,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 468,
+    "neon": false
+   }
+  },
+  "look3_shoes_greatsword_relic": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 164,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 164,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.092
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 568,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.092
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 568,
+    "neon": false
+   }
+  },
+  "look3_shoes_greatsword_ancient": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 196,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 196,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.092
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 568,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.092
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 568,
+    "neon": false
+   }
+  },
+  "look3_shoes_greatsword_primordial": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 196,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 196,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.083
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 632,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.083
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 632,
+    "neon": false
+   }
+  },
+  "look3_shoes_greatsword_transcendent": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 196,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 196,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.083
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 668,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.083
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 668,
+    "neon": false
+   }
+  },
+  "look3_armor_dualblade_normal": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.093,
+     -0.065,
+     -0.108
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 1622,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.29,
+     -0.176
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 160,
+    "neon": false
+   }
+  },
+  "look3_armor_dualblade_rare": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.098,
+     -0.057,
+     -0.099
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 1892,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.29,
+     -0.191
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 180,
+    "neon": false
+   }
+  },
+  "look3_armor_dualblade_epic": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.098,
+     -0.047,
+     -0.092
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 2292,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.29,
+     -0.191
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 180,
+    "neon": false
+   }
+  },
+  "look3_armor_dualblade_legendary": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.086,
+     -0.027,
+     -0.07
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 2620,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.319,
+     -0.206
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 280,
+    "neon": false
+   }
+  },
+  "look3_armor_dualblade_relic": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.089,
+     0.209,
+     0.04
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 2844,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.319,
+     -0.206
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 280,
+    "neon": false
+   }
+  },
+  "look3_armor_dualblade_ancient": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.093,
+     0.209,
+     0.025
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 3112,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.349,
+     -0.221
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 380,
+    "neon": false
+   }
+  },
+  "look3_armor_dualblade_primordial": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.046,
+     0.287,
+     0.052
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 3604,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.346,
+     -0.091
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 392,
+    "neon": false
+   }
+  },
+  "look3_armor_dualblade_transcendent": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.098,
+     0.287,
+     0.05
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 3436,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.349,
+     -0.221
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 452,
+    "neon": false
+   }
+  },
+  "look3_gloves_dualblade_normal": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.092,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 256,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.092,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 256,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 320,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 320,
+    "neon": false
+   }
+  },
+  "look3_gloves_dualblade_rare": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.092,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 256,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.092,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 256,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 360,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 360,
+    "neon": false
+   }
+  },
+  "look3_gloves_dualblade_epic": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.057,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 288,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.057,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 288,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 360,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 360,
+    "neon": false
+   }
+  },
+  "look3_gloves_dualblade_legendary": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.057,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 288,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.057,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 288,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 420,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 420,
+    "neon": false
+   }
+  },
+  "look3_gloves_dualblade_relic": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 352,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 352,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 420,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 420,
+    "neon": false
+   }
+  },
+  "look3_gloves_dualblade_ancient": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 352,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 352,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     -0.042,
+     -0.305,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 452,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.045,
+     -0.305,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 452,
+    "neon": false
+   }
+  },
+  "look3_gloves_dualblade_primordial": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 352,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 352,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     -0.078,
+     -0.303,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 508,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.081,
+     -0.303,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 508,
+    "neon": false
+   }
+  },
+  "look3_gloves_dualblade_transcendent": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 388,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 388,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     -0.042,
+     -0.305,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 488,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.045,
+     -0.337,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 488,
+    "neon": false
+   }
+  },
+  "look3_shoes_dualblade_normal": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 132,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 132,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 364,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 364,
+    "neon": false
+   }
+  },
+  "look3_shoes_dualblade_rare": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 144,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 144,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 364,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 364,
+    "neon": false
+   }
+  },
+  "look3_shoes_dualblade_epic": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 144,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 144,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 428,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 428,
+    "neon": false
+   }
+  },
+  "look3_shoes_dualblade_legendary": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 164,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 164,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 468,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 468,
+    "neon": false
+   }
+  },
+  "look3_shoes_dualblade_relic": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 164,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 164,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.092
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 568,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.092
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 568,
+    "neon": false
+   }
+  },
+  "look3_shoes_dualblade_ancient": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 196,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 196,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.092
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 568,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.092
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 568,
+    "neon": false
+   }
+  },
+  "look3_shoes_dualblade_primordial": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 196,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 196,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.083
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 632,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.083
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 632,
+    "neon": false
+   }
+  },
+  "look3_shoes_dualblade_transcendent": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 196,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 196,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.083
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 668,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.083
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 668,
+    "neon": false
+   }
+  },
+  "look3_armor_bow_normal": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     -0.08,
+     -0.315,
+     0.027
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 1174,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.3,
+     -0.205
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 188,
+    "neon": false
+   }
+  },
+  "look3_armor_bow_rare": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     -0.089,
+     -0.315,
+     0.035
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 1354,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.3,
+     -0.205
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 208,
+    "neon": false
+   }
+  },
+  "look3_armor_bow_epic": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     -0.1,
+     -0.315,
+     0.031
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 1654,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.3,
+     -0.205
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 208,
+    "neon": false
+   }
+  },
+  "look3_armor_bow_legendary": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     -0.126,
+     -0.315,
+     0.027
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 1922,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.319,
+     -0.222
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 320,
+    "neon": false
+   }
+  },
+  "look3_armor_bow_relic": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     -0.14,
+     -0.225,
+     0.047
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 2086,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.319,
+     -0.222
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 320,
+    "neon": false
+   }
+  },
+  "look3_armor_bow_ancient": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     -0.155,
+     -0.225,
+     0.033
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 2258,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.348,
+     -0.222
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 420,
+    "neon": false
+   }
+  },
+  "look3_armor_bow_primordial": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     -0.177,
+     -0.145,
+     0.059
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 2594,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.348,
+     -0.093
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 432,
+    "neon": false
+   }
+  },
+  "look3_armor_bow_transcendent": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     -0.177,
+     -0.145,
+     0.056
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 2518,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.348,
+     -0.222
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 492,
+    "neon": false
+   }
+  },
+  "look3_gloves_bow_normal": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.092,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 256,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.092,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 256,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 320,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 320,
+    "neon": false
+   }
+  },
+  "look3_gloves_bow_rare": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.092,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 256,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.092,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 256,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 360,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 360,
+    "neon": false
+   }
+  },
+  "look3_gloves_bow_epic": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.057,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 288,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.057,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 288,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 360,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 360,
+    "neon": false
+   }
+  },
+  "look3_gloves_bow_legendary": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.057,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 288,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.057,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 288,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 420,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 420,
+    "neon": false
+   }
+  },
+  "look3_gloves_bow_relic": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 352,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 352,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 420,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 420,
+    "neon": false
+   }
+  },
+  "look3_gloves_bow_ancient": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 352,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 352,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     -0.042,
+     -0.305,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 452,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.045,
+     -0.305,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 452,
+    "neon": false
+   }
+  },
+  "look3_gloves_bow_primordial": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 352,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 352,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     -0.078,
+     -0.303,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 508,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.081,
+     -0.303,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 508,
+    "neon": false
+   }
+  },
+  "look3_gloves_bow_transcendent": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 388,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 388,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     -0.042,
+     -0.305,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 488,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.045,
+     -0.337,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 488,
+    "neon": false
+   }
+  },
+  "look3_shoes_bow_normal": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 132,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 132,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 364,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 364,
+    "neon": false
+   }
+  },
+  "look3_shoes_bow_rare": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 144,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 144,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 364,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 364,
+    "neon": false
+   }
+  },
+  "look3_shoes_bow_epic": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 144,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 144,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 428,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 428,
+    "neon": false
+   }
+  },
+  "look3_shoes_bow_legendary": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 164,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 164,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 468,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 468,
+    "neon": false
+   }
+  },
+  "look3_shoes_bow_relic": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 164,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 164,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.092
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 568,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.092
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 568,
+    "neon": false
+   }
+  },
+  "look3_shoes_bow_ancient": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 196,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 196,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.092
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 568,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.092
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 568,
+    "neon": false
+   }
+  },
+  "look3_shoes_bow_primordial": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 196,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 196,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.083
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 632,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.083
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 632,
+    "neon": false
+   }
+  },
+  "look3_shoes_bow_transcendent": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 196,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 196,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.083
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 668,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.083
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 668,
+    "neon": false
+   }
+  },
+  "look3_armor_healer_normal": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     -0.107,
+     -0.058
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 1382,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.7,
+     -0.047
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 212,
+    "neon": false
+   }
+  },
+  "look3_armor_healer_rare": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.004,
+     -0.101,
+     -0.05
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 1632,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.7,
+     -0.047
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 212,
+    "neon": false
+   }
+  },
+  "look3_armor_healer_epic": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.004,
+     -0.093,
+     -0.054
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 2032,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.7,
+     -0.047
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 212,
+    "neon": false
+   }
+  },
+  "look3_armor_healer_legendary": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.004,
+     -0.077,
+     -0.048
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 2360,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.7,
+     -0.042
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 316,
+    "neon": false
+   }
+  },
+  "look3_armor_healer_relic": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.004,
+     0.219,
+     0.02
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 2624,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.7,
+     -0.042
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 316,
+    "neon": false
+   }
+  },
+  "look3_armor_healer_ancient": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.004,
+     0.219,
+     0.005
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 2892,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.7,
+     -0.042
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 316,
+    "neon": false
+   }
+  },
+  "look3_armor_healer_primordial": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.0,
+     0.3,
+     0.039
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 3688,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.7,
+     -0.042
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 328,
+    "neon": false
+   }
+  },
+  "look3_armor_healer_transcendent": {
+   "Main": {
+    "attach": "UpperTorso",
+    "offset": [
+     0.004,
+     0.3,
+     0.037
+    ],
+    "refSize": [
+     2,
+     1.6,
+     1
+    ],
+    "tris": 3520,
+    "neon": false
+   },
+   "Tasset": {
+    "attach": "LowerTorso",
+    "offset": [
+     0.0,
+     -0.7,
+     -0.042
+    ],
+    "refSize": [
+     2,
+     0.4,
+     1
+    ],
+    "tris": 388,
+    "neon": false
+   }
+  },
+  "look3_gloves_healer_normal": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.092,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 256,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.092,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 256,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.0,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 320,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.0,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 320,
+    "neon": false
+   }
+  },
+  "look3_gloves_healer_rare": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.092,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 256,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.092,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 256,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 360,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 360,
+    "neon": false
+   }
+  },
+  "look3_gloves_healer_epic": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.057,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 288,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.057,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 288,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 360,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 360,
+    "neon": false
+   }
+  },
+  "look3_gloves_healer_legendary": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.057,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 288,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.057,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 288,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 420,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 420,
+    "neon": false
+   }
+  },
+  "look3_gloves_healer_relic": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 352,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 352,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 420,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.003,
+     -0.308,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 420,
+    "neon": false
+   }
+  },
+  "look3_gloves_healer_ancient": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 352,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 352,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     -0.042,
+     -0.305,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 452,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.045,
+     -0.305,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 452,
+    "neon": false
+   }
+  },
+  "look3_gloves_healer_primordial": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 352,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 352,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     -0.078,
+     -0.303,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 508,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.081,
+     -0.303,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 508,
+    "neon": false
+   }
+  },
+  "look3_gloves_healer_transcendent": {
+   "Glove_L": {
+    "attach": "LeftHand",
+    "offset": [
+     0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 388,
+    "neon": false
+   },
+   "Glove_R": {
+    "attach": "RightHand",
+    "offset": [
+     -0.063,
+     0.01,
+     -0.056
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 388,
+    "neon": false
+   },
+   "Bracer_L": {
+    "attach": "LeftLowerArm",
+    "offset": [
+     -0.042,
+     -0.305,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 488,
+    "neon": false
+   },
+   "Bracer_R": {
+    "attach": "RightLowerArm",
+    "offset": [
+     0.045,
+     -0.337,
+     0.0
+    ],
+    "refSize": [
+     1,
+     1.05,
+     1
+    ],
+    "tris": 488,
+    "neon": false
+   }
+  },
+  "look3_shoes_healer_normal": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 132,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 132,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 364,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 364,
+    "neon": false
+   }
+  },
+  "look3_shoes_healer_rare": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 144,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 144,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 364,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 364,
+    "neon": false
+   }
+  },
+  "look3_shoes_healer_epic": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 144,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 144,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 428,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 428,
+    "neon": false
+   }
+  },
+  "look3_shoes_healer_legendary": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 164,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 164,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 468,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.061
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 468,
+    "neon": false
+   }
+  },
+  "look3_shoes_healer_relic": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 164,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 164,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.092
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 568,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.092
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 568,
+    "neon": false
+   }
+  },
+  "look3_shoes_healer_ancient": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 196,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 196,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.092
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 568,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.092
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 568,
+    "neon": false
+   }
+  },
+  "look3_shoes_healer_primordial": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 196,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 196,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.083
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 632,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.083
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 632,
+    "neon": false
+   }
+  },
+  "look3_shoes_healer_transcendent": {
+   "Boot_L": {
+    "attach": "LeftFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 196,
+    "neon": false
+   },
+   "Boot_R": {
+    "attach": "RightFoot",
+    "offset": [
+     0.0,
+     -0.05,
+     -0.25
+    ],
+    "refSize": [
+     1,
+     0.3,
+     1
+    ],
+    "tris": 196,
+    "neon": false
+   },
+   "Greave_L": {
+    "attach": "LeftLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.083
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 668,
+    "neon": false
+   },
+   "Greave_R": {
+    "attach": "RightLowerLeg",
+    "offset": [
+     0.0,
+     0.065,
+     -0.083
+    ],
+    "refSize": [
+     1,
+     1.19,
+     1
+    ],
+    "tris": 668,
+    "neon": false
+   }
   }
  },
  "tris": {

@@ -46,6 +46,20 @@ return {
 	},
 	-- LOOK2 보정 1 바닥층(갑옷 착용 중 2D 옷 = 누빔 상의 + 바지 · 등급색 없음): 직업 → 색(textures/gear_v3/base_<색>_shirt|pants · ArtAssetIds image)
 	baseLayer = { greatsword = "navy", dualblade = "navy", bow = "cream", healer = "cream" },
+	-- QUEUE-ALL9E1 LOOK3(10-04 밤 · 사용자 "아이콘 요청안을 최대한 · 렉 감수" - gear-art-v3.md 3-2절): 등급마다 메시 armor/look3_<부위>_<직업>_<등급>(조각 = 붙는 R15 파트마다 1 · 장식 합침)
+	--   색 = 등급별 색 지도(SurfaceAppearance 템플릿 ReplicatedStorage.Shared.GearV3Look3 - roblox/tools/blender/look3_looks.py) · 천 = 지도 알파(Overlay) → 파트 Color = 세트 색1 · 발광 = EmissiveMask
+	--   간단 메시(LOD) = LOOK2 단계 메시(s1 ~ s5 · 같은 색 구역 · 바닥층 · 토글은 서버라 두 단계 같다): 그래픽 품질 낮음 · 폰 · 남의 장비가 lodDistance 밖
+	look3 = {
+		enabled = true, -- Studio에서만 ReplicatedStorage Attribute "GearV3Look3"(boolean)가 덮는다
+		lodDistance = 70, -- 남의 캐릭터가 카메라에서 이 거리(stud) 밖이면 간단 메시 · 안쪽 복귀 = lodDistance − lodHysteresis
+		lodHysteresis = 10,
+		lodCheckSeconds = 1, -- 거리 판정 주기
+		lowQualityMax = 3, -- 저장된 그래픽 품질(1 ~ 10)이 이 값 이하면 간단 메시(자동 = 높음 취급 · 폰은 아래 phoneSimple)
+		phoneSimple = true, -- 터치 전용 기기(키보드 없음) = 간단 메시
+		emblemForward = 0.06, -- 문장(세트) 앞으로(LOOK3 가슴판이 더 두꺼움 · stud)
+		fitClamp = { 0.6, 1.6 }, -- 크기 = 붙는 파트 실측 ÷ 기준 체형(축마다) - 이 범위로 자름
+		budget = { trisNormalToEpic = 2500, trisLegendaryToAncient = 4000, trisPrimordialTranscendent = 6000, trisOutfit = 15000, trisMesh = 20000, partsPerSlot = 4, partsPerOutfit = 16, mapMax = 1024 },
+	},
 	-- 착용(6절) · 예산(7절): 하네스 · 메시 스크립트가 같은 값(artlib 쪽 숫자는 make_gear_v3.py가 이 표를 미러 - 바뀌면 둘 다)
 	budget = { armor = 1500, glovesPair = 500, shoesPair = 500, weapon = 800, float = 300, coreGem = 120, meshPartsPerPlayer = 24 },
 }

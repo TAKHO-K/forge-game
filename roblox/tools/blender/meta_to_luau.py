@@ -82,7 +82,8 @@ def convert_armor(path):
     for model, pieces in d["pieces"].items():
         lines.append('\t\t["%s"] = {' % model)
         for name, p in pieces.items():
-            lines.append('\t\t\t["%s"] = { attach = "%s", offset = %s, refSize = %s, neon = %s },' % (name, p["attach"], vec(p["offset"]), vec(p["refSize"]), "true" if p.get("neon") else "false"))
+            tris = (", tris = %d" % p["tris"]) if model.startswith("look3_") and "tris" in p else ""  # QUEUE-ALL9E1 LOOK3: 하네스 예산 검사(gear_v3_test)
+            lines.append('\t\t\t["%s"] = { attach = "%s", offset = %s, refSize = %s, neon = %s%s },' % (name, p["attach"], vec(p["offset"]), vec(p["refSize"]), "true" if p.get("neon") else "false", tris))
         lines.append("\t\t},")
     lines += ["\t},", "}", ""]
     out = os.path.join(OUT, "armor_wear.lua")

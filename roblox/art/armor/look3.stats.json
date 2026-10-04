@@ -1,0 +1,482 @@
+{
+ "look3_armor_greatsword_legendary": {
+  "tris": 3276,
+  "parts": 2,
+  "maxMeshTris": 2956
+ },
+ "look3_gloves_greatsword_legendary": {
+  "tris": 1416,
+  "parts": 4,
+  "maxMeshTris": 420
+ },
+ "look3_shoes_greatsword_legendary": {
+  "tris": 1264,
+  "parts": 4,
+  "maxMeshTris": 468
+ },
+ "look3_armor_greatsword_normal": {
+  "tris": 1662,
+  "parts": 2,
+  "maxMeshTris": 1474
+ },
+ "look3_armor_greatsword_rare": {
+  "tris": 1952,
+  "parts": 2,
+  "maxMeshTris": 1744
+ },
+ "look3_armor_greatsword_epic": {
+  "tris": 2444,
+  "parts": 2,
+  "maxMeshTris": 2236
+ },
+ "look3_armor_greatsword_relic": {
+  "tris": 3504,
+  "parts": 2,
+  "maxMeshTris": 3184
+ },
+ "look3_armor_greatsword_ancient": {
+  "tris": 3872,
+  "parts": 2,
+  "maxMeshTris": 3452
+ },
+ "look3_armor_greatsword_primordial": {
+  "tris": 4384,
+  "parts": 2,
+  "maxMeshTris": 3952
+ },
+ "look3_armor_greatsword_transcendent": {
+  "tris": 4276,
+  "parts": 2,
+  "maxMeshTris": 3784
+ },
+ "look3_gloves_greatsword_normal": {
+  "tris": 1152,
+  "parts": 4,
+  "maxMeshTris": 320
+ },
+ "look3_gloves_greatsword_rare": {
+  "tris": 1232,
+  "parts": 4,
+  "maxMeshTris": 360
+ },
+ "look3_gloves_greatsword_epic": {
+  "tris": 1296,
+  "parts": 4,
+  "maxMeshTris": 360
+ },
+ "look3_gloves_greatsword_relic": {
+  "tris": 1544,
+  "parts": 4,
+  "maxMeshTris": 420
+ },
+ "look3_gloves_greatsword_ancient": {
+  "tris": 1608,
+  "parts": 4,
+  "maxMeshTris": 452
+ },
+ "look3_gloves_greatsword_primordial": {
+  "tris": 1720,
+  "parts": 4,
+  "maxMeshTris": 508
+ },
+ "look3_gloves_greatsword_transcendent": {
+  "tris": 1752,
+  "parts": 4,
+  "maxMeshTris": 488
+ },
+ "look3_shoes_greatsword_normal": {
+  "tris": 992,
+  "parts": 4,
+  "maxMeshTris": 364
+ },
+ "look3_shoes_greatsword_rare": {
+  "tris": 1016,
+  "parts": 4,
+  "maxMeshTris": 364
+ },
+ "look3_shoes_greatsword_epic": {
+  "tris": 1144,
+  "parts": 4,
+  "maxMeshTris": 428
+ },
+ "look3_shoes_greatsword_relic": {
+  "tris": 1464,
+  "parts": 4,
+  "maxMeshTris": 568
+ },
+ "look3_shoes_greatsword_ancient": {
+  "tris": 1528,
+  "parts": 4,
+  "maxMeshTris": 568
+ },
+ "look3_shoes_greatsword_primordial": {
+  "tris": 1656,
+  "parts": 4,
+  "maxMeshTris": 632
+ },
+ "look3_shoes_greatsword_transcendent": {
+  "tris": 1728,
+  "parts": 4,
+  "maxMeshTris": 668
+ },
+ "look3_armor_dualblade_normal": {
+  "tris": 1782,
+  "parts": 2,
+  "maxMeshTris": 1622
+ },
+ "look3_armor_dualblade_rare": {
+  "tris": 2072,
+  "parts": 2,
+  "maxMeshTris": 1892
+ },
+ "look3_armor_dualblade_epic": {
+  "tris": 2472,
+  "parts": 2,
+  "maxMeshTris": 2292
+ },
+ "look3_armor_dualblade_legendary": {
+  "tris": 2900,
+  "parts": 2,
+  "maxMeshTris": 2620
+ },
+ "look3_armor_dualblade_relic": {
+  "tris": 3124,
+  "parts": 2,
+  "maxMeshTris": 2844
+ },
+ "look3_armor_dualblade_ancient": {
+  "tris": 3492,
+  "parts": 2,
+  "maxMeshTris": 3112
+ },
+ "look3_armor_dualblade_primordial": {
+  "tris": 3996,
+  "parts": 2,
+  "maxMeshTris": 3604
+ },
+ "look3_armor_dualblade_transcendent": {
+  "tris": 3888,
+  "parts": 2,
+  "maxMeshTris": 3436
+ },
+ "look3_gloves_dualblade_normal": {
+  "tris": 1152,
+  "parts": 4,
+  "maxMeshTris": 320
+ },
+ "look3_gloves_dualblade_rare": {
+  "tris": 1232,
+  "parts": 4,
+  "maxMeshTris": 360
+ },
+ "look3_gloves_dualblade_epic": {
+  "tris": 1296,
+  "parts": 4,
+  "maxMeshTris": 360
+ },
+ "look3_gloves_dualblade_legendary": {
+  "tris": 1416,
+  "parts": 4,
+  "maxMeshTris": 420
+ },
+ "look3_gloves_dualblade_relic": {
+  "tris": 1544,
+  "parts": 4,
+  "maxMeshTris": 420
+ },
+ "look3_gloves_dualblade_ancient": {
+  "tris": 1608,
+  "parts": 4,
+  "maxMeshTris": 452
+ },
+ "look3_gloves_dualblade_primordial": {
+  "tris": 1720,
+  "parts": 4,
+  "maxMeshTris": 508
+ },
+ "look3_gloves_dualblade_transcendent": {
+  "tris": 1752,
+  "parts": 4,
+  "maxMeshTris": 488
+ },
+ "look3_shoes_dualblade_normal": {
+  "tris": 992,
+  "parts": 4,
+  "maxMeshTris": 364
+ },
+ "look3_shoes_dualblade_rare": {
+  "tris": 1016,
+  "parts": 4,
+  "maxMeshTris": 364
+ },
+ "look3_shoes_dualblade_epic": {
+  "tris": 1144,
+  "parts": 4,
+  "maxMeshTris": 428
+ },
+ "look3_shoes_dualblade_legendary": {
+  "tris": 1264,
+  "parts": 4,
+  "maxMeshTris": 468
+ },
+ "look3_shoes_dualblade_relic": {
+  "tris": 1464,
+  "parts": 4,
+  "maxMeshTris": 568
+ },
+ "look3_shoes_dualblade_ancient": {
+  "tris": 1528,
+  "parts": 4,
+  "maxMeshTris": 568
+ },
+ "look3_shoes_dualblade_primordial": {
+  "tris": 1656,
+  "parts": 4,
+  "maxMeshTris": 632
+ },
+ "look3_shoes_dualblade_transcendent": {
+  "tris": 1728,
+  "parts": 4,
+  "maxMeshTris": 668
+ },
+ "look3_armor_bow_normal": {
+  "tris": 1362,
+  "parts": 2,
+  "maxMeshTris": 1174
+ },
+ "look3_armor_bow_rare": {
+  "tris": 1562,
+  "parts": 2,
+  "maxMeshTris": 1354
+ },
+ "look3_armor_bow_epic": {
+  "tris": 1862,
+  "parts": 2,
+  "maxMeshTris": 1654
+ },
+ "look3_armor_bow_legendary": {
+  "tris": 2242,
+  "parts": 2,
+  "maxMeshTris": 1922
+ },
+ "look3_armor_bow_relic": {
+  "tris": 2406,
+  "parts": 2,
+  "maxMeshTris": 2086
+ },
+ "look3_armor_bow_ancient": {
+  "tris": 2678,
+  "parts": 2,
+  "maxMeshTris": 2258
+ },
+ "look3_armor_bow_primordial": {
+  "tris": 3026,
+  "parts": 2,
+  "maxMeshTris": 2594
+ },
+ "look3_armor_bow_transcendent": {
+  "tris": 3010,
+  "parts": 2,
+  "maxMeshTris": 2518
+ },
+ "look3_gloves_bow_normal": {
+  "tris": 1152,
+  "parts": 4,
+  "maxMeshTris": 320
+ },
+ "look3_gloves_bow_rare": {
+  "tris": 1232,
+  "parts": 4,
+  "maxMeshTris": 360
+ },
+ "look3_gloves_bow_epic": {
+  "tris": 1296,
+  "parts": 4,
+  "maxMeshTris": 360
+ },
+ "look3_gloves_bow_legendary": {
+  "tris": 1416,
+  "parts": 4,
+  "maxMeshTris": 420
+ },
+ "look3_gloves_bow_relic": {
+  "tris": 1544,
+  "parts": 4,
+  "maxMeshTris": 420
+ },
+ "look3_gloves_bow_ancient": {
+  "tris": 1608,
+  "parts": 4,
+  "maxMeshTris": 452
+ },
+ "look3_gloves_bow_primordial": {
+  "tris": 1720,
+  "parts": 4,
+  "maxMeshTris": 508
+ },
+ "look3_gloves_bow_transcendent": {
+  "tris": 1752,
+  "parts": 4,
+  "maxMeshTris": 488
+ },
+ "look3_shoes_bow_normal": {
+  "tris": 992,
+  "parts": 4,
+  "maxMeshTris": 364
+ },
+ "look3_shoes_bow_rare": {
+  "tris": 1016,
+  "parts": 4,
+  "maxMeshTris": 364
+ },
+ "look3_shoes_bow_epic": {
+  "tris": 1144,
+  "parts": 4,
+  "maxMeshTris": 428
+ },
+ "look3_shoes_bow_legendary": {
+  "tris": 1264,
+  "parts": 4,
+  "maxMeshTris": 468
+ },
+ "look3_shoes_bow_relic": {
+  "tris": 1464,
+  "parts": 4,
+  "maxMeshTris": 568
+ },
+ "look3_shoes_bow_ancient": {
+  "tris": 1528,
+  "parts": 4,
+  "maxMeshTris": 568
+ },
+ "look3_shoes_bow_primordial": {
+  "tris": 1656,
+  "parts": 4,
+  "maxMeshTris": 632
+ },
+ "look3_shoes_bow_transcendent": {
+  "tris": 1728,
+  "parts": 4,
+  "maxMeshTris": 668
+ },
+ "look3_armor_healer_normal": {
+  "tris": 1594,
+  "parts": 2,
+  "maxMeshTris": 1382
+ },
+ "look3_armor_healer_rare": {
+  "tris": 1844,
+  "parts": 2,
+  "maxMeshTris": 1632
+ },
+ "look3_armor_healer_epic": {
+  "tris": 2244,
+  "parts": 2,
+  "maxMeshTris": 2032
+ },
+ "look3_armor_healer_legendary": {
+  "tris": 2676,
+  "parts": 2,
+  "maxMeshTris": 2360
+ },
+ "look3_armor_healer_relic": {
+  "tris": 2940,
+  "parts": 2,
+  "maxMeshTris": 2624
+ },
+ "look3_armor_healer_ancient": {
+  "tris": 3208,
+  "parts": 2,
+  "maxMeshTris": 2892
+ },
+ "look3_armor_healer_primordial": {
+  "tris": 4016,
+  "parts": 2,
+  "maxMeshTris": 3688
+ },
+ "look3_armor_healer_transcendent": {
+  "tris": 3908,
+  "parts": 2,
+  "maxMeshTris": 3520
+ },
+ "look3_gloves_healer_normal": {
+  "tris": 1152,
+  "parts": 4,
+  "maxMeshTris": 320
+ },
+ "look3_gloves_healer_rare": {
+  "tris": 1232,
+  "parts": 4,
+  "maxMeshTris": 360
+ },
+ "look3_gloves_healer_epic": {
+  "tris": 1296,
+  "parts": 4,
+  "maxMeshTris": 360
+ },
+ "look3_gloves_healer_legendary": {
+  "tris": 1416,
+  "parts": 4,
+  "maxMeshTris": 420
+ },
+ "look3_gloves_healer_relic": {
+  "tris": 1544,
+  "parts": 4,
+  "maxMeshTris": 420
+ },
+ "look3_gloves_healer_ancient": {
+  "tris": 1608,
+  "parts": 4,
+  "maxMeshTris": 452
+ },
+ "look3_gloves_healer_primordial": {
+  "tris": 1720,
+  "parts": 4,
+  "maxMeshTris": 508
+ },
+ "look3_gloves_healer_transcendent": {
+  "tris": 1752,
+  "parts": 4,
+  "maxMeshTris": 488
+ },
+ "look3_shoes_healer_normal": {
+  "tris": 992,
+  "parts": 4,
+  "maxMeshTris": 364
+ },
+ "look3_shoes_healer_rare": {
+  "tris": 1016,
+  "parts": 4,
+  "maxMeshTris": 364
+ },
+ "look3_shoes_healer_epic": {
+  "tris": 1144,
+  "parts": 4,
+  "maxMeshTris": 428
+ },
+ "look3_shoes_healer_legendary": {
+  "tris": 1264,
+  "parts": 4,
+  "maxMeshTris": 468
+ },
+ "look3_shoes_healer_relic": {
+  "tris": 1464,
+  "parts": 4,
+  "maxMeshTris": 568
+ },
+ "look3_shoes_healer_ancient": {
+  "tris": 1528,
+  "parts": 4,
+  "maxMeshTris": 568
+ },
+ "look3_shoes_healer_primordial": {
+  "tris": 1656,
+  "parts": 4,
+  "maxMeshTris": 632
+ },
+ "look3_shoes_healer_transcendent": {
+  "tris": 1728,
+  "parts": 4,
+  "maxMeshTris": 668
+ }
+}

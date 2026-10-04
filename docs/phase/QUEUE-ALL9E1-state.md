@@ -28,8 +28,8 @@
 | + | LOOK1 장비 마감 | LOOK2로 대체 | | 0번 조사만 함(docs/design/look1-survey.md) |
 | + | LOOK2 장비 마감 + 색 배치 + 바닥층 · 토글(상한 7h) | 완료 · 판정 받음(→ LOOK3) | 781c8c37 · 6530ea2b · (보고서 커밋) | 보고서 docs/phase/QUEUE-ALL9E1-LOOK2-report.md(맨 위 판정 4건) · 저장 v73 · 리뷰어 2회(결함 1건 반영) |
 | A | LOOK2 · P3 판정 기록 + 캐주얼 남는 골드 재측정 | 완료 | (이 커밋) | 남는 골드 캐주얼 0.01h(≤ 6h 통과) · EconSim 초월 +1 ~ +5 칸 즉시 납입으로 고침(25,300 영향 ±1.2%) · run_all 전부 |
-| B | LOOK3 3D를 아이콘 수준으로(상한 8h) | 진행 중 | | |
-| C | 아이콘 다시 굽기 · 비교 시트(B 뒤) | 대기 | | |
+| B | LOOK3 3D를 아이콘 수준으로(상한 8h) | 완료 · 사용자 판정 대기 | (이 커밋) | 보고서 docs/phase/QUEUE-ALL9E1-LOOK3-report.md(맨 위 판정 4건) · 등급 메시 96 · 1벌 11파트 · 최대 7,760삼각형 · 색 지도 + 발광 마스크 164 업로드 · LOD 2단 · gear_v3 10/10 · run_all 전부 |
+| C | 아이콘 다시 굽기 · 비교 시트(B 뒤) | 완료 · 사용자 선택 대기 | (이 커밋) | roblox/art/icons/gear_v3_look3 96장(업로드 · 연결 안 함) · 시트 docs/art/ref/compare/icons-look3-vs-current.png · 추천 = 갑옷만 교체 |
 
 ## 정지 기록(2026-10-04 · 사용자 "지금 하는 항목까지만 마치고 멈춰")
 
@@ -44,6 +44,7 @@
 - 블록 1-1 나머지 · 1-2(착용 통과 시험 · 시안 비교 캡처) · 블록 2(보석 광채 · 초월 무기 이펙트 · 홈 광원) · 블록 3(아이콘 128 + 추가 항목: 보석 홈 화면 무기 그림 · 512 무기 · 보석 아이콘) · 블록 4(보고서 QUEUE-ALL9E1-report.md).
 
 ### 다음에 할 첫 작업
+- (10-04 밤 LOOK3 뒤) LOOK3 보고서 맨 위 판정 4건(충분한가 · 어깨 UpperTorso · 아이콘 선택 · 프레임 측정)을 받은 뒤 원래 순서: 1-2 남은 부분 → 2 → 3(+보석 홈) → 4 → ADD F → MENU2. Play 촬영 요령(LOOK3): 더미 = 서버에서 ModelStreamingMode Persistent를 부모 연결 전에(아니면 클라에 몸이 안 옴) · y 2300 공중 바닥판 · 클라 ScreenGui 전부 끔 · LOOK2 비교 = 서버 ReplicatedStorage:SetAttribute("GearV3Look3", false).
 - (10-04 밤 LOOK2 뒤) LOOK2 판정(보고서 맨 위 4건 - 특히 어깨 재모델 · 블록 3 아이콘 다시 굽기)을 받은 뒤 1-2 남은 것(달리기 · 공격 · 활강 freeze 캡처 · 레이어드 옷 착용 시험 · 시안 비교 docs/art/ref/compare/) → 블록 2 → 3 → 4 → ADD F → MENU2. 판정 전이면 1-2 남은 것부터(LOOK2 판정에 영향 없는 부분).
 - Play 요령(LOOK2): 출석 · 시즌판 · 상점 · 메인 메뉴 Gui를 끄고 시작 · 장비창 버튼은 moveTo 뒤 클릭(첫 클릭이 먹히지 않는 경우) · 폰 배치 = DebugInventoryScreen(800,360) + ForceTouchLayout · 레이어드 옷 시험 에셋 = 재킷 9039676988 · 바지 9180004944(공개 아바타 33의 장신구만).
 - (이전 기록) 1-1 완료 → 짧은 작업 2건(불씨 · class_legend) 커밋 → 1-2 착용 통과 시험(4직업 × Grip 3각도 · 달리기 · 공격 · 활강 · 체형 0.8/1.35 · 레이어드 옷 · 시안 비교 docs/art/ref/compare/). Play 더미 = 서버 execute_luau로 R15 모델 + Attribute ArmorWearDummy · ClassId · ArmorLook_<부위>="tierN|등급"(바꾼 직후 1 ~ 2초는 메시 로딩으로 검게 보임) · 카메라 = 클라 BindToRenderStep.

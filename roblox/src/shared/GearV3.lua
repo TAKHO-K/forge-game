@@ -106,6 +106,27 @@ function GearV3.surfaceFor(key, pieceName, grade)
 	return template and template:Clone() or nil
 end
 
+-- QUEUE-ALL9E1 LOOK3: 스위치(데이터 · Studio Attribute GearV3Look3가 덮음) · 메시 키 · 색 지도 템플릿(GearV3Look3 폴더 - 없으면 nil)
+function GearV3.look3Enabled()
+	if RunService:IsStudio() then
+		local override = ReplicatedStorage:GetAttribute("GearV3Look3")
+		if type(override) == "boolean" then
+			return override
+		end
+	end
+	return GearV3Data.look3 and GearV3Data.look3.enabled == true
+end
+
+function GearV3.look3Key(slot, classId, grade)
+	return ("look3_%s_%s_%s"):format(slot, tostring(classId), tostring(grade))
+end
+
+function GearV3.look3Surface(key)
+	local folder = ReplicatedStorage:FindFirstChild("Shared") and ReplicatedStorage.Shared:FindFirstChild("GearV3Look3")
+	local template = folder and folder:FindFirstChild(key)
+	return template and template:Clone() or nil
+end
+
 -- 무기 구역 색(세트 없음): 날 · 몸(Body) = 강철에 등급 메인을 조금(weaponBodyTint) · 태초 = 백색 금속 · 초월 = 흑요석(보라 금지 - 5절 ⑤)
 --   Trim = 등급 메인(가드 · 장식) · Inner = 손잡이(어두운 - 태초 · 초월은 흑요석 그늘) · CoreGem = 등급 보석(없으면 밝은) · Float · Crack = Neon
 function GearV3.weaponColor(pieceName, grade)
