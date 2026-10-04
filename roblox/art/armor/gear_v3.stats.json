@@ -1,0 +1,548 @@
+{
+ "armor": {
+  "armor_greatsword_s1": {
+   "tris": 736,
+   "parts": 10,
+   "visibleParts": 10,
+   "coreGem": 0,
+   "float": 0
+  },
+  "armor_greatsword_s2": {
+   "tris": 958,
+   "parts": 13,
+   "visibleParts": 13,
+   "coreGem": 0,
+   "float": 0
+  },
+  "armor_greatsword_s3": {
+   "tris": 1246,
+   "parts": 13,
+   "visibleParts": 13,
+   "coreGem": 0,
+   "float": 0
+  },
+  "armor_greatsword_s4": {
+   "tris": 1488,
+   "parts": 17,
+   "visibleParts": 14,
+   "coreGem": 72,
+   "float": 6
+  },
+  "armor_greatsword_s5": {
+   "tris": 1452,
+   "parts": 17,
+   "visibleParts": 15,
+   "coreGem": 96,
+   "float": 18
+  },
+  "gloves_greatsword_s1": {
+   "tris": 360,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "gloves_greatsword_s2": {
+   "tris": 360,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "gloves_greatsword_s3": {
+   "tris": 424,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "gloves_greatsword_s4": {
+   "tris": 424,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "gloves_greatsword_s5": {
+   "tris": 424,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "shoes_greatsword_s1": {
+   "tris": 488,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "shoes_greatsword_s2": {
+   "tris": 488,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "shoes_greatsword_s3": {
+   "tris": 488,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "shoes_greatsword_s4": {
+   "tris": 488,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "shoes_greatsword_s5": {
+   "tris": 488,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "armor_dualblade_s1": {
+   "tris": 592,
+   "parts": 7,
+   "visibleParts": 7,
+   "coreGem": 0,
+   "float": 0
+  },
+  "armor_dualblade_s2": {
+   "tris": 814,
+   "parts": 12,
+   "visibleParts": 12,
+   "coreGem": 0,
+   "float": 0
+  },
+  "armor_dualblade_s3": {
+   "tris": 1102,
+   "parts": 12,
+   "visibleParts": 12,
+   "coreGem": 0,
+   "float": 0
+  },
+  "armor_dualblade_s4": {
+   "tris": 1350,
+   "parts": 16,
+   "visibleParts": 13,
+   "coreGem": 72,
+   "float": 12
+  },
+  "armor_dualblade_s5": {
+   "tris": 1302,
+   "parts": 16,
+   "visibleParts": 14,
+   "coreGem": 96,
+   "float": 36
+  },
+  "gloves_dualblade_s1": {
+   "tris": 448,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "gloves_dualblade_s2": {
+   "tris": 448,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "gloves_dualblade_s3": {
+   "tris": 448,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "gloves_dualblade_s4": {
+   "tris": 448,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "gloves_dualblade_s5": {
+   "tris": 448,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "shoes_dualblade_s1": {
+   "tris": 344,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "shoes_dualblade_s2": {
+   "tris": 344,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "shoes_dualblade_s3": {
+   "tris": 408,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "shoes_dualblade_s4": {
+   "tris": 408,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "shoes_dualblade_s5": {
+   "tris": 408,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "armor_bow_s1": {
+   "tris": 540,
+   "parts": 9,
+   "visibleParts": 9,
+   "coreGem": 0,
+   "float": 0
+  },
+  "armor_bow_s2": {
+   "tris": 762,
+   "parts": 12,
+   "visibleParts": 12,
+   "coreGem": 0,
+   "float": 0
+  },
+  "armor_bow_s3": {
+   "tris": 1050,
+   "parts": 12,
+   "visibleParts": 12,
+   "coreGem": 0,
+   "float": 0
+  },
+  "armor_bow_s4": {
+   "tris": 1302,
+   "parts": 16,
+   "visibleParts": 13,
+   "coreGem": 72,
+   "float": 16
+  },
+  "armor_bow_s5": {
+   "tris": 1286,
+   "parts": 16,
+   "visibleParts": 14,
+   "coreGem": 96,
+   "float": 48
+  },
+  "gloves_bow_s1": {
+   "tris": 288,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "gloves_bow_s2": {
+   "tris": 288,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "gloves_bow_s3": {
+   "tris": 352,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "gloves_bow_s4": {
+   "tris": 352,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "gloves_bow_s5": {
+   "tris": 352,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "shoes_bow_s1": {
+   "tris": 360,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "shoes_bow_s2": {
+   "tris": 360,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "shoes_bow_s3": {
+   "tris": 424,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "shoes_bow_s4": {
+   "tris": 424,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "shoes_bow_s5": {
+   "tris": 424,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "armor_healer_s1": {
+   "tris": 712,
+   "parts": 10,
+   "visibleParts": 10,
+   "coreGem": 0,
+   "float": 0
+  },
+  "armor_healer_s2": {
+   "tris": 934,
+   "parts": 13,
+   "visibleParts": 13,
+   "coreGem": 0,
+   "float": 0
+  },
+  "armor_healer_s3": {
+   "tris": 1222,
+   "parts": 13,
+   "visibleParts": 13,
+   "coreGem": 0,
+   "float": 0
+  },
+  "armor_healer_s4": {
+   "tris": 1490,
+   "parts": 17,
+   "visibleParts": 14,
+   "coreGem": 72,
+   "float": 32
+  },
+  "armor_healer_s5": {
+   "tris": 1474,
+   "parts": 17,
+   "visibleParts": 15,
+   "coreGem": 96,
+   "float": 64
+  },
+  "gloves_healer_s1": {
+   "tris": 288,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "gloves_healer_s2": {
+   "tris": 288,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "gloves_healer_s3": {
+   "tris": 352,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "gloves_healer_s4": {
+   "tris": 352,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "gloves_healer_s5": {
+   "tris": 352,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "shoes_healer_s1": {
+   "tris": 376,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "shoes_healer_s2": {
+   "tris": 376,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "shoes_healer_s3": {
+   "tris": 440,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "shoes_healer_s4": {
+   "tris": 440,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "shoes_healer_s5": {
+   "tris": 440,
+   "parts": 4,
+   "visibleParts": 4,
+   "coreGem": 0,
+   "float": 0
+  },
+  "emblem_stone": {
+   "tris": 44,
+   "parts": 1,
+   "visibleParts": 1,
+   "coreGem": 0,
+   "float": 0
+  },
+  "emblem_crystal": {
+   "tris": 32,
+   "parts": 1,
+   "visibleParts": 1,
+   "coreGem": 0,
+   "float": 0
+  },
+  "emblem_shell": {
+   "tris": 48,
+   "parts": 1,
+   "visibleParts": 1,
+   "coreGem": 0,
+   "float": 0
+  },
+  "emblem_sun": {
+   "tris": 140,
+   "parts": 1,
+   "visibleParts": 1,
+   "coreGem": 0,
+   "float": 0
+  },
+  "emblem_storm": {
+   "tris": 40,
+   "parts": 1,
+   "visibleParts": 1,
+   "coreGem": 0,
+   "float": 0
+  },
+  "emblem_frost": {
+   "tris": 108,
+   "parts": 1,
+   "visibleParts": 1,
+   "coreGem": 0,
+   "float": 0
+  }
+ },
+ "weapons": {
+  "greatsword_s1": {
+   "tris": 450,
+   "parts": 4
+  },
+  "greatsword_s2": {
+   "tris": 514,
+   "parts": 5
+  },
+  "greatsword_s3": {
+   "tris": 542,
+   "parts": 6
+  },
+  "greatsword_s4": {
+   "tris": 550,
+   "parts": 7
+  },
+  "greatsword_s5": {
+   "tris": 787,
+   "parts": 13
+  },
+  "dualblade_s1": {
+   "tris": 322,
+   "parts": 4
+  },
+  "dualblade_s2": {
+   "tris": 402,
+   "parts": 5
+  },
+  "dualblade_s3": {
+   "tris": 494,
+   "parts": 6
+  },
+  "dualblade_s4": {
+   "tris": 446,
+   "parts": 7
+  },
+  "dualblade_s5": {
+   "tris": 647,
+   "parts": 12
+  },
+  "bow_s1": {
+   "tris": 432,
+   "parts": 5
+  },
+  "bow_s2": {
+   "tris": 568,
+   "parts": 6
+  },
+  "bow_s3": {
+   "tris": 668,
+   "parts": 8
+  },
+  "bow_s4": {
+   "tris": 624,
+   "parts": 9
+  },
+  "bow_s5": {
+   "tris": 796,
+   "parts": 14
+  },
+  "healer_s1": {
+   "tris": 398,
+   "parts": 5
+  },
+  "healer_s2": {
+   "tris": 516,
+   "parts": 6
+  },
+  "healer_s3": {
+   "tris": 658,
+   "parts": 6
+  },
+  "healer_s4": {
+   "tris": 634,
+   "parts": 7
+  },
+  "healer_s5": {
+   "tris": 794,
+   "parts": 11
+  }
+ }
+}

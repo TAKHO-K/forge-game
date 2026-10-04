@@ -19,8 +19,10 @@
 ## 추가 항목(10-04 밤) - 보석 홈 화면 무기 그림 · 512 무기 · 보석 아이콘
 - 아이콘 블록(3)이 아직이라 블록 3에 합쳐 진행(상한 2.5h) · 원문 = 지시 파일 끝 "추가 항목(10-04 밤)".
 
+| 1 | 1-1 장비 v3 메시 | 진행 중 | (이 커밋) | make_gear_v3.py(60 + 문장 6 + 무기 20 생성 · 예산 안 - 방어구 최대 1,490 · 무기 최대 796 · 보이는 파트 최대 15) · GearV3Data · 아직 FBX 내보내기 · 업로드 · 게임 연결(ArmorWearView · 색 함수 · 스위치 GearV3Meshes) · 캡처 안 함 |
+
 ## 다음 항목
-블록 1(장비 v3 메시 · make_gear_v3.py · GearV3Data 있음)
+블록 1-1 이어서: ① `bash roblox/tools/blender/bl.sh make_gear_v3.py --weapons --emblems --export`(armor_wear.meta.json 합침 → meta_to_luau) ② 렌더 확인(--render) ③ upload.py 업로드(armor/*_s[1-5].fbx · emblem_* · weapons/*_s[1-5].fbx) ④ 클라 ArmorWearView: GearV3Meshes 켬 = armor/<부위>_<직업>_<단계> · 색 = 구역(GearV3Data + ItemVisualData) · 문(Ep · Re · An · Tr) 파트는 그 등급만 · 문장 메시 ⑤ 48조합 예약 색 하네스 ⑥ Play 캡처. 남은 블록 = 1-2 · 2 · 3(+ 추가 항목) · 4 → ADD F → MENU2
 
 ## 결정 기록
 - 0-1: 옵션 A(회복 보조 없음) - 기록만.
