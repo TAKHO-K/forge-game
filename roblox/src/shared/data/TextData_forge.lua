@@ -122,6 +122,7 @@ return {
 		["transcend.inherit.slotAuto"] = "태초 홈이 초월 홈으로 바뀝니다(박힌 보석은 그대로).", -- QUEUE-ALL9E1-ADD B1
 		["transcend.inherit.slotNew"] = "보석 홈이 없어 새 홈 1개를 열어 초월 홈으로 만듭니다.", -- B3
 		["transcend.inherit.slotPickTitle"] = "초월 홈 고르기", -- B3 환생 0회
+		["transcend.inherit.slotPickNote"] = "다음 창에서 초월 홈으로 바꿀 홈을 고릅니다(박힌 보석은 그대로).",
 		["transcend.inherit.slotPick"] = "{slot}번 홈({gem})을 초월 홈으로 만들까요?\n초월 홈에는 초월 보석까지 넣을 수 있고, 박힌 보석은 그대로 남습니다.",
 		["transcend.inherit.slotEmpty"] = "빈 홈",
 		["transcend.inherit.slotThis"] = "이 홈으로",
@@ -353,6 +354,7 @@ return {
 		["transcend.inherit.slotAuto"] = "Your Primordial socket becomes a Transcendent socket (socketed gems stay).",
 		["transcend.inherit.slotNew"] = "You have no sockets, so a new one opens as a Transcendent socket.",
 		["transcend.inherit.slotPickTitle"] = "Choose a Transcendent Socket",
+		["transcend.inherit.slotPickNote"] = "Next, choose which socket becomes Transcendent (socketed gems stay).",
 		["transcend.inherit.slotPick"] = "Make socket {slot} ({gem}) a Transcendent socket?\nIt can hold up to a Transcendent gem, and the socketed gem stays.",
 		["transcend.inherit.slotEmpty"] = "empty",
 		["transcend.inherit.slotThis"] = "This socket",

@@ -188,7 +188,7 @@ function TranscendView.build(parent, width, pad, footerHeight, buttonY, resultY,
 			return
 		end
 		local pick = prep.slotPick -- QUEUE-ALL9E1-ADD B3: 환생 0회 = 초월 홈 고르기 · 홈 없음 = 새 홈 / 환생 1회 이상 = 태초 홈 자동 전환(B1)
-		local slotLine = Text.get(pick == nil and "transcend.inherit.slotAuto" or pick.new and "transcend.inherit.slotNew" or "transcend.inherit.slotPickTitle")
+		local slotLine = Text.get(pick == nil and "transcend.inherit.slotAuto" or pick.new and "transcend.inherit.slotNew" or "transcend.inherit.slotPickNote")
 		local args = { level = tostring(prep.fromLevel), mult = ("%.2f"):format(prep.weaponMultiplier), n = tostring(prep.rewardGems),
 			mark = Text.get(prep.mark and "transcend.inherit.markYes" or "transcend.inherit.markNo") .. "\n" .. slotLine } -- 0-2: +29 = 증표 없음 안내
 		Confirm.ask({ title = Text.get("transcend.inherit.title"), body = Text.get("transcend.inherit.confirm1", args), primaryText = Text.get("transcend.inherit.next"),
