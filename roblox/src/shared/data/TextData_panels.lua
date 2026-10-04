@@ -364,7 +364,7 @@ return {
 		["ui.class.confirmChecking"] = "Switching to {class}...\nChecking",
 		["ui.class.confirmContinue"] = "Switching to {class}.\nContinues at Lv.{level} · best stage {stage}.",
 		["ui.class.confirmFresh"] = "Switching to {class}.\nStarts at Lv.1. Gold and bag are kept.",
-		["ui.class.row"] = "{class}   ATK {atk}x / DEF {def}x / SPD {speed}x",
+		["ui.class.row"] = "{class}   Attack {atk}x / Defense {def}x / Speed {speed}x",
 		["ui.class.reopen"] = "Class",
 		["ui.panel.menu.inventory"] = "Bag",
 		["ui.panel.menu.character"] = "Character",

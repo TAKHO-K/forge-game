@@ -38,7 +38,7 @@ local TextData = {
 		["inv.bag.count"] = "칸 {used} / {total}",
 		["inv.cmp.stat.armor"] = "방어력",
 		["inv.cmp.stat.gloves"] = "공격력",
-		["inv.cmp.stat.shoes"] = "이동 · 공속",
+		["inv.cmp.stat.shoes"] = "이동 속도 · 공격 속도",
 		["inv.cmp.none"] = "▲ 착용 중인 {part} 없음 - 장착하면 그대로 오름",
 		["inv.cmp.same"] = "= {stat} 착용 중과 같음",
 		["inv.cmp.up"] = "▲ {stat} +{value}",
@@ -220,11 +220,11 @@ local TextData = {
 		["help.less"] = "접기 ▲",
 
 		-- C4-3 치명 옵션 툴팁 한 줄(오버치명 전환 - CombatConfig.overCrit)
-		["item.critOverflowNote"] = "치명 확률 100% 초과분은 공격력으로 바뀜",
+		["item.critOverflowNote"] = "치명타 확률 100% 초과분은 공격력으로 바뀜",
 		-- C5-7b 초월 특수 옵션 툴팁 한 줄(TranscendentData - 숫자는 ItemDescribe가 넘긴다)
 		["transcendent.special.phantom"] = "환영: 기본 공격 {chance}% 확률로 환영 추가타 · 3번째마다 강공격",
-		["transcendent.special.frenzy"] = "광폭: 전투 중 이속 · 공속 +{speed}% · 대시 쿨 −{dash}%",
-		["transcendent.special.soar"] = "비상: 공중 강공격 적중 시 공중 행동 초기화(쿨 {cd}초)",
+		["transcendent.special.frenzy"] = "광폭: 전투 중 이동 속도 · 공격 속도 +{speed}% · 대시 쿨타임 −{dash}%",
+		["transcendent.special.soar"] = "비상: 공중 강공격 적중 시 공중 행동 초기화(쿨타임 {cd}초)",
 
 		-- 강화대
 		["enhance.help.short"] = "실패할 때마다 불씨가 차고, 가득 차면 다음 강화는 반드시 성공합니다.",
@@ -563,8 +563,8 @@ local TextData = {
 		["character.toTraining"] = "수련 (U)",
 		["stat.attack"] = "공격력", -- QUEUE-ALL9C 1-2
 		["stat.attackSpeed"] = "공격 속도", -- QUEUE-ALL9C 1-2
-		["stat.critRate"] = "치명 확률", -- QUEUE-ALL9C 1-2
-		["stat.critDmg"] = "치명 피해", -- QUEUE-ALL9C 1-2
+		["stat.critRate"] = "치명타 확률", -- QUEUE-ALL9C 1-2
+		["stat.critDmg"] = "치명타 피해", -- QUEUE-ALL9C 1-2
 		["stat.maxHp"] = "최대 체력", -- QUEUE-ALL9C 1-2
 		["stat.defense"] = "방어력", -- QUEUE-ALL9C 1-2
 		["stat.moveSpeed"] = "이동 속도", -- QUEUE-ALL9C 1-2

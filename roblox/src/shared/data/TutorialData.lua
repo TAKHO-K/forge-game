@@ -80,7 +80,7 @@ TutorialData.steps = {
 		grade = "epic",
 		tierIndex = 3,
 		killTarget = 21,
-		lessonText = "신발(이동+공속%)까지 착용하면 3부위 완성입니다. Q로 스킬을 써보세요.",
+		lessonText = "신발(이동 속도 · 공격 속도 %)까지 착용하면 3부위 완성입니다. Q로 스킬을 써보세요.",
 		grant = { part = "shoes", grade = "epic" },
 		lend = nil,
 		bossPatternKeys = UP_TO_CHARGE,

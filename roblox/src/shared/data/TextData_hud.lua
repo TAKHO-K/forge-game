@@ -126,7 +126,7 @@ return {
 		["hud.party.reconnectBody"] = "Rejoin {name}'s party (Time left {time})",
 		["hud.party.subtitle"] = "{class} · Stage {stage}",
 		["hud.party.awaySubtitle"] = "{away} · {subtitle}",
-		["hud.party.buffChip"] = "✚ DMG +{pct}",
+		["hud.party.buffChip"] = "✚ Damage +{pct}",
 		["hud.party.buffChipShort"] = "✚ +{pct}",
 		["hud.party.expChip"] = "EXP +{percent}%",
 		["hud.party.expChipFriend"] = "EXP +{percent}% · Friend bonus",

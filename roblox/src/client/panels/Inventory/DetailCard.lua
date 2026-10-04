@@ -438,7 +438,11 @@ function DetailCard.build(parent, S)
 			if line then
 				l.Text = line.text
 				l.TextColor3 = line.color or UIColors.textPrimary
-				local h = l.TextSize + 5
+				-- TEXT-FULL(10-05): 풀네임으로 길어진 줄은 자르지 않고 줄바꿈(높이 = 글 높이)
+				l.TextWrapped = true
+				l.TextTruncate = Enum.TextTruncate.None
+				l.TextYAlignment = Enum.TextYAlignment.Top
+				local h = textHeight(line.text, l.TextSize, l.Font, width - 8 - lineX) + 5
 				l.Position = UDim2.new(0, lineX, 0, y)
 				l.Size = UDim2.new(1, -lineX, 0, h)
 				y += h

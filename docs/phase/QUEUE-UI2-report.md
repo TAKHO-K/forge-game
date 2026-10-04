@@ -156,3 +156,89 @@
 ### 남은 것(다음 묶음 작업 - 판단 아님)
 - 03 v2 겉모습 전체 재구성(칸 = 06 칸 틀 9-slice · 탭 6 그림 · 보석 홈 무대 1000×560 + 반원 홈 5 + ViewportFrame 회전 무기 · 폰 분해 = 아래 시트 · 1.3배 폰 가방)은 아직 - 지금 = 옛 가방 화면 + 위 바꾼 것. 캡처 7장(pc_02 ~ 04 · 06 · 폰 5) 남음.
 - 보석 홈 무기 = 512 렌더 아님(장착 무기 아이콘 그림) - "이전 결정"의 512 렌더 원본이 저장소에 없음(icons/weapons = 아이콘 크기) → 확인 필요.
+
+## TEXT-FULL 축약어 → 풀네임(추가 10-05)
+
+원칙: 화면 글자 축약 금지 · 글자 키 id는 그대로 · 값만 바꿈. 찾는 법 = 스크래치 스캐너(`roblox/src` 모든 .lua의 문자열 값 · 주석 · 검증/개발 로그 제외)로 축약어 목록 검색 + 화면 확인.
+
+### 바꾼 것(65곳)
+
+| 파일 | 키 | 옛 글자 | 새 글자 |
+|---|---|---|---|
+| TextData.lua | `inv.cmp.stat.shoes` | 이동 · 공속 | 이동 속도 · 공격 속도 |
+| TextData.lua | `transcendent.special.frenzy` | 이속 · 공속 +{speed}% · 대시 쿨 −{dash}% | 이동 속도 · 공격 속도 +{speed}% · 대시 쿨타임 −{dash}% |
+| TextData.lua | `transcendent.special.soar` | (쿨 {cd}초) | (쿨타임 {cd}초) |
+| TextData_inv.lua | `gear.gem.valueCrit` | 치확+{rate}%p 치피+{dmg} | 치명타 확률 +{rate}%p · 치명타 피해 +{dmg} |
+| TextData_inv.lua | `gear.gem.valueCrit` | Crit +{rate}% · Crit DMG +{dmg} | Critical Hit Chance +{rate}% · Critical Damage +{dmg} |
+| TextData_shared.lua | `desc.item.critRate` | 치확 {value}%p | 치명타 확률 {value}%p |
+| TextData_shared.lua | `desc.item.critDmg` | 치피 {value} | 치명타 피해 {value} |
+| TextData_shared.lua | `desc.item.meta.shoes` | 이동+공속 +{value}% | 이동 속도 · 공격 속도 +{value}% |
+| TextData_shared.lua | `desc.cmp.base.shoes` | 이동+공속 +{value}% | 이동 속도 · 공격 속도 +{value}% |
+| TextData_shared.lua | `desc.skill.label.expected` | Est. DMG | Expected Damage |
+| TextData_shared.lua | `desc.skill.label.crit` | "Crit" | "Critical Hit" |
+| TextData_shared.lua | `desc.skill.label.finalDmg` | Final DMG | Final Damage |
+| TextData_shared.lua | `desc.skill.critInfo` | Crit chance {rate} · Crit damage ×{dmg} | Critical Hit Chance {rate} · Critical Damage ×{dmg} |
+| TextData_shared.lua | `desc.skill.dmg` | Crit {crit} | Critical Hit {crit} |
+| TextData_shared.lua | `desc.skill.dmgMulti` | Crit {crit} | Critical Hit {crit} |
+| TextData_shared.lua | `desc.skill.dash.effect` | Crit chance +{crit} | Critical Hit Chance +{crit} |
+| TextData_shared.lua | `desc.skill.heal.shield` | Crit ×{crit} | Critical Hit ×{crit} |
+| TextData_shared.lua | `desc.skill.heal.amount` | Crit ×{crit} | Critical Hit ×{crit} |
+| TextData_shared.lua | `desc.skill.crit.summon` | Crit chance over 100% gives crit damage +{bonus} | Critical Hit Chance over 100% gives Critical Damage +{bonus} |
+| TextData_shared.lua | `desc.item.critRate` | Crit {value}% | Critical Hit Chance {value}% |
+| TextData_shared.lua | `desc.item.critDmg` | Crit DMG {value} | Critical Damage {value} |
+| TextData_shared.lua | `desc.item.meta.shoes` | Move+Atk Speed +{value}% | Move Speed · Attack Speed +{value}% |
+| TextData_shared.lua | `desc.cmp.base.shoes` | Move+Atk Speed +{value}% | Move Speed · Attack Speed +{value}% |
+| TextData_en.lua | `inv.axis.finalDamage` | Final DMG | Final Damage |
+| TextData_en.lua | `inv.axis.crit` | "Crit" | "Critical" |
+| TextData_en.lua | `inv.axis.healingPower` | "Regen" | "Regeneration" |
+| TextData_en.lua | `inv.cmp.stat.shoes` | Move · Atk Speed | Move Speed · Attack Speed |
+| TextData_en.lua | `nameplate.mob.stats` | ATK {attack} | Attack {attack} |
+| TextData_en.lua | `item.critOverflowNote` | Crit chance over 100% | Critical Hit Chance over 100% |
+| TextData_en.lua | `stat.critRate` | Crit Chance | Critical Hit Chance |
+| TextData_en.lua | `stat.critDmg` | Crit Damage | Critical Damage |
+| TextData_forge.lua | `forge.inherit.stat.critRate` | Crit Rate | Critical Hit Chance |
+| TextData_forge.lua | `forge.inherit.stat.critDmg` | Crit DMG | Critical Damage |
+| TextData_hud.lua | `hud.party.buffChip` | ✚ DMG +{pct} | ✚ Damage +{pct} |
+| TextData_names.lua | `위력` | ["치명"] = "Crit" | ["치명"] = "Critical" |
+| TextData_names.lua | `위력` | ["재생"] = "Regen" | ["재생"] = "Regeneration" |
+| TextData_panels.lua | `ui.class.row` | ATK {atk}x / DEF {def}x / SPD {speed}x | Attack {atk}x / Defense {def}x / Speed {speed}x |
+| TutorialData.lua | `83행` | 신발(이동+공속%) | 신발(이동 속도 · 공격 속도 %) |
+| TextData_shared.lua | `desc.skill.desc.dash` | 평타 | 기본 공격 |
+| TextData_shared.lua | `desc.skill.desc.summon` | 평타 | 기본 공격 |
+| TextData_shared.lua | `desc.skill.desc.toggle` | 평타 | 기본 공격 |
+| TextData_shared.lua | `desc.skill.dash.effect` | 평타 | 기본 공격 |
+| TextData_shared.lua | `desc.skill.dash.dmg` | 평타 | 기본 공격 |
+| TextData_shared.lua | `desc.skill.toggle.effect` | 평타 | 기본 공격 |
+| TextData_shared.lua | `desc.skill.act.dash` | 평타 | 기본 공격 |
+| TextData_shared.lua | `desc.skill.crit.basic` | 평타 | 기본 공격 |
+| TextData_shared.lua | `desc.skill.final.arrow` | 평타 | 기본 공격 |
+| TextData_shared.lua | `desc.skill.final.basic` | 평타 | 기본 공격 |
+| TextData_shared.lua | `desc.skill.healMode.off` | 평타 | 기본 공격 |
+| TextData_shared.lua | `desc.skill.rule.circle` | 평타 | 기본 공격 |
+| TextData_shared.lua | `desc.skill.rule.dash` | 평타 | 기본 공격 |
+| TextData.lua | `item.critOverflowNote` | 치명 확률 / 치명 피해 | 치명타 확률 / 치명타 피해 |
+| TextData.lua | `stat.critRate` | 치명 확률 / 치명 피해 | 치명타 확률 / 치명타 피해 |
+| TextData.lua | `stat.critDmg` | 치명 확률 / 치명 피해 | 치명타 확률 / 치명타 피해 |
+| TextData_forge.lua | `forge.inherit.stat.critRate` | 치명 확률 / 치명 피해 | 치명타 확률 / 치명타 피해 |
+| TextData_forge.lua | `forge.inherit.stat.critDmg` | 치명 확률 / 치명 피해 | 치명타 확률 / 치명타 피해 |
+| TextData_shared.lua | `desc.skill.critInfo` | 치명 확률 / 치명 피해 | 치명타 확률 / 치명타 피해 |
+| TextData_shared.lua | `desc.skill.dash.effect` | 치명 확률 / 치명 피해 | 치명타 확률 / 치명타 피해 |
+| TextData_shared.lua | `desc.skill.crit.summon` | 치명 확률 / 치명 피해 | 치명타 확률 / 치명타 피해 |
+| TextData_shared.lua | `desc.skill.rule.selfBuff` | 치명 확률 / 치명 피해 | 치명타 확률 / 치명타 피해 |
+| SkillIconData.lua | `35행` | 치명 확률 / 치명 피해 | 치명타 확률 / 치명타 피해 |
+| SkillIconData.lua | `short.dualblade.q` | 확정 치명을 | 확정 치명타를 |
+| SkillIconData.lua | `short.dualblade.r` | 치명 확률 | 치명타 확률 |
+| SkillIconData.lua | `short.healer.e` | 평타가 | 기본 공격이 |
+| TextData_shared.lua | `desc.skill.summon.effect 외 2` | 확정 치명 | 확정 치명타 |
+
+### 그대로 둔 것(판단 근거)
+- 옵션 · 보석 고유 이름(위력 · 신속 · 치명 · 건강 · 방어 · 성장 · 재생 · 흡혈 / en Might · Haste · Vitality · Guard · Growth · Lifesteal) = 축약이 아니라 이름. 단 en `Crit` · `Regen`은 영어 낱말 축약이라 `Critical` · `Regeneration`으로 바꿈.
+- 게임 단위 HP · Lv · EXP · CP · Gold·EXP = 장르 공용 단위 표기(풀어 쓰면 칸에 안 들어감) → 유지. 바꾸려면 판단 필요.
+- 딜링모드 · 딜러 = 치유사 모드 · 파티 역할 이름(고유 명칭) → 유지. 쿨타임 · 쿨다운 = 낱말 그대로(“쿨” 단독만 쿨타임으로).
+- 보상 아이콘 그림이 없을 때 쓰는 대체 글자(RewardIcons SHORT = G · EXP · 석 · 권 · ES · RT) = 그림 자리표시(ART-AUDIT 대상) → 유지.
+- 개발 로그 · 검증 문장 · 운영 도구 문구(DevTools · *Verify · MovementConfig.moveGuard.legal 검증 출력) = 플레이어 화면 아님 → 유지.
+
+### 잘림 확인(Play)
+- 장비 상세 카드 "착용 중 옵션: 치명타 확률 … · 치명타 피해 …" 줄이 PC에서 …로 잘림 → **DetailCard 글 줄 = 줄바꿈 + 높이 = 글 높이**(다시 축약 안 함 · 옛부터 잘리던 "분해 시 … 판매 시 …" 줄도 같이 해결). 캡처 `claude-design-handoff\_audit	ext-full\pc_detail_compare.png`(상세 + 비교 툴팁).
+- 폰(DebugInventoryScreen 800×302): 아래 시트 상세 줄 잘림 없음 `phone_detail_sheet_debug-screen.png`. 캐릭터 창 상세 능력치(치명타 확률 · 치명타 피해 · 공격 속도 · 이동 속도) TextFits 전부 O `pc_character_stats.png`.
+- **1.3배**: 장비창 · 캐릭터 창 · 비교 툴팁은 옛 `ui/kit/Theme.textSize` 글자라 설정 "글자 크기"(textScale)가 곱해지지 않는다(UiKit v2 화면만 곱함 - UI2-4 보고와 같은 사실). 즉 지금 1.3배에서도 위 1.0 화면과 같다. 이 창들을 v2 글자로 옮기는 일 = UI2-5 2-4(1.3배 폰 가방)에서.

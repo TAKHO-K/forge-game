@@ -17,7 +17,7 @@ local en = {
 	["하락 방지권"] = "Drop Protection Ticket", ["초기화 방지권"] = "Reset Protection Ticket", -- EnhanceConfig.protection
 
 	-- ═══ 옵션 · 세트 축(OptionData · GemData) ═══
-	["위력"] = "Might", ["신속"] = "Haste", ["치명"] = "Crit", ["건강"] = "Vitality", ["방어"] = "Guard", ["성장"] = "Growth", ["재생"] = "Regen", ["흡혈"] = "Lifesteal",
+	["위력"] = "Might", ["신속"] = "Haste", ["치명"] = "Critical", ["건강"] = "Vitality", ["방어"] = "Guard", ["성장"] = "Growth", ["재생"] = "Regeneration", ["흡혈"] = "Lifesteal",
 	-- 보석 특수(GemData)
 	["연속격"] = "Combo Strike", ["속사의 흔적"] = "Rapid Mark", ["심판의 표식"] = "Judgment Mark", ["삼위일체"] = "Trinity",
 	-- 초월 특수(TranscendentData)
