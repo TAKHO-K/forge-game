@@ -129,21 +129,7 @@ local function makeActionButton(order, width, style)
 	stroke.Transparency = look.strokeT
 	stroke.Parent = btn
 	local kind = V2_KIND[style]
-	local image = kind and UiKit.stateImage(kind, "normal")
-	if image then -- 03 v2: 버튼 그림 9-slice(장착 = 노랑 pri 1개 · 각성 = 태초 primal · 나머지 = 남색 보조 sec) - 그림은 버튼 아래 z(글자를 가리지 않게)
-		local c = UiTokens.slice[kind].center
-		local skin = Instance.new("ImageLabel")
-		skin.Name = "Skin"
-		skin.BackgroundTransparency = 1
-		skin.Size = UDim2.fromScale(1, 1)
-		skin.Image = image
-		skin.ScaleType = Enum.ScaleType.Slice
-		skin.SliceCenter = Rect.new(c[1], c[2], c[3], c[4])
-		skin.SliceScale = UiTokens.sliceScale
-		skin.ZIndex = btn.ZIndex
-		skin.Parent = btn
-		btn.ZIndex += 1
-		btn.BackgroundTransparency = 1
+	if kind and UiKit.skin(btn, kind) then -- 03 v2: 버튼 그림 9-slice(장착 = 노랑 pri 1개 · 각성 = 태초 primal · 나머지 = 남색 보조 sec)
 		stroke.Enabled = false
 		btn.TextColor3 = Color3.fromHex(UiTokens.colors[V2_TEXT[kind] or "text.primary"])
 	end

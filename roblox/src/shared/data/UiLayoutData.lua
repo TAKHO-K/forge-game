@@ -138,6 +138,12 @@ return {
 		pc = { headH = 64, line = 4, tabW = 107, tabH = 44, tabGap = 7, rowH = 44, close = 44, cardSlice = true },
 		phone = { headH = 48, line = 4, tabSize = 44, tabGap = 8, close = 44, cardSlice = true },
 		-- 폰 그림 탭(44) 아이콘: ui = UiIconData 아이콘 ID · part = 게임 장비 아이콘(ItemIcons 부위) · gem = 보석 몸통(GemData.iconBodyByGrade 등급)
+		-- 등급 골라 분해(2-2): PC = 가운데 창 640 × 480 · 폰 = 아래 시트(창 폭 · 232). 칩 = ArmorData.gradeOrder 앞 chipGrades개(고를 수 있음 = bulkSellGrades · 나머지 막힘)
+		salvage = {
+			chipGrades = 6,
+			pc = { w = 640, h = 480, pad = 31, titleY = 22, titleH = 40, subH = 48, chipY = 112, chipH = 48, chipGap = 8, chipCols = 3, summaryH = 60, autoH = 32, buttonH = 56, buttonGap = 12 },
+			phone = { w = 784, h = 232, pad = 17, titleY = 6, titleH = 30, subH = 0, chipY = 44, chipH = 44, chipGap = 8, chipCols = 6, summaryH = 52, autoH = 0, buttonH = 48, buttonGap = 10 },
+		},
 		tabIcons = { gear = { part = "weapon" }, all = { ui = "bag" }, armor = { part = "armor" }, gloves = { part = "gloves" }, shoes = { part = "shoes" }, gem = { gem = "legendary" }, codex = { ui = "book" } },
 	},
 }

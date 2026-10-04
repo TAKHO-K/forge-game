@@ -351,23 +351,7 @@ local function makeHeaderPill(text, order, widthPadding, dropdown)
 	if dropdown then
 		addChevron(pill)
 	end
-	local image = V2 and UiKit.stateImage("sec", "normal")
-	if image then -- 03 v2: 보조 버튼 그림(남색 sec 9-slice) - 그림은 버튼 아래 z
-		local c = UiTokens.slice.sec.center
-		local skin = Instance.new("ImageLabel")
-		skin.Name = "Skin"
-		skin.BackgroundTransparency = 1
-		local padL, padR = padding.PaddingLeft.Offset, padding.PaddingRight.Offset -- UIPadding은 자식 크기에도 걸린다 → 그림은 패딩 바깥까지
-		skin.Position = UDim2.fromOffset(-padL, 0)
-		skin.Size = UDim2.new(1, padL + padR, 1, 0)
-		skin.Image = image
-		skin.ScaleType = Enum.ScaleType.Slice
-		skin.SliceCenter = Rect.new(c[1], c[2], c[3], c[4])
-		skin.SliceScale = UiTokens.sliceScale
-		skin.ZIndex = pill.ZIndex
-		skin.Parent = pill
-		pill.ZIndex += 1
-		pill.BackgroundTransparency = 1
+	if V2 and UiKit.skin(pill, "sec", { pad = { padding.PaddingLeft.Offset, padding.PaddingRight.Offset } }) then -- 03 v2: 보조 버튼 그림(남색 sec 9-slice)
 		stroke.Enabled = false
 		pill.TextColor3 = tok("text.primary")
 		local chevron = pill:FindFirstChild("Chevron")

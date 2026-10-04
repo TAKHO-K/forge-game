@@ -9,6 +9,7 @@ local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local Text = require(ReplicatedStorage.Shared.Text)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 local Toast = require(script.Parent.Parent.Parent.ui.kit.Toast)
+local ItemIcons = require(script.Parent.Parent.Parent.ItemIcons) -- 2-2 막힌 등급 칩 자물쇠
 
 -- 일괄판매(S20b: InventoryUI 분할) - 확인 팝업 · 기준 등급 드롭다운. 헤더 버튼(R.bulkSellButton · R.cutoffButton)이 여는 창 안 overlay다.
 local BulkSell = {}
@@ -218,13 +219,17 @@ local function openConfirm()
 		or ""
 	confirmOverlay.Visible = true
 end
-bulkSellButton.Activated:Connect(openConfirm)
+bulkSellButton.Activated:Connect(function()
+	if not R.openSalvageV2 then -- 03 v2 = 등급 골라 분해 창(아래)
+		openConfirm()
+	end
+end)
 
 -- QUEUE-ALL9A 2-2: 서버가 개수가 달라 거부하면(확인 창이 떠 있는 동안 가방이 바뀜) 안내 + 새 개수로 확인 창 다시
 sellRequest.OnClientEvent:Connect(function(action, ok, why)
 	if action == "sellGrades" and not ok and why == "count_mismatch" then
 		Toast.push("TC", { text = Text.get("gear.bulk.changed"), grade = "notice", seconds = 4 })
-		openConfirm()
+		;(R.openSalvageV2 or openConfirm)()
 	end
 end)
 
@@ -450,6 +455,314 @@ player:GetAttributeChangedSignal("BulkSellGrades"):Connect(function() -- QUEUE-A
 		S.rebuildGrid()
 	end
 end)
+
+-- ═══ QUEUE-UI2 UI2-5 2차 2-2: 등급 골라 분해(03 v2) - PC = 가운데 창 640 × 480 · 폰 = 아래에서 올라오는 시트(가로 꽉 · 232) ═══
+--   헤더의 [판매 등급 ▾] · [일괄 판매] 두 버튼 → [등급 골라 분해] 하나(같은 창에서 등급 고르기 · 판매 · 분해 · 자동 정리).
+--   게임 규칙 그대로: 고를 수 있는 등급 = ArmorData.bulkSellGrades(일반 · 희귀 · 영웅) · 전설 이상 = 막힘(하나씩) · 판매 = 고른 등급 전부(골드) · 분해 = 그중 영웅 이상(Loot.isBulkDismantleTarget - 보석).
+--   [취소] = 기본(왼쪽) · [N개 분해] = 빨강(오른쪽 - 확인 창 안 위험 버튼 규칙) · [N개 판매] = 보조. 창 자체가 확인 단계(누르는 순간 보인 개수로 요청 - 서버가 다시 세서 다르면 거절 → 창 다시).
+if require(script.Parent.Layout).lookV2 then
+	local UiKit = require(script.Parent.Parent.Parent.ui.v2.UiKit)
+	local UiTokens = require(ReplicatedStorage.Shared.data.UiTokens)
+	local SHEET = require(ReplicatedStorage.Shared.data.UiLayoutData).bag.salvage
+	local function tok(name)
+		return Color3.fromHex(UiTokens.colors[name])
+	end
+	local Z = 30
+	cutoffButton.Visible = false -- 등급 고르기 = 창 안
+	bulkSellButton.Text = Text.get("gear.bulk.v2.button")
+
+	local dimV2 = Instance.new("TextButton")
+	dimV2.Name = "SalvageDim"
+	dimV2.Text = ""
+	dimV2.AutoButtonColor = false
+	dimV2.Size = UDim2.fromScale(1, 1)
+	dimV2.BackgroundColor3 = Color3.new(0, 0, 0)
+	dimV2.BackgroundTransparency = UiTokens.dimTransparency
+	dimV2.Visible = false
+	dimV2.ZIndex = Z
+	dimV2.Parent = content
+
+	local box = Instance.new("Frame")
+	box.Name = "SalvageByGrade"
+	box.BackgroundColor3 = tok("panel.window")
+	box.ZIndex = Z + 1
+	box.Parent = dimV2
+	Instance.new("UICorner", box).CornerRadius = UDim.new(0, UiTokens.corner.window)
+	local boxStroke = Instance.new("UIStroke")
+	boxStroke.Color = tok("line")
+	boxStroke.Thickness = UiTokens.stroke.window
+	boxStroke.Parent = box
+	local sinkBox = Instance.new("TextButton") -- 창 안 클릭이 딤(닫기)으로 새지 않게
+	sinkBox.Text = ""
+	sinkBox.AutoButtonColor = false
+	sinkBox.BackgroundTransparency = 1
+	sinkBox.Size = UDim2.fromScale(1, 1)
+	sinkBox.ZIndex = Z + 1
+	sinkBox.Parent = box
+
+	local function label(parent, text, size, color, z)
+		local l = Instance.new("TextLabel")
+		l.BackgroundTransparency = 1
+		l.Font = Enum.Font.GothamBold
+		l.TextSize = Theme.textSize(size)
+		l.TextColor3 = color
+		l.TextXAlignment = Enum.TextXAlignment.Left
+		l.TextWrapped = true
+		l.Text = text
+		l.ZIndex = z or Z + 2
+		l.Parent = parent
+		return l
+	end
+	local title = label(box, Text.get("gear.bulk.v2.title"), "title", tok("text.primary"))
+	title.Name = "Title"
+	local sub = label(box, Text.get("gear.bulk.v2.sub"), "caption", tok("text.secondary"))
+	sub.Name = "Sub"
+	sub.Font = Enum.Font.Gotham
+
+	-- 등급 칩(고를 수 있음 = 체크 · 막힘 = 회색 + 자물쇠 + "하나씩")
+	local chips = {}
+	local chipOrder = {}
+	for i = 1, SHEET.chipGrades do
+		table.insert(chipOrder, ArmorData.gradeOrder[i])
+	end
+	for _, gradeId in ipairs(chipOrder) do
+		local selectable = table.find(ArmorData.bulkSellGrades, gradeId) ~= nil
+		local chip = Instance.new("TextButton")
+		chip.Name = "Chip_" .. gradeId
+		chip.Text = ""
+		chip.AutoButtonColor = false
+		chip.ZIndex = Z + 2
+		chip.Parent = box
+		local skin = UiKit.skin(chip, "sec", { state = selectable and "normal" or "disabled" })
+		local dot = Instance.new("Frame")
+		dot.Name = "GradeDot"
+		dot.AnchorPoint = Vector2.new(0, 0.5)
+		dot.Position = UDim2.new(0, 14, 0.5, -2)
+		dot.Size = UDim2.fromOffset(12, 12)
+		dot.BackgroundColor3 = GradeColor.border(gradeId)
+		dot.BackgroundTransparency = selectable and 0 or 0.5
+		dot.ZIndex = chip.ZIndex + 1
+		dot.Parent = chip
+		Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
+		local name = label(chip, ArmorData.grades[gradeId].displayName, "body", selectable and tok("text.primary") or tok("text.muted"), chip.ZIndex + 1)
+		name.Position = UDim2.new(0, 34, 0, 0)
+		name.Size = UDim2.new(1, -70, 1, -4)
+		name.TextYAlignment = Enum.TextYAlignment.Center
+		name.TextWrapped = false
+		local mark = Instance.new("Frame") -- 오른쪽: 체크(고를 수 있음) · 자물쇠(막힘)
+		mark.Name = "Mark"
+		mark.AnchorPoint = Vector2.new(1, 0.5)
+		mark.Position = UDim2.new(1, -12, 0.5, -2)
+		mark.Size = UDim2.fromOffset(22, 22)
+		mark.BackgroundColor3 = tok("accent")
+		mark.ZIndex = chip.ZIndex + 1
+		mark.Parent = chip
+		Instance.new("UICorner", mark).CornerRadius = UDim.new(0, 6)
+		local markStroke = Instance.new("UIStroke")
+		markStroke.Color = tok("text.secondary")
+		markStroke.Thickness = 2
+		markStroke.Parent = mark
+		local tick = label(mark, "V", "caption", tok("accent.text"), chip.ZIndex + 2)
+		tick.Font = Enum.Font.GothamBlack
+		tick.Size = UDim2.fromScale(1, 1)
+		tick.TextXAlignment = Enum.TextXAlignment.Center
+		if not selectable then
+			mark.BackgroundTransparency = 1
+			markStroke.Enabled = false
+			tick.Visible = false
+			ItemIcons.lock(mark, 18, tok("text.muted"))
+			for _, d in ipairs(mark:GetDescendants()) do
+				if d:IsA("GuiObject") then
+					d.ZIndex = chip.ZIndex + 2
+				end
+			end
+			chip:SetAttribute("Blocked", Text.get("gear.bulk.v2.oneByOne"))
+		end
+		chips[gradeId] = { button = chip, selectable = selectable, mark = mark, tick = tick, skin = skin, name = name }
+	end
+
+	local summary = label(box, "", "body", tok("text.secondary"))
+	summary.Name = "Summary"
+	summary.Font = Enum.Font.Gotham
+	summary.TextYAlignment = Enum.TextYAlignment.Top
+
+	local function action(name, kind, textToken)
+		local b = Instance.new("TextButton")
+		b.Name = name
+		b.AutoButtonColor = false
+		b.Font = Enum.Font.GothamBold
+		b.TextSize = Theme.textSize("header")
+		b.TextColor3 = tok(textToken or "text.primary")
+		b.ZIndex = Z + 2
+		b.Parent = box
+		if not UiKit.skin(b, kind) then
+			b.BackgroundColor3 = kind == "danger" and tok("warning") or tok("panel.slot")
+			Instance.new("UICorner", b).CornerRadius = UDim.new(0, UiTokens.corner.button)
+		end
+		return b
+	end
+	local cancelV2 = action("Cancel", "sec")
+	cancelV2.Text = Text.get("gear.bulk.cancel")
+	local sellV2 = action("Sell", "sec")
+	local dismantleV2 = action("Dismantle", "danger")
+
+	-- 자동 정리 두 줄(줍는 순간 · 판매/분해 방식)은 옛 드롭다운에서 이 창 아래로 옮긴다(같은 버튼 · 같은 연결)
+	local autoBox = Instance.new("Frame")
+	autoBox.Name = "AutoRows"
+	autoBox.BackgroundTransparency = 1
+	autoBox.ZIndex = Z + 2
+	autoBox.Parent = box
+	local autoList = Instance.new("UIListLayout")
+	autoList.FillDirection = Enum.FillDirection.Horizontal
+	autoList.Padding = UDim.new(0, 12)
+	autoList.SortOrder = Enum.SortOrder.LayoutOrder
+	autoList.Parent = autoBox
+	for _, row in ipairs({ autoRow, modeRow }) do
+		row.Parent = autoBox
+		row.ZIndex = Z + 2
+		row.TextXAlignment = Enum.TextXAlignment.Left
+		row.TextColor3 = tok("info")
+	end
+	noteRow.Visible = false -- 안내 = 창 부제(sub)
+
+	local shown = { sell = 0, key = "", dismantle = 0 }
+	local function refreshV2()
+		for gradeId, c in pairs(chips) do
+			if c.selectable then
+				local on = S.bulkSellChecked[gradeId] == true
+				c.mark.BackgroundTransparency = on and 0 or 1
+				c.tick.Visible = on
+				if c.skin then -- 고름 = 노랑(tab-on) + 진한 글자
+					c.skin.Image = UiKit.stateImage(on and "tab-on" or "sec", "normal") or c.skin.Image
+					c.name.TextColor3 = on and tok("accent.text") or tok("text.primary")
+				end
+			end
+		end
+		local count, total = S.bulkSellEstimate()
+		local nd, byGrade = dismantleCount()
+		local parts = {}
+		for _, id in ipairs(ArmorData.gradeOrder) do
+			if byGrade[id] then
+				table.insert(parts, ("%s %d"):format(ArmorData.grades[id].displayName, byGrade[id]))
+			end
+		end
+		local lines = {}
+		if count > 0 then
+			table.insert(lines, Text.get("gear.bulk.v2.sellLine", { count = ("%d"):format(count), gold = NumberFormat.currency(total, Text.languageFor()) }))
+		end
+		if nd > 0 then
+			table.insert(lines, Text.get("gear.bulk.v2.dismantleLine", { count = ("%d"):format(nd), grades = table.concat(parts, " · ") }))
+		end
+		summary.Text = #lines > 0 and table.concat(lines, "\n") or Text.get("gear.bulk.v2.none")
+		shown.sell, shown.key, shown.dismantle = count, S.sellCheckedKey(), nd
+		sellV2.Text = Text.get("gear.bulk.v2.sell", { count = ("%d"):format(count) })
+		dismantleV2.Text = Text.get("gear.bulk.v2.dismantle", { count = ("%d"):format(nd) })
+		for _, pair in ipairs({ { sellV2, "sec", count > 0 }, { dismantleV2, "danger", nd > 0 } }) do -- 0개 = 비활성 그림 + 흐린 글자
+			local b, kind, on = pair[1], pair[2], pair[3]
+			local skin = b:FindFirstChild("Skin")
+			if skin then
+				skin.Image = UiKit.stateImage(kind, on and "normal" or "disabled") or skin.Image
+			end
+			b.TextColor3 = tok(on and "text.primary" or "text.muted")
+		end
+	end
+
+	-- 배치: PC = 가운데 창 · 폰 = 아래 시트(칩 한 줄 6 · 버튼 두 칸)
+	local function placeV2()
+		local L = R.layout
+		local phone = L and L.mode == "phone"
+		local P = phone and SHEET.phone or SHEET.pc
+		local winW, winH = R.win.AbsoluteSize.X, R.win.AbsoluteSize.Y
+		local w, h = math.min(P.w, winW - 16), math.min(P.h, winH - 16)
+		box.AnchorPoint = phone and Vector2.new(0.5, 1) or Vector2.new(0.5, 0.5)
+		box.Position = phone and UDim2.new(0.5, 0, 1, 0) or UDim2.fromScale(0.5, 0.5)
+		box.Size = UDim2.fromOffset(phone and winW or w, h)
+		local pad = P.pad
+		local innerW = (phone and winW or w) - 2 * pad
+		title.Position = UDim2.fromOffset(pad, P.titleY)
+		title.Size = UDim2.new(1, -2 * pad, 0, P.titleH)
+		sub.Position = UDim2.fromOffset(pad, P.titleY + P.titleH)
+		sub.Size = UDim2.new(1, -2 * pad, 0, P.subH)
+		sub.Visible = P.subH > 0
+		local cols = P.chipCols
+		local cw = math.floor((innerW - (cols - 1) * P.chipGap) / cols)
+		for i, gradeId in ipairs(chipOrder) do
+			local c = chips[gradeId].button
+			local col, row = (i - 1) % cols, math.floor((i - 1) / cols)
+			c.Position = UDim2.fromOffset(pad + col * (cw + P.chipGap), P.chipY + row * (P.chipH + P.chipGap))
+			c.Size = UDim2.fromOffset(cw, P.chipH)
+		end
+		local rows = math.ceil(#chipOrder / cols)
+		local afterChips = P.chipY + rows * (P.chipH + P.chipGap)
+		summary.Position = UDim2.fromOffset(pad, afterChips + 4)
+		summary.Size = UDim2.new(1, -2 * pad, 0, P.summaryH)
+		autoBox.Position = UDim2.fromOffset(pad, afterChips + 4 + P.summaryH)
+		autoBox.Size = UDim2.new(1, -2 * pad, 0, P.autoH)
+		autoBox.Visible = P.autoH > 0
+		for _, row in ipairs({ autoRow, modeRow }) do
+			row.Size = UDim2.new(0.5, -6, 0, P.autoH)
+		end
+		local by = h - pad - P.buttonH
+		local bw = math.floor((innerW - 2 * P.buttonGap) / 3)
+		cancelV2.Position = UDim2.fromOffset(pad, by)
+		sellV2.Position = UDim2.fromOffset(pad + bw + P.buttonGap, by)
+		dismantleV2.Position = UDim2.fromOffset(pad + 2 * (bw + P.buttonGap), by)
+		for _, b in ipairs({ cancelV2, sellV2, dismantleV2 }) do
+			b.Size = UDim2.fromOffset(bw, P.buttonH)
+		end
+	end
+
+	local function openV2()
+		closeCutoffDropdown()
+		confirmOverlay.Visible = false
+		placeV2()
+		refreshV2()
+		dimV2.Visible = true
+	end
+	local function closeV2()
+		dimV2.Visible = false
+	end
+	R.openSalvageV2 = openV2
+	R.salvageV2 = box
+	bulkSellButton.Activated:Connect(function()
+		openV2()
+	end)
+	dimV2.Activated:Connect(closeV2)
+	cancelV2.Activated:Connect(closeV2)
+	for gradeId, c in pairs(chips) do
+		c.button.Activated:Connect(function()
+			if not c.selectable then
+				return -- 전설 이상 = 하나씩(막힘)
+			end
+			local was = S.bulkSellChecked[gradeId]
+			S.bulkSellChecked[gradeId] = not was or nil
+			if S.sellCheckedKey() == "" then
+				S.bulkSellChecked[gradeId] = true
+			end
+			SettingSave("bulkSellGrades", S.sellCheckedKey())
+			refreshChecks()
+			S.rebuildGrid()
+			refreshV2()
+		end)
+	end
+	sellV2.Activated:Connect(function()
+		if shown.sell > 0 then
+			closeV2()
+			sellRequest:FireServer("sellGrades", shown.key, shown.sell)
+		end
+	end)
+	dismantleV2.Activated:Connect(function()
+		if shown.dismantle > 0 then
+			closeV2()
+			sellRequest:FireServer("dismantleBulk", S.sellCheckedTop())
+		end
+	end)
+	player:GetAttributeChangedSignal("BulkSellGrades"):Connect(function()
+		if dimV2.Visible then
+			refreshV2()
+		end
+	end)
+end
 
 R.cutoffDropdown, R.cutoffDropdownDim = cutoffDropdown, cutoffDropdownDim
 

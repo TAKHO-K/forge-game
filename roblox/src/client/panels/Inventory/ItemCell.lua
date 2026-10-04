@@ -142,22 +142,11 @@ end
 
 -- 03 v2 빈 칸 · 칸 바탕 = btn-card 9-slice 그림(그림 없으면 옛 색 칸 그대로). 반환: 그림(없으면 nil)
 function ItemCell.cardSkin(cell)
-	local image = V2 and UiKit.stateImage("card", "normal")
-	if not image then
+	local skin = V2 and UiKit.skin(cell, "card", { keepZ = true })
+	if not skin then
 		return nil
 	end
-	local c = UiTokens.slice.card.center
-	local skin = Instance.new("ImageLabel")
 	skin.Name = "CardSkin"
-	skin.BackgroundTransparency = 1
-	skin.Size = UDim2.fromScale(1, 1)
-	skin.Image = image
-	skin.ScaleType = Enum.ScaleType.Slice
-	skin.SliceCenter = Rect.new(c[1], c[2], c[3], c[4])
-	skin.SliceScale = UiTokens.sliceScale
-	skin.ZIndex = cell.ZIndex
-	skin.Parent = cell
-	cell.BackgroundTransparency = 1
 	for _, child in ipairs(cell:GetChildren()) do
 		if child:IsA("UIStroke") then
 			child.Enabled = false -- 테두리는 그림 안에 있다

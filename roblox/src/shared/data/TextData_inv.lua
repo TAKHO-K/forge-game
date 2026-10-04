@@ -20,6 +20,16 @@ return {
 		["gear.reward.bulk"] = "분해하기를 누르면: 보석 {count}개({grades}) · 같은 장비를 팔면 {gold}골드",
 		["gear.bag.sellGrades"] = "판매 등급: {grades}", -- QUEUE-ALL8 G1
 		["gear.bulk.excludeNote"] = "전설 이상 · 잠긴 · 착용 중 장비는 팔리지 않습니다",
+		-- QUEUE-UI2 UI2-5 2차 2-2 등급 골라 분해(03 v2 창 · 폰 아래 시트)
+		["gear.bulk.v2.button"] = "등급 골라 분해",
+		["gear.bulk.v2.title"] = "등급 골라 분해",
+		["gear.bulk.v2.sub"] = "고른 등급의 잠기지 않은 장비를 한 번에 정리합니다. 장착 중 장비는 빠지고, 박힌 보석은 돌려받습니다.",
+		["gear.bulk.v2.oneByOne"] = "하나씩",
+		["gear.bulk.v2.sell"] = "{count}개 판매",
+		["gear.bulk.v2.dismantle"] = "{count}개 분해",
+		["gear.bulk.v2.sellLine"] = "판매하면 {count}개 → {gold}골드",
+		["gear.bulk.v2.dismantleLine"] = "분해하면 영웅 이상 {count}개 → 보석({grades})",
+		["gear.bulk.v2.none"] = "고른 등급에 정리할 장비가 없습니다",
 		["bag.sellHint.pc"] = "가방(G)에서 한 번에 팔 수 있어요", -- QUEUE-ALL8 G3 · G4(판매 = 가방)
 		["bag.sellHint.phone"] = "가방 아이콘을 눌러 한 번에 팔 수 있어요",
 		-- QUEUE-N1004 A-1 자동 정리(설정 · 가방 · 첫 가득 안내 · 묶음 알림)
@@ -127,6 +137,15 @@ return {
 		["gear.reward.bulk"] = "Salvage gives {count} gems ({grades}) · Selling them gives {gold} Gold",
 		["gear.bag.sellGrades"] = "Sell grades: {grades}",
 		["gear.bulk.excludeNote"] = "Legendary+, locked and worn gear is never sold",
+		["gear.bulk.v2.button"] = "Salvage by Grade",
+		["gear.bulk.v2.title"] = "Salvage by Grade",
+		["gear.bulk.v2.sub"] = "Clear out unlocked gear of the chosen grades at once. Worn gear is skipped and socketed gems come back to you.",
+		["gear.bulk.v2.oneByOne"] = "One by one",
+		["gear.bulk.v2.sell"] = "Sell {count}",
+		["gear.bulk.v2.dismantle"] = "Salvage {count}",
+		["gear.bulk.v2.sellLine"] = "Sell: {count} items → {gold} Gold",
+		["gear.bulk.v2.dismantleLine"] = "Salvage: {count} Epic+ items → gems ({grades})",
+		["gear.bulk.v2.none"] = "Nothing to clear in the chosen grades",
 		["bag.sellHint.pc"] = "Sell many at once from your bag (G)",
 		["bag.sellHint.phone"] = "Tap the bag icon to sell many at once",
 		["autoTidy.settings"] = "Auto tidy",

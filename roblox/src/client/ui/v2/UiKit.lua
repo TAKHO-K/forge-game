@@ -384,6 +384,32 @@ local function imageButton(kind, name)
 end
 UiKit.imageButton = imageButton
 
+-- 옛 화면(배율 1 · ZIndexBehavior Global)의 TextButton · Frame에 상태 그림 9-slice를 깔기(QUEUE-UI2 UI2-5 2차 장비창 겉모습).
+--   그림 = 같은 z의 자식 ImageLabel "Skin" · 부모 z +1(Global에서 글자가 그림 위) · 부모 바탕 투명. 그림이 없으면 nil(옛 겉모습 그대로).
+--   opts.pad = { left, right } · opts.keepZ - 부모 UIPadding만큼 그림을 바깥으로 넓힌다(UIPadding은 자식 크기에도 걸린다).
+function UiKit.skin(parent, kind, opts)
+	opts = opts or {}
+	local image = stateImage(kind, opts.state or "normal")
+	if not image then
+		return nil
+	end
+	local s = Instance.new("ImageLabel")
+	s.Name = "Skin"
+	s.BackgroundTransparency = 1
+	local padL, padR = opts.pad and opts.pad[1] or 0, opts.pad and opts.pad[2] or 0
+	s.Position = UDim2.fromOffset(-padL, 0)
+	s.Size = UDim2.new(1, padL + padR, 1, 0)
+	s.Image = image
+	applySlice(s, kind)
+	s.ZIndex = parent.ZIndex
+	s.Parent = parent
+	if not opts.keepZ then -- keepZ = 부모에 글자가 없을 때(칸 바탕) - 자식 아이콘들의 z를 그대로 둔다
+		parent.ZIndex += 1
+	end
+	parent.BackgroundTransparency = 1
+	return s
+end
+
 -- 버튼(주 = 노랑 pri · 보조 = sec · 위험 = danger(확인 창 안에서만) · 판 B = plate · 태초 = primal)
 --   refs = { root(ImageButton), button(= root), face(내용 Frame - 글자 · 아이콘 자리), title, sub, setEnabled, setText, Activated }
 local KIND = { primary = "pri", secondary = "sec", danger = "danger", plate = "plate", primal = "primal", card = "card", tabOn = "tab-on", tabOff = "tab-off" }
