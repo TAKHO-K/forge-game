@@ -1,4 +1,5 @@
 -- QUEUE-B1 결정 14: 캐릭터 경험치 곡선 이관 왕복(v34 이하 · v44 표본 → 지금 곡선). 레벨 · 진행률이 그대로여야 한다.
+MODS.SlotSaveData.enabled = false -- QUEUE-MENU2: 이 하네스 = 옛 키(Player_) 경로 시험(슬롯 경로 = slot_save_test)
 -- 표본은 그 버전 시절의 **옛 곡선**으로 만든다(지금 코드의 CharacterLevel로 만들면 v35 버그를 못 잡는다 - QUEUE-6h-b 감사 ①).
 -- 실행: LUAU=<luau.exe> PRELUDE=server_prelude.luau EXTRA_SERVER=SaveSystem ECON_RES=res_mig.txt python build_run.py migrate_curve_test.luau
 local pass, total = 0, 0

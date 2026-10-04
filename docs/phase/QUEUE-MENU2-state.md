@@ -8,7 +8,7 @@
 | 블록 | 상태 | 커밋 | 메모 |
 |---|---|---|---|
 | A 조사 | 완료 | (이 커밋) | docs/design/menu2-survey.md(저장 v73 · migrate = SaveSystem.lua:479 · 결정 필요 목록 = 10절) |
-| B 캐릭터 칸 저장 | 진행 | | 설계 = docs/design/menu2-slot-save.md(메모리 모양 그대로 · 저장 계층만 나눔 · 기본값 11건 = 보고서 판정 항목) |
+| B 캐릭터 칸 저장 | 핵심 완료 · 남음(결제 하네스 추가 3 · EconSim 판단 · 운영 도구 키) | (이 커밋) | 설계 docs/design/menu2-slot-save.md · SlotSaveData · SlotSave(순수) · SaveSystem 슬롯 경로(계정 Acct_ + 캐릭터 Char_ · 옛 Player_ 읽기만) · v74(playSeconds · runtime) · 스위치 끔 = 합쳐 읽기(손실 0) · legacyRecheck · 하네스 slot_save 37/37 · 옛 저장 하네스 4개 = 끔 고정 · Studio Play 이관 4캐릭터 + 자동 저장 확인 · C 서버 직업 변경 거절(srv.class.newCharOnly) |
 | C 메뉴 건너뛰기 제거 | 남음 | | |
 | D 메인 메뉴로 · 쿨/게이지 | 남음 | | |
 | E 이어하기 창 | 남음 | | |

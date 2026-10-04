@@ -1,4 +1,5 @@
 -- QUEUE-6h-b 후속 안전장치 ① 약한 세션 잠금 · ② 손상 저장 음수 골드 → 0 하네스(실제 SaveSystem + 가짜 DataStore).
+MODS.SlotSaveData.enabled = false -- QUEUE-MENU2: 이 하네스 = 옛 키(Player_) 경로 시험(슬롯 경로 = slot_save_test)
 -- 실행: LUAU=<luau.exe> PRELUDE=server_prelude.luau EXTRA_SERVER=SaveSystem ECON_RES=res_lock.txt python build_run.py save_lock_test.luau
 local pass, total = 0, 0
 local function check(label, ok, detail)

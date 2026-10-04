@@ -9,6 +9,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
+local SlotSaveData = require(ReplicatedStorage.Shared.data.SlotSaveData) -- QUEUE-MENU2 C
 local RequestGate = require(script.Parent.RequestGate) -- QUEUE-6h-b 후속: 공통 요청 제한
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local ImmediateSave = require(script.Parent.ImmediateSave)
@@ -57,6 +58,15 @@ classSelectRequest.OnServerEvent:Connect(function(player, classId)
 
 	if PlayerProfile.getClassId(player) == classId then
 		return -- 이미 그 직업이다 - 확인창을 건너뛰고 재요청한 경우 등, 할 일이 없다
+	end
+
+	-- QUEUE-MENU2 C: 캐릭터 = 직업 고정 - 직업 지정은 새 캐릭터(직업 없음)일 때만 · 기존 캐릭터의 직업 변경 요청 = 거절(클라 값 믿지 않음)
+	if SlotSaveData.enabled and PlayerProfile.getClassId(player) ~= nil then
+		local notice = ReplicatedStorage:FindFirstChild("SystemNotice")
+		if notice then
+			notice:FireClient(player, require(ReplicatedStorage.Shared.Text).getFor(player, "srv.class.newCharOnly"))
+		end
+		return
 	end
 
 	if BossEncounter.classChangeBlocked(player) then -- QUEUE-ALL10 0-2(AUDIT1 즉시-2): 보스전 중(잔류 포함) 직업 전환 = 거절 + 안내(막타 직전 전환으로 첫 클리어 표를 받던 구멍)

@@ -1,4 +1,5 @@
 -- QUEUE-ALL5 A3 모르는 id 보관(SaveSystem.quarantineUnknownIds) 하네스 - 실제 SaveSystem · shared/IdRegistry · 데이터 표.
+MODS.SlotSaveData.enabled = false -- QUEUE-MENU2: 이 하네스 = 옛 키(Player_) 경로 시험(슬롯 경로 = slot_save_test)
 -- 실행: LUAU=<luau.exe> PRELUDE=server_prelude.luau EXTRA_SERVER=SaveSystem ECON_RES=res_quar.txt python build_run.py id_quarantine_test.luau
 local pass, total = 0, 0
 local function check(label, ok, detail)

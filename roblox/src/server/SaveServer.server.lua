@@ -111,6 +111,7 @@ Players.PlayerRemoving:Connect(function(player)
 	pcall(ImmediateSave.flush, player)
 	SaveSystem.markReleasing(player, false)
 	PlayerProfile.clear(player)
+	SaveSystem.forgetSlotSession(player) -- QUEUE-MENU2 B: 캐릭터 칸 세션
 	leavingCount -= 1
 end)
 

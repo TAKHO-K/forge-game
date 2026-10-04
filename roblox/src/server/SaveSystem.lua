@@ -22,6 +22,8 @@ local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
 local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMaterialData)
 -- S19b 사전 작업 2: 검증 모드(verifyArmed - Studio에서 터미널이 켠 때만)의 저장 키 분리용.
 local DevToolsConfig = require(ReplicatedStorage.Shared.data.DevToolsConfig)
+local SlotSaveData = require(ReplicatedStorage.Shared.data.SlotSaveData) -- QUEUE-MENU2 B 캐릭터 칸 저장 스위치
+local SlotSave = require(script.Parent.SlotSave)
 
 local SaveSystem = {}
 
@@ -103,6 +105,9 @@ local function defaultClassState()
 		reclaimLevel = 0,
 		-- QUEUE-ALL9E1 LOOK2(v73): 갑옷 착용 중 내 아바타 옷 보이기(true = 본인 2D · 레이어드 옷 + 갑옷 판 · false = 게임 바닥층 2D 옷 · 레이어드 숨김) - 직업(캐릭터)별 · MENU2 때 캐릭터 칸 키로 옮긴다
 		showOwnClothes = false,
+		-- QUEUE-MENU2(v74): 캐릭터 칸 저장 - 총 플레이 시간(초 · 이어하기 카드) · runtime = 쿨 종료 시각(os.time 기준 { [칸] = 초 }) · 궁 게이지 · 마지막 위치(구역 · 좌표 - 메뉴 왕복 · 재접속 복원)
+		playSeconds = 0,
+		runtime = { cooldownEnds = {}, ultGauge = 0, lastZone = nil, lastPos = nil },
 
 		-- ⚠ 29-5부터 **아무도 읽지 않는다**: 보스의 정체는 스테이지 번호만의 함수가 됐다(BossRules.bossIdForStage, PRD 20.80 [A]).
 		-- 필드는 지우지 않는다 - 옛 세이브가 검증(아래 type 검사)·이관을 그대로 통과하고, 되돌릴 일이 생겨도 데이터가 남아 있다.
@@ -1554,6 +1559,18 @@ local function migrate(data)
 		end
 		data.version = 73
 	end
+	if data.version < 74 then
+		-- QUEUE-MENU2 B: 직업(캐릭터) 칸 playSeconds · runtime(쿨 종료 시각 · 궁 게이지 · 마지막 위치) - 옛 값 없음 = 0 · 빈 표
+		for _, classState in pairs(type(data.classes) == "table" and data.classes or {}) do
+			if type(classState) == "table" then
+				classState.playSeconds = tonumber(classState.playSeconds) or 0
+				if type(classState.runtime) ~= "table" then
+					classState.runtime = { cooldownEnds = {}, ultGauge = 0 }
+				end
+			end
+		end
+		data.version = 74
+	end
 
 	data.savedAt = data.savedAt or 0
 	SaveSystem.clampStageCap(data) -- S1 리뷰 7: 불러온 옛 값도 상한으로
@@ -2096,7 +2113,58 @@ end
 --                       잃을 수 있어 손상으로 취급하고 건드리지 않는다.
 --   "invalid_schema" - migrate 후에도 필수 필드가 이상하다.
 --   그 외 문자열      - DataStore 호출 자체가 재시도 끝에 계속 실패했다(pcall 에러 메시지).
+-- 읽은 원본(raw) → 이관 · 손상 고침 · 모르는 id 보관 · 검사 · 음수 골드. QUEUE-MENU2 B: 옛 키 원본과 슬롯 합친 프로필(계정 + 캐릭터)이 같은 길을 탄다.
+local function finishLoad(player, raw, info)
+	if type(raw) == "table" and type(raw.version) == "string" and tonumber(raw.version) then
+		raw.version = tonumber(raw.version) -- QUEUE-ALL4 C: 버전 숫자 문자열(손상)은 이관 전에 숫자로(안 그러면 migrate의 비교가 에러)
+	end
+	if raw ~= nil and type(raw) ~= "table" then
+		return nil, "invalid_schema" -- QUEUE-ALL4 리뷰 5: 표가 아닌 저장값(손상)
+	end
+	if raw ~= nil and type(raw.version) == "number" and raw.version > SaveConfig.saveVersion then
+		return nil, "future_version"
+	end
+
+	-- QUEUE-ALL4 C: 손상 저장(버전이 문자열 · 표 자리에 숫자 등)이면 migrate가 에러를 던져 loadProfile 자체가 터졌다(호출부에 프로필이 아예 안 생김).
+	-- 에러는 invalid_schema와 같게 다룬다(원본은 건드리지 않음 - 저장 중단 + 안내 · 운영 복구 opsRestoreVersion).
+	local okMigrate, profile = pcall(migrate, raw or {})
+	if not okMigrate then
+		warn(("[SaveSystem] 이관 중 에러(손상 저장): %s - %s"):format(player.Name, tostring(profile)))
+		return nil, "invalid_schema"
+	end
+	local okRepair, repaired = pcall(SaveSystem.repairProfile, profile)
+	if okRepair and #repaired > 0 then
+		info.repaired = repaired
+		warn(("[SaveSystem] 손상 저장 고침: %s - %s"):format(player.Name, table.concat(repaired, " · ")))
+	end
+	-- QUEUE-ALL5 A3: 모르는 id = 보관 칸으로(로드 실패 대신) · 다시 생긴 id = 제자리로
+	local okQ, quarantined, restoredN, resets = pcall(SaveSystem.quarantineUnknownIds, profile)
+	if okQ and (#quarantined > 0 or restoredN > 0 or #resets > 0) then
+		info.quarantined, info.quarantineRestored = quarantined, restoredN
+		warn(("[SaveSystem] 모르는 id 보관: %s - 옮김 %d(%s%s) · 되돌림 %d · 선택 해제 %d(%s)"):format(player.Name, #quarantined, table.concat(quarantined, " · ", 1, math.min(#quarantined, 10)),
+			#quarantined > 10 and " …" or "", restoredN, #resets, table.concat(resets, " · ", 1, math.min(#resets, 10))))
+	elseif not okQ then
+		warn(("[SaveSystem] 보관 처리 에러: %s - %s"):format(player.Name, tostring(quarantined)))
+	end
+	local okValid, valid = pcall(isValidProfile, profile) -- QUEUE-ALL4 리뷰 5: 칸 자리에 표 아닌 값이면 검사 자체가 에러
+	if not okRepair or not okValid or not valid then
+		return nil, "invalid_schema"
+	end
+	-- 손상 저장 음수 골드 → 0(save-audit-alpha 결정 3). 게임 경로로는 못 생긴다 - 생기면 로그 + 통계(SaveServer)로 알린다.
+	if profile.gold < 0 then
+		info.negativeGold = profile.gold
+		profile.gold = 0
+		warn(("[SaveSystem] 손상 저장 음수 골드 → 0: %s (저장값 %s)"):format(player.Name, tostring(info.negativeGold)))
+	end
+
+	return profile, nil, info
+end
+SaveSystem.finishLoad = finishLoad
+
 function SaveSystem.loadProfile(player)
+	if SlotSaveData.enabled then
+		return SaveSystem.loadSlotProfile(player) -- QUEUE-MENU2 B: 계정 키 + 캐릭터 키
+	end
 	local lastErr
 	local totalAttempts = SaveConfig.saveRetryCount + 1 -- 첫 시도 + 재시도 횟수
 
@@ -2124,49 +2192,15 @@ function SaveSystem.loadProfile(player)
 				info.lockReleased = not SaveSystem.heldElsewhere(raw, os.time())
 				print(("[SaveSystem] 세션 잠금 대기: %s %d초 · 풀림=%s"):format(player.Name, waited, tostring(info.lockReleased)))
 			end
-			if type(raw) == "table" and type(raw.version) == "string" and tonumber(raw.version) then
-				raw.version = tonumber(raw.version) -- QUEUE-ALL4 C: 버전 숫자 문자열(손상)은 이관 전에 숫자로(안 그러면 migrate의 비교가 에러)
+			-- QUEUE-MENU2 B6: 스위치를 끈 뒤 = 켜 둔 동안의 진행(계정 + 캐릭터 키)을 옛 모양으로 합쳐 읽는다(손실 0) · 읽기 실패 = 로드 실패(옛 값으로 진행하면 그 진행을 덮는다)
+			local okMerge, merged = pcall(SaveSystem.mergeSlotsIfNewer, player, raw)
+			if not okMerge then
+				return nil, tostring(merged)
 			end
-			if raw ~= nil and type(raw) ~= "table" then
-				return nil, "invalid_schema" -- QUEUE-ALL4 리뷰 5: 표가 아닌 저장값(손상)
+			if merged ~= raw then
+				info.slotMerged = true
 			end
-			if raw ~= nil and type(raw.version) == "number" and raw.version > SaveConfig.saveVersion then
-				return nil, "future_version"
-			end
-
-			-- QUEUE-ALL4 C: 손상 저장(버전이 문자열 · 표 자리에 숫자 등)이면 migrate가 에러를 던져 loadProfile 자체가 터졌다(호출부에 프로필이 아예 안 생김).
-			-- 에러는 invalid_schema와 같게 다룬다(원본은 건드리지 않음 - 저장 중단 + 안내 · 운영 복구 opsRestoreVersion).
-			local okMigrate, profile = pcall(migrate, raw or {})
-			if not okMigrate then
-				warn(("[SaveSystem] 이관 중 에러(손상 저장): %s - %s"):format(player.Name, tostring(profile)))
-				return nil, "invalid_schema"
-			end
-			local okRepair, repaired = pcall(SaveSystem.repairProfile, profile)
-			if okRepair and #repaired > 0 then
-				info.repaired = repaired
-				warn(("[SaveSystem] 손상 저장 고침: %s - %s"):format(player.Name, table.concat(repaired, " · ")))
-			end
-			-- QUEUE-ALL5 A3: 모르는 id = 보관 칸으로(로드 실패 대신) · 다시 생긴 id = 제자리로
-			local okQ, quarantined, restoredN, resets = pcall(SaveSystem.quarantineUnknownIds, profile)
-			if okQ and (#quarantined > 0 or restoredN > 0 or #resets > 0) then
-				info.quarantined, info.quarantineRestored = quarantined, restoredN
-				warn(("[SaveSystem] 모르는 id 보관: %s - 옮김 %d(%s%s) · 되돌림 %d · 선택 해제 %d(%s)"):format(player.Name, #quarantined, table.concat(quarantined, " · ", 1, math.min(#quarantined, 10)),
-					#quarantined > 10 and " …" or "", restoredN, #resets, table.concat(resets, " · ", 1, math.min(#resets, 10))))
-			elseif not okQ then
-				warn(("[SaveSystem] 보관 처리 에러: %s - %s"):format(player.Name, tostring(quarantined)))
-			end
-			local okValid, valid = pcall(isValidProfile, profile) -- QUEUE-ALL4 리뷰 5: 칸 자리에 표 아닌 값이면 검사 자체가 에러
-			if not okRepair or not okValid or not valid then
-				return nil, "invalid_schema"
-			end
-			-- 손상 저장 음수 골드 → 0(save-audit-alpha 결정 3). 게임 경로로는 못 생긴다 - 생기면 로그 + 통계(SaveServer)로 알린다.
-			if profile.gold < 0 then
-				info.negativeGold = profile.gold
-				profile.gold = 0
-				warn(("[SaveSystem] 손상 저장 음수 골드 → 0: %s (저장값 %s)"):format(player.Name, tostring(info.negativeGold)))
-			end
-
-			return profile, nil, info
+			return finishLoad(player, merged, info)
 		end
 
 		lastErr = result
@@ -2176,6 +2210,303 @@ function SaveSystem.loadProfile(player)
 	end
 
 	return nil, lastErr
+end
+
+-- ═══ QUEUE-MENU2 B 캐릭터 칸 저장(계정 키 + 캐릭터 키) - 설계 docs/design/menu2-slot-save.md · 나누기/합치기 = server/SlotSave(순수) ═══
+--   세션(slotSession[player]) = { account, acctSavedAt, charId, classId, slot, charSavedAt, playMark } - 메모리 프로필은 옛 모양 그대로.
+local slotSession = {}
+function SaveSystem.slotSessionOf(player)
+	return slotSession[player]
+end
+function SaveSystem.forgetSlotSession(player)
+	slotSession[player] = nil
+end
+
+local function accountKeyBase(userId)
+	return SlotSaveData.accountKeyPrefix .. tostring(userId)
+end
+local function characterKeyBase(userId, charId)
+	return SlotSaveData.characterKeyPrefix .. tostring(userId) .. "_" .. tostring(charId)
+end
+SaveSystem.accountKeyBase, SaveSystem.characterKeyBase = accountKeyBase, characterKeyBase
+
+-- Studio(수동 · 검증 Play) = 키마다 이 서버 첫 읽기에 접미사 키를 비우고 실제 키를 읽기만(시드) - 쓴 키는 이미 시드된 것으로 친다(방금 쓴 값을 지우지 않게)
+local seededKeys = {}
+local function readKey(base)
+	local suffix = studioSuffix()
+	if not suffix then
+		return store:GetAsync(base)
+	end
+	local key = base .. suffix
+	if not seededKeys[key] then
+		store:RemoveAsync(key)
+		seededKeys[key] = true
+	end
+	local raw = store:GetAsync(key)
+	if raw ~= nil then
+		return raw
+	end
+	if ReplicatedStorage:GetAttribute("StudioFreshProfile") == true then
+		return nil
+	end
+	return store:GetAsync(base)
+end
+
+-- 키 하나 쓰기(낙관적 동시성 - 저장값 savedAt이 baseline보다 새롭고 내 메아리가 아니면 취소) → true, nil, 새 savedAt | false, 이유
+local function updateKey(player, base, baselineSavedAt, payloadFn)
+	local key = base .. (studioSuffix() or "")
+	seededKeys[key] = true
+	local newSavedAt = os.time()
+	local lastErr
+	for attempt = 1, SaveConfig.saveRetryCount + 1 do
+		local ok, result = pcall(function()
+			return store:UpdateAsync(key, function(old)
+				local ownEcho = type(old) == "table" and old.savedAt == newSavedAt and old.sessionId == SERVER_SESSION_ID
+				if type(old) == "table" and type(old.savedAt) == "number" and old.savedAt > (baselineSavedAt or 0) and not ownEcho then
+					return nil
+				end
+				local v = payloadFn(old)
+				sanitizeForSave(v, old, base)
+				v.savedAt = newSavedAt
+				v.version = SaveConfig.saveVersion
+				v.sessionId = releasing[player] and "" or SERVER_SESSION_ID
+				return v
+			end)
+		end)
+		if ok then
+			if result == nil then
+				return false, "stale_session"
+			end
+			return true, nil, newSavedAt
+		end
+		lastErr = result
+		if attempt <= SaveConfig.saveRetryCount then
+			task.wait(SaveConfig.saveRetryDelaysSeconds[attempt])
+		end
+	end
+	return false, tostring(lastErr)
+end
+
+-- 계정 키 잠금 대기(옛 키와 같은 약한 잠금)
+local function readAccountWithLock(player, info)
+	local acct = readKey(accountKeyBase(player.UserId))
+	local waited = 0
+	while SaveSystem.heldElsewhere(acct, os.time()) and waited < SaveConfig.sessionLockMaxWaitSeconds and player.Parent do
+		task.wait(SaveConfig.sessionLockPollSeconds)
+		waited += SaveConfig.sessionLockPollSeconds
+		local okAgain, again = pcall(readKey, accountKeyBase(player.UserId))
+		if okAgain then
+			acct = again
+		end
+	end
+	if waited > 0 then
+		info.lockWaitedSeconds = waited
+		info.lockReleased = not SaveSystem.heldElsewhere(acct, os.time())
+	end
+	return acct
+end
+
+-- 옛 키 → 계정 + 캐릭터(이관) · 키 쓰기. old = 지금 계정 키(다시 켬 재이관이면 - 번호 · 보관함 이어감)
+local function migrateLegacyToSlots(player, legacyProfile, old, info)
+	local now = os.time()
+	local account, characters = SlotSave.splitLegacy(legacyProfile, defaultProfile(), now)
+	if type(old) == "table" then
+		local offset = math.max(0, (tonumber(old.nextCharId) or 1) - 1)
+		for _, ch in ipairs(characters) do
+			ch.charId += offset
+		end
+		for _, s in ipairs(account.slots) do
+			if s then
+				s.charId += offset
+			end
+		end
+		account.nextCharId += offset
+		account.archive = type(old.archive) == "table" and old.archive or {}
+		info.slotRemigrated = true
+	end
+	for _, ch in ipairs(characters) do
+		local ok, err = updateKey(player, characterKeyBase(player.UserId, ch.charId), 0, function()
+			return { charId = ch.charId, classId = ch.classId, data = ch.data }
+		end)
+		if not ok then
+			return nil, nil, err
+		end
+	end
+	local ok, err, at = updateKey(player, accountKeyBase(player.UserId), type(old) == "table" and old.savedAt or 0, function()
+		return account
+	end)
+	if not ok then
+		return nil, nil, err
+	end
+	account.savedAt = at
+	info.slotMigrated = #characters
+	print(("[SaveSystem] 캐릭터 칸 이관: %s - 캐릭터 %d · 옛 키 그대로(legacy)"):format(player.Name, #characters))
+	return account, characters
+end
+
+-- 슬롯 로드: wantSlot = 칸 번호(nil = 마지막 플레이 · "new" = 캐릭터 없이 - 직업 선택이 새 캐릭터)
+function SaveSystem.loadSlotProfile(player, wantSlot)
+	local info = {}
+	local okA, acct = pcall(readAccountWithLock, player, info)
+	if not okA then
+		return nil, tostring(acct)
+	end
+	if acct ~= nil and type(acct) ~= "table" then
+		return nil, "invalid_schema"
+	end
+	if type(acct) == "table" and type(acct.version) == "number" and acct.version > SaveConfig.saveVersion then
+		return nil, "future_version"
+	end
+	local account, characters
+	local legacyRaw = nil
+	if acct == nil or SlotSaveData.legacyRecheck then -- 옛 키 = 계정 키가 없을 때(첫 이관) · 운영이 다시 켬 재확인을 켰을 때만(평소 접속 읽기 = 계정 + 캐릭터)
+		local okL, rawL = pcall(readStored, player)
+		if not okL then
+			return nil, tostring(rawL)
+		end
+		legacyRaw = rawL
+	end
+	local legacyNewer = type(acct) == "table" and type(legacyRaw) == "table" and (tonumber(legacyRaw.savedAt) or 0) > (tonumber(acct.savedAt) or 0)
+	if acct == nil or legacyNewer then
+		local legacyProfile, err = finishLoad(player, legacyRaw, info)
+		if not legacyProfile then
+			return nil, err
+		end
+		local mErr
+		account, characters, mErr = migrateLegacyToSlots(player, legacyProfile, acct, info)
+		if not account then
+			return nil, mErr
+		end
+	else
+		account = acct
+	end
+	local slot = nil
+	if wantSlot ~= "new" then
+		slot = tonumber(wantSlot) or account.lastSlot
+	end
+	local summary = slot and type(account.slots) == "table" and account.slots[slot] or nil
+	local character, charSavedAt, charVersion = nil, 0, SaveConfig.saveVersion
+	if summary then
+		for _, ch in ipairs(characters or {}) do
+			if ch.charId == summary.charId then
+				character = ch
+			end
+		end
+		if not character then
+			local okC, raw = pcall(readKey, characterKeyBase(player.UserId, summary.charId))
+			if not okC then
+				return nil, tostring(raw)
+			end
+			if type(raw) ~= "table" or type(raw.data) ~= "table" then
+				return nil, "missing_character" -- 칸은 있는데 캐릭터 키가 없다(손상) - 빈 캐릭터로 덮지 않는다
+			end
+			character, charSavedAt, charVersion = { charId = raw.charId or summary.charId, classId = raw.classId or summary.classId, data = raw.data }, tonumber(raw.savedAt) or 0, tonumber(raw.version) or SaveConfig.saveVersion
+		else
+			charSavedAt = account.savedAt or 0
+		end
+	end
+	local composed = SlotSave.compose(defaultProfile(), account.shared, character)
+	composed.version = math.min(tonumber(account.version) or SaveConfig.saveVersion, charVersion)
+	composed.savedAt = tonumber(account.savedAt) or 0
+	local profile, err, outInfo = finishLoad(player, composed, info)
+	if not profile then
+		return nil, err
+	end
+	slotSession[player] = {
+		account = account, acctSavedAt = tonumber(account.savedAt) or 0,
+		charId = character and character.charId, classId = character and character.classId, slot = character and slot or nil,
+		charSavedAt = charSavedAt, playMark = os.time(),
+	}
+	return profile, nil, outInfo
+end
+
+-- 슬롯 저장: 캐릭터 키 → 계정 키. 직업 선택(캐릭터 없음 → 직업 생김) = 새 칸 잡기
+function SaveSystem.saveSlotProfile(player, profile)
+	local sess = slotSession[player]
+	if not sess then
+		return false, "no_slot_session"
+	end
+	local bad = SaveSystem.clampStageCap(profile)
+	if #bad > 0 then
+		warn(("[forge-game] 저장 전 스테이지 하드 상한으로 자름: %s - %s"):format(tostring(player and player.Name), table.concat(bad, " · ")))
+	end
+	local now = os.time()
+	if profile.classId and not sess.charId then
+		local slot, charId = SlotSave.claimSlot(sess.account, profile.classId, now)
+		if not slot then
+			return false, "slots_full"
+		end
+		sess.charId, sess.classId, sess.slot, sess.charSavedAt = charId, profile.classId, slot, 0
+	end
+	if sess.charId then
+		if profile.classId ~= sess.classId then
+			warn(("[SaveSystem] 캐릭터 직업 고정 - 프로필 직업 %s ≠ 캐릭터 %s(%s) · 캐릭터 직업으로 저장"):format(tostring(profile.classId), tostring(sess.classId), player.Name))
+		end
+		local cs = profile.classes and profile.classes[sess.classId]
+		if type(cs) == "table" then
+			cs.playSeconds = (tonumber(cs.playSeconds) or 0) + math.max(0, now - (sess.playMark or now))
+			sess.playMark = now
+		end
+		local ch = { charId = sess.charId, classId = sess.classId, data = SlotSave.extractCharacter(profile, sess.classId) }
+		local ok, err, at = updateKey(player, characterKeyBase(player.UserId, sess.charId), sess.charSavedAt, function()
+			return { charId = ch.charId, classId = ch.classId, data = ch.data }
+		end)
+		if not ok then
+			return false, err
+		end
+		sess.charSavedAt = at
+		local sum = SlotSave.summarize(ch, now, sess.account.slots[sess.slot] or nil)
+		sum.lastPlayedAt = now
+		sess.account.slots[sess.slot] = sum
+		sess.account.lastSlot = sess.slot
+	end
+	sess.account.shared = SlotSave.extractShared(profile)
+	local ok, err, at = updateKey(player, accountKeyBase(player.UserId), sess.acctSavedAt, function()
+		return sess.account
+	end)
+	if not ok then
+		return false, err
+	end
+	sess.acctSavedAt = at
+	profile.savedAt = at
+	return true
+end
+
+-- 스위치 끔(옛 경로): 계정 키가 옛 키보다 새로우면 계정 + 모든 캐릭터(보관 포함)를 옛 모양으로 합친다(손실 0). 읽기 에러 = 던진다(로드 실패).
+function SaveSystem.mergeSlotsIfNewer(player, legacyRaw)
+	if not SlotSaveData.mergeOnDisable then
+		return legacyRaw
+	end
+	local acct = readKey(accountKeyBase(player.UserId))
+	if type(acct) ~= "table" then
+		return legacyRaw
+	end
+	if type(legacyRaw) == "table" and (tonumber(legacyRaw.savedAt) or 0) >= (tonumber(acct.savedAt) or 0) then
+		return legacyRaw
+	end
+	local chars = {}
+	local lastCharId = acct.lastSlot and type(acct.slots) == "table" and acct.slots[acct.lastSlot] and acct.slots[acct.lastSlot].charId
+	local list = {}
+	for _, s in ipairs(type(acct.slots) == "table" and acct.slots or {}) do
+		if s then
+			table.insert(list, s)
+		end
+	end
+	for _, s in ipairs(type(acct.archive) == "table" and acct.archive or {}) do
+		table.insert(list, s)
+	end
+	for _, s in ipairs(list) do
+		local raw = readKey(characterKeyBase(player.UserId, s.charId))
+		if type(raw) == "table" and type(raw.data) == "table" then
+			table.insert(chars, { charId = s.charId, classId = raw.classId or s.classId, data = raw.data })
+		end
+	end
+	local merged = SlotSave.mergeToLegacy(defaultProfile(), acct, chars, lastCharId)
+	merged.version = tonumber(acct.version) or SaveConfig.saveVersion
+	merged.savedAt = type(legacyRaw) == "table" and tonumber(legacyRaw.savedAt) or 0 -- 옛 키 쓰기의 낙관적 기준 = 옛 키 값
+	merged.sessionId = type(legacyRaw) == "table" and legacyRaw.sessionId or nil
+	print(("[SaveSystem] SlotSave 끔: %s - 캐릭터 %d를 옛 모양으로 합쳐 읽음"):format(player.Name, #chars))
+	return merged
 end
 
 -- 저장. profile.savedAt은 "내가 마지막으로 읽은/저장에 성공한 시점"의 값이어야 한다 -
@@ -2286,6 +2617,9 @@ function SaveSystem.clampStageCap(profile)
 end
 
 function SaveSystem.saveProfile(player, profile)
+	if SlotSaveData.enabled then
+		return SaveSystem.saveSlotProfile(player, profile) -- QUEUE-MENU2 B: 옛 키(Player_)는 켬 동안 쓰지 않는다(legacy 보존)
+	end
 	local bad = SaveSystem.clampStageCap(profile)
 	if #bad > 0 then
 		warn(("[forge-game] 저장 전 스테이지 하드 상한으로 자름: %s - %s"):format(tostring(player and player.Name), table.concat(bad, " · ")))
