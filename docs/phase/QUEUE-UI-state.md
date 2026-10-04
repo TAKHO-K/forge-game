@@ -5,5 +5,5 @@
 
 | 블록 | 상태 | 커밋 | 메모 |
 |---|---|---|---|
-| UI-0 기반(토큰 · 공용 부품 · 아이콘 표 · 좌표 표) | 대기 | | |
-| UI-1 메인 메뉴(01 spec · checklist 14) | 대기 | | |
+| UI-0 기반(토큰 · 공용 부품 · 아이콘 표 · 좌표 표) | 완료 | 51d408e1 | shared/data UiTokens · UiIconData · UiLayoutData · shared/UiModel · client/ui/v2 UiRoot · UiKit · 공격 버튼 무기 아이콘 · ui_v2 21/21 · 부품 화면 확인은 UI-1에서 |
+| UI-1 메인 메뉴(01 spec · checklist 14) | 진행 중 | | |
