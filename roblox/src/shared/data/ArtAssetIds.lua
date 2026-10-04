@@ -1107,6 +1107,8 @@ return {
 	["textures/gear_v3/sa_rough_25"] = { id = 84304304937590, kind = "Decal", image = 139282493434346, status = "Approved" },
 	["textures/gear_v3/sa_rough_50"] = { id = 127185198012144, kind = "Decal", image = 86093005535592, status = "Approved" },
 	["textures/gear_v3/sa_rough_85"] = { id = 94125885230115, kind = "Decal", image = 108717344439121, status = "Approved" },
+	["ui/legends/class-archer"] = { id = 101150501774689, kind = "Decal", image = 93815610631159, status = "Approved" },
+	["ui/legends/class-warrior"] = { id = 87845902020071, kind = "Decal", image = 104297886940231, status = "Approved" },
 	["ui/menu_bg"] = { id = 95255177655623, kind = "Decal", image = 123748120333845, status = "Approved" },
 	["ui/menu_gate"] = { id = 109635341223921, kind = "Decal", image = 91597549008463, status = "Approved" },
 	["ui/menu_hub"] = { id = 89035135155080, kind = "Decal", image = 113685914048484, status = "Approved" },

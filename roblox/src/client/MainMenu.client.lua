@@ -450,7 +450,16 @@ local function makePage(name)
 	pages[name] = page
 	return page
 end
+local v2 = nil -- QUEUE-UI UI-1 메인 메뉴 v2(MainMenuData.v2Menu - 아래에서 짓는다) · 메인 페이지 = v2 · 설정 · 소식 페이지 = 옛 모양 그대로
 local function showPage(name)
+	if v2 and name == "MainPage" then
+		for _, page in pairs(pages) do
+			page.Visible = false
+		end
+		root.Visible = false
+		v2.show()
+		return
+	end
 	for n, page in pairs(pages) do
 		page.Visible = n == name
 	end
@@ -772,6 +781,9 @@ enter = function(mode, skipped)
 		lightLayer.Visible = false
 	end
 	local pressClock = os.clock()
+	if v2 then
+		v2.hide()
+	end
 	task.spawn(function() -- 메인 메뉴 버그(10-05): 접속 때 캐릭터를 월드에 두지 않는다 → 입장하는 지금 스폰(로딩 막대 앞 - 캐릭터 · 주변 스트리밍 단계가 스폰을 기다린다)(칸 play · new가 이미 스폰했으면 서버가 아무것도 안 함)
 		local remote = ReplicatedStorage:FindFirstChild("SlotRequest")
 		if remote then
@@ -867,6 +879,26 @@ local function openSlots()
 	end
 	return false
 end
+if Data.v2Menu then
+	v2 = require(script.Parent.ui.v2.MainMenuV2).new(gui, {
+		enter = function(mode)
+			enter(mode)
+		end,
+		showOldPage = function(name)
+			v2.hide()
+			root.Visible = true
+			showPage(name)
+		end,
+		slotRemote = slotRemote,
+		classSelectRequest = ReplicatedStorage:WaitForChild("ClassSelectRequest", 10),
+		settingSave = SettingSave,
+	})
+	local baseRefresh2 = refreshTexts
+	refreshTexts = function()
+		baseRefresh2()
+		v2.refreshTexts()
+	end
+end
 
 -- QUEUE-MENU2 D: 다시 열기(설정 → [메인 메뉴로] - 서버가 저장 · 파티 해제 · 캐릭터를 뺀 뒤)
 local function reopen()
@@ -884,10 +916,15 @@ local function reopen()
 	hideCore()
 	refreshTexts()
 	refreshContinue()
-	showPage("MainPage")
-	root.Visible = true
 	waitLabel.Visible = false
 	loading.Visible = false
+	if v2 then -- 메뉴 다시 열기 = 이어하기 창 펼친 채
+		showPage("MainPage")
+		v2.openSlots()
+		return
+	end
+	showPage("MainPage")
+	root.Visible = true
 	if slotWindow then
 		slotWindow.close()
 	end
@@ -916,6 +953,10 @@ menuButton(mainPage, "MenuNews", "menu.news", 4, function()
 	showPage("NewsPage")
 end)
 onEnterKey = function()
+	if v2 then
+		v2.onEnterKey()
+		return
+	end
 	if root.Visible and pages.MainPage.Visible then
 		if not openSlots() then
 			enter("continue")
@@ -940,6 +981,6 @@ end
 refreshTexts()
 hideCore()
 showPage("MainPage")
-root.Visible = true
+root.Visible = v2 == nil
 waitLabel.Visible = false
 menuShownClock = os.clock()

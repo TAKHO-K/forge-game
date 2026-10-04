@@ -56,6 +56,17 @@ shadeGradient.Parent = shade
 -- 배경 키 아트(MenuBootData.background - 좌우 나눈 장을 원본 픽셀 범위대로 이어 붙인 틀 하나): 화면 꽉 채움(잘라내기) · 가로 가운데 · 세로 focusY
 local bg = Data.background
 local artParts = {}
+local V2 = Data.layoutV2 and Data.v2 or nil -- QUEUE-UI UI-1: 01 spec 배경(오른쪽 붙임 · 왼쪽 페이드 · 남색 바탕)
+if V2 then
+	skyGradient.Color = ColorSequence.new(V2.skyTop, V2.skyBottom)
+	ground.Visible = false
+	shade.BackgroundColor3 = V2.shade
+	local keys = {}
+	for _, k in ipairs(V2.shadeKeys) do
+		table.insert(keys, NumberSequenceKeypoint.new(k[1], k[2]))
+	end
+	shadeGradient.Transparency = NumberSequence.new(keys)
+end
 local art = nil
 if bg and #bg.parts > 0 and bg.width > 0 and bg.height > 0 then
 	sky.ClipsDescendants = true
@@ -82,8 +93,21 @@ if bg and #bg.parts > 0 and bg.width > 0 and bg.height > 0 then
 	local function cover()
 		local w, h = gui.AbsoluteSize.X, gui.AbsoluteSize.Y
 		local aspect = bg.width / bg.height
+		if V2 then -- 화면 높이 꽉 · 오른쪽 끝에 붙임(넓은 화면 = 왼쪽 남는 곳은 남색 바탕)
+			art.AnchorPoint = Vector2.new(1, 0)
+			art.Position = UDim2.fromScale(1, 0)
+			art.Size = UDim2.fromOffset(math.ceil(h * V2.artAspect), h)
+			return
+		end
 		local width = math.max(w, h * aspect)
 		art.Size = UDim2.fromOffset(math.ceil(width), math.ceil(width / aspect))
+	end
+	if V2 and artParts[1] then -- 그림 왼쪽 artFade(22%) 투명 → 불투명(첫 장 안 비율로)
+		local first = bg.parts[1]
+		local edge = math.clamp(V2.artFade * bg.width / (first.x1 - first.x0), 0.01, 0.99)
+		local g = Instance.new("UIGradient")
+		g.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(edge, 0), NumberSequenceKeypoint.new(1, 0) })
+		g.Parent = artParts[1]
 	end
 	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(cover)
 	task.defer(cover)

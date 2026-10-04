@@ -38,7 +38,7 @@ Theme.tabHeight = 28
 -- 모바일 판정 + 그에 따라 바뀌는 값(버튼 · 탭 높이)을 다시 계산한다.
 function Theme.recompute()
 	local player = Players.LocalPlayer
-	local forced = RunService:IsStudio() and player ~= nil and player:GetAttribute("ForceTouchLayout") == true
+	local forced = RunService:IsStudio() and ((player ~= nil and player:GetAttribute("ForceTouchLayout") == true) or ReplicatedStorage:GetAttribute("ForceTouchLayout") == true) -- QUEUE-UI: Edit에서 ReplicatedStorage에 켜 두면 접속 처음부터 폰 배치(메인 메뉴 촬영)
 	Theme.isMobile = (UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled) or forced
 	Theme.buttonHeight = Theme.buttonHeightFor(Theme.isMobile)
 	Theme.tabHeight = Theme.isMobile and 40 or 28

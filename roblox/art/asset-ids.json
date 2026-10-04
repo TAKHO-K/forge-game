@@ -7322,6 +7322,20 @@
   "status": "Approved",
   "imageId": 108717344439121
  },
+ "ui/legends/class-archer.png": {
+  "sha256": "300a42ac9ec00643420166caea0aa01919a032cf79cdb1310dd2615fa5b9b4d8",
+  "assetType": "Decal",
+  "assetId": 101150501774689,
+  "status": "Approved",
+  "imageId": 93815610631159
+ },
+ "ui/legends/class-warrior.png": {
+  "sha256": "22fa6d13a2efc84c3b9de85a95b1f830d01bb6207d8f6e33fab7a25ebb0891b0",
+  "assetType": "Decal",
+  "assetId": 87845902020071,
+  "status": "Approved",
+  "imageId": 104297886940231
+ },
  "ui/menu_bg.png": {
   "sha256": "c5d2b635e1039ce278352b54f6910d6b1f137f1347241247494b42d0edb1e352",
   "assetType": "Decal",

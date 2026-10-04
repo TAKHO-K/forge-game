@@ -2,6 +2,7 @@
 --   메뉴에 있는 동안 아래 단계를 미리 불러오고, [이어하기] 등을 누를 때 남은 단계가 있으면 로딩 막대(최대 loadCapSeconds 뒤 입장 - 나머지는 배경에서 계속).
 --   steps 순서 = 막대 진행 순서(무게 = 막대에서 차지하는 몫). id별 할 일은 화면 코드의 STEP_RUNNERS 한 곳.
 return {
+	v2Menu = true, -- QUEUE-UI UI-1 메인 메뉴 v2(01_main-menu/v1 - client/ui/v2/MainMenuV2) · false = 옛 기본 모양(QUEUE-MENU2)
 	skipMenuOption = false, -- QUEUE-MENU2 C: "다음부터 메뉴 건너뛰기" 옵션(끔 = UI 숨김 · 저장값 skipMenu 무시 - 직업 선택이 메뉴의 새 캐릭터라 메뉴를 늘 보인다)
 	loadCapSeconds = 15,
 	steps = {

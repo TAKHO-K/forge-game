@@ -33,4 +33,6 @@ check("메뉴 입장(enter)이 enterWorld를 부름", "InvokeServer(\"enterWorld
 check("자동 이어하기 없음: 칸 play는 클라 onPlay(카드 두 번)에서만", menu.count("InvokeServer(\"play\"") == 1)
 win = code(read("client/ui/SlotWindow.lua"))
 check("이어하기 창: 시작 = 같은 카드 두 번(armed) · 미리 선택(selected)만으로 시작 안 함", "if self.armed == slot then" in win and "if self.selected == slot then" not in win)
+v2 = code(read("client/ui/v2/MainMenuV2.lua"))
+check("메뉴 v2 이어하기 창: 시작 = 같은 카드 두 번(armed)", "if self.armed == row.slot then" in v2 and v2.count('InvokeServer("play"') == 1)
 print("[MENUSRC] 끝 %d/%d" % (ok_n, total))

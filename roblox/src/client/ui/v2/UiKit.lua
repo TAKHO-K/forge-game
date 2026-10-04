@@ -263,9 +263,10 @@ function UiKit.window(props)
 	line.Size = UDim2.new(1, 0, 0, lineH)
 	line.Parent = root
 	local title = UiKit.label(head, props.title, "windowTitle", "text.primary", { name = "Title", font = "korean" })
-	title.Position = UDim2.fromOffset(phone and 56 or 24, 0)
+	title.Position = UDim2.fromOffset(props.titleX or 24, 0)
 	title.Size = UDim2.new(0.6, 0, 1, 0)
 	title.AutomaticSize = Enum.AutomaticSize.X
+	title.TextTruncate = Enum.TextTruncate.None
 	local sub = nil
 	if props.sub then
 		sub = UiKit.label(head, props.sub, "cardInfo", "text.secondary", { name = "Sub", font = "number" })
@@ -318,6 +319,7 @@ function UiKit.emptySlot(parent, rect, text, sub, name)
 	local list = Instance.new("UIListLayout")
 	list.FillDirection = Enum.FillDirection.Horizontal
 	list.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	list.SortOrder = Enum.SortOrder.LayoutOrder
 	list.VerticalAlignment = Enum.VerticalAlignment.Center
 	list.Padding = UDim.new(0, 12)
 	list.Parent = row
@@ -332,11 +334,13 @@ function UiKit.emptySlot(parent, rect, text, sub, name)
 	UiKit.icon(circle, "plus", math.floor(c * 0.6), { center = true })
 	local t = UiKit.label(row, text, "cardName", "text.primary", { name = "Title", font = "korean" })
 	t.AutomaticSize = Enum.AutomaticSize.X
+	t.TextTruncate = Enum.TextTruncate.None
 	t.Size = UDim2.new(0, 0, 1, 0)
 	t.LayoutOrder = 2
 	if sub and not UiKit.isPhone() then
 		local s2 = UiKit.label(row, sub, "cardInfo", "text.secondary", { name = "Sub" })
 		s2.AutomaticSize = Enum.AutomaticSize.X
+		s2.TextTruncate = Enum.TextTruncate.None
 		s2.Size = UDim2.new(0, 0, 1, 0)
 		s2.LayoutOrder = 3
 	end
@@ -359,12 +363,14 @@ function UiKit.lockedSlot(parent, rect, text, name)
 	local list = Instance.new("UIListLayout")
 	list.FillDirection = Enum.FillDirection.Horizontal
 	list.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	list.SortOrder = Enum.SortOrder.LayoutOrder
 	list.VerticalAlignment = Enum.VerticalAlignment.Center
 	list.Padding = UDim.new(0, 10)
 	list.Parent = row
 	UiKit.icon(row, "lock", UiKit.isPhone() and 16 or 22).LayoutOrder = 1
 	local t = UiKit.label(row, text, "cardInfo", "text.muted", { name = "Title", font = "korean" })
 	t.AutomaticSize = Enum.AutomaticSize.X
+	t.TextTruncate = Enum.TextTruncate.None
 	t.Size = UDim2.new(0, 0, 1, 0)
 	t.LayoutOrder = 2
 	f.Parent = parent
@@ -378,6 +384,9 @@ function UiKit.band(parent, rect, text)
 	f.BackgroundColor3 = UiKit.color("panel.section")
 	f.BorderSizePixel = 0
 	UiKit.place(f, rect)
+	if rect[1] == 0 and rect[3] >= (UiKit.isPhone() and Tokens.base.phone.w or Tokens.base.pc.w) then
+		f.Size = UDim2.fromOffset(rect[3] * 3, rect[4]) -- 화면 폭 띠 = 넓은 화면에서도 오른쪽 끝까지
+	end
 	local line = Instance.new("Frame")
 	line.Name = "InfoLine"
 	line.BackgroundColor3 = UiKit.color("info")
@@ -430,15 +439,23 @@ end
 -- 확인 창(모달): dim 위 창 · 열 때 UIScale 0.9 → 1 · 첫 포커스 = props.focus("cancel" 기본) · Enter = 첫 포커스 버튼.
 --   props = { parent(UiRoot.frame), rect, title, body, sub, cancelText, okText, okKind("secondary" 기본 - 노랑은 시작 · 구매만), cancelRect, okRect, onAnswer(bool) }
 function UiKit.confirm(props)
+	local layer = Instance.new("Frame") -- 루트 크기 층(창 좌표 = 기준 px) · 어둡게 덮개는 화면 밖까지(넓은 화면 = 루트 밖도 덮는다)
+	layer.Name = props.name or "ConfirmDim"
+	layer.BackgroundTransparency = 1
+	layer.Size = UDim2.fromScale(1, 1)
+	layer.ZIndex = 50
 	local dim = Instance.new("TextButton")
-	dim.Name = props.name or "ConfirmDim"
+	dim.Name = "Dim"
 	dim.AutoButtonColor = false
 	dim.Text = ""
 	dim.BackgroundColor3 = Color3.new(0, 0, 0)
 	dim.BackgroundTransparency = Tokens.dimTransparency
-	dim.Size = UDim2.fromScale(1, 1)
+	dim.AnchorPoint = Vector2.new(0.5, 0.5)
+	dim.Position = UDim2.fromScale(0.5, 0.5)
+	dim.Size = UDim2.fromScale(6, 6)
 	dim.ZIndex = 50
-	local win = UiKit.window({ parent = dim, rect = props.rect, title = props.title, name = "ConfirmWindow" })
+	dim.Parent = layer
+	local win = UiKit.window({ parent = layer, rect = props.rect, title = props.title, name = "ConfirmWindow" })
 	win.root.ZIndex = 51
 	for _, d in ipairs(win.root:GetDescendants()) do
 		if d:IsA("GuiObject") then
@@ -461,10 +478,10 @@ function UiKit.confirm(props)
 			return
 		end
 		answered = true
-		if GuiService.SelectedObject and GuiService.SelectedObject:IsDescendantOf(dim) then
+		if GuiService.SelectedObject and GuiService.SelectedObject:IsDescendantOf(layer) then
 			GuiService.SelectedObject = nil
 		end
-		dim:Destroy()
+		layer:Destroy()
 		if props.onAnswer then
 			props.onAnswer(v)
 		end
@@ -486,7 +503,7 @@ function UiKit.confirm(props)
 	local scale = Instance.new("UIScale")
 	scale.Scale = Tokens.confirmOpenScale
 	scale.Parent = win.root
-	dim.Parent = props.parent
+	layer.Parent = props.parent
 	TweenService:Create(scale, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1 }):Play()
 	pcall(function()
 		GuiService.SelectedObject = first.face
@@ -503,7 +520,7 @@ function UiKit.confirm(props)
 			answer(false)
 		end
 	end)
-	return { root = dim, cancel = cancel, ok = ok, first = first, answer = answer }
+	return { root = layer, cancel = cancel, ok = ok, first = first, answer = answer }
 end
 
 -- 아이콘 칸 틀 + 등급 배지 + 강화 칩(07-B 계승 전 +20 ~ +30 띠 · 07-C 초월 = shared/WeaponFx.stepOf 한 판정).

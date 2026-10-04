@@ -37,6 +37,8 @@ return {
 			classArt = { 520, 170, 709, 860 },
 			classArtSilhouette = { 640, 200, 480, 600 },
 			classInfo = { 1290, 150, 534, 498 },
+			classInfoBrowse = { 1290, 150, 534, 448 }, -- 구경 모드(목업 pc_07)
+			classBackBrowse = { 96, 96, 124, 52 },
 			classStart = { 1290, 916, 534, 72 },
 			browseBand = { 0, 0, 1920, 67 },
 		},
@@ -71,6 +73,8 @@ return {
 			classArt = { 172, 52, 247, 300 },
 			classArtSilhouette = { 200, 70, 190, 240 },
 			classInfo = { 430, 12, 358, 260 },
+			classInfoBrowse = { 430, 62, 358, 212 }, -- 구경 모드(목업 phone_07 - 띠 아래)
+			classBackBrowse = { 154, 4, 44, 44 },
 			classStart = { 430, 284, 358, 56 },
 			browseBand = { 150, 0, 650, 54 },
 		},
