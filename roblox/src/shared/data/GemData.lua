@@ -22,6 +22,9 @@ return {
 	slotGradeCap = { "primordial", "epic", "legendary", "relic", "ancient" },
 	-- QUEUE-ALL9E1-ADD B: 초월 홈(무기별 weapon.transcendSlots) 상한 = 이 등급. 계승 = 태초 상한 홈 전부 → 초월 홈(B1) · 환생 0회 계승자 = 고른 홈 1개(없으면 1번 홈을 새로 연다 - B3).
 	transcendSlotGrade = "transcendent",
+	-- QUEUE-ALL9E1 추가 항목 3(기능만 · 그림은 DESIGN-BACKLOG 7): 보석 아이콘 키(ArtAssetIds) = 종류(옵션 id)별 키가 있으면 그것 → 등급 키 → 없으면 임시 아이콘(등급색 원). 그리는 곳 = client/ItemIcons.gem 한 곳
+	iconKeyByKind = "icons/gems/%s_%s", -- (등급, 옵션 id)
+	iconKeyByGrade = "icons/gems/%s", -- (등급)
 	transcendRim = { 216, 185, 110 }, -- 초월 홈 1px 바깥 선(금빛 균열 #D8B96E - 흑요석 #202127 테두리가 어두운 패널에서 안 보여서 · B6)
 
 	-- 슬롯이 열리는 데 필요한 환생 횟수(현재는 slot i = 환생 i회, 기존 동작 그대로 유지 -

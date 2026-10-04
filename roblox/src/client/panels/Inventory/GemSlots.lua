@@ -11,6 +11,7 @@ local Gem = require(ReplicatedStorage.Shared.Gem)
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local GradeColor = require(ReplicatedStorage.Shared.GradeColor)
 local HudIcons = require(script.Parent.Parent.Parent.HudIcons)
+local ItemIcons = require(script.Parent.Parent.Parent.ItemIcons)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 local GemActions = require(script.Parent.GemActions)
 
@@ -181,7 +182,7 @@ function GemSlots.create(parent)
 			chip.stroke.Thickness = 2
 			if view.filled then
 				local color = GemActions.gradeColor(view.gemGrade)
-				chip.dot.BackgroundColor3 = color
+				ItemIcons.gem(chip.dot, view.gem or { grade = view.gemGrade }, color) -- QUEUE-ALL9E1 추가 항목 3: 아이콘 한 소스(그림 없으면 등급색 원) · 박힌 채 등급이 오르면 GemSync → 다시 칠함
 				chip.stroke.Color = GradeColor.of(capGrade) -- QUEUE-ALL9E1-ADD B4 · B6: 테두리 = 홈 등급 8색(박힌 보석 색은 점으로 - 홈 등급이 오르면 테두리만 바뀐다)
 			else
 				chip.stroke.Color = GradeColor.of(capGrade)

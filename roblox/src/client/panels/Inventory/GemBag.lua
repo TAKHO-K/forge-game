@@ -13,6 +13,8 @@ local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local Text = require(ReplicatedStorage.Shared.Text)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 local GemReplaceTip = require(script.Parent.GemReplaceTip)
+local GemActions = require(script.Parent.GemActions)
+local ItemIcons = require(script.Parent.Parent.Parent.ItemIcons)
 
 local GemBag = {}
 
@@ -91,6 +93,18 @@ function GemBag.create(parent, deps)
 			gradeLabel.TextColor3 = UIColors.textPrimary
 			gradeLabel.Text = Text.name(ArmorData.grades[gem.grade].displayName)
 			gradeLabel.Parent = cell
+
+			-- QUEUE-ALL9E1 추가 항목 3: 보석 그림(한 소스 ItemIcons.gem - 그림 없으면 등급색 원)
+			local gemIcon = Instance.new("Frame")
+			gemIcon.Name = "GemIcon"
+			gemIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+			gemIcon.Position = UDim2.new(0.5, 0, 0.5, -8)
+			gemIcon.Size = UDim2.fromScale(0.42, 0.42)
+			gemIcon.SizeConstraint = Enum.SizeConstraint.RelativeYY
+			gemIcon.BorderSizePixel = 0
+			gemIcon.Parent = cell
+			corner(gemIcon, 100)
+			ItemIcons.gem(gemIcon, gem, GemActions.gradeColor(gem.grade))
 
 			-- 선택 · 홈 먼저 모드에서 끼울 수 있는 보석(링)
 			local ring = Instance.new("Frame")

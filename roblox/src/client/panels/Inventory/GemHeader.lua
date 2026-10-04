@@ -184,7 +184,12 @@ function GemHeader.createWeaponArt(parent, size)
 				child:Destroy()
 			end
 			local iconColor = visual and GradeColor.text(weaponGrade) or UIColors.textPrimary -- G1-1 · QUEUE-ALL9C 2-2 글자 · 아이콘색
-			ItemIcons.weapon(art, size, iconColor)
+			-- QUEUE-ALL9E1 추가 항목 1: 장착 무기(직업 × 등급) 아이콘 = 장비 탭 무기 칸과 같은 소스(ItemIcons.keyFor) · 그림이 없으면 도형
+			local key = ItemIcons.keyFor("weapon", weaponGrade, nil, classId)
+			holder:SetAttribute("WeaponIconKey", key or "")
+			if not ItemIcons.image(art, size, key) then
+				ItemIcons.weapon(art, size, iconColor)
+			end
 		end,
 	}
 end

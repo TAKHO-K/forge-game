@@ -16,6 +16,9 @@ local Workspace = game:GetService("Workspace")
 
 local EnhanceEffect = require(ReplicatedStorage.Shared.EnhanceEffect)
 local EnhanceVisualData = require(ReplicatedStorage.Shared.data.EnhanceVisualData)
+local All10 = require(ReplicatedStorage.Shared.All10)
+local All10Data = require(ReplicatedStorage.Shared.data.All10Data)
+local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local RareMonsterConfig = require(ReplicatedStorage.Shared.data.RareMonsterConfig)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local WorldLabelStyle = require(ReplicatedStorage.Shared.WorldLabelStyle)
@@ -238,6 +241,16 @@ end
 
 -- 무기에 level 단계의 모습을 입힌다(멱등 - 같은 단계로 다시 불러도 · 단계가 내려가도 그 단계의 모습이 된다).
 function WeaponEnhanceVisual.apply(weapon, level)
+	-- QUEUE-ALL9E1 2-2(연결 지점만): 초월 무기 = 초월 강화 단계 → 이펙트 단계 번호(All10.transcendFxTier) · 실제 단계별 효과 전까지 = 기존 강화 연출(tempVisualLevel) 재사용
+	local isTranscendent = ArmorData.gradeOrder[(player:GetAttribute("WeaponGrade") or 0) + 1] == "transcendent"
+	local tier = isTranscendent and All10.transcendFxTier(player:GetAttribute("TranscendLevel") or 0) or nil
+	if tier then
+		level = math.max(level, All10Data.transcendEnhance.tempVisualLevel)
+	end
+	local tierHolder = effectParent(weapon)
+	if tierHolder then
+		tierHolder:SetAttribute("TranscendFxTier", tier)
+	end
 	local state = EnhanceEffect.resolveVisual(level)
 	local fx = weapon.instances.fx
 	if not fx then
@@ -346,6 +359,14 @@ end
 -- getWeapon() = WeaponVisual의 지금 무기(없으면 nil). WeaponLevel이 바뀔 때마다 그 무기에 다시 apply하고, 단계에 도달하는 순간의 빛기둥(+25)을 세운다.
 function WeaponEnhanceVisual.init(getWeapon)
 	local lastLevel = player:GetAttribute("WeaponLevel") or 0
+	for _, attr in ipairs({ "TranscendLevel", "WeaponGrade" }) do -- QUEUE-ALL9E1 2-2: 초월 강화 · 계승 = 이펙트 단계 다시 판정
+		player:GetAttributeChangedSignal(attr):Connect(function()
+			local weapon = getWeapon()
+			if weapon then
+				WeaponEnhanceVisual.apply(weapon, player:GetAttribute("WeaponLevel") or 0)
+			end
+		end)
+	end
 	player:GetAttributeChangedSignal("WeaponLevel"):Connect(function()
 		local level = player:GetAttribute("WeaponLevel") or 0
 		local weapon = getWeapon()

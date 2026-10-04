@@ -127,6 +127,46 @@ function ItemIcons.keyFor(part, grade, itemLevel, classId, setZone)
 	return ("icons/armor/%s_%s_%s"):format(part, ArtMeshKit.armorZone({ setZone = setZone, itemLevel = itemLevel }), tostring(grade))
 end
 
+-- QUEUE-ALL9E1 추가 항목 3: 보석 아이콘 한 소스(키 규칙 = GemData.iconKeyByKind · iconKeyByGrade). holder = 보석 자리 Frame(둥근 원).
+--   그림이 있으면 holder 안에 ImageLabel(배경 투명) · 없으면 holder 배경 = tempColor(임시 아이콘 = 지금 쓰는 등급색 원). holder Attribute GemIconKey = 쓴 키(임시면 "temp:<등급>").
+local GemData = require(ReplicatedStorage.Shared.data.GemData)
+function ItemIcons.gemKey(gem)
+	local kind = type(gem.option) == "table" and gem.option.id or nil
+	local byKind = kind and GemData.iconKeyByKind:format(tostring(gem.grade), tostring(kind))
+	if byKind and ArtAssetIds[byKind] and ArtAssetIds[byKind].image then
+		return byKind, true
+	end
+	local byGrade = GemData.iconKeyByGrade:format(tostring(gem.grade))
+	if ArtAssetIds[byGrade] and ArtAssetIds[byGrade].image then
+		return byGrade, true
+	end
+	return "temp:" .. tostring(gem.grade), false
+end
+
+function ItemIcons.gem(holder, gem, tempColor)
+	local old = holder:FindFirstChild("GemArt")
+	if old then
+		old:Destroy()
+	end
+	local key, hasArt = ItemIcons.gemKey(gem)
+	holder:SetAttribute("GemIconKey", key)
+	if hasArt then
+		holder.BackgroundTransparency = 1
+		local img = Instance.new("ImageLabel")
+		img.Name = "GemArt"
+		img.BackgroundTransparency = 1
+		img.Size = UDim2.fromScale(1, 1)
+		img.Image = "rbxassetid://" .. tostring(ArtAssetIds[key].image)
+		img.ScaleType = Enum.ScaleType.Fit
+		img.ZIndex = holder.ZIndex
+		img.Parent = holder
+	else
+		holder.BackgroundTransparency = 0
+		holder.BackgroundColor3 = tempColor
+	end
+	return key
+end
+
 ItemIcons.byPart = {
 	weapon = ItemIcons.weapon,
 	armor = ItemIcons.armor,

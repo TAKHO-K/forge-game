@@ -200,6 +200,7 @@ local function paintSlots()
 			unlocked = Gem.isSlotUnlocked(currentGemState.slotUnlocked, slot),
 			filled = filled,
 			gemGrade = filled and gem.grade or nil,
+			gem = filled and gem or nil, -- QUEUE-ALL9E1 추가 항목 3: 보석 아이콘(종류 × 등급) - ItemIcons.gem
 			capGrade = Gem.gradeCapForSlot(slot, currentGemState.transcendSlots), -- QUEUE-ALL9E1-ADD B6 테두리 = 홈 등급
 			mark = slotMark(slot),
 			selected = kind == "gemSlot" and value == slot,
@@ -596,7 +597,7 @@ task.spawn(function()
 	end
 end)
 
-for _, attr in ipairs({ "RebirthCount", "InfiniteStage", "AccountBestStage" }) do
+for _, attr in ipairs({ "RebirthCount", "InfiniteStage", "AccountBestStage", "ClassId", "WeaponGrade", "WeaponLevel" }) do -- QUEUE-ALL9E1 추가 항목 1: 무기 그림 = 장착 변경 · 계승 · 캐릭터 전환 · 강화 즉시
 	player:GetAttributeChangedSignal(attr):Connect(updateGemTab)
 end
 

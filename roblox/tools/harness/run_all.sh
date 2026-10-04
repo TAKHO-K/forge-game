@@ -33,6 +33,7 @@ run bulk_sell res_bulk.txt "$(python deps.py PlayerProfile,PetService,QuestServi
 run stat_sheet res_sheet.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem)" stat_sheet_test.luau # QUEUE-ALL9C 1-2 상세 능력치 합계 = 전투 값 · 줄/출처 = StatSheetData
 run all10 res_all10.txt "$(python deps.py TranscendService,TranscendFirsts,PlayerProfile,PetService,QuestService,SaveSystem,BaseLayer)" all10_test.luau # QUEUE-ALL10 초월 계승(스위치 끔 = 지금 게임 · 저장 v70 · 계승 · 초월 강화 · 수련 · 보석 · 몹 곡선)
 EXTRA_FILES=client/ArmorColors.lua,shared/MeshMeta/armor_wear.lua run gear_v3 res_gear.txt "" gear_v3_test.luau # QUEUE-ALL9E1 1-1 장비 v3 48조합 예약 색 · 문 부품 · 무기 색 · 메시 메타 60 + 문장 6 · 1인 MeshPart ≤ 24
+EXTRA_FILES=client/ItemIcons.lua run gem_home res_gemhome.txt "" gem_home_test.luau # QUEUE-ALL9E1 기능: 보석 탭 무기 키 · 보석 아이콘 한 소스 · 초월 이펙트 단계
 run monster_stats res_mstat.txt "" monster_stats_test.luau # QUEUE-N1004 C-4 몹 스탯 공용 함수 값 불변(골든 1,736값 · 31지점 · 오차 0)
 run ui_rules res_ui.txt "" ui_rules_test.luau # QUEUE-ALL9C 블록 1 화면 규칙(순위 상위 약 n% 등 순수 함수)
 run community_goal res_goal.txt "" community_goal_test.luau # QUEUE-ALL7 B5 합동 목표 00 · ±25% · 문턱 순서
