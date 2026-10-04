@@ -174,6 +174,10 @@ function TranscendService.confirm(player, token)
 	end
 	busy[player] = true
 	local okSave, saved = pcall(TranscendService.deps and TranscendService.deps.save or function(p)
+		-- Studio의 DevTools 백업 세션(/gg 뒤)은 원래 아무것도 저장하지 않는다 → 저장 확인 대신 통과(라이브 서버엔 이 상태가 없다 - IsStudio 전용)
+		if game:GetService("RunService"):IsStudio() and require(script.Parent.SaveCoordinator).isDevToolsSuspended(p) then
+			return true
+		end
 		return require(script.Parent.ImmediateSave).flush(p)
 	end, player)
 	busy[player] = nil

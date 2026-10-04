@@ -72,6 +72,11 @@ end
 
 -- DevTools.server.lua만 호출한다. suspended=true인 동안 saveForPlayer는 조용히
 -- 아무것도 하지 않는다 - 테스트 조건이 DataStore에 반영되는 일을 원천 차단한다.
+-- QUEUE-ALL10: DevTools 백업 세션(/gg 뒤 - 그 세션 저장을 일부러 멈춤)인가 - 즉시 저장을 확인하는 흐름(초월 계승)이 Studio에서 이 경우를 저장 실패로 오인하지 않게
+function SaveCoordinator.isDevToolsSuspended(player)
+	return devToolsSuspended[player] == true
+end
+
 function SaveCoordinator.setDevToolsSuspended(player, suspended)
 	if suspended then
 		devToolsSuspended[player] = true

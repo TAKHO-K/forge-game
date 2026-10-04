@@ -151,7 +151,7 @@ function TranscendView.build(parent, width, pad, footerHeight, buttonY, resultY,
 			if not step1 then
 				return
 			end
-			task.defer(function()
+			task.delay(0.5, function() -- 첫 확인 창의 닫힘 트윈이 끝난 뒤(트윈 중 open 실패 = 조용히 취소되던 것 - Play 실측)
 				Confirm.ask({ title = Text.get("transcend.inherit.confirm2Title"), body = Text.get("transcend.inherit.confirm2"), primaryText = Text.get("transcend.inherit.do"),
 					secondaryText = Text.get("transcend.inherit.cancel"), danger = true, parentId = panelId }, function(step2)
 					if not step2 then
@@ -214,6 +214,10 @@ local function rebuildCells(refs, slots, filled)
 			cell.Position = UDim2.new((i - 1) / slots, 0, 0, 0)
 			cell.Parent = refs.bar
 			Theme.corner(cell, 3)
+			local stroke = Instance.new("UIStroke") -- 빈 칸도 보이게(패널 바탕과 같은 어두운 색이라 842 폭 캡처에서 막대가 안 보였다)
+			stroke.Color = Theme.colors.rim
+			stroke.Transparency = 0.45
+			stroke.Parent = cell
 			refs.cells[i] = cell
 		end
 	end
