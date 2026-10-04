@@ -237,4 +237,14 @@ local ok, err = pcall(function()
 	end
 end)
 if not ok then print("[BULK] 에러 " .. tostring(err)) end
+-- QUEUE-ALL10 0-5(결정 5): 첫 가득 참 안내 [켜기] 기본 = 희귀 이하(서버가 받는 선택지 안) · 태초 · 초월은 희귀 기준에서도 제외
+local ok5, err5 = pcall(function()
+	local ArmorData, Loot = MODS.ArmorData, MODS.Loot
+	local def = ArmorData.autoProcessHintDefault
+	local function item(g) return { id = "x", grade = g, part = "armor", stats = {} } end
+	check("ALL10 0-5 첫 안내 기본 = rare(선택지 안) · 희귀 O · 영웅 X · 태초 · 초월 X", def == "rare" and table.find(ArmorData.autoProcessGradeChoices, def) ~= nil
+		and Loot.isAutoProcessTarget(item("rare"), def) and not Loot.isAutoProcessTarget(item("epic"), def)
+		and not Loot.isAutoProcessTarget(item("primordial"), def) and not Loot.isAutoProcessTarget(item("transcendent"), def), tostring(def))
+end)
+if not ok5 then print("[BULK] 에러 " .. tostring(err5)) end
 print(("[BULK] 끝 %d/%d"):format(pass, total))

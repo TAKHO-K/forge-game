@@ -281,8 +281,7 @@ inventoryFull.OnClientEvent:Connect(function()
 	SettingSave("autoProcessHintSeen", true)
 	Confirm.ask({ title = Text.get("autoTidy.hint.title"), body = Text.get("autoTidy.hint.body"), primaryText = Text.get("autoTidy.hint.on"), secondaryText = Text.get("autoTidy.hint.later") }, function(accepted)
 		if accepted then
-			local choices = ArmorData.autoProcessGradeChoices
-			ReplicatedStorage:WaitForChild("AutoProcessRequest"):FireServer(true, choices[#choices]) -- 기본 = 일반 이하
+			ReplicatedStorage:WaitForChild("AutoProcessRequest"):FireServer(true, ArmorData.autoProcessHintDefault) -- QUEUE-ALL10 0-5 기본 = 희귀 이하
 		end
 	end)
 end)
