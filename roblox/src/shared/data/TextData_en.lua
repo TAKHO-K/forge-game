@@ -436,6 +436,7 @@ return {
 	["prob.raid"] = "Raid · Retry (fights of {sec}s+ · shorter fights move Ancient+ share to Epic): ",
 	["prob.sparkle"] = "Sparkle Monster: ",
 	["prob.enhance"] = "Weapon Enhance (no Ember · no guard)",
+	["prob.transcend"] = "Transcend Enhance (+1 ~ +5 always succeed · a fail only costs Gold · no drops or resets)",
 	["prob.option"] = "Option reroll · Drop option (my class pool - equal)",
 	["prob.optionOff"] = "Options now off: {list}",
 	["prob.variant"] = "Skill Variant ({appear} of Epic+ gear · reroll = gold of {kills} monsters)",

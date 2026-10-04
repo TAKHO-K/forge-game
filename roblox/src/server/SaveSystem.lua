@@ -411,11 +411,12 @@ function SaveSystem.sanitizeAll10(data)
 				if weapon.transcend ~= nil then
 					park("weapon_transcend_shape", weapon.transcend, classId)
 				end
-				weapon.transcend = weapon.grade == A.inherit.toGrade and { level = 0, slot = 0 } or nil -- 초월 무기면 기본 단계로(없던 값을 만들지 않는다 - grade 7이 아니면 그대로 없음)
+				weapon.transcend = weapon.grade == A.inherit.toGrade and { level = 0, slot = 0, fails = 0 } or nil -- 초월 무기면 기본 단계로(없던 값을 만들지 않는다 - grade 7이 아니면 그대로 없음)
 			end
 			if weapon.transcend then
 				weapon.transcend.level = int(weapon.transcend.level, 0, 0)
 				weapon.transcend.slot = int(weapon.transcend.slot, 0, 0)
+				weapon.transcend.fails = int(weapon.transcend.fails, 0, 0) -- QUEUE-ALL9E1 0-4(v71) 불씨
 			end
 		end
 		local rec = type(classState) == "table" and classState.transcendInherit
@@ -1495,6 +1496,16 @@ local function migrate(data)
 		end
 		data.transcendGems = type(data.transcendGems) == "table" and data.transcendGems or { list = {}, seq = 0 }
 		data.version = 70
+	end
+	if data.version < 71 then
+		-- QUEUE-ALL9E1 0-4: 초월 강화 +6 ~ 확률 단계의 불씨(weapon.transcend.fails - 이번 단계 실패 횟수 · 천장 판정). 옛 초월 무기 = 0. 값 정리는 sanitizeAll10.
+		for _, classState in pairs(type(data.classes) == "table" and data.classes or {}) do
+			local t = type(classState) == "table" and type(classState.weapon) == "table" and classState.weapon.transcend
+			if type(t) == "table" then
+				t.fails = t.fails or 0
+			end
+		end
+		data.version = 71
 	end
 
 	data.savedAt = data.savedAt or 0

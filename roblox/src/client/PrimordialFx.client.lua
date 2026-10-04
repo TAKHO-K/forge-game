@@ -674,3 +674,11 @@ ReplicatedStorage:WaitForChild("TranscendentEvent").OnClientEvent:Connect(functi
 		p.lunge = { at = os.clock(), target = payload.position, heavy = payload.heavy == true } -- 강공격 = 무기가 1.35배 길게 뻗는다(본인 화면은 AttackResult 강공격 불꽃도 같이)
 	end
 end)
+
+-- QUEUE-ALL9E1 0-5: 초월 강화 전 서버 최초 달성 배너(서버 TranscendFirsts - 채팅 줄은 SystemNotice가 따로) · 알림 끔 설정이면 배너 없음
+ReplicatedStorage:WaitForChild("TranscendFirstBanner").OnClientEvent:Connect(function(msg)
+	if type(msg) ~= "table" or type(msg.key) ~= "string" or noticeMode() == "off" then
+		return
+	end
+	Toast.push("TC", { richParts = { { text = Text.get(msg.key, msg.args), colorName = "gold", bold = true } }, seconds = 5, fadeSeconds = 0.4, rainbow = true })
+end)

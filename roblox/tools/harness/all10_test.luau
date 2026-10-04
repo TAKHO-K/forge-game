@@ -35,15 +35,48 @@ local ok, err = pcall(function()
 	-- 돌파 계수 = 기준 빌드 × (1,500 구간 1/2.4) - 진행 속도 ∝ 상대 힘이라 기준 빌드인 사람은 구간 안 2.4배 · 뒤 정상
 	local S0 = 10000
 	local ref0, ref750, ref1500 = All10.referenceBuild(10000, S0), All10.referenceBuild(10750, S0), All10.referenceBuild(11500, S0)
-	local wantRef750 = Data.inherit.weaponMultiplier * (1 + Data.advancedTraining.perLevel * 7) * (1 + Data.transcendEnhance.perLevel * Data.transcendEnhance.maxLevel * 750 / (mc.refEndStage - S0))
+	local wantRef750 = Data.inherit.weaponMultiplier * (1 + Data.advancedTraining.perLevel * 7) * All10.transcendMultiplierAt(Data.transcendEnhance.baseMaxLevel * 750 / (mc.refEndStage - S0))
 	check("기준 빌드: 계승 지점 = ×1.25 · 10,750 = 1.25 × (1 + 고급 7%) × (1 + 초월 기대치) · 스테이지에 단조 증가", near(ref0, Data.inherit.weaponMultiplier) and near(ref750, wantRef750, 1e-12) and ref1500 > ref750, ("%.4f · %.4f"):format(ref0, ref750))
 	check("돌파 계수: 구간 안 = 기준 빌드 ÷ 2.4 · 1,500부터 = 기준 빌드(정상 복귀) · 계승 전 · 계승 안 함 = 기준 빌드/1", near(All10.breakFactor(10750, S0), ref750 / mc.breakRatio, 1e-12)
 		and near(All10.breakFactor(11500, S0), ref1500, 1e-12) and near(All10.breakFactor(9000, S0), All10.referenceBuild(9000, S0) / mc.breakRatio, 1e-12) and All10.breakFactor(12000, nil) == 1)
 	check("돌파 2.4배: 기준 빌드인 사람의 상대 힘(빌드 ÷ 돌파 계수) = 구간 안 2.4 · 뒤 1.0", near(ref750 / All10.breakFactor(10750, S0), mc.breakRatio, 1e-12) and near(ref1500 / All10.breakFactor(11500, S0), 1, 1e-12))
 	-- 초월 강화(10칸): 칸마다 효과 1/10 · +20 = +100% · 칸 가격 = 단계 비용 ÷ 10 · 효율 일정(공격 1%당 비용 = 단계 무관)
 	local te = Data.transcendEnhance
-	check("초월 강화: +0 칸 3 = +1.5% · +7 칸 0 = +35% · +20 = +100%(칸 무시)", near(All10.transcendEnhanceBonus({ level = 0, slot = 3 }), 0.015) and near(All10.transcendEnhanceBonus({ level = 7, slot = 0 }), 0.35)
-		and near(All10.transcendEnhanceBonus({ level = 20, slot = 5 }), 1.0))
+	-- QUEUE-ALL9E1 0-4: +1 ~ +5 확정(칸) · +6 ~ 단계당 ×(1 + gain) 곱
+	local g = 1 + te.gain
+	check("초월 강화(0-4): +0 칸 3 = +1.5% · +5 = +25% · +7 = 1.25 × 1.22² · +20 = 1.25 × 1.22^15(칸 무시) · 한 단계 성공 = 처치 시간 15 ~ 25% 감소", near(All10.transcendEnhanceBonus({ level = 0, slot = 3 }), 0.015)
+		and near(All10.transcendEnhanceBonus({ level = 5, slot = 0 }), 0.25) and near(All10.transcendEnhanceBonus({ level = 7, slot = 0 }), 1.25 * g ^ 2 - 1, 1e-12)
+		and near(All10.transcendEnhanceBonus({ level = 20, slot = 5 }), 1.25 * g ^ 15 - 1, 1e-12) and 1 - 1 / g >= 0.15 and 1 - 1 / g <= 0.25, ("+20 ×%.2f · 처치 시간 −%.1f%%"):format(1 + All10.transcendEnhanceBonus({ level = 20 }), (1 - 1 / g) * 100))
+	local bandOk = true
+	local want = { [6] = { 0.40, 8 }, [8] = { 0.40, 8 }, [9] = { 0.30, 10 }, [12] = { 0.25, 12 }, [15] = { 0.15, 20 }, [18] = { 0.10, 30 }, [20] = { 0.10, 30 }, [21] = { 0.10, 30 }, [25] = { 0.10, 30 } }
+	for lv, w in pairs(want) do
+		local b = All10.transcendBand(lv)
+		bandOk = bandOk and b ~= nil and b.chance == w[1] and b.ceiling == w[2]
+	end
+	check("확률 표(사용자 숫자): +6~8 40%·8 · +9~11 30%·10 · +12~14 25%·12 · +15~17 15%·20 · +18~20 10%·30 · +21~25 10%·30 · +1~5 = 확정(묶음 없음)", bandOk and All10.transcendBand(5) == nil and All10.transcendBand(1) == nil)
+	local ceilOk = true
+	for _, lv in ipairs({ 6, 9, 12, 15, 18 }) do
+		local b = All10.transcendBand(lv)
+		ceilOk = ceilOk and not All10.transcendAttemptSucceeds(lv, b.ceiling - 2, 0.9999) and All10.transcendAttemptSucceeds(lv, b.ceiling - 1, 0.9999) and All10.transcendAttemptSucceeds(lv, 0, b.chance - 1e-9)
+	end
+	local mcOk, mcTxt = true, {}
+	for _, lv in ipairs({ 6, 9, 12, 15, 18 }) do
+		local b, n, tries = All10.transcendBand(lv), 200000, 0
+		for _ = 1, n do
+			local f = 0
+			while true do
+				tries += 1
+				if All10.transcendAttemptSucceeds(lv, f, math.random()) then break end
+				f += 1
+			end
+		end
+		local e = tries / n
+		mcOk = mcOk and math.abs(e / All10.transcendExpectedAttempts(b) - 1) < 0.01
+		table.insert(mcTxt, ("+%d %.3f/%.3f"):format(lv, e, All10.transcendExpectedAttempts(b)))
+	end
+	check("천장: N−1번 실패 뒤 N번째 = 확정 · 그 전 = 확률 · 기대 시도 수 식 = 몬테카를로 20만(±1%) → 시도 가격 × 기대 시도 = 단계 비용(실패 포함)", ceilOk and mcOk
+		and near(All10.transcendAttemptCost(6, 10000) * All10.transcendExpectedAttempts(All10.transcendBand(6)) / (All10.transcendSlotCost(10000) * te.slots), 1, 1e-6), table.concat(mcTxt, " · "))
+	check("+21 ~ +25 = 최고 스테이지 24,000 이상에서만(23,999 = 상한 20 · 24,000 = 25)", All10.transcendCap(23999) == 20 and All10.transcendCap(24000) == 25)
 	local slot10k = All10.transcendSlotCost(10000)
 	local want10k = GoldCost.cost(MonsterData.tier1.goldDrop * te.levelKills / te.slots * Data.killUnitScale, 10000, "transcend")
 	check("초월 칸 가격 = tier1 골드 × levelKills ÷ 10 × 1.76 × GoldCost(최고 스테이지) · 스테이지 오르면 수입과 같은 율", slot10k == want10k and near(All10.transcendSlotCost(12000) / slot10k, 1.001 ^ 2000, 1e-6), ("%.4g"):format(slot10k))
@@ -74,7 +107,7 @@ local okS, errS = pcall(function()
 	local SaveSystem, SaveConfig, A, All10 = MODS.SaveSystem, MODS.SaveConfig, MODS.All10Data, MODS.All10
 	ATTR.All10Economy = true
 	local fresh = SaveSystem.migrate({})
-	check("v70 새 계정: training.advanced 50 · guard 0 · transcendGems 빈 목록 · 무기 transcend 없음 · 계승 기록 없음", SaveConfig.saveVersion == 70 and fresh.version == 70
+	check("v70 새 계정: training.advanced 50 · guard 0 · transcendGems 빈 목록 · 무기 transcend 없음 · 계승 기록 없음", SaveConfig.saveVersion == 71 and fresh.version == 71
 		and fresh.training.advanced == 50 and fresh.training.guard == 0 and type(fresh.transcendGems.list) == "table" and #fresh.transcendGems.list == 0 and fresh.transcendGems.seq == 0
 		and fresh.classes.bow.weapon.transcend == nil and fresh.classes.bow.transcendInherit == nil)
 	local old = SaveSystem.migrate({})
@@ -82,7 +115,7 @@ local okS, errS = pcall(function()
 	old.training.advanced, old.training.guard, old.transcendGems = nil, nil, nil
 	old.gold = 12345
 	local m = SaveSystem.migrate(old)
-	check("v69 → v70: 빈 칸 채움 · 다른 값 그대로(골드 · 수련 공격) · 멱등", m.version == 70 and m.training.advanced == 50 and m.training.guard == 0 and type(m.transcendGems) == "table"
+	check("v69 → v71: 빈 칸 채움 · 다른 값 그대로(골드 · 수련 공격) · 멱등", m.version == 71 and m.training.advanced == 50 and m.training.guard == 0 and type(m.transcendGems) == "table"
 		and m.gold == 12345 and m.training.attack == 0 and SaveSystem.migrate(m).training.advanced == 50)
 	local bad = SaveSystem.migrate({})
 	bad.training.advanced, bad.training.guard = 0 / 0, "12"
@@ -102,7 +135,7 @@ local okS, errS = pcall(function()
 	for _, e in ipairs(s.quarantine) do if e.kind == "all10" then q += 1 end end
 	check("손상 값 정리: NaN · inf → 기본 · 숫자 문자열 → 숫자 · 큰 수 보존(계산만 상한) · 모양 틀림 → 보관 칸 4 + 기본 · 계승 기록 다른 칸 보존 · 손상 stage = 지금 최고",
 		s.training.advanced == 50 and s.training.guard == 12 and type(s.transcendGems.list) == "table" and tb.level == 1e6 and tb.slot == 0
-		and All10.transcendEnhanceBonus(tb) == All10.transcendEnhanceBonus({ level = 20, slot = 0 }) and th.level == 0 and th.slot == 0
+		and All10.transcendEnhanceBonus(tb) == All10.transcendEnhanceBonus({ level = MODS.All10Data.transcendEnhance.maxLevel, slot = 0 }) and tb.fails == 0 and th.level == 0 and th.slot == 0
 		and s.classes.dualblade.weapon.transcend.level == 0 and s.classes.greatsword.weapon.transcend == nil and q == 4
 		and s.classes.bow.transcendInherit.stage == 12345 and s.classes.bow.transcendInherit.fromLevel == 30 and s.classes.healer.transcendInherit == nil and SaveSystem.isValidProfile(s),
 		("adv %s guard %s bow %s/%s 보관 %d"):format(tostring(s.training.advanced), tostring(s.training.guard), tostring(tb.level), tostring(tb.slot), q))
@@ -263,9 +296,30 @@ local okT, errT = pcall(function()
 	prof.gold = 1e30
 	check("초월 강화: 칸 10번 = +1(칸 0) · 칸당 가격 일정 · +1 칸 1 공격 = ×1.25 × (1 + 0.05 × 1.1) · 골드 부족 = 칸 그대로", paidOk and r1.ok and cs.weapon.transcend.slot == 1
 		and math.abs(atk1 / atkBefore - 1.25 * (1 + 0.05 * 1.1)) < 1e-12 and not poor.ok and poor.why == "no_gold" and cs.weapon.transcend.slot == 1)
-	cs.weapon.transcend.level, cs.weapon.transcend.slot = A.transcendEnhance.maxLevel, 0
-	check("초월 강화 +20 = max(더 낼 수 없음)", TS.payEnhance(pl).why == "max")
-	cs.weapon.transcend.level = 1
+	-- QUEUE-ALL9E1 0-4 서버 확률 시도: 실패 = 골드만 · 단계 그대로 · 불씨 +1 · 성공 = +1 · 불씨 0 · 천장 = 확정 · 공격 ×1.22
+	local te2 = A.transcendEnhance
+	cs.weapon.transcend.level, cs.weapon.transcend.slot, cs.weapon.transcend.fails = 5, 0, 0
+	local atk5 = PlayerCombat.getAttack(cs.weapon, "bow", 100, 0, 0, 1, nil)
+	TS.deps.roll = function() return 0.99 end
+	local gA = prof.gold
+	local f1 = TS.payEnhance(pl)
+	local failOk = f1.ok and f1.attempt and not f1.success and cs.weapon.transcend.level == 5 and cs.weapon.transcend.fails == 1 and math.abs((gA - prof.gold) - f1.cost) <= 1e-9 * gA
+	for _ = 1, 6 do TS.payEnhance(pl) end
+	local before8 = cs.weapon.transcend.fails
+	local f8 = TS.payEnhance(pl)
+	local atk6 = PlayerCombat.getAttack(cs.weapon, "bow", 100, 0, 0, 1, nil)
+	TS.deps.roll = function() return 0.0 end
+	local s7 = TS.payEnhance(pl)
+	TS.deps.roll = nil
+	check("확률 시도: 실패 = 골드만 · 단계 그대로 · 불씨 +1 · 7번 실패 뒤 8번째 확정(+6 · 불씨 0) · 공격 ×1.22 · 굴림 성공 = +7", failOk and before8 == 7 and f8.success and s7.success
+		and cs.weapon.transcend.level == 7 and cs.weapon.transcend.fails == 0 and math.abs(atk6 / atk5 - (1 + te2.gain)) < 1e-9, ("×%.4f"):format(atk6 / atk5))
+	cs.weapon.transcend.level = 20
+	cs.stageProgress.infiniteBest = 23999
+	local capWhy = TS.payEnhance(pl).why
+	cs.weapon.transcend.level = te2.maxLevel
+	check("초월 강화 +20 · 최고 23,999 = ext_stage(+21은 24,000부터) · +25 = max", capWhy == "ext_stage" and TS.payEnhance(pl).why == "max", tostring(capWhy))
+	cs.stageProgress.infiniteBest = 10000
+	cs.weapon.transcend.level, cs.weapon.transcend.fails = 1, 0
 	-- ③ 고급 · 방어 수련
 	local plN, profN = fresh()
 	check("고급 수련: 초월 무기 없으면 not_transcend(스테이지 10,000이어도)", TS.buyAdvanced(plN).why == "not_transcend" and profN.training.advanced == 50)
@@ -354,4 +408,46 @@ local okG, errG = pcall(function()
 	check("보스 · 잡몹 골드: 스위치 끔 = 켬(ALL10은 골드 식을 바꾸지 않음 - 계승자도 같은 골드)", offBoss == onBoss and offTrash == onTrash, ("보스 %.4g · 잡몹 %.4g"):format(onBoss, onTrash))
 end)
 if not okG then print("[A10] 에러 " .. tostring(errG)) end
+-- QUEUE-ALL9E1 0-5 초월 최초 달성: 가짜 DataStore(UpdateAsync = 실제처럼 경쟁 시 변환 함수를 다시 돌림) - 두 서버 동시 → 1명만 · 같은 사람 재시도 = 이김 · 개발 계정 제외 · epoch 키
+local okF, errF = pcall(function()
+	local TF = MODS.TranscendFirsts
+	local data = {}
+	local interleave = nil
+	local fake = {
+		GetAsync = function(_, key) return data[key] end,
+		UpdateAsync = function(_, key, fn)
+			while true do
+				local seen = data[key]
+				local new = fn(seen)
+				if interleave then -- 경쟁: 변환 뒤 커밋 전에 다른 서버가 먼저 씀 → 실제 UpdateAsync처럼 다시 돈다
+					local f = interleave
+					interleave = nil
+					f()
+				end
+				if data[key] == seen then
+					if new == nil then return nil end
+					data[key] = new
+					return new
+				end
+			end
+		end,
+	}
+	TF.deps = { store = fake, test = true }
+	local A1 = { userId = 1001, name = "A", at = 1 }
+	local B1 = { userId = 1002, name = "B", at = 1 }
+	interleave = function() TF.tryClaim(10, B1) end
+	local wonA, recA = TF.tryClaim(10, A1)
+	local wonB2 = TF.tryClaim(10, B1)
+	local wonA15 = TF.tryClaim(15, A1)
+	local wonA15again = TF.tryClaim(15, A1)
+	local wonB15 = TF.tryClaim(15, B1)
+	local rows = TF.readAll()
+	check("0-5 두 서버 동시 +10 → 먼저 커밋한 B만 · A = 짐(기록 B) · B 재시도 = 이김 · +15 A 이김 · A 재시도 이김 · B 짐 · 기록 2줄(높은 단계부터) · 키 = 시험 접두사 + epoch",
+		not wonA and recA and recA.userId == 1002 and wonB2 and wonA15 and wonA15again and not wonB15 and #rows == 2 and rows[1].level == 15 and rows[2].level == 10
+		and TF.keyFor(20) == "test_" .. MODS.All10Data.transcendFirsts.launchEpoch .. ":20", ("%s · %s"):format(tostring(recA and recA.userId), TF.keyFor(20)))
+	check("0-5 대상 단계 10 · 15 · 20만 · 개발 계정 제외 · 칭호 3종 데이터", TF.isFirstLevel(10) and TF.isFirstLevel(20) and not TF.isFirstLevel(11) and TF.excluded(11595243049) and not TF.excluded(1001)
+		and MODS.TitleData.titles.firstTranscend20 ~= nil and MODS.TitleData.titles.firstTranscend10 ~= nil)
+end)
+if not okF then print("[A10] 에러 " .. tostring(errF)) end
+
 print(("[A10] 끝 %d/%d"):format(pass, total))

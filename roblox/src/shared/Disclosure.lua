@@ -37,6 +37,20 @@ function Disclosure.enhanceRows()
 	return rows
 end
 
+-- QUEUE-ALL9E1 0-4 초월 강화(+6 ~): 서버 판정과 같은 표(All10Data.transcendEnhance.bands) · 스위치(All10Economy) 끔이면 행 없음
+function Disclosure.transcendRows()
+	local All10 = require(ReplicatedStorage.Shared.All10)
+	local rows = {}
+	if not All10.enabled() then
+		return rows
+	end
+	local d = All10.data.transcendEnhance
+	for _, band in ipairs(d.bands) do
+		table.insert(rows, { fromLevel = band.fromLevel, toLevel = band.toLevel, chance = band.chance, ceiling = band.ceiling, extendStage = band.fromLevel > d.baseMaxLevel and d.extendStage or nil })
+	end
+	return rows
+end
+
 function Disclosure.build()
 	local options = {}
 	for _, classId in ipairs(ClassData.order) do
@@ -51,6 +65,7 @@ function Disclosure.build()
 		drop = DropTable.disclosure(), -- 잡몹(티어별) · 보스 첫 클리어 · 토벌 · 반짝이 - 보스는 종과 무관하게 같은 표(bossIds = 적용 보스 목록)
 		bossIds = bossIds,
 		enhance = Disclosure.enhanceRows(),
+		transcend = Disclosure.transcendRows(), -- QUEUE-ALL9E1 0-4
 		options = options,
 		optionDisabled = OptionData.disabled,
 		variants = SkillVariant.disclosure(),

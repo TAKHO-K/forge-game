@@ -23,11 +23,34 @@ return {
 	},
 
 	-- 2-2 초월 강화 0 ~ 20(D7 + 결정 4): 확정 성공 · 골드만 · 하락/초기화 없음 · 한 단계 = 10칸 분할 납입
+	--   QUEUE-ALL9E1 0-4(P3-4 · 사용자 10-04 · D7 변경): +1 ~ +5 = 확정 · 10칸 분할 그대로 / +6 이상 = 확률(3단계 묶음 · 실패 = 골드만 · 하락 · 초기화 없음) +
+	--   불씨 천장(ceiling번째 시도 확정 · 성공하면 0) · 단계당 공격 ×(1 + gain)(곱 - 한 단계 성공 = 같은 스테이지 처치 시간 1 − 1/(1 + gain) 감소) ·
+	--   시도 비용 = 그 단계 기대 비용(levelKills · 실패 포함) ÷ 기대 시도 수(천장 반영). +21 ~ +25 = 계정 최고 스테이지 extendStage 이상에서만(결정 4).
 	transcendEnhance = {
-		maxLevel = 20, -- D8: 늘리면 +21 ~ 이 같은 식
-		perLevel = 0.05, -- 단계당 공격 +5%(무기 강화 줄 합연산 · 칸마다 1/10)
-		levelKills = 360000, -- 한 단계 비용(마리분) - 공격 1%당 비용 일정(효율 일정 · R13) · 3-1 실제 EconSim 맞춤: 28만 → 36만(상위 1% +20 ≈ 24,755 - 25,300 근처)
-		slots = 10, -- 결정 4: 10칸 분할(칸마다 효과 1/10 · 낸 만큼 저장)
+		maxLevel = 25, baseMaxLevel = 20, extendStage = 24000, -- 상한 = 최고 스테이지 < extendStage면 baseMaxLevel(All10.transcendCap)
+		perLevel = 0.05, -- +1 ~ +5 단계당 공격 +5%(무기 강화 줄 합연산 · 칸마다 1/10)
+		sureUntil = 5, -- 여기까지 확정(칸 납입)
+		levelKills = 360000, -- 한 단계 비용(마리분 · 확률 단계는 실패 포함 기대값) · 3-1 실제 EconSim 맞춤: 28만 → 36만
+		slots = 10, -- 결정 4: 10칸 분할(칸마다 효과 1/10 · 낸 만큼 저장) - +1 ~ +5만
+		gain = 0.22, -- +6 이상 단계당 공격 ×1.22(같은 스테이지 처치 시간 −18% - 목표 15 ~ 25%)
+		bands = { -- 성공해서 닿는 단계 기준(+6 ~ +8 = 5 → 6 · 6 → 7 · 7 → 8 시도) · chance = 성공률 · ceiling = 이 번째 시도는 확정(불씨 게이지)
+			{ fromLevel = 6, toLevel = 8, chance = 0.40, ceiling = 8 },
+			{ fromLevel = 9, toLevel = 11, chance = 0.30, ceiling = 10 },
+			{ fromLevel = 12, toLevel = 14, chance = 0.25, ceiling = 12 },
+			{ fromLevel = 15, toLevel = 17, chance = 0.15, ceiling = 20 },
+			{ fromLevel = 18, toLevel = 20, chance = 0.10, ceiling = 30 },
+			{ fromLevel = 21, toLevel = 25, chance = 0.10, ceiling = 30 }, -- extendStage 이상
+		},
+	},
+
+	-- QUEUE-ALL9E1 0-5(P3-5): 초월 강화 최초 달성 - levels 각 단계 "전 서버 최초 1명" = 전 서버 배너 + 명예의 전당 "초월 강화" 줄 + 칭호(titleIds).
+	--   판정 = DataStore UpdateAsync 선점(키 = launchEpoch .. ":" .. 단계 · 먼저 쓴 사람만) · Studio = 시험 키(PrimordialData.testKeyPrefix) · 개발 계정 제외(LeaderboardConfig.excludedUserIds).
+	--   launchEpoch = 출시 때 바꾼다(그 전 기록 = 시험 기록과 분리). 그 밖 localFromLevel 이상 성공 = 같은 서버 알림.
+	transcendFirsts = {
+		levels = { 10, 15, 20 },
+		titleIds = { [10] = "firstTranscend10", [15] = "firstTranscend15", [20] = "firstTranscend20" },
+		storeName = "TranscendFirsts_v1", launchEpoch = "prelaunch1", topic = "TranscendFirst",
+		localFromLevel = 15,
 	},
 
 	-- 2-3 고급 수련 51 ~ 100(D5 · R9 · R10): 초월 무기 보유 시에만 해금(★사용자 규칙 - 스테이지만으로 열지 않는다) · 같은 수련 창 · 51부터 이름 "고급 수련"

@@ -107,6 +107,12 @@ local function render()
 	for _, r in ipairs(d.enhance) do
 		line(Text.get("ui.prob.enhanceRow", { from = ("%d"):format(r.level), to = ("%d"):format(r.level + 1), success = pct(r.success), maintain = pct(r.maintain), down1 = pct(r.down1), down2 = pct(r.down2), reset = pct(r.reset) }), "caption", "textSecondary")
 	end
+	if d.transcend and #d.transcend > 0 then -- QUEUE-ALL9E1 0-4 초월 강화(+1 ~ +5 = 확정 · 표 = 서버 판정 그대로)
+		line(Text.get("prob.transcend"), "body", "textPrimary")
+		for _, r in ipairs(d.transcend) do
+			line(Text.get(r.extendStage and "ui.prob.transcendRowExt" or "ui.prob.transcendRow", { from = ("%d"):format(r.fromLevel), to = ("%d"):format(r.toLevel), chance = pct(r.chance), ceiling = ("%d"):format(r.ceiling) }), "caption", "textSecondary")
+		end
+	end
 	line(Text.get("prob.option"), "body", "textPrimary")
 	local pool = d.options[classId] or Disclosure.optionPool(nil) -- 직업 없음 = 공통 풀(실제 rollFor(nil)과 같음)
 	local names = {}

@@ -188,7 +188,7 @@ local en = {
 	["망치와 모루"] = "Hammer & Anvil", ["할로윈 박쥐"] = "Halloween Bats", ["슬라임 낙하산"] = "Slime Parachute",
 	["로켓 반짝"] = "Rocket Twinkle", ["풍선 펑"] = "Balloon Pop", ["수정 결정 무기"] = "Crystal Weapon", ["황금 망치"] = "Golden Hammer",
 	["대장간 화로"] = "Forge Braziers", ["하이파이브"] = "High Five", ["펫 왕관"] = "Pet Crown",
-	["+30 증표"] = "+30 Mark", ["환생 없는 초월자"] = "Unreborn Transcendent", -- QUEUE-ALL9E1 0-2
+	["+30 증표"] = "+30 Mark", ["환생 없는 초월자"] = "Unreborn Transcendent", ["최초의 초월 +10"] = "First Transcendent +10", ["최초의 초월 +15"] = "First Transcendent +15", ["최초의 초월 +20"] = "First Transcendent +20", -- QUEUE-ALL9E1 0-2
 }
 
 return { en = en }

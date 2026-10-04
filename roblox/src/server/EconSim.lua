@@ -853,6 +853,18 @@ local function tryEnhanceWithGold(state, profile, rng)
 		state.enhanceAttempts += 1
 		local result = Enhance.tryEnhance(level, state.gauge, { useDrop, useReset }, EconSimConfig.commonRandom and EconSim.commonDraw(state, level) or rng:NextNumber())
 		state.weaponLevel, state.gauge = result.level, result.gauge
+		-- QUEUE-ALL9E1 0-3 측정(보고 전용 - 진행에 영향 없음): 초기화 횟수 · 태초 +29 / +30 첫 도달
+		if result.result == "reset" then
+			state.resetCount = (state.resetCount or 0) + 1
+		end
+		if state.weaponGrade == ArmorData.maxWeaponGradeIndex then
+			state.primordialAt = state.primordialAt or {}
+			for _, L in ipairs({ 29, 30 }) do
+				if state.weaponLevel >= L and not state.primordialAt[L] then
+					state.primordialAt[L] = { seconds = state.seconds, stage = state.reach, resets = state.resetCount or 0 }
+				end
+			end
+		end
 	end
 end
 
@@ -902,7 +914,7 @@ local function tryInherit(state, profile, run)
 	state.inheritFrom = { grade = state.weaponGrade, level = state.weaponLevel, rebirth = state.rebirth } -- QUEUE-ALL9E1 0-2(보고)
 	state.weaponGrade = All10Data.inherit.toGrade
 	state.weaponLevel = All10Data.inherit.resultLevel -- 0-2: +29 계승도 +30 몫(게임 confirm과 같다)
-	state.transcend = { level = 0, slot = 0 }
+	state.transcend = { level = 0, slot = 0, fails = 0 }
 	state.inheritStage = state.reach
 	state.gems[1] = EconSim.makeGem("attackPercent", "transcendent", state.reach, math.min((profile.gemRoll or 1) * (profile.optionRoll or 1), OptionData.rollMax))
 	if run then
@@ -920,8 +932,9 @@ local function tryAll10Spend(state, run)
 	while guard < 4000 do
 		guard += 1
 		local best, bestCost
-		if state.transcend.level < d.transcendEnhance.maxLevel then
-			best, bestCost = "transcend", All10.transcendSlotCost(state.reach)
+		local nextLevel = state.transcend.level + 1
+		if state.transcend.level < All10.transcendCap(state.reach) then -- QUEUE-ALL9E1 0-4: +21 ~ = extendStage 이상 · +6 ~ = 확률 시도 가격
+			best, bestCost = "transcend", All10.transcendBand(nextLevel) and All10.transcendAttemptCost(nextLevel, state.reach) or All10.transcendSlotCost(state.reach)
 		end
 		if state.training.advanced < All10.advancedCap(state.reach, true) then
 			local c = All10.advancedCost(state.training.advanced, state.reach)
@@ -941,11 +954,27 @@ local function tryAll10Spend(state, run)
 		state.gold -= bestCost
 		state.spend[best] += bestCost
 		if best == "transcend" then
-			state.transcend.slot += 1
-			if state.transcend.slot >= d.transcendEnhance.slots then
-				state.transcend.level += 1
-				state.transcend.slot = 0
-				if run and state.transcend.level == d.transcendEnhance.maxLevel then
+			local leveled = false
+			if All10.transcendBand(nextLevel) then
+				-- 확률 단계(게임 TranscendService.payEnhance와 같은 판정 함수 · 공통 난수 - 단계마다 고정 흐름)
+				state.transcendAttempts = (state.transcendAttempts or 0) + 1
+				if All10.transcendAttemptSucceeds(nextLevel, state.transcend.fails, EconSim.commonDraw(state, 1000 + nextLevel)) then
+					state.transcend.level, state.transcend.fails, leveled = nextLevel, 0, true
+				else
+					state.transcend.fails = (state.transcend.fails or 0) + 1
+				end
+			else
+				state.transcend.slot += 1
+				if state.transcend.slot >= d.transcendEnhance.slots then
+					state.transcend.level += 1
+					state.transcend.slot = 0
+					leveled = true
+				end
+			end
+			if leveled and run then
+				run.transcendAt = run.transcendAt or {}
+				run.transcendAt[state.transcend.level] = { seconds = state.seconds, stage = state.reach }
+				if state.transcend.level == d.transcendEnhance.baseMaxLevel then
 					run.transcendDoneAt = { seconds = state.seconds, stage = state.reach }
 				end
 			end

@@ -121,6 +121,10 @@ end
 
 local TranscendentData = require(ReplicatedStorage.Shared.data.TranscendentData) -- C5-7 명예의 전당 별도 칸(초월 줄 = 맨 앞 · ✦)
 local function lineFor(entry)
+	if entry.kind == "tFirst" then -- QUEUE-ALL9E1 0-5 "초월 강화" 최초 줄
+		local date = PrimordialStamp.dateText(entry.at)
+		return Text.get("srv.hof.firstTranscend", { glyph = TranscendentData.announce.glyph, level = tostring(entry.level), name = tostring(entry.name or PrimordialData.fallbackName) }) .. "\n" .. (date or "")
+	end
 	local no, name = tostring(entry.no or "?"), tostring(entry.name or PrimordialData.fallbackName)
 	local head = entry.grade == TranscendentData.gradeId and Text.get("srv.hof.headTranscend", { glyph = TranscendentData.announce.glyph, no = no, name = name })
 		or ("#%s %s"):format(no, name)
@@ -145,6 +149,22 @@ local function redraw()
 	slab:SetAttribute("HallTop", entries[1] and entries[1].no or 0)
 end
 
+local firsts = {} -- QUEUE-ALL9E1 0-5 이 서버가 받은 최초 기록(원본 읽기 실패 때 대신)
+-- 최초 달성 알림이 온 순간(TranscendFirsts) - 같은 단계 줄이 없으면 맨 앞에
+function HallOfFame.addFirst(entry)
+	for _, row in ipairs(entries) do
+		if row.kind == "tFirst" and row.level == entry.level then
+			return
+		end
+	end
+	local row = { kind = "tFirst", level = entry.level, name = entry.name, at = entry.at, userId = entry.userId }
+	table.insert(firsts, row)
+	table.insert(entries, 1, row)
+	if slab then
+		redraw()
+	end
+end
+
 -- 원본에서 다시 읽는다(서버 시작 · 5분마다 · 검증). 반환 = 읽기 성공 여부.
 function HallOfFame.refresh()
 	local list = {} -- Q0-6: 명예의 전당 = 초월만(태초 목록은 읽지 않는다 - 원본 DataStore는 그대로)
@@ -165,6 +185,13 @@ function HallOfFame.refresh()
 				table.insert(entries, row)
 			end
 		end
+		for i, row in ipairs(require(script.Parent.TranscendFirsts).readAll() or firsts) do -- QUEUE-ALL9E1 0-5 "초월 강화" 최초 = 맨 앞(높은 단계부터 · 읽기 실패 = 이 서버가 아는 것)
+			row.kind = "tFirst"
+			table.insert(entries, i, row)
+		end
+		while #entries > PrimordialData.recentKeep do
+			table.remove(entries)
+		end
 		redraw()
 	end
 	return lastReadOk
@@ -182,7 +209,7 @@ local function onAnnounce(entry)
 		return
 	end
 	for _, row in ipairs(entries) do
-		if row.no == entry.no then
+		if row.kind ~= "tFirst" and row.no == entry.no then
 			return
 		end
 	end

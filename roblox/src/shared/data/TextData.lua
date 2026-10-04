@@ -441,6 +441,7 @@ local TextData = {
 		["prob.raid"] = "토벌 · 재도전(전투 {sec}초 이상 기준 · 더 짧으면 고대 이상 몫이 비례해 영웅으로): ",
 		["prob.sparkle"] = "반짝이 몬스터: ",
 		["prob.enhance"] = "무기 강화(불씨 · 방지 없이)",
+		["prob.transcend"] = "초월 강화(+1 ~ +5 = 확정 · 실패 = 골드만 · 하락 · 초기화 없음)", -- QUEUE-ALL9E1 0-4
 		["prob.option"] = "옵션 리롤 · 드랍 옵션(내 직업 풀 - 균등)",
 		["prob.optionOff"] = "지금 꺼진 옵션: {list}",
 		["prob.variant"] = "스킬 변형(영웅 이상 장비의 {appear} · 리롤 = 몬스터 {kills}마리분 골드)",

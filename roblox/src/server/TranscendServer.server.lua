@@ -3,6 +3,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RequestGate = require(script.Parent.RequestGate)
 local TranscendService = require(script.Parent.TranscendService)
+require(script.Parent.TranscendFirsts).start() -- QUEUE-ALL9E1 0-5 초월 최초 달성(배너 Remote · 다른 서버 구독)
 
 local request = Instance.new("RemoteFunction")
 request.Name = "TranscendRequest"

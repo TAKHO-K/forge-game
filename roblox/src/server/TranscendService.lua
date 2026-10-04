@@ -24,6 +24,15 @@ local TranscendService = {}
 local busy = {} -- [Player] = true(계승 저장 대기 중 - 겹친 요청 거절)
 local tokens = {} -- [Player] = { token, at, classId }
 local gemRng = Random.new()
+local enhanceRng = Random.new() -- QUEUE-ALL9E1 0-4 초월 강화 확률 굴림
+
+-- QUEUE-ALL9E1 0-5: 초월 강화 단계 도달 알림(전 서버 최초 · 같은 서버) - TranscendFirsts가 맡는다(없으면 조용히 건너뜀)
+function TranscendService.onLevelReached(player, level)
+	local ok, Firsts = pcall(require, script.Parent.TranscendFirsts)
+	if ok and Firsts and typeof(player) == "Instance" then
+		task.spawn(Firsts.onReached, player, level)
+	end
+end
 
 -- 테스트 · 검증 주입(하네스): save = function(player) → bool, now = function() → 초
 TranscendService.deps = nil
@@ -181,7 +190,7 @@ function TranscendService.confirm(player, token)
 	local fromGrade, fromLevel = weapon.grade, weapon.level
 	weapon.grade = d.toGrade
 	weapon.level = d.resultLevel -- 0-2: 어디서 왔든 같은 초월 +0(강화 줄 +30 몫)
-	weapon.transcend = { level = 0, slot = 0 }
+	weapon.transcend = { level = 0, slot = 0, fails = 0 }
 	-- 계승 스테이지 = 계정 최고(리뷰: 진행 낮은 직업으로 계승해 돌파 기준을 낮추는 이득 방지 - 비용과 같은 기준)
 	classState.transcendInherit = { stage = math.max(1, math.floor(tonumber(PlayerProfile.getAccountBestStage(player)) or 1)), at = os.time(), fromGrade = fromGrade, fromLevel = fromLevel, rebirth = tonumber(classState.rebirthCount) or 0 }
 	if not before.hadTitle then
@@ -267,26 +276,56 @@ function TranscendService.payEnhance(player)
 		return { ok = false, why = "not_transcend" }
 	end
 	local d = All10Data.transcendEnhance
+	local best = PlayerProfile.getAccountBestStage(player)
 	if t.level >= d.maxLevel then
 		return { ok = false, why = "max" }
 	end
-	local cost = All10.transcendSlotCost(PlayerProfile.getAccountBestStage(player))
+	if t.level >= All10.transcendCap(best) then
+		return { ok = false, why = "ext_stage" } -- QUEUE-ALL9E1 0-4: +21 ~ +25 = 최고 스테이지 extendStage 이상
+	end
+	local nextLevel = t.level + 1
+	local band = All10.transcendBand(nextLevel)
+	if not band then
+		-- 확정 단계(+1 ~ +5): 칸 1개 납입(10칸 = 다음 단계)
+		local cost = All10.transcendSlotCost(best)
+		if not PlayerProfile.trySpendGold(player, cost) then
+			return { ok = false, why = "no_gold", cost = cost }
+		end
+		t.slot += 1
+		local leveled = false
+		if t.slot >= d.slots then
+			t.level += 1
+			t.slot = 0
+			leveled = true
+			audit(player, "transcendEnhance", ("+%d 달성"):format(t.level))
+		end
+		sync(player)
+		if typeof(player) == "Instance" then
+			require(script.Parent.ImmediateSave).request(player)
+		end
+		return { ok = true, level = t.level, slot = t.slot, leveled = leveled, cost = cost }
+	end
+	-- 확률 단계(+6 ~): 시도 1회 = 골드만 · 실패 = 불씨(fails) +1 · ceiling번째 = 확정 · 성공 = 다음 단계 · 불씨 0
+	local cost = All10.transcendAttemptCost(nextLevel, best)
 	if not PlayerProfile.trySpendGold(player, cost) then
 		return { ok = false, why = "no_gold", cost = cost }
 	end
-	t.slot += 1
-	local leveled = false
-	if t.slot >= d.slots then
-		t.level += 1
-		t.slot = 0
-		leveled = true
-		audit(player, "transcendEnhance", ("+%d 달성"):format(t.level))
+	local roll = TranscendService.deps and TranscendService.deps.roll and TranscendService.deps.roll() or enhanceRng:NextNumber()
+	local success = All10.transcendAttemptSucceeds(nextLevel, t.fails, roll)
+	if success then
+		local wasFails = t.fails or 0
+		t.level = nextLevel
+		t.fails = 0
+		audit(player, "transcendEnhance", ("+%d 달성(확률 %d%% · 실패 %d회 뒤)"):format(t.level, math.floor(band.chance * 100 + 0.5), wasFails))
+		TranscendService.onLevelReached(player, t.level)
+	else
+		t.fails = (t.fails or 0) + 1
 	end
 	sync(player)
 	if typeof(player) == "Instance" then
 		require(script.Parent.ImmediateSave).request(player)
 	end
-	return { ok = true, level = t.level, slot = t.slot, leveled = leveled, cost = cost }
+	return { ok = true, attempt = true, success = success, leveled = success, level = t.level, slot = 0, fails = t.fails, ceiling = band.ceiling, chance = band.chance, cost = cost }
 end
 
 -- ── ③ 고급 · 방어 수련 ──
@@ -472,6 +511,10 @@ function TranscendService.view(player)
 	return {
 		enabled = All10.enabled(), canInherit = All10.canInherit(classState.weapon), transcend = isT, inherited = hasInherited(profile),
 		level = t and t.level, slot = t and t.slot, slots = All10Data.transcendEnhance.slots, maxLevel = All10Data.transcendEnhance.maxLevel,
+		cap = All10.transcendCap(best), extendStage = All10Data.transcendEnhance.extendStage, fails = t and (t.fails or 0), -- QUEUE-ALL9E1 0-4 확률 단계
+		nextChance = t and All10.transcendBand(t.level + 1) and All10.transcendBand(t.level + 1).chance, nextCeiling = t and All10.transcendBand(t.level + 1) and All10.transcendBand(t.level + 1).ceiling,
+		attemptCost = t and All10.transcendBand(t.level + 1) and All10.transcendAttemptCost(t.level + 1, best), gain = All10Data.transcendEnhance.gain,
+		multNow = t and (1 + All10.transcendEnhanceBonus(t)), multNext = t and All10.transcendBand(t.level + 1) and All10.transcendMultiplierAt(t.level + 1),
 		perLevel = All10Data.transcendEnhance.perLevel, slotCost = All10.transcendSlotCost(best),
 		advanced = profile.training.advanced, advancedCap = All10.advancedCap(best, isT), advancedMax = All10Data.advancedTraining.maxLevel,
 		advancedCost = isT and profile.training.advanced < All10Data.advancedTraining.maxLevel and All10.advancedCost(profile.training.advanced, best) or nil,

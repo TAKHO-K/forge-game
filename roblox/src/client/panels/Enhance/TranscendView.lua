@@ -201,8 +201,9 @@ function TranscendView.build(parent, width, pad, footerHeight, buttonY, resultY,
 					if res and res.ok then
 						local v = refs.view
 						refs.result.Text = res.leveled and Text.get("transcend.enh.leveled", { level = tostring(res.level) })
+							or res.attempt and Text.get("transcend.enh.failed", { fails = tostring(res.fails), ceiling = tostring(res.ceiling) }) -- 0-4 확률 단계 실패
 							or Text.get("transcend.enh.paid", { slot = tostring(res.slot), slots = tostring(v and v.slots or 10) })
-						refs.result.TextColor3 = Theme.color(res.leveled and "gold" or "success")
+						refs.result.TextColor3 = Theme.color(res.leveled and "gold" or res.attempt and "textSecondary" or "success")
 					else
 						refs.result.Text = whyText(res and res.why or "generic")
 						refs.result.TextColor3 = Theme.color("danger")
@@ -326,13 +327,27 @@ function TranscendView.render(refs)
 	elseif mode == "transcend" then
 		local level, slot = v.level or 0, v.slot or 0
 		local maxed = level >= (v.maxLevel or 20)
+		local prob = v.nextChance ~= nil -- QUEUE-ALL9E1 0-4: +6 ~ 확률 단계(불씨 막대 = 천장 칸 수)
 		refs.title.Text = Text.get("transcend.enh.title", { level = tostring(level) })
-		refs.body.Text = Text.get("transcend.enh.effect", { now = pct((level + slot / v.slots) * v.perLevel), step = pct(v.perLevel / v.slots) })
 		refs.reward.Visible, refs.bar.Visible, refs.slotsText.Visible, refs.note.Visible = false, not maxed, not maxed, true
-		rebuildCells(refs, v.slots, slot)
-		refs.slotsText.Text = Text.get("transcend.enh.slots", { slot = tostring(slot), slots = tostring(v.slots) })
-		refs.note.Text = Text.get("transcend.enh.note")
-		if maxed then
+		if prob then
+			refs.body.Text = Text.get("transcend.enh.effectMult", { now = ("%.2f"):format(v.multNow or 1), next = ("%.2f"):format(v.multNext or 1) })
+			rebuildCells(refs, v.nextCeiling, v.fails or 0)
+			refs.slotsText.Text = Text.get("transcend.enh.chance", { chance = ("%d"):format(math.floor(v.nextChance * 100 + 0.5)), fails = tostring(v.fails or 0), ceiling = tostring(v.nextCeiling) })
+			refs.note.Text = Text.get("transcend.enh.noteProb")
+		else
+			refs.body.Text = Text.get("transcend.enh.effect", { now = pct((level + slot / v.slots) * v.perLevel), step = pct(v.perLevel / v.slots) })
+			rebuildCells(refs, v.slots, slot)
+			refs.slotsText.Text = Text.get("transcend.enh.slots", { slot = tostring(slot), slots = tostring(v.slots) })
+			refs.note.Text = Text.get("transcend.enh.note")
+		end
+		if not maxed and v.cap and level >= v.cap then
+			refs.button.setText(Text.get("transcend.enh.max", { level = tostring(level) }))
+			refs.button.setEnabled(false, Text.get("transcend.why.ext_stage"))
+		elseif prob and not maxed then
+			refs.button.setText(Text.get("transcend.enh.try", { cost = NumberFormat.currency(v.attemptCost, Text.languageFor()) }))
+			refs.button.setEnabled((player:GetAttribute("Gold") or 0) >= v.attemptCost, Text.get("transcend.why.no_gold"))
+		elseif maxed then
 			refs.button.setText(Text.get("transcend.enh.max", { level = tostring(level) }))
 			refs.button.setEnabled(false)
 		else

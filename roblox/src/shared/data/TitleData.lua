@@ -18,6 +18,10 @@ local T = {
 			grantedBy = "server/PrimordialRegistry.onRolled" },
 		transcendHeir = { id = "transcendHeir", name = "초월 계승자", grade = "transcendent", condition = "무기 +29 이상을 초월 무기로 계승한다", grantedBy = "server/TranscendService.confirm" }, -- QUEUE-ALL10 2-1(D2) · QUEUE-ALL9E1 0-2 조건 +29
 		-- QUEUE-ALL9E1 0-2 히든 칭호: hidden = 얻기 전엔 도감 칭호 탭에 "???"로만 보인다(CodexService.view)
+		-- QUEUE-ALL9E1 0-5 초월 강화 전 서버 최초(단계별 1명 - server/TranscendFirsts)
+		firstTranscend10 = { id = "firstTranscend10", name = "최초의 초월 +10", grade = "transcendent", condition = "전 서버에서 처음으로 초월 강화 +10에 도달한다", grantedBy = "server/TranscendFirsts" },
+		firstTranscend15 = { id = "firstTranscend15", name = "최초의 초월 +15", grade = "transcendent", condition = "전 서버에서 처음으로 초월 강화 +15에 도달한다", grantedBy = "server/TranscendFirsts" },
+		firstTranscend20 = { id = "firstTranscend20", name = "최초의 초월 +20", grade = "transcendent", condition = "전 서버에서 처음으로 초월 강화 +20에 도달한다", grantedBy = "server/TranscendFirsts" },
 		unrebornTranscendent = { id = "unrebornTranscendent", name = "환생 없는 초월자", grade = "transcendent", hidden = true, condition = "그 직업 환생 0회로 초월 계승한다", grantedBy = "server/TranscendService.confirm" },
 		weeklyChampion = { id = "weeklyChampion", name = "주간 챔피언", grade = "ancient", condition = "주간 도전 한 주 1위(처치 시간)", grantedBy = "server/WeeklyChallengeService" }, -- QUEUE-ALL1 P4 §3
 		communityHero = { id = "communityHero", name = "모두의 영웅", grade = "legendary", condition = "주간 합동 목표 100% 달성 주에 기여하고 받기(한정)", grantedBy = "server/CommunityGoalService" }, -- QUEUE-ALL1 P3 §4

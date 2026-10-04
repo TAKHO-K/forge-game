@@ -42,22 +42,69 @@ function All10.isTranscendWeapon(weapon)
 	return type(weapon) == "table" and weapon.grade == All10Data.inherit.toGrade and type(weapon.transcend) == "table"
 end
 
--- ── 2-2 초월 강화(확정 · 10칸 분할) ──
--- 칸 하나 가격(골드) - 그 단계 비용 ÷ slots
+-- ── 2-2 초월 강화(+1 ~ +5 확정 · 10칸 분할 / +6 ~ 확률 + 불씨 천장 - QUEUE-ALL9E1 0-4) ──
+-- 칸 하나 가격(골드) - 그 단계 비용 ÷ slots(확정 단계)
 function All10.transcendSlotCost(bestStage)
 	local d = All10Data.transcendEnhance
 	return scaledGold(d.levelKills / d.slots, bestStage, "transcend")
 end
 
--- 초월 강화 공격 몫(무기 강화 줄에 더하는 값): 단계 + 칸/칸 수
+-- 단계 상한: 계정 최고 스테이지 < extendStage = baseMaxLevel(+20) · 이상 = maxLevel(+25)
+function All10.transcendCap(bestStage)
+	local d = All10Data.transcendEnhance
+	return (bestStage or 0) >= d.extendStage and d.maxLevel or d.baseMaxLevel
+end
+
+-- 다음 단계(nextLevel)로 가는 시도의 확률 묶음 - nil = 확정(칸 납입) 단계
+function All10.transcendBand(nextLevel)
+	for _, band in ipairs(All10Data.transcendEnhance.bands) do
+		if nextLevel >= band.fromLevel and nextLevel <= band.toLevel then
+			return band
+		end
+	end
+	return nil
+end
+
+-- 기대 시도 수(천장 N번째 확정): Σ_{k=1..N} (1 − p)^(k−1) = (1 − (1 − p)^N) / p
+function All10.transcendExpectedAttempts(band)
+	return (1 - (1 - band.chance) ^ band.ceiling) / band.chance
+end
+
+-- 확률 단계 시도 1회 가격 = 단계 기대 비용(levelKills · 실패 포함) ÷ 기대 시도 수
+function All10.transcendAttemptCost(nextLevel, bestStage)
+	local band = All10.transcendBand(nextLevel)
+	local d = All10Data.transcendEnhance
+	return scaledGold(d.levelKills / (band and All10.transcendExpectedAttempts(band) or d.slots), bestStage, "transcend")
+end
+
+-- 시도 판정(서버 · 시뮬 같은 함수): fails = 이 단계에서 이미 실패한 횟수 · roll ∈ [0, 1)
+function All10.transcendAttemptSucceeds(nextLevel, fails, roll)
+	local band = All10.transcendBand(nextLevel)
+	if not band then
+		return true
+	end
+	return (fails or 0) + 1 >= band.ceiling or roll < band.chance
+end
+
+-- 연속 단계(소수 - 기준 빌드)의 초월 강화 배수: t ≤ sureUntil = 1 + perLevel × t · 넘으면 (1 + perLevel × sureUntil) × (1 + gain)^(t − sureUntil)
+function All10.transcendMultiplierAt(t)
+	local d = All10Data.transcendEnhance
+	t = math.max(0, t or 0)
+	if t <= d.sureUntil then
+		return 1 + d.perLevel * t
+	end
+	return (1 + d.perLevel * d.sureUntil) * (1 + d.gain) ^ (t - d.sureUntil)
+end
+
+-- 초월 강화 공격 몫(무기 강화 줄 × (1 + 이 값)): 확정 단계는 칸/칸 수까지(+5 미만) · 확률 단계는 칸 없음
 function All10.transcendEnhanceBonus(transcend)
 	if not All10.enabled() or type(transcend) ~= "table" then
 		return 0
 	end
 	local d = All10Data.transcendEnhance
 	local level = math.clamp(math.floor(tonumber(transcend.level) or 0), 0, d.maxLevel)
-	local slot = level >= d.maxLevel and 0 or math.clamp(math.floor(tonumber(transcend.slot) or 0), 0, d.slots - 1)
-	return d.perLevel * (level + slot / d.slots)
+	local slot = level >= d.sureUntil and 0 or math.clamp(math.floor(tonumber(transcend.slot) or 0), 0, d.slots - 1)
+	return All10.transcendMultiplierAt(level + slot / d.slots) - 1
 end
 
 -- ── 2-3 고급 수련 · 방어 수련 ──
@@ -152,8 +199,8 @@ function All10.referenceBuild(stage, inheritStage)
 	local d = All10Data
 	local adv = All10.advancedCap(stage, true)
 	local span = math.max(1, d.monsterCurve.refEndStage - inheritStage)
-	local tLevel = d.transcendEnhance.maxLevel * math.clamp(((stage or 0) - inheritStage) / span, 0, 1)
-	return d.inherit.weaponMultiplier * (1 + d.advancedTraining.perLevel * (adv - (d.advancedTraining.fromLevel - 1))) * (1 + d.transcendEnhance.perLevel * tLevel)
+	local tLevel = d.transcendEnhance.baseMaxLevel * math.clamp(((stage or 0) - inheritStage) / span, 0, 1)
+	return d.inherit.weaponMultiplier * (1 + d.advancedTraining.perLevel * (adv - (d.advancedTraining.fromLevel - 1))) * All10.transcendMultiplierAt(tLevel) -- QUEUE-ALL9E1 0-4: 초월 강화 배수 = 게임과 같은 꼴(+6부터 곱)
 end
 
 -- 돌파 계수(그 사람에게만 · 몹 HP에 곱함) - 계승 안 했으면 1:

@@ -149,6 +149,8 @@ return {
 		["ui.prob.riftBelow"] = "균열 시간: {list}(늘어난 몫은 아래 등급에서 뺌 · 태초 · 초월 제외) - 아래 표는 균열 중 확률",
 		["ui.prob.firstBossMin"] = "  · 직업마다 첫 보스 첫 클리어 = {grade} 이상 확정(위 표 굴림이 아래면 {grade}으로)",
 		["ui.prob.enhanceRow"] = "+{from} → +{to} {success} · 유지 {maintain} · -1 {down1} · -2 {down2} · 초기화 {reset}",
+		["ui.prob.transcendRow"] = "+{from} ~ +{to} 성공 {chance} · {ceiling}번째 시도 확정", -- QUEUE-ALL9E1 0-4
+		["ui.prob.transcendRowExt"] = "+{from} ~ +{to} 성공 {chance} · {ceiling}번째 시도 확정(스테이지 24,000부터)",
 		["ui.prob.hatchRow"] = "Lv.{level}({hatches}회~) {list}",
 		["ui.quest.daysHours"] = "{days}일 {hours}시간",
 		-- 창 공통 · 확인창 · 직업 선택 · 메뉴 이름 · 보상 짧은 글(UIManager · Confirm · ClassSelectUI · PanelRegistry · RewardIcons)
@@ -339,6 +341,8 @@ return {
 		["ui.prob.riftBelow"] = "Rift time: {list} (extra taken from lower grades · excl. Primordial, Transcendent) - table below is during Rift",
 		["ui.prob.firstBossMin"] = "  · First boss first clear per class = {grade} or better (lower rolls become {grade})",
 		["ui.prob.enhanceRow"] = "+{from} → +{to} {success} · Keep {maintain} · -1 {down1} · -2 {down2} · Reset {reset}",
+		["ui.prob.transcendRow"] = "+{from} ~ +{to} Success {chance} · Try #{ceiling} always succeeds",
+		["ui.prob.transcendRowExt"] = "+{from} ~ +{to} Success {chance} · Try #{ceiling} always succeeds (from Stage 24,000)",
 		["ui.prob.hatchRow"] = "Lv.{level} ({hatches}+ hatches) {list}",
 		["ui.quest.daysHours"] = "{days}d {hours}h",
 		-- 창 공통 · 확인창 · 직업 선택 · 메뉴 이름 · 보상 짧은 글(UIManager · Confirm · ClassSelectUI · PanelRegistry · RewardIcons)
