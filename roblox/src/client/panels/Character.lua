@@ -259,6 +259,23 @@ local function build()
 			end
 		end })
 	change.root.Name = "ChangeClassButton"
+	-- QUEUE-MENU2 C: 캐릭터 = 직업 고정 → 게임 안 직업 변경 입구는 숨김(코드는 그대로) · 그 자리 = 안내 + [메인 메뉴로]
+	local ToMainMenu = require(script.Parent.Parent.ui.ToMainMenu)
+	if ToMainMenu.available() then
+		change.root.Visible = false
+		local toMenu = Button.build({ parent = content, kind = "secondary", text = Text.get("menu.toMenu"), width = 150,
+			position = UDim2.new(0, 12, 1, -12), anchorPoint = Vector2.new(0, 1), onActivated = function()
+				ToMainMenu.request(CharacterPanel.id)
+			end })
+		toMenu.root.Name = "ToMainMenuButton"
+		local hint = Theme.label(content, Text.get("menu.classChangeHint"), "caption", "textSecondary")
+		hint.Name = "ClassChangeHint"
+		hint.TextWrapped = true
+		hint.AnchorPoint = Vector2.new(0, 1)
+		hint.Position = UDim2.new(0, 12, 1, -12 - Theme.buttonHeight - 6)
+		hint.Size = UDim2.new(1, -24, 0, 30)
+		ToMainMenu.bindState(toMenu, nil)
+	end
 	local train = Button.build({ parent = content, kind = "primary", text = Text.get("character.toTraining"), width = 150,
 		position = UDim2.new(1, -12, 1, -12), anchorPoint = Vector2.new(1, 1), onActivated = function()
 			UIManager.openLazy("training")

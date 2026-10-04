@@ -44,12 +44,16 @@ local bootClock = gui:GetAttribute("BootClock") or os.clock()
 local entered = false
 local BLOCK_ACTION = "MainMenuInputBlock"
 local onEnterKey = nil
-ContextActionService:BindActionAtPriority(BLOCK_ACTION, function(_, state, input)
+local function blockInput(_, state, input)
 	if state == Enum.UserInputState.Begin and input.KeyCode == Enum.KeyCode.Return and onEnterKey then
 		onEnterKey()
 	end
 	return Enum.ContextActionResult.Sink
-end, false, Enum.ContextActionPriority.High.Value + 100, Enum.UserInputType.Keyboard, Enum.UserInputType.Gamepad1)
+end
+local function bindBlock() -- QUEUE-MENU2 D: 메인 메뉴로 다시 열 때도 같은 막기
+	ContextActionService:BindActionAtPriority(BLOCK_ACTION, blockInput, false, Enum.ContextActionPriority.High.Value + 100, Enum.UserInputType.Keyboard, Enum.UserInputType.Gamepad1)
+end
+bindBlock()
 gui:WaitForChild("Sky").Active = true
 -- 로블록스 채팅 창 · 플레이어 목록(CoreGui)이 왼쪽 위 메뉴를 덮어 클릭을 가로챈다 → 메뉴 동안 숨기고 입장 때 원래 값으로
 local StarterGui = game:GetService("StarterGui")
@@ -237,7 +241,7 @@ Theme.recompute()
 local fadeTargets = {} -- { inst, 속성 } - 입장 때 투명하게
 local texts = {} -- { label, key, argsFn } - 언어를 바꾸면 다시 쓴다
 local function addFade(inst, prop)
-	table.insert(fadeTargets, { inst, prop })
+	table.insert(fadeTargets, { inst, prop }) -- 3 = 되돌릴 값(입장 직전에 기록 - QUEUE-MENU2 D 메인 메뉴로 다시 열 때)
 end
 for _, name in ipairs({ "Sky", "Ground", "Shade" }) do
 	local f = name == "Sky" and sky or sky:FindFirstChild(name)
@@ -806,6 +810,7 @@ enter = function(mode, skipped)
 	loading.Visible = false
 	local info = TweenInfo.new(Data.fadeSeconds)
 	for _, t in ipairs(fadeTargets) do
+		t[3] = t[1][t[2]] -- QUEUE-MENU2 D: 다시 열 때 되돌릴 값 = 입장 직전 보이던 값(키 아트는 시작 때 아직 서서히 나타나는 중이라 그때 값은 투명)
 		TweenService:Create(t[1], info, { [t[2]] = 1 }):Play()
 	end
 	if mode == "classes" and hasClass() then
@@ -816,14 +821,83 @@ enter = function(mode, skipped)
 		end
 	end
 	task.delay(Data.fadeSeconds + 0.05, function()
-		gui:Destroy()
+		if entered then
+			gui.Enabled = false -- QUEUE-MENU2 D: 지우지 않고 숨김(설정 → [메인 메뉴로] = 다시 연다)
+		end
 	end)
 end
 
+-- ── QUEUE-MENU2 E: 이어하기 창(캐릭터 칸) · 새 캐릭터 ─────────────
+local SlotSaveData = require(Shared.data.SlotSaveData)
+local slotRemote = SlotSaveData.enabled and ReplicatedStorage:WaitForChild("SlotRequest", 10) or nil
+local slotWindow = slotRemote and require(script.Parent.ui.SlotWindow).new(gui, {
+	onPlay = function(slot)
+		local ok, res = pcall(function()
+			return slotRemote:InvokeServer("play", slot)
+		end)
+		if ok and res and res.ok then
+			enter("continue")
+			return true
+		end
+		return false, ok and res and res.reason
+	end,
+	onNew = function()
+		local ok, res = pcall(function()
+			return slotRemote:InvokeServer("new")
+		end)
+		if ok and res and res.ok then
+			enter("classes") -- 캐릭터 없음(ClassId "") = 직업 선택 창이 스스로 열린다
+			return true
+		end
+		return false, ok and res and res.reason
+	end,
+}) or nil
+local function openSlots()
+	if slotWindow and slotWindow.open() then
+		return true
+	end
+	return false
+end
+
+-- QUEUE-MENU2 D: 다시 열기(설정 → [메인 메뉴로] - 서버가 저장 · 파티 해제 · 캐릭터를 뺀 뒤)
+local function reopen()
+	if not entered then
+		return
+	end
+	entered = false
+	for _, t in ipairs(fadeTargets) do
+		if t[3] ~= nil then
+			t[1][t[2]] = t[3]
+		end
+	end
+	gui.Enabled = true
+	bindBlock()
+	hideCore()
+	refreshTexts()
+	refreshContinue()
+	showPage("MainPage")
+	root.Visible = true
+	waitLabel.Visible = false
+	loading.Visible = false
+	if slotWindow then
+		slotWindow.close()
+	end
+	openSlots()
+end
+local reopenSignal = Instance.new("BindableEvent")
+reopenSignal.Name = "OpenMainMenu"
+reopenSignal.Parent = script
+reopenSignal.Event:Connect(reopen)
+
 continueCard.Activated:Connect(function()
-	enter("continue")
+	if not openSlots() then -- QUEUE-MENU2 E: 캐릭터 칸 창(스위치 끔 · 서버 없음 = 옛 동작)
+		enter("continue")
+	end
 end)
 menuButton(mainPage, "MenuClasses", "menu.classSelect", 2, function()
+	if openSlots() then -- QUEUE-MENU2 C: 직업 선택 = 새 캐릭터 - 칸 창의 "+ 새 캐릭터"(빈 칸이 없으면 보관 안내)
+		return
+	end
 	enter("classes")
 end)
 menuButton(mainPage, "MenuSettings", "menu.settings", 3, function()
@@ -834,7 +908,9 @@ menuButton(mainPage, "MenuNews", "menu.news", 4, function()
 end)
 onEnterKey = function()
 	if root.Visible and pages.MainPage.Visible then
-		enter("continue")
+		if not openSlots() then
+			enter("continue")
+		end
 	end
 end
 

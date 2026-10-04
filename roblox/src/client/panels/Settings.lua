@@ -351,6 +351,21 @@ local function build()
 		purchaseHelp.TextWrapped = true
 		purchaseHelp.Position = UDim2.fromOffset(PAD, y + Theme.buttonHeight + 12)
 		purchaseHelp.Size = UDim2.new(1, -PAD * 2, 0, 40)
+		-- QUEUE-MENU2 D: [메인 메뉴로](확인 창 · 금지 상태 = 회색 + 이유 1줄 - ui/ToMainMenu)
+		local ToMainMenu = require(script.Parent.Parent.ui.ToMainMenu)
+		if ToMainMenu.available() then
+			local menuY = y + Theme.buttonHeight + 60
+			local toMenu = Button.build({ parent = g, name = "ToMainMenuButton", kind = "secondary", width = 160, position = UDim2.new(1, -PAD - 160, 0, menuY),
+				text = Text.get("menu.toMenu"), onActivated = function()
+					ToMainMenu.request(SettingsPanel.id)
+				end })
+			local why = Theme.label(g, "", "caption", "danger")
+			why.Name = "ToMainMenuReason"
+			why.TextXAlignment = Enum.TextXAlignment.Right
+			why.Position = UDim2.new(0, PAD, 0, menuY + Theme.buttonHeight + 4)
+			why.Size = UDim2.new(1, -PAD * 2, 0, 16)
+			ToMainMenu.bindState(toMenu, why)
+		end
 		-- QUEUE-ALL9C 1-8 [창 위치 초기화](PC · 태블릿 - 옮긴 창 · 가방 창을 기본 자리로)
 		if not Theme.isMobile then
 			Button.build({ parent = g, name = "WindowResetButton", kind = "secondary", width = 160, position = UDim2.fromOffset(PAD, y + Theme.buttonHeight + 60),

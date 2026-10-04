@@ -272,6 +272,7 @@ local function main()
 	check("SLOT", "활 캐릭터: 가방 확장 권리 · 영수증(계정) 보임", profBow.gamepasses.bagExpand == true and profBow.purchases.receipts[1].id == "R1")
 	check("SLOT", "활 캐릭터: 대검 진도 안 보임(계정 최고 = 캐릭터 최고)", profBow.classes.greatsword.stageProgress.infiniteBest <= 1 and profBow.classes.bow.stageProgress.infiniteBest == 45)
 	check("SLOT", "활 캐릭터: 메인 퀘스트 = 캐릭터별(처음부터)", profBow.quests == nil or profBow.quests.main == 1)
+	check("SLOT", "활 캐릭터: 변환권 칸 = 기본값(손상 고침 없음)", type(profBow.purchases.optionRerollTickets) == "table")
 
 	-- ═══ 3. 새 캐릭터 · 같은 직업 중복 · 칸 상한 ═══
 	SaveA.forgetSlotSession(p)

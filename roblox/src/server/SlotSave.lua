@@ -68,6 +68,13 @@ end
 -- 합치기: base = SaveSystem.defaultProfile()(새 표 - 여기서 채운다) · character = nil이면 캐릭터 없음(classId nil - 직업 선택 = 새 캐릭터)
 function SlotSave.compose(base, shared, character)
 	local p = base
+	local nestedDefault = {} -- 캐릭터 안쪽 필드의 기본값(base = 새 기본 프로필) - 캐릭터에 없으면 이 값(손상 고침 경고 없이)
+	for _, pair in ipairs(D.characterNested) do
+		local parent = base[pair[1]]
+		if type(parent) == "table" and parent[pair[2]] ~= nil then
+			nestedDefault[pair[1] .. "." .. pair[2]] = deepCopy(parent[pair[2]])
+		end
+	end
 	for k, v in pairs(shared or {}) do
 		p[k] = deepCopy(v)
 	end
@@ -93,6 +100,12 @@ function SlotSave.compose(base, shared, character)
 		p.classId = character.classId
 	else
 		p.classId = nil
+	end
+	for key, v in pairs(nestedDefault) do
+		local parent, sub = key:match("^([^%.]+)%.(.+)$")
+		if type(p[parent]) == "table" and p[parent][sub] == nil then
+			p[parent][sub] = v
+		end
 	end
 	if type(p.quests) == "table" then -- 메인 퀘스트 사슬 = 캐릭터별(새 캐릭터 = 처음부터 · Quest.newState와 같은 시작값)
 		p.quests.main = p.quests.main or 1

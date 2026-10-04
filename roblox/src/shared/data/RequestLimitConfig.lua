@@ -25,6 +25,7 @@ return {
 		SpectateRequest = { perSecond = 0.05, burst = 1 },
 		EnhanceRequest = { perSecond = 4, burst = 6 }, -- QUEUE-ALL9B 6(서비스 쿨다운 0.5초 = 초당 2 · 화면 연타 여유)
 		QuestRequest = { perSecond = 8, burst = 12 }, -- QUEUE-ALL9B 6(창 열기 view + 받기 연속 · 동작별 0.2초 제한은 그대로)
+		SlotRequest = { perSecond = 2, burst = 6 }, -- QUEUE-MENU2 캐릭터 칸(목록 · 전환 · 보관) - 전환 자체는 SlotSaveData.switchMinSeconds가 따로 막는다
 	},
 	-- RemoteFunction 기본(감사 F7 권고는 0.2초 캐시였지만 상태를 읽는 함수(가방 · 보석 · 요약)는 변경 직후 다시 읽으면 옛 값이 가서 통만 쓴다)
 	functionDefault = { perSecond = 10, burst = 20 },

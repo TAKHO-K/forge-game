@@ -9,9 +9,9 @@
 |---|---|---|---|
 | A 조사 | 완료 | (이 커밋) | docs/design/menu2-survey.md(저장 v73 · migrate = SaveSystem.lua:479 · 결정 필요 목록 = 10절) |
 | B 캐릭터 칸 저장 | 핵심 완료 · 남음(결제 하네스 추가 3 · EconSim 판단 · 운영 도구 키) | (이 커밋) | 설계 docs/design/menu2-slot-save.md · SlotSaveData · SlotSave(순수) · SaveSystem 슬롯 경로(계정 Acct_ + 캐릭터 Char_ · 옛 Player_ 읽기만) · v74(playSeconds · runtime) · 스위치 끔 = 합쳐 읽기(손실 0) · legacyRecheck · 하네스 slot_save 37/37 · 옛 저장 하네스 4개 = 끔 고정 · Studio Play 이관 4캐릭터 + 자동 저장 확인 · C 서버 직업 변경 거절(srv.class.newCharOnly) |
-| C 메뉴 건너뛰기 제거 | 남음 | | |
-| D 메인 메뉴로 · 쿨/게이지 | 진행(쿨 · 게이지 · 위치 유지 완료 · 메뉴로 버튼 · 금지 상태 · 파티 해제 남음) | (이 커밋) | SkillCooldowns(서버 공용 시각) · CharacterRuntime(capture = 저장 훅 · restore) · ProfileBoot(접속 · 전환 공용) · 클라 SkillCooldowns 표시 · Studio 접미사 키 첫 쓰기 비움(이관 stale 고침) |
-| E 이어하기 창 | 남음 | | |
+| C 메뉴 건너뛰기 제거 | 진행(서버 직업 변경 거절 · 캐릭터 창 [직업 변경] 숨김 + 안내 + [메인 메뉴로] 완료 · 건너뛰기 옵션 UI 제거 남음) | (이 커밋) | |
+| D 메인 메뉴로 · 쿨/게이지 | 대부분 완료 | e8216486 · (이 커밋) | 쿨 · 게이지 · 위치 유지 · 설정 [게임] · 캐릭터 창 [메인 메뉴로](확인 창 · 금지 = 회색 + 이유) · 서버 SlotSwitch.toMenu(금지 상태 · 파티 해제 · 즉시 저장 · 캐릭터 빼기) · 메뉴 다시 열기(OpenMainMenu) · Play 확인. 남음: 하네스(금지 상태 · 파티 해제) · 강화/합성 연출 중 금지(클라 상태 - 미구현) |
+| E 이어하기 창 | 핵심 완료(기본 모양) | (이 커밋) | ui/SlotWindow(오른쪽 0.25초 · 카드 = 직업 + ① · 레벨 · 최고 · 환생 · 무기 등급 테두리 + 강화 · 플레이 · 마지막 · 마지막 플레이 맨 위 선택 · 두 번 = 시작 · + 새 캐릭터 · 잠긴 칸 · ⋯ 보관 · 보관함 복구) · 서버 SlotSwitch/SlotServer(SlotRequest) · Play: 전환(도적 → 활) · 메뉴 왕복 확인. 남음: 폰 캡처 · 같은 직업 2개 캡처 · 연타 하네스 |
 | F 직업 선택 두 화면 | 남음 · **방향 변경(10-04 밤)**: 2D 전설 일러스트만 · 아바타 미리보기 · 변신 연출 = 스위치로 끔(ClassSelectAvatarPreview · ClassSelectTransform) · 확정 → 액션 포즈 → 바로 진입 · 애니메이션 = 재생기 자리 + 임시 실루엣만(그림 · legend_anim.json은 설계 담당이 넘김) | | (옛 메모) 그림 2/4 들어옴(warrior · archer) · 궁수 배경 제거 주의 |
 | G 검증 · 보고 | 남음 | | |
 

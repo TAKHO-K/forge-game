@@ -8,6 +8,12 @@ return {
 	accountKeyPrefix = "Acct_", -- Acct_<UserId>
 	characterKeyPrefix = "Char_", -- Char_<UserId>_<번호>(50자 이하)
 	maxArchive = 10, -- 보관(삭제 대신) 최대
+	windowSlideSeconds = 0.25, -- 이어하기 창 펼침
+	numberGlyphs = { "①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩" }, -- 같은 직업 번호(전사 ① · 전사 ②)
+	-- 서버 거절 이유 → 글 키(menu.slot.err.<이유> · 메뉴 이동 금지 = menu.toMenuBlocked.<이유>) - 목록 밖 = menu.slot.err.default
+	errorReasons = { full = true, boss = true, inherit = true, too_fast = true, busy = true, save_failed = true, load_failed = true, current = true, archive_full = true },
+	blockReasons = { boss = true, inherit = true },
+	lockedPreviewSlots = 1, -- 이어하기 창 끝 잠긴 칸("새 직업 출시 때 열림" - 날짜 약속 없음)
 	switchMinSeconds = 5, -- 캐릭터 전환(메뉴 왕복) 최소 간격 - UpdateAsync가 읽기 + 쓰기 예산을 둘 다 쓴다
 
 	-- 캐릭터 키로 가는 최상위 필드(사용자 B1 "캐릭터별" - 가방 · 골드 · 강화 · 보석 · 수련 · 계승/초월). 직업 칸 classes[classId]는 따로(그 캐릭터 직업 하나만).
