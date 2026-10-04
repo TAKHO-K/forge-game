@@ -18,6 +18,8 @@ docs/art/ref/*
 !docs/art/ref/cosmetics_concept_v2.png
 # QUEUE-ALL9E1(사용자 10-04): 불씨 테마 시안 v3(우리 GPT 콘셉트 - 읽기만 · 사양 = docs/design/cosmetics-v3.md · 구현은 ALL9E-2)
 !docs/art/ref/cosmetics_ember_v3.png
+# QUEUE-ALL9E1(사용자 10-04): 직업 전설 시안(우리 GPT 콘셉트 - 읽기만) · 나머지 3장은 들어오면 MENU2 F블록에서
+!docs/art/ref/class_legend_*.png
 
 # Python 캐시(Blender 스크립트 실행 산출물)
 __pycache__/
