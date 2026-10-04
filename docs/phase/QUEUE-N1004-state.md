@@ -3,7 +3,7 @@
 > 시작 2026-10-04 07:31(로컬). 순서 블록 A → B → C. 지시 원문 = `docs/phase/QUEUE-N1004-prompt.md`(자동 압축 뒤 반드시 다시 읽기).
 > 재개: "QUEUE-N1004 이어서" → 이 파일의 "다음 항목"부터. 시간 상한 A ≤ 1.5h · B ≤ 4.5h · C ≤ 4h.
 
-**다음 항목: C-4**
+**QUEUE-N1004 완료(2026-10-04)** - 보고 = 블록 A `docs/phase/QUEUE-ALL9C-F-report.md` · 블록 B `docs/audit/AUDIT1-report.md` · `cleanup-candidates.md` · `unimplemented.md` · 블록 C `docs/design/all10-p1-proposal.md`
 
 | 블록 | 항목 | 상태 | 시작 | 완료 | 커밋 | 메모 |
 |---|---|---|---|---|---|---|
@@ -21,5 +21,5 @@
 | C | C-1 EconSim 확장 | 완료 | 08:20 | 08:47 | 599e5253 | EconSimAll10 오버레이 · 기본 꺼짐 · 파이썬과 일치 |
 | C | C-2 격자 탐색 | 완료 | | 08:47 | d266affe | 목표 7 중 6 통과(잉여율 일부) |
 | C | C-3 제안서 | 완료 | | 08:47 | d266affe | all10-p1-proposal.md |
-| C | C-4 몹 스탯 공용 함수 | 대기 | | | | |
-| 끝 | 최종 검증 · push · 요약 | 대기 | | | | |
+| C | C-4 몹 스탯 공용 함수 | 완료 | | 09:18 | 91c23dcb | 골든 1,736값 오차 0 · Play 캡처 2(PC만 - 월드 이름표라 폰 캡처 생략) |
+| 끝 | 최종 검증 · push · 요약 | 완료 | | 09:18 | (이 커밋) | run_all 전부 통과 · 텍스트 검사 · 우리 코드 로그 에러 0 · 추가 print 0 · 삭제 0 |
