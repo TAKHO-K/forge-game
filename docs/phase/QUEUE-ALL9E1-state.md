@@ -21,8 +21,42 @@
 
 | 1 | 1-1 장비 v3 메시 | 진행 중 | (이 커밋) | make_gear_v3.py(60 + 문장 6 + 무기 20 생성 · 예산 안 - 방어구 최대 1,490 · 무기 최대 796 · 보이는 파트 최대 15) · GearV3Data · 아직 FBX 내보내기 · 업로드 · 게임 연결(ArmorWearView · 색 함수 · 스위치 GearV3Meshes) · 캡처 안 함 |
 
-## 다음 항목
-블록 1-1 이어서: ① `bash roblox/tools/blender/bl.sh make_gear_v3.py --weapons --emblems --export`(armor_wear.meta.json 합침 → meta_to_luau) ② 렌더 확인(--render) ③ upload.py 업로드(armor/*_s[1-5].fbx · emblem_* · weapons/*_s[1-5].fbx) ④ 클라 ArmorWearView: GearV3Meshes 켬 = armor/<부위>_<직업>_<단계> · 색 = 구역(GearV3Data + ItemVisualData) · 문(Ep · Re · An · Tr) 파트는 그 등급만 · 문장 메시 ⑤ 48조합 예약 색 하네스 ⑥ Play 캡처. 남은 블록 = 1-2 · 2 · 3(+ 추가 항목) · 4 → ADD F → MENU2
+## 정지 기록(2026-10-04 · 사용자 "지금 하는 항목까지만 마치고 멈춰")
+
+### 완료
+- 블록 0 전부(0-1 ~ 0-6) · ADD A ~ E(보고서 docs/phase/QUEUE-ALL9E1-ADD-report.md) · 사용자 추가(치장 시안 v2 등록 · 게임 이름 확정) · 블록 0 push.
+
+### 진행 중
+- 블록 1-1 장비 v3 메시: `roblox/tools/blender/make_gear_v3.py` 완성(방어구 60 + 문장 6 + 무기 20 · 전부 예산 안 · 통계 `roblox/art/armor/gear_v3.stats.json`) · `shared/data/GearV3Data.lua`(세트 hex · 단계 · 문 · 핵심 보석 색 · 스위치 enabled = true · 아직 아무 코드도 읽지 않음).
+- 아직 안 한 것: FBX 내보내기(--export) · 렌더 검수 · upload.py 업로드 · ArmorWearView 연결(구역 색 · 문 파트 · 문장 메시) · 스위치 GearV3Meshes 연결 · 48조합 예약 색 하네스 · Play 캡처.
+
+### 남은 일
+- 블록 1-1 나머지 · 1-2(착용 통과 시험 · 시안 비교 캡처) · 블록 2(보석 광채 · 초월 무기 이펙트 · 홈 광원) · 블록 3(아이콘 128 + 추가 항목: 보석 홈 화면 무기 그림 · 512 무기 · 보석 아이콘) · 블록 4(보고서 QUEUE-ALL9E1-report.md).
+
+### 다음에 할 첫 작업
+- `bash roblox/tools/blender/bl.sh make_gear_v3.py --weapons --emblems --export` → `meta_to_luau.py`로 MeshMeta.armor_wear 갱신 → `--render`로 직업 4 × 단계 5 렌더 검수.
+
+### 예산 초과 단순화 내역(make_gear_v3.py · 첫 생성 → 최종 · 삼각형)
+| 부위 · 단계 | 무엇을 줄였나 | 전 → 후 |
+|---|---|---|
+| 장갑 쌍 s3 ~ s5(4직업) | 바탕 장식을 직업 v3.1 "legendary"(테 · 징) → "normal" 고정 · 단계 차이 = 손목 테 1줄 + 색 | 대검 672 → 424 · 쌍검 760 → 448 · 활 600 → 352 · 치유사 600 → 352 |
+| 신발 쌍 s3 ~ s5(4직업) | 위와 같음 · 대검 정강이 테 뺌(바탕 판금 테가 이미 있음) | 대검 800 → 488 · 쌍검 656 → 408 · 활 672 → 424 · 치유사 688 → 440 |
+| 쌍검 장갑 s3 ~ s5 | 손목 테 뺌(바탕 가죽 끈 셋이 테 역할) | 512 → 448 |
+| 갑옷 s5(대검) | 어깨 s2 테를 s5에서 뺌(왕관 마루가 대신) · 왕관 마루 3 → 2 · 문장 받침 테 s5 뺌(목깃 · 균열이 대신) · 목깃 10 → 8각 | 1,644 → 1,452 |
+| 갑옷 s5(치유사) | 위와 같음 + 부유 성물 고리 3 → 2 · 고리 8 → 6각 | 1,734 → 1,474 |
+| 갑옷 s4(치유사 · 대검) | 문장 받침 테 10 → 8각 · 핵심 보석 집계 = 문 파트(루비 · 에메랄드) 중 보이는 하나 | 치유사 1,514 → 1,490 · 대검 1,500 → 1,488 |
+| 무기 치유사 s1 · s3 · s5 | 날 아닌 파트 모따기(bevel) 뺌(옛 make_weapons와 같게) · s5 태초 빛 테(Halo) 뺌(초월 균열 자리) | s1 748 → 398 · s3 1,296 → 658 · s5 1,381 → 794 |
+| 무기 활 s5 | 태초 빛 테(Halo) 뺌 | 895 → 796 |
+- 최종 최대: 갑옷 1,490(≤ 1,500) · 장갑 쌍 448 · 신발 쌍 488(≤ 500) · 무기 796(≤ 800) · 핵심 보석 96(≤ 120) · 부유 합 64(≤ 300) · 보이는 파트(방어구 3부위) 최대 15(≤ 24 - 무기 별도 최대 14).
+
+### 대기 중 큐 실행 순서
+1. QUEUE-ALL9E1 남은 블록: 1-1 나머지 → 1-2 → 2 → 3(보석 홈 화면 추가 항목 포함) → 4
+2. QUEUE-ALL9E1-ADD: F(전갈 여왕 외형 - 장비 v3 뒤) · 보고서 F절
+3. QUEUE-MENU2: A → G
+
+### 정지 때 검사(실패해도 고치지 않고 기록)
+- run_all: 전부 통과(security_launch 45/45 · save_launch 65/65 · save_lock 12/12 · migrate_curve 21/21 · id_quarantine 15/15 · monetize 85/85 · dupe O 11 / X 0 · multiplayer 12/12 · attack 7/7 · request_gate 7/7 · mesh_import 34/34 · ops_security 25/25 · season_pass 13/13 · economy_all9b 34/34 · enhance_g 25/25 · bignum 67/67(알려진 문제 4) · bulk_sell 11/11 · stat_sheet 9/9 · all10 55/55 · monster_stats 5/5 · ui_rules 4/4 · community_goal 24/24 · boss_motion 점프 0 · regrow_timing 8/8 · meshswap O · id_registry 통과).
+- luau-analyze(이번 큐에서 바뀐 Lua 44개): 1,507줄 중 1,479줄 = TypeError · UnknownType(Roblox 타입 정의 없이 돌린 환경 잡음) · 린트 5줄 = DevTools SameLineStatement 4(2958 · 2981 · 2992 · 4464) · SaveSystem MisleadingAndOr 1(2233) - 모두 이번 큐 이전 코드(git blame 9-16 · 9-24 · 10-02) · 이번 큐 코드의 린트 경고 0.
 
 ## 결정 기록
 - 0-1: 옵션 A(회복 보조 없음) - 기록만.
