@@ -30,3 +30,15 @@
 - 절차 = docs/phase/all9c/menu-background.md 그대로(menu_bg.py → 좌우 2장 770×1024 · 가운데 2px씩 겹침 · upload.py Decal 72856913796131 · 106571649028543 Approved → 이미지 id 90708952668878 · 129274403210371 → menu_bg.py --gen menu_keyart_v2).
 - 바뀐 것 = MenuBootData.lua BEGIN/END 사이(이미지 id 2개 · 출처 이름)만 · ArtAssetIds · asset-ids.json에 v2 줄 추가(v1 줄 · 파일 · meta 그대로 - 되돌리기 = `menu_bg.py --gen menu_keyart_v1`).
 - 캡처: docs/phase/menu2/captures/menu_keyart_v2_pc_16x9.jpg(뷰포트 1052×592 - Studio 높이 상한 592라 1920×1080과 같은 16:9) · menu_keyart_v2_phone_800x360.jpg(800×361). 메뉴 묶음이 얼굴 4명 · 초월 대검을 가리지 않음(폰: 메뉴 오른쪽 끝 ≈ 34% · 전사 망토 끝 ≈ 37%) · 이음매 안 보임. .gitignore 변경 불필요(이미 추적 대상).
+
+## 10-05 판정 · 재정리(지시 = prompt 끝 "사용자 결정(10-05)")
+| 항목 | 상태 | 커밋 | 메모 |
+|---|---|---|---|
+| A 판정 반영(수련 = 현재 직업 캐릭터만 · 둘째 캐릭터 튜토리얼 건너뛰기 + 다시 보기 · 금지 상태 확대) | 남음 | | |
+| B1 운영 도구 · 검증 체인 슬롯 키 | 남음 | | |
+| B2 결제 하네스 3 | 남음 | | |
+| B3 쿨 링 Play 캡처 | 남음 | | |
+| B4 EconSim 부캐 | 남음 | | |
+| B5 저장 필드 규칙 문서 + 하네스 | 남음 | | |
+| C DESIGN-BACKLOG 재정리 · handoff 폴더 | 남음 | | |
+| 다음: ALL9D → SEC2 → PERF1 준비 → unimplemented 기능 | 대기 | | |
