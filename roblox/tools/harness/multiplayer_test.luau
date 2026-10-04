@@ -96,4 +96,34 @@ local ok, err = pcall(function()
 	check("재접속 기여 인계 입구 존재(MonsterState.takeCarriedContribution · resetGen)", type(MonsterState.takeCarriedContribution) == "function")
 end)
 if not ok then print("[R5] 하네스 에러 " .. tostring(err)) end
+-- QUEUE-ALL10 0-2(AUDIT1 즉시-2): 보스 첫 클리어 = 입장 직업 기준(UserId) - 전투 중 변경 · 막타 직전 변경 · 파티원 변경 · 재접속(다른 서버에서 바꾸고 복귀)
+local okL, errL = pcall(function()
+	local BossEncounter, PlayerProfile = MODS.BossEncounter, MODS.PlayerProfile
+	local classOf = {}
+	local origGet = PlayerProfile.getClassId
+	PlayerProfile.getClassId = function(p) return classOf[p.UserId] end
+	local A, B = fakePlayer("A", 11), fakePlayer("B", 12)
+	classOf[11], classOf[12] = "sword", "bow"
+	local enc = { id = "eL", model = {}, members = { A, B } }
+	BossEncounter.recordEntryClasses(enc)
+	local same = BossEncounter.firstClearClassOk(enc, A, classOf[11]) and BossEncounter.firstClearClassOk(enc, B, classOf[12])
+	classOf[11] = "staff" -- 막타 직전 A가 레벨 1 직업으로(서버 거절을 뚫었다고 가정 - 2중 방어)
+	local aBlocked = not BossEncounter.firstClearClassOk(enc, A, classOf[11])
+	local bStill = BossEncounter.firstClearClassOk(enc, B, classOf[12])
+	classOf[12] = "dagger" -- 파티원 B도 변경
+	local bBlocked = not BossEncounter.firstClearClassOk(enc, B, classOf[12])
+	BossEncounter.recordEntryClasses(enc) -- 다시 불러도(재도전 · 디버그 추가) 처음 기록 유지
+	local keep = enc.entryClass[11] == "sword" and enc.entryClass[12] == "bow"
+	local A2 = fakePlayer("A", 11) -- 튕김 뒤 다른 Player 객체(같은 UserId) · 다른 서버에서 직업을 바꾸고 복귀
+	classOf[11] = "staff"
+	local rejoinBlocked = not BossEncounter.firstClearClassOk(enc, A2, classOf[11])
+	classOf[11] = "sword"
+	local rejoinOk = BossEncounter.firstClearClassOk(enc, A2, classOf[11])
+	local standIn = BossEncounter.firstClearClassOk(enc, fakePlayer("S", 99), "bow") -- 기록 없는 검증 스탠드인 = 통과
+	PlayerProfile.getClassId = origGet
+	check("ALL10 0-2 입장 직업 고정: 같음 O · 막타 직전 변경 X · 파티원 B 그대로 O → B 변경 X · 재기록 무시 · 재접속(다른 직업) X · 재접속(같은 직업) O · 스탠드인 O",
+		same and aBlocked and bStill and bBlocked and keep and rejoinBlocked and rejoinOk and standIn)
+	check("ALL10 0-2 보스전 밖 = 직업 변경 허용(encounterOf 없음)", not BossEncounter.classChangeBlocked(fakePlayer("Z", 98)))
+end)
+if not okL then print("[R5] 하네스 에러 " .. tostring(errL)) end
 print(("[R5] 끝 %d/%d"):format(pass, total))

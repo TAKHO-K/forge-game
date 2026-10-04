@@ -196,8 +196,12 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 		-- (Loot.rollBossFirstClearDrop), 재도전은 확정 1개(Loot.rollBossRetryDrop, 28-1 [2-2] - D1부터 토벌 표).
 		-- 재입장 자체는 막지 않는다(지시 원문) - 막는 것은 등급 상승뿐이다.
 		local stage = monsterData.stageNumber
-		if monsterData.isRaid or PlayerProfile.hasBossFirstClearReward(recipient, stage) then -- Q5: 토벌 = 항상 토벌 표(첫 클리어 기록 안 함)
-			local fightEncounter = BossEncounter.getEncounterByModel(target)
+		local fightEncounter = BossEncounter.getEncounterByModel(target)
+		local classChanged = not BossEncounter.firstClearClassOk(fightEncounter, recipient, classId) -- QUEUE-ALL10 0-2: 입장 직업과 다르면 첫 클리어 아님
+		if classChanged then
+			warn(("[ALL10] 보스 첫 클리어 제외(입장 직업과 다름): %s - 스테이지 %d"):format(tostring(recipient), stage))
+		end
+		if monsterData.isRaid or classChanged or PlayerProfile.hasBossFirstClearReward(recipient, stage) then -- Q5: 토벌 = 항상 토벌 표(첫 클리어 기록 안 함)
 			local fightSeconds = fightEncounter and fightEncounter.startedAt and math.max(0, os.clock() - fightEncounter.startedAt) or 0 -- 리뷰 치명: 전투 시간 공정성(짧은 반복 토벌)
 			armorDrops = { Loot.rollBossRetryDrop(dropStage, classId, fightSeconds) }
 			primordialP = DropTable.bossRetryGradeTable(fightSeconds).primordial or 0

@@ -205,6 +205,29 @@ function BossEncounter.getEncounter(player)
 	return encounterOf[player]
 end
 
+-- QUEUE-ALL10 0-2(AUDIT1 즉시-2): 보스전(입장 ~ 잔류 끝 · 퇴장) 동안은 직업을 바꿀 수 없다 - 진실의 출처 = encounterOf 하나(위 주석과 같은 원칙).
+function BossEncounter.classChangeBlocked(player)
+	return encounterOf[player] ~= nil
+end
+
+-- 입장 순간의 직업 = 그 전투의 보상 기준. UserId로 적는다(튕김 복귀 · 다른 서버에서 직업을 바꾸고 돌아온 경우도 같은 사람으로 비교).
+function BossEncounter.recordEntryClasses(encounter)
+	encounter.entryClass = encounter.entryClass or {}
+	for _, member in ipairs(encounter.members) do
+		local uid = typeof(member) == "Instance" and member.UserId or (type(member) == "table" and member.UserId)
+		if uid and encounter.entryClass[uid] == nil then
+			encounter.entryClass[uid] = PlayerProfile.getClassId(member)
+		end
+	end
+end
+
+-- 첫 클리어 판정은 입장 때 직업 기준: 지금 직업이 입장 직업과 다르면 첫 클리어 표를 쓰지 않는다(재도전 표 · 기록 안 함). 기록 없는 스탠드인(검증) = 통과.
+function BossEncounter.firstClearClassOk(encounter, player, classId)
+	local uid = type(player) ~= "nil" and player.UserId
+	local entry = encounter and encounter.entryClass and uid and encounter.entryClass[uid]
+	return entry == nil or entry == classId
+end
+
 function BossEncounter.getEncounterByModel(model)
 	return encounterByModel[model]
 end
@@ -400,6 +423,7 @@ local function spawnEncounter(data, stage, members, party, size, owner, isTutori
 	}
 	nextEncounterId += 1
 	encounter.id = nextEncounterId
+	BossEncounter.recordEntryClasses(encounter)
 	model:SetAttribute("BossEncounterId", encounter.id)
 	for _, member in ipairs(members) do
 		encounterOf[member] = encounter

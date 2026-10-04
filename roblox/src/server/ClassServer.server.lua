@@ -15,6 +15,7 @@ local ImmediateSave = require(script.Parent.ImmediateSave)
 local BuffState = require(script.Parent.BuffState)
 local StuckArrowState = require(script.Parent.StuckArrowState)
 local SummonState = require(script.Parent.SummonState)
+local BossEncounter = require(script.Parent.BossEncounter)
 
 local classSelectRequest = Instance.new("RemoteEvent")
 classSelectRequest.Name = "ClassSelectRequest"
@@ -56,6 +57,14 @@ classSelectRequest.OnServerEvent:Connect(function(player, classId)
 
 	if PlayerProfile.getClassId(player) == classId then
 		return -- 이미 그 직업이다 - 확인창을 건너뛰고 재요청한 경우 등, 할 일이 없다
+	end
+
+	if BossEncounter.classChangeBlocked(player) then -- QUEUE-ALL10 0-2(AUDIT1 즉시-2): 보스전 중(잔류 포함) 직업 전환 = 거절 + 안내(막타 직전 전환으로 첫 클리어 표를 받던 구멍)
+		local notice = ReplicatedStorage:FindFirstChild("SystemNotice")
+		if notice then
+			notice:FireClient(player, require(ReplicatedStorage.Shared.Text).getFor(player, "srv.class.inBoss"))
+		end
+		return
 	end
 
 	PlayerProfile.setClassId(player, classId)

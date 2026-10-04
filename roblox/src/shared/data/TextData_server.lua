@@ -57,6 +57,7 @@ return {
 		["srv.chest.spawned"] = "보물상자가 {zone}에 나타났습니다! 함께 부수면 모두가 보상을 받습니다",
 		["srv.chest.vanished"] = "{zone}의 보물상자가 사라졌습니다",
 		["srv.reward.gold"] = "골드 {n}",
+		["srv.class.inBoss"] = "보스전 중에는 직업을 바꿀 수 없습니다.", -- QUEUE-ALL10 0-2
 		["srv.reward.enhanceStone"] = "강화석 {n}",
 		["srv.reward.highEnhanceStone"] = "상급 강화석 {n}",
 		["srv.reward.title"] = "칭호 {name}",
@@ -142,6 +143,7 @@ return {
 		["srv.chest.spawned"] = "A chest appeared in {zone}! Break it together.",
 		["srv.chest.vanished"] = "The chest in {zone} is gone.",
 		["srv.reward.gold"] = "Gold {n}",
+		["srv.class.inBoss"] = "You can't change class during a boss fight.",
 		["srv.reward.enhanceStone"] = "Enhance Stone {n}",
 		["srv.reward.highEnhanceStone"] = "Greater Enhance Stone {n}",
 		["srv.reward.title"] = "Title {name}",
