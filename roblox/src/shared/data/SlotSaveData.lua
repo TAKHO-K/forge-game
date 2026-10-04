@@ -12,7 +12,9 @@ return {
 	numberGlyphs = { "①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩" }, -- 같은 직업 번호(전사 ① · 전사 ②)
 	-- 서버 거절 이유 → 글 키(menu.slot.err.<이유> · 메뉴 이동 금지 = menu.toMenuBlocked.<이유>) - 목록 밖 = menu.slot.err.default
 	errorReasons = { full = true, boss = true, inherit = true, too_fast = true, busy = true, save_failed = true, load_failed = true, current = true, archive_full = true },
-	blockReasons = { boss = true, inherit = true },
+	blockReasons = { boss = true, inherit = true, enhance = true, craft = true, gift = true, trade = true },
+	-- MENU2 판정 4(10-05): 처리 직후 메뉴 이동 금지 시간(연출 길이 + 여유 · server/MenuBlock) - 강화 결과 굴림 ≤ 0.8 · 재련 · 계승 연출 · 선물 받기 팝업
+	blockAfterSeconds = { enhance = 1.5, craft = 1.5, inherit = 4, gift = 2, trade = 2 },
 	lockedPreviewSlots = 1, -- 이어하기 창 끝 잠긴 칸("새 직업 출시 때 열림" - 날짜 약속 없음)
 	switchMinSeconds = 5, -- 캐릭터 전환(메뉴 왕복) 최소 간격 - UpdateAsync가 읽기 + 쓰기 예산을 둘 다 쓴다
 
@@ -24,7 +26,8 @@ return {
 		{ "quests", "main" },
 		{ "quests", "mainN" },
 	},
-	-- 이관(옛 단일 프로필 → 캐릭터): 공유였던 재화는 지금 직업 캐릭터 하나에(복제 방지) · 수련은 이관되는 모든 캐릭터에 복사(지금 각 직업이 누리던 힘 유지)
-	copyToAllOnMigrate = { training = true },
+	-- 이관(옛 단일 프로필 → 캐릭터): 공유였던 재화 · 수련 = 지금 직업 캐릭터 하나에(복제 방지 - 사용자 10-05 "수련 모든 캐릭터 복사 금지") · 다른 직업 캐릭터 = 그 직업 고유 데이터만
+	--   예전 값 { training = true }(수련 모든 캐릭터 복사) - 되살리면 힘 복제
+	copyToAllOnMigrate = {},
 	-- 진행이 없는 직업 칸은 캐릭터로 만들지 않는다: 경험치 0 · 최고 스테이지 ≤ 1 · 환생 0 · 무기 +0 · 등급 0 · 착용 장비 없음 · 보석 없음
 }

@@ -366,6 +366,27 @@ local function build()
 			why.Size = UDim2.new(1, -PAD * 2, 0, 16)
 			ToMainMenu.bindState(toMenu, why)
 		end
+		-- MENU2 판정 3: [튜토리얼 다시 보기](견습 = 계정 단위 → 두 번째 캐릭터부터 자동 건너뜀 · 보상은 다시 안 나옴)
+		Button.build({ parent = g, name = "TutorialReplayButton", kind = "secondary", width = 160, position = UDim2.fromOffset(PAD, y + Theme.buttonHeight * 2 + 88),
+			text = Text.get("menu.tutorialReplay"), onActivated = function()
+				local Confirm = require(script.Parent.Parent.ui.kit.Confirm)
+				Confirm.ask({ title = Text.get("menu.tutorialReplay"), body = Text.get("menu.tutorialReplayConfirm"),
+					primaryText = Text.get("menu.slot.confirm"), secondaryText = Text.get("menu.slot.cancel"), parentId = SettingsPanel.id }, function(accepted)
+					if not accepted then
+						return
+					end
+					local ok, res = pcall(function()
+						return ReplicatedStorage:WaitForChild("SlotRequest"):InvokeServer("tutorialReplay")
+					end)
+					if ok and res and res.ok then
+						require(script.Parent.Parent.UIManager).closeAll()
+					else
+						local why = ok and res and res.reason
+						local key = (why == "boss" or why == "active") and ("menu.tutorialReplay.err." .. why) or "menu.tutorialReplay.err.default"
+						require(script.Parent.Parent.ui.kit.Toast).push("TC", { richParts = { { text = Text.get(key), colorName = "textPrimary", bold = true } }, seconds = 3, fadeSeconds = 0.3 })
+					end
+				end)
+			end })
 		-- QUEUE-ALL9C 1-8 [창 위치 초기화](PC · 태블릿 - 옮긴 창 · 가방 창을 기본 자리로)
 		if not Theme.isMobile then
 			Button.build({ parent = g, name = "WindowResetButton", kind = "secondary", width = 160, position = UDim2.fromOffset(PAD, y + Theme.buttonHeight + 60),

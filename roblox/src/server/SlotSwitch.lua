@@ -18,7 +18,7 @@ function SlotSwitch.blockReason(player)
 	if okT and TranscendService.isBusy and TranscendService.isBusy(player) then
 		return "inherit"
 	end
-	return nil
+	return require(script.Parent.MenuBlock).reason(player) -- 강화 · 재련 · 계승 연출 · 선물 받기 직후(MENU2 판정 4)
 end
 
 local function cleanup(player)

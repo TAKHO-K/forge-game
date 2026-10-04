@@ -65,6 +65,7 @@ gemCraftRequest.OnServerEvent:Connect(function(player, action, a, b, c)
 	local success, reason, data = GemCraftRequest.handle(player, action, a, b, c)
 	if success then
 		ImmediateSave.request(player)
+		require(script.Parent.MenuBlock).mark(player, "craft") -- MENU2 판정 4: 재련 · 분해 연출 중 메뉴 이동 금지
 	end
 	gemCraftResult:FireClient(player, type(action) == "string" and action or "", success, reason, data)
 end)

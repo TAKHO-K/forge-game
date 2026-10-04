@@ -197,6 +197,7 @@ function GiftService.claim(player, id)
 	s.mailbox.gifts = kept
 	if got > 0 then
 		require(script.Parent.ImmediateSave).request(player)
+		require(script.Parent.MenuBlock).mark(player, "gift") -- MENU2 판정 4: 선물 받기 중 메뉴 이동 금지
 	end
 	return got
 end

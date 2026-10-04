@@ -251,7 +251,7 @@ local function main()
 	check("SLOT", "이관: 옛 키 그대로(legacy 보존 · 읽기만)", deepEqual(raw("Player_501"), legacyBefore))
 	check("SLOT", "이관: 칸 1 = 대검 · 칸 2 = 활 · 나머지 빈 칸", acct and acct.slots[1] and acct.slots[1].classId == "greatsword" and acct.slots[2] and acct.slots[2].classId == "bow" and acct.slots[3] == false and acct.slots[4] == false)
 	check("SLOT", "이관: 대검 = 공유 재화 전부(골드 · 가방 · 가루)", prof.gold == 5000 and #prof.inventory == 3 and prof.gemDust == 77)
-	check("SLOT", "이관: 수련 = 모든 캐릭터 복사", raw("Char_501_2").data.training.attack == 10 and prof.training.attack == 10)
+	check("SLOT", "이관: 수련 = 지금 직업 캐릭터만(활 = 0 · 복제 0)", (tonumber(raw("Char_501_2").data.training.attack) or 0) == 0 and prof.training.attack == 10)
 	check("SLOT", "이관: 활 캐릭터 = 골드 0 · 가방 비어 있음(복제 0)", raw("Char_501_2").data.gold == 0 and #raw("Char_501_2").data.inventory == 0)
 	local tg1, tg2 = raw("Char_501_1").data.transcendGems.list, raw("Char_501_2").data.transcendGems.list
 	check("SLOT", "이관: 초월 보석 = 박힌 직업으로(활 1 · 안 박힌 것 대검 1)", #tg1 == 1 and tg1[1].id == "TG2" and #tg2 == 1 and tg2[1].id == "TG1")
@@ -402,6 +402,26 @@ local function main()
 		NOW += 16
 		check("SLOT", "쿨 복원 뒤 시간 지나면 풀림", not SC2.isOnCooldown(pp, "Q", 30))
 		workspace = oldWs
+	end
+
+	-- ═══ 메뉴 이동 금지 시간창(MENU2 판정 4 - 강화 · 재련 · 계승 연출 · 선물 받기 직후 · server/MenuBlock) ═══
+	do
+		local MB = LOADERS["MenuBlock"]()
+		local pb = { Name = "MB", UserId = 901 }
+		check("SLOT", "금지: 아무것도 안 했으면 이유 없음", MB.reason(pb) == nil)
+		local allKnown = true
+		for kind, sec in pairs(SlotSaveData.blockAfterSeconds) do
+			allKnown = allKnown and SlotSaveData.blockReasons[kind] == true and type(sec) == "number" and sec > 0
+		end
+		check("SLOT", "금지: 시간창 종류 = 거절 이유 목록에 전부 있음(글 키 menu.toMenuBlocked.<이유>)", allKnown)
+		for _, kind in ipairs({ "enhance", "craft", "inherit", "gift", "trade" }) do
+			MB.mark(pb, kind)
+			local during = MB.reason(pb)
+			NOW += SlotSaveData.blockAfterSeconds[kind] + 0.01
+			check("SLOT", ("금지: %s 직후 = 막힘 · %.1f초 뒤 = 풀림"):format(kind, SlotSaveData.blockAfterSeconds[kind]), during == kind and MB.reason(pb) == nil, tostring(during))
+		end
+		MB.mark(pb, "unknown_kind")
+		check("SLOT", "금지: 목록 밖 종류는 무시", MB.reason(pb) == nil)
 	end
 
 	-- ═══ 7. 새 계정 ═══

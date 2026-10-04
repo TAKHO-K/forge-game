@@ -10,6 +10,10 @@ remote.Parent = ReplicatedStorage
 
 remote.OnServerInvoke = function(player, action, arg)
 	return RequestGate.invoke(player, "SlotRequest", tostring(action) .. ":" .. tostring(arg), function()
+		if action == "tutorialReplay" then -- MENU2 판정 3: 설정 [튜토리얼 다시 보기](슬롯 스위치와 무관)
+			local ok, why = require(script.Parent.TutorialState).replay(player)
+			return { ok = ok, reason = why }
+		end
 		if not SlotSaveData.enabled then
 			return { ok = false, reason = "disabled" }
 		end

@@ -272,6 +272,23 @@ function TutorialState.stop(player, markCompleted)
 	end
 end
 
+-- MENU2 판정 3(10-05): 설정 [튜토리얼 다시 보기] - 견습은 계정 단위라 두 번째 캐릭터부터 자동으로 건너뛴다 → 원하면 1단계부터 다시.
+--   보상은 계정 1회(hasTutorialGrant)라 다시 안 나온다. 반환: true | false, 이유(boss · active · no_class)
+function TutorialState.replay(player)
+	if not PlayerProfile.getClassId(player) then
+		return false, "no_class"
+	end
+	if activeStep[player] then
+		return false, "active"
+	end
+	if BossEncounter.getEncounter(player) then
+		return false, "boss"
+	end
+	PlayerProfile.setTutorialCompleted(player, false)
+	TutorialState.start(player, 1)
+	return activeStep[player] ~= nil, activeStep[player] == nil and "default" or nil
+end
+
 local function tryResumeTutorial(player)
 	if not PlayerProfile.getProfile(player) then
 		return

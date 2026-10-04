@@ -21,6 +21,10 @@ function ToMainMenu.blockReason()
 	if player:GetAttribute("BossEncounterId") then
 		return "boss"
 	end
+	local kind = player:GetAttribute("MenuBlock") -- MENU2 판정 4: 강화 · 재련 · 계승 연출 · 선물 받기 직후(server/MenuBlock)
+	if kind and (tonumber(player:GetAttribute("MenuBlockUntil")) or 0) > workspace:GetServerTimeNow() then
+		return kind
+	end
 	return nil
 end
 
@@ -84,6 +88,13 @@ function ToMainMenu.bindState(buttonRefs, reasonLabel)
 		end
 	end
 	player:GetAttributeChangedSignal("BossEncounterId"):Connect(paint)
+	player:GetAttributeChangedSignal("MenuBlockUntil"):Connect(function()
+		paint()
+		local left = (tonumber(player:GetAttribute("MenuBlockUntil")) or 0) - workspace:GetServerTimeNow()
+		if left > 0 then
+			task.delay(left + 0.05, paint) -- 시간창이 끝나면 회색 풀기
+		end
+	end)
 	paint()
 end
 

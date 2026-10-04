@@ -14,6 +14,10 @@ request.OnServerInvoke = function(player, action, arg)
 		return nil
 	end
 	return RequestGate.invoke(player, "TranscendRequest", action .. "|" .. string.sub(tostring(arg), 1, 64), function()
-		return TranscendService.handle(player, action, arg)
+		local result = TranscendService.handle(player, action, arg)
+		if action == "confirm" or action == "enhance" then -- MENU2 판정 4: 계승 · 초월 강화 연출 중 메뉴 이동 금지
+			require(script.Parent.MenuBlock).mark(player, "inherit")
+		end
+		return result
 	end)
 end

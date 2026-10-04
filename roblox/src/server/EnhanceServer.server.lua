@@ -27,4 +27,5 @@ enhanceRequest.OnServerEvent:Connect(function(player, useDropTicket, useResetTic
 		return
 	end
 	EnhanceService.handleRequest(player, useDropTicket, useResetTicket) -- QUEUE-ALL9B G: 두 인자 = 하락 · 초기화 방지 옵션(방지권 폐지)
+	require(script.Parent.MenuBlock).mark(player, "enhance") -- MENU2 판정 4: 강화 연출 중 메뉴 이동 금지
 end)
