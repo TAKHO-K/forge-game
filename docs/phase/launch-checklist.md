@@ -108,7 +108,7 @@
 
 | 항목 | 넣을 것 | 파일 |
 |---|---|---|
-| 이름 | ★ 사용자 결정(설명 초안도 `{게임 이름}`으로 비어 있음) | - |
+| 이름 | 확정(사용자 10-04): 한국어 "전설을 넘어서" · 영어 "Beyond Legendary" · 홈 제목 태그 [⚔️강화 RPG] / [⚔️Upgrade RPG]는 Creator Hub에서 사용자가 입력(코드에 없음) | 게임 안 = GameInfoData.names(언어별) |
 | 설명 | 초안 2안(한국어 · 영어) + 업데이트 게시판 첫 글 | `Claude outputs/QUEUE-ALL2/launch/description-drafts.md` · 틀 `docs/store/description-template.md` |
 | 아이콘(512 × 512) | 1장 고르기 ★(추천 D) | Blender판 `docs/release/icons/game_icon_blender_{A,B,C,D}.png` · 게임 안 촬영판 D `docs/release/icons/game_icon_capture_D.png`(QUEUE-STUDIO S-4) · 옛 캡처 `Claude outputs/QUEUE-ALL2/launch/icon_{A_grass,B_pillar,C_tight}.png` |
 | 썸네일(1920 × 1080) | 3장 × 글자 있음/없음 - 보통 글자 있음 3장 업로드(순서 A → B → C 추천) ★ | `Claude outputs/QUEUE-ALL2/launch/thumb_A_transcend_text.png` · `thumb_B_codex_text.png` · `thumb_C_hub_text.png`(글자 없는 판 = `_plain`) |
@@ -266,7 +266,7 @@
 
 1. 상품 · 패스 13개 **가격**(지금 자리값 199 · 149 · 399 · 99 · 49).
 2. 상품 · 패스 13개 **512 아이콘** - QUEUE-ALL5 E에서 13장 제작(`docs/release/icons/`) → 이대로 쓸지 · 다시 그릴지만 결정.
-3. **게임 이름**(설명 초안 `{게임 이름}`). **게임 이름 확정 후 교체(ALL9F 출시 전 점검)**: 게임 안 이름 = `roblox/src/shared/data/GameInfoData.lua` `name` 한 곳(지금 자리값 `"NAME"` - 메인 메뉴 로고 자리) · `python roblox/tools/i18n/check_textdata.py`가 자리값이 남아 있으면 "경고: 게임 이름이 아직 자리값" 줄을 낸다(QUEUE-ALL9C 2-3).
+3. **게임 이름** - 확정 · 반영 완료(QUEUE-ALL9E1 중 사용자 10-04: 전설을 넘어서 / Beyond Legendary · 메뉴 로고 = 플레이어 언어 · check_textdata 자리값 경고 0). 남은 일 = 설명 초안 `{게임 이름}` 채우기 · Creator Hub 제목(태그 포함)은 사용자 입력. 옛 메모: **게임 이름 확정 후 교체(ALL9F 출시 전 점검)**: 게임 안 이름 = `roblox/src/shared/data/GameInfoData.lua` `name` 한 곳(지금 자리값 `"NAME"` - 메인 메뉴 로고 자리) · `python roblox/tools/i18n/check_textdata.py`가 자리값이 남아 있으면 "경고: 게임 이름이 아직 자리값" 줄을 낸다(QUEUE-ALL9C 2-3).
 4. 경험 **아이콘 1장**(A 풀밭 · B 빛기둥 · C 근접 · **D 근접 + 초월 대검 + 빛기둥(추천)** - Blender판 `docs/release/icons/game_icon_blender_*.png` · 게임 안 촬영판 `game_icon_capture_D.png`) · **썸네일 순서** · 장르(추천 RPG).
 5. **시즌 1 시작일** `LeaderboardConfig.firstSeasonDateKst`(추천 오픈일) - 합동 목표 때문에 **월요일 오픈** 추천.
 6. **체크포인트 순간이동** 출시 때 켤지(`WorldMapData.lua:451` - 지금 켬).

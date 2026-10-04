@@ -466,8 +466,20 @@ end
 
 -- 메인 페이지(맨 위 = 게임 이름 자리 - GameInfoData.name · 메뉴 항목은 아래 4개)
 local mainPage = makePage("MainPage")
-local logo = Theme.label(mainPage, GameInfoData.name, "title", "textPrimary")
+local function gameName() -- 사용자 10-04: 플레이어 언어로(names에 없으면 기본 name)
+	return GameInfoData.names[Text.languageFor(nil)] or GameInfoData.name
+end
+local logo = Theme.label(mainPage, gameName(), "title", "textPrimary")
 logo.Name = "GameLogo"
+do -- 긴 이름(Beyond Legendary)이 폰 폭에서 잘리지 않게 - 칸에 맞춰 줄이되 logoTextSize를 넘지 않음
+	logo.TextScaled = true
+	local limit = Instance.new("UITextSizeConstraint")
+	limit.MaxTextSize = Data.logoTextSize
+	limit.Parent = logo
+end
+player:GetAttributeChangedSignal(SettingsData.keys.language.attrs[1]):Connect(function()
+	logo.Text = gameName()
+end)
 logo.Font = Enum.Font.GothamBlack
 logo.TextSize = Data.logoTextSize
 logo.LayoutOrder = 0
