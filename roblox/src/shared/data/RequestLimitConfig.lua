@@ -7,6 +7,7 @@ return {
 	remotes = {
 		-- 직업 전환 = 버프 · 화살 · 분신 정리 + 스탯 재계산(가장 무겁다 - 감사 F6 권고 "1초")
 		ClassSelectRequest = { perSecond = 1, burst = 2 },
+		TranscendRequest = { perSecond = 4, burst = 8 }, -- QUEUE-ALL10 초월 계승 · 강화 칸 · 수련 · 보석(RemoteFunction)
 		-- 창을 끄는 동안 위치를 연달아 보낼 수 있다(저장은 즉시 저장 스로틀이 따로 막는다)
 		SetInventoryWindowPosition = { perSecond = 20, burst = 20 },
 		-- QUEUE-B1 B2 상점 창구(구매 프롬프트 · 장착 · 받기) - 사람 손 속도면 닿지 않는다

@@ -217,6 +217,14 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 				ReplicatedStorage:WaitForChild("PrimordialFx"):FireClient(recipient, { grade = "legendary", firstBoss = true, position = deathPosition })
 			end
 		end
+		-- QUEUE-ALL10 2-4(D9): 15,000 이상 보스 = 초월 보석 희귀 드랍(계승한 계정만 · 0.2% · 계정 목록 - 가방과 무관 · 지급 감사 기록)
+		local transcendGem = monsterData.isRaid ~= true and require(script.Parent.TranscendService).rollBossDrop(recipient, dropStage)
+		if transcendGem and typeof(recipient) == "Instance" then
+			local notice = ReplicatedStorage:FindFirstChild("SystemNotice")
+			if notice then
+				notice:FireClient(recipient, require(ReplicatedStorage.Shared.Text).getFor(recipient, "srv.transcend.gemDrop"))
+			end
+		end
 	elseif isSparkle then
 		armorDrops = { Loot.rollSparkleArmorDrop(dropStage, monsterData.tierIndex, classId) }
 		primordialP = RareMonsterConfig.sparkleGradeChances.primordial or 0

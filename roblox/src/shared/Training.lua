@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TrainingData = require(ReplicatedStorage.Shared.data.TrainingData)
 local GoldCost = require(ReplicatedStorage.Shared.GoldCost)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
+local All10 = require(ReplicatedStorage.Shared.All10) -- QUEUE-ALL10 2-5 직업 특성 진화(능력 상한 +)
 
 local Training = {}
 
@@ -27,7 +28,8 @@ end
 function Training.capFor(def, bestStage)
 	local cap = math.floor(math.max(0, bestStage or 0) / (def and def.stagesPerLevel or TrainingData.stagesPerLevel)) -- QUEUE-ALL9B 2: 항목별 스테이지 간격(수련 = 20)
 	if def and def.maxLevel then
-		cap = math.min(cap, def.maxLevel)
+		local evolution = Training.statDef(def.id) ~= def and All10.evolutionCapBonus(bestStage) or 0 -- QUEUE-ALL10 2-5(D4): 직업 고유 능력만 5,000 · 7,500 · 10,000에서 상한 +10씩(공용 수련 1 ~ 50은 그대로 · 스위치 끔 = 0)
+		cap = math.min(cap, def.maxLevel + evolution)
 	end
 	return cap
 end

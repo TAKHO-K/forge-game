@@ -134,4 +134,141 @@ local okS, errS = pcall(function()
 	check("보석 번호 < 개수 → 끌어올림(id 중복 방지)", SaveSystem.migrate(seqFix).transcendGems.seq == 2)
 end)
 if not okS then print("[A10] 에러 " .. tostring(errS)) end
+
+-- 블록 2 서버(TranscendService · 실제 PlayerProfile · PlayerCombat): 계승 원자성 · 토큰 · 롤백 · 공격력 · 초월 강화 칸 · 수련 · 보석 보존 · 드랍 · 스위치 끔
+local okT, errT = pcall(function()
+	if not MODS.TranscendService then
+		print("[A10] (서비스 하네스 건너뜀 - deps에 TranscendService 없음)")
+		return
+	end
+	local SaveSystem, PP, TS, A, All10 = MODS.SaveSystem, MODS.PlayerProfile, MODS.TranscendService, MODS.All10Data, MODS.All10
+	local PlayerCombat = MODS.PlayerCombat
+	ATTR.All10Economy = true
+	local clock = 1000
+	local saveOk = true
+	local g = 0
+	TS.deps = { now = function() return clock end, save = function() return saveOk end, guid = function() g += 1; return "tok" .. g end }
+	local uid = 500
+	local function fresh(grade, level)
+		uid += 1
+		local at = {}
+		local pl = setmetatable({ Name = "T" .. uid, UserId = uid, DisplayName = "T" .. uid, Parent = true }, { __index = function(_, k)
+			if k == "SetAttribute" then return function(_, n, v) at[n] = v end end
+			if k == "GetAttribute" then return function(_, n) return at[n] end end
+			if k == "FindFirstChild" or k == "WaitForChild" or k == "FindFirstChildOfClass" then return function() return nil end end
+			if k == "IsA" then return function() return false end end
+			if k == "GetAttributeChangedSignal" then return function() return { Connect = function() end } end end
+			return nil
+		end })
+		local prof = SaveSystem.migrate({})
+		prof.classId = "bow"
+		prof.gold = 1e30
+		local cs = prof.classes.bow
+		cs.weapon.grade, cs.weapon.level = grade or 6, level or 30
+		cs.weapon.slotUnlocked = { true, true, true, true, true }
+		cs.weapon.gems = { { grade = "primordial", itemLevel = 100, option = { id = "attackPercent", roll = 0.5 } }, false, false, false, false }
+		cs.stageProgress.infinite, cs.stageProgress.infiniteBest = 10000, 10000
+		cs.rebirthCount = 5
+		PP.init(pl, prof)
+		return pl, prof, cs
+	end
+	-- ① 계승
+	local pl, prof, cs = fresh()
+	local atkBefore = PlayerCombat.getAttack(cs.weapon, "bow", 100, 0, 0, 1, nil)
+	local p1 = TS.prepare(pl)
+	local badTok = TS.confirm(pl, "가짜")
+	local p2 = TS.prepare(pl)
+	local r = TS.confirm(pl, p2.token)
+	local again = TS.confirm(pl, p2.token)
+	local atkAfter = PlayerCombat.getAttack(cs.weapon, "bow", 100, 0, 0, 1, nil)
+	check("계승: 태초 +30 → 초월(7) +0 · 단계 0 칸 0 · 계승 스테이지 = 최고 10,000 · 칭호 · 보석 1(잠금 · 계정 목록) · 가짜 토큰 X · 같은 토큰 두 번 X(중복 계승 방지)",
+		p1.ok and not badTok.ok and badTok.why == "token" and r.ok and cs.weapon.grade == 7 and cs.weapon.level == 30 and cs.weapon.transcend.level == 0 and cs.weapon.transcend.slot == 0
+		and cs.transcendInherit.stage == 10000 and cs.transcendInherit.fromLevel == 30 and PP.hasTitle(pl, "transcendHeir") and #prof.transcendGems.list == 1 and prof.transcendGems.list[1].locked
+		and prof.transcendGems.list[1].grade == "transcendent" and not again.ok, ("%s · %s"):format(tostring(r.why), tostring(again.why)))
+	check("계승 뒤 공격력 = 태초 +30 × 1.25(등급 줄) · 다시 계승 시도 = already", math.abs(atkAfter / atkBefore - 1.25) < 1e-12 and TS.prepare(pl).why == "already", ("×%.6f"):format(atkAfter / atkBefore))
+	ATTR.All10Economy = false
+	local atkOff = PlayerCombat.getAttack(cs.weapon, "bow", 100, 0, 0, 1, nil)
+	ATTR.All10Economy = true
+	check("스위치 끔이면 초월 무기 = 태초 +30 공격(이득 0)", atkOff == atkBefore)
+	-- 토큰 만료 · 직업 바뀜 · 저장 실패 롤백
+	local pl2, prof2, cs2 = fresh()
+	local t1 = TS.prepare(pl2)
+	clock += A.inherit.confirmTtlSeconds + 1
+	local expired = TS.confirm(pl2, t1.token)
+	local t2 = TS.prepare(pl2)
+	saveOk = false
+	local failed = TS.confirm(pl2, t2.token)
+	saveOk = true
+	local rolledBack = cs2.weapon.grade == 6 and cs2.weapon.transcend == nil and cs2.transcendInherit == nil and #prof2.transcendGems.list == 0 and not PP.hasTitle(pl2, "transcendHeir") and cs2.weapon.gems[1].grade == "primordial"
+	local t3 = TS.prepare(pl2)
+	prof2.classId = "healer"
+	local changed = TS.confirm(pl2, t3.token)
+	prof2.classId = "bow"
+	local t4 = TS.prepare(pl2)
+	local ok4 = TS.confirm(pl2, t4.token)
+	check("토큰 만료 X · 저장 실패 = 무기 · 기록 · 보석 · 칭호 전부 되돌림 · 확인 사이 직업 바뀜 X · 다시 하면 성공", not expired.ok and expired.why == "token" and not failed.ok and failed.why == "save_failed"
+		and rolledBack and not changed.ok and changed.why == "class_changed" and ok4.ok and cs2.weapon.grade == 7)
+	local pl3 = fresh(6, 29)
+	local pl4 = fresh(5, 30)
+	check("조건 미달: 태초 +29 · 유물 +30 = not_ready", TS.prepare(pl3).why == "not_ready" and TS.prepare(pl4).why == "not_ready")
+	-- ② 초월 강화: 칸 10개 = +1 · 칸 가격 · 골드 부족 = 변화 없음 · +20 = max
+	local gold0 = prof.gold
+	local slotCost = All10.transcendSlotCost(PP.getAccountBestStage(pl))
+	local res
+	for _ = 1, A.transcendEnhance.slots do res = TS.payEnhance(pl) end
+	local paidOk = res.ok and res.leveled and cs.weapon.transcend.level == 1 and cs.weapon.transcend.slot == 0 and math.abs((gold0 - prof.gold) - slotCost * A.transcendEnhance.slots) <= 1e-6 * gold0
+	local r1 = TS.payEnhance(pl)
+	local atk1 = PlayerCombat.getAttack(cs.weapon, "bow", 100, 0, 0, 1, nil)
+	prof.gold = 0
+	local poor = TS.payEnhance(pl)
+	prof.gold = 1e30
+	check("초월 강화: 칸 10번 = +1(칸 0) · 칸당 가격 일정 · +1 칸 1 공격 = ×1.25 × (1 + 0.05 × 1.1) · 골드 부족 = 칸 그대로", paidOk and r1.ok and cs.weapon.transcend.slot == 1
+		and math.abs(atk1 / atkBefore - 1.25 * (1 + 0.05 * 1.1)) < 1e-12 and not poor.ok and poor.why == "no_gold" and cs.weapon.transcend.slot == 1)
+	cs.weapon.transcend.level, cs.weapon.transcend.slot = A.transcendEnhance.maxLevel, 0
+	check("초월 강화 +20 = max(더 낼 수 없음)", TS.payEnhance(pl).why == "max")
+	cs.weapon.transcend.level = 1
+	-- ③ 고급 · 방어 수련
+	local plN, profN = fresh()
+	check("고급 수련: 초월 무기 없으면 not_transcend(스테이지 10,000이어도)", TS.buyAdvanced(plN).why == "not_transcend" and profN.training.advanced == 50)
+	cs.stageProgress.infiniteBest = 10050 -- 상한 50 (10,050 → 50 + 0)
+	local capped = TS.buyAdvanced(pl)
+	cs.stageProgress.infiniteBest = 10300 -- 상한 53
+	local b1, b2, b3, b4 = TS.buyAdvanced(pl), TS.buyAdvanced(pl), TS.buyAdvanced(pl), TS.buyAdvanced(pl)
+	check("고급 수련: 상한 = 50 + (최고 − 10,000) ÷ 100 · 10,300 = 53까지 · 그다음 cap · 공격 버킷 +3%", capped.why == "cap" and b1.ok and b2.ok and b3.ok and not b4.ok and b4.why == "cap" and prof.training.advanced == 53
+		and math.abs(PP.getMilestoneMultiplier(pl) - PP.getMilestoneMultiplier(plN) - 0.03) < 1e-12)
+	local g0 = TS.buyGuard(pl)
+	cs.stageProgress.infiniteBest = 12000
+	local g1 = TS.buyGuard(pl)
+	check("방어 수련: 11,999 이하 = stage · 12,000 = 열림 · 받는 피해 × 0.99", g0.why == "stage" and g1.ok and prof.training.guard == 1 and math.abs(PP.getGuardTakeMultiplier(pl) - 0.99) < 1e-12 and PP.getGuardTakeMultiplier(plN) == 1)
+	-- ④ 초월 보석: 장착(1번 홈 · 원래 태초 보석은 보석칸으로) · 추출(목록 보존 · 홈 빔) · 일반 보석 교체가 사본을 밀어내면 목록으로 반환(보석칸 복제 X) · 판매 · 분해 대상 아님
+	local gid = prof.transcendGems.list[1].id
+	local invBefore = #cs.gemInventory
+	local e1 = TS.equipGem(pl, gid)
+	local socketed = cs.weapon.gems[1].transcendGemId == gid and cs.weapon.gems[1].grade == "transcendent" and prof.transcendGems.list[1].socket and #cs.gemInventory == invBefore + 1
+	local ex = TS.extractGem(pl, gid)
+	local extracted = cs.weapon.gems[1] == false and prof.transcendGems.list[1].socket == nil and #prof.transcendGems.list == 1
+	TS.equipGem(pl, gid)
+	local primIndex = #cs.gemInventory
+	local okSwap = PP.equipGem(pl, 1, primIndex)
+	local swapped = okSwap and cs.weapon.gems[1].grade == "primordial" and prof.transcendGems.list[1].socket == nil and #cs.gemInventory == invBefore
+	local noCopyInInv = true
+	for _, g in ipairs(cs.gemInventory) do if g.transcendGemId or g.grade == "transcendent" then noCopyInInv = false end end
+	check("초월 보석: 장착(사본 · 태초 보석 → 보석칸) · 추출 100% 보존 · 일반 보석 교체 = 목록으로 반환 · 보석칸에 초월 사본 0(판매 · 분해 대상 없음)", e1.ok and socketed and ex.ok and extracted and swapped and noCopyInInv)
+	check("초월 보석 장착: 계승 안 한 계정 = locked · 초월 무기 아님 = not_transcend", TS.equipGem(plN, gid).why == "locked")
+	-- 드랍: 15,000 이상 · 0.2% · 계승한 계정만
+	local n0 = #prof.transcendGems.list
+	local dropLow = TS.rollBossDrop(pl, 14999, 0)
+	local dropMiss = TS.rollBossDrop(pl, 15000, A.transcendGem.dropChance)
+	local dropHit = TS.rollBossDrop(pl, 15000, A.transcendGem.dropChance - 1e-9)
+	local dropN = TS.rollBossDrop(plN, 20000, 0)
+	check("보스 드랍: 14,999 X · 굴림 ≥ 0.2% X · < 0.2% O(계정 목록 · 잠금 · 번호 TG2) · 계승 안 한 계정 X", dropLow == nil and dropMiss == nil and dropHit ~= nil and dropHit.locked and dropHit.id == "TG2" and dropN == nil and #prof.transcendGems.list == n0 + 1)
+	-- 스위치 끔 = 모든 동작 disabled
+	ATTR.All10Economy = false
+	local off = TS.payEnhance(pl).why == "disabled" and TS.buyAdvanced(pl).why == "disabled" and TS.buyGuard(pl).why == "disabled" and TS.prepare(pl).why == "disabled" and TS.rollBossDrop(pl, 20000, 0) == nil
+		and PP.getGuardTakeMultiplier(pl) == 1 and math.abs(PP.getMilestoneMultiplier(pl) - PP.getMilestoneMultiplier(plN)) < 1e-12
+	ATTR.All10Economy = true
+	check("스위치 끔 = 계승 · 강화 칸 · 수련 · 드랍 disabled · 고급 · 방어 효과 0", off)
+	TS.deps = nil
+end)
+if not okT then print("[A10] 에러 " .. tostring(errT)) end
 print(("[A10] 끝 %d/%d"):format(pass, total))

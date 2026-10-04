@@ -803,6 +803,14 @@ function PlayerProfile.getGuardTakeMultiplier(player)
 	return All10.defenseTakeMultiplier(profile.training.guard)
 end
 
+-- QUEUE-ALL10: 수련 · 공격 배율 Attribute 다시 걸기(TranscendService가 고급 수련 · 초월 무기 변경 뒤 부른다)
+function PlayerProfile.syncTrainingAttributes(player)
+	local profile = profiles[player]
+	if profile and typeof(player) == "Instance" then
+		syncMilestoneAttributes(player, profile)
+	end
+end
+
 -- 최대 체력 배율(버킷이 최대 체력 쪽일 때만 1이 아니다 - Milestone.maxHpMultiplier).
 function PlayerProfile.getMilestoneMaxHpMultiplier(player)
 	local profile = profiles[player]
@@ -1378,10 +1386,14 @@ function PlayerProfile.equipGem(player, slot, gemInventoryIndex)
 		-- 그 보석이 생성 시점에 굴린 옵션이 조용히 사라진다(optionId만 옮기던 23-2 그대로
 		-- 두면 새 필드가 여기서 빠진다).
 		local previous = classState.weapon.gems[slot]
-		table.insert(classState.gemInventory, {
-			grade = previous.grade, optionId = previous.optionId,
-			itemLevel = previous.itemLevel, option = previous.option,
-		})
+		if previous.transcendGemId then -- QUEUE-ALL10 2-4: 초월 보석 사본은 보석칸이 아니라 계정 목록으로 돌아간다(자동 반환 · 복제 방지)
+			require(script.Parent.TranscendService).onCopyRemoved(player, previous)
+		else
+			table.insert(classState.gemInventory, {
+				grade = previous.grade, optionId = previous.optionId,
+				itemLevel = previous.itemLevel, option = previous.option,
+			})
+		end
 	end
 	classState.weapon.gems[slot] = {
 		optionId = pending.optionId, grade = pending.grade,

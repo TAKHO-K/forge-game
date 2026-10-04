@@ -126,7 +126,7 @@ local en = {
 	["강아지"] = "Puppy", ["고양이"] = "Kitty", ["새끼 용"] = "Baby Dragon",
 
 	-- ═══ 칭호(TitleData · NestData · CodexData 줄 칭호 틀) ═══
-	["태초의 선택"] = "Primordial Chosen", ["초월자"] = "Transcender", ["주간 챔피언"] = "Weekly Champion", ["모두의 영웅"] = "Everyone's Hero",
+	["태초의 선택"] = "Primordial Chosen", ["초월자"] = "Transcender", ["초월 계승자"] = "Transcendent Heir", ["주간 챔피언"] = "Weekly Champion", ["모두의 영웅"] = "Everyone's Hero",
 	["호기심 대장"] = "Curious Captain", ["둥지 탐험가"] = "Nest Explorer", ["비밀 수집가"] = "Secret Collector", ["모험가"] = "Adventurer",
 	["%s 수집가"] = "%s Collector", ["%s 정복자"] = "%s Conqueror", ["%s 사육사"] = "%s Keeper", ["%s 탐험가"] = "%s Explorer", ["%s 탐구자"] = "%s Scholar", ["%s 사냥꾼"] = "%s Hunter", ["%s 장인"] = "%s Master",
 

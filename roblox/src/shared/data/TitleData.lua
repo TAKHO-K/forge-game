@@ -16,6 +16,7 @@ local T = {
 			condition = "드랍 초월 장비(세계 번호가 붙는 초월)를 처음 얻는다",
 			acquire = { kind = "dropPrimordial", sources = { "boss", "raid", "field", "sparkle" }, parts = { "armor", "gloves", "shoes" } },
 			grantedBy = "server/PrimordialRegistry.onRolled" },
+		transcendHeir = { id = "transcendHeir", name = "초월 계승자", grade = "transcendent", condition = "태초 무기 +30을 초월 무기로 계승한다", grantedBy = "server/TranscendService.confirm" }, -- QUEUE-ALL10 2-1(D2)
 		weeklyChampion = { id = "weeklyChampion", name = "주간 챔피언", grade = "ancient", condition = "주간 도전 한 주 1위(처치 시간)", grantedBy = "server/WeeklyChallengeService" }, -- QUEUE-ALL1 P4 §3
 		communityHero = { id = "communityHero", name = "모두의 영웅", grade = "legendary", condition = "주간 합동 목표 100% 달성 주에 기여하고 받기(한정)", grantedBy = "server/CommunityGoalService" }, -- QUEUE-ALL1 P3 §4
 		seasonRegular = { id = "seasonRegular", name = "시즌 출석 개근", grade = "rare", condition = "시즌 출석판 16칸 받기", grantedBy = "server/QuestService(시즌 출석판 - QUEUE-ALL9B 5)" },
