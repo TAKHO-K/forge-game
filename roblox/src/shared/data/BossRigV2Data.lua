@@ -12,9 +12,20 @@ local D = {}
 D.rigs = {}
 
 -- 막대 부위(수정 · 뿔 · 왕관): 중심 center · 회전 rot(도)로 놓되 관절 = 밑동(흔들림 · 터짐이 밑동에서 돈다)
+-- 회전(도 - CFrame.Angles(rx, ry, rz)와 같은 순서 Rx · Ry · Rz)을 벡터에 적용(데이터 로드에 CFrame을 안 쓴다 - 하네스 · 도구 스텁에서도 돈다)
+local function rotate(v, rot)
+	local x, y, z = v.X, v.Y, v.Z
+	local cz, sz = math.cos(math.rad(rot.Z)), math.sin(math.rad(rot.Z))
+	x, y = x * cz - y * sz, x * sz + y * cz
+	local cy, sy = math.cos(math.rad(rot.Y)), math.sin(math.rad(rot.Y))
+	x, z = x * cy + z * sy, -x * sy + z * cy
+	local cx, sx = math.cos(math.rad(rot.X)), math.sin(math.rad(rot.X))
+	y, z = y * cx - z * sx, y * sx + z * cx
+	return V(x, y, z)
+end
+
 local function stick(J, name, parent, size, center, rot, color, material, shape)
-	local R = CFrame.Angles(math.rad(rot.X), math.rad(rot.Y), math.rad(rot.Z))
-	local base = center - R:VectorToWorldSpace(V(0, size.Y / 2, 0))
+	local base = center - rotate(V(0, size.Y / 2, 0), rot)
 	return add(J, { name = name, parent = parent, part = name, size = size, shape = shape, color = color, material = material, at = base, pivot = V(0, -size.Y / 2, 0), rot = rot })
 end
 
@@ -27,6 +38,9 @@ do
 		thigh = { w = 0.75, len = 0.8 }, shin = { w = 0.7, len = 0.8 }, foot = V(0.8, 0.3, 1.1),
 		upperArm = { w = 0.75, len = 1.0 }, forearm = { w = 0.8, len = 0.95 }, hand = V(1.05, 1.0, 1.05), shoulderX = 1.5, stance = 0.5,
 	})
+	-- 눈 · 입 = 지금 그림 자리(옛 메시는 머리 상자보다 0.34 · 0.7 아래에 그려졌다 - KIT가 상자로 자르므로 상자를 그림에 맞춘다)
+	BossSkeleton.find(J, "Eyes").at = V(0, -0.34, -0.5)
+	BossSkeleton.find(J, "Jaw").at = V(0, -0.66, -0.5)
 	add(J, { name = "Pauldron_L", parent = "UpperArm_L", part = "LeftPauldron", size = V(1.0, 0.5, 1.15), color = "head", at = V(-0.1, 0.45, 0), pivot = V(0, 0, 0) })
 	add(J, { name = "Pauldron_R", parent = "UpperArm_R", part = "RightPauldron", size = V(1.0, 0.5, 1.15), color = "head", at = V(0.1, 0.45, 0), pivot = V(0, 0, 0) })
 	add(J, { name = "Rune", parent = "Body", part = "Rune", size = V(0.7, 0.7, 0.08), color = "accent", material = "Neon", at = V(0, 0.2, -0.66), pivot = V(0, 0, 0) })

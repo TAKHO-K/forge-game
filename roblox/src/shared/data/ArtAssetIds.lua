@@ -267,6 +267,8 @@ return {
 	["bosses/frost_giant"] = { id = 94028837621068, kind = "Model", status = "Approved" },
 	["bosses/scorpion_queen"] = { id = 84986386356967, kind = "Model", status = "Approved" },
 	["bosses/section_guardian"] = { id = 73336907208395, kind = "Model", status = "Approved" },
+	["bosses/section_guardian_v2"] = { id = 88197704447095, kind = "Model", status = "Approved" },
+	["bosses/section_guardian_v2_atlas1"] = { id = 110428015021521, kind = "Decal", image = 107503596647838, status = "Approved" },
 	["bosses/storm_lord"] = { id = 114400850367342, kind = "Model", status = "Approved" },
 	["extras/cloud_whale"] = { id = 88361825867912, kind = "Model", status = "Approved" },
 	["extras/gate_decor/abyssal_lord"] = { id = 84302773211103, kind = "Model", status = "Approved" },

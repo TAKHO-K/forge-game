@@ -100,6 +100,22 @@ function ArtMeshKit.applyRig(model, key, rigId, S, lift)
 			q:Destroy()
 		end
 	end
+	-- BOSS-FRAMEWORK 7 KIT 메시: 메타 texture(아틀라스 - ArtAssetIds image id)를 입는 부위에 TextureID · 색 흰색(텍스처 색 그대로 - 겉모습만)
+	local texMeta = metaFor(rigId)
+	texMeta = texMeta and texMeta.texture
+	if texMeta then
+		local ArtAssetIds = require(ReplicatedStorage.Shared.data.ArtAssetIds)
+		local e = ArtAssetIds[texMeta.atlas]
+		if e and e.image then
+			for name in pairs(texMeta.parts or {}) do
+				local mesh = model:FindFirstChild(name)
+				if mesh and mesh:IsA("MeshPart") then
+					mesh.TextureID = "rbxassetid://" .. tostring(e.image)
+					mesh.Color = Color3.new(1, 1, 1)
+				end
+			end
+		end
+	end
 	if not refCF then
 		return count, lines
 	end

@@ -344,3 +344,41 @@ RunService:BindToRenderStep("A2M1Probe", Enum.RenderPriority.Last.Value + 5, fun
 	stepMotion(dt)
 	stepPerf(dt)
 end)
+
+-- BOSS-FRAMEWORK 촬영 카메라(Studio 전용): LocalPlayer Attribute FrameCam = "각도|거리|높이"(예 "40|36|9") → 전시 리그(BossAnimPreview) 또는 가장 가까운 보스를
+--   보이는 몸 정면에서 각도만큼 돈 자리에서 매 프레임 따라 찍는다(부드럽게) · nil = 끔(게임 카메라로).
+local frameCam = nil
+player:GetAttributeChangedSignal("FrameCam"):Connect(function()
+	local v = player:GetAttribute("FrameCam")
+	if type(v) ~= "string" then
+		frameCam = nil
+		Workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
+		return
+	end
+	local a, d, h = v:match("^([%-%d%.]+)|([%d%.]+)|([%-%d%.]+)$")
+	frameCam = { yaw = tonumber(a) or 40, dist = tonumber(d) or 36, height = tonumber(h) or 9 }
+end)
+RunService:BindToRenderStep("BossFrameCam", Enum.RenderPriority.Last.Value + 20, function(dt)
+	local F = frameCam
+	if not F then
+		return
+	end
+	local m = Workspace:FindFirstChild("BossAnimPreview") or nearestBoss()
+	local body = m and m:FindFirstChild("Body")
+	local root = m and m:FindFirstChild("HumanoidRootPart")
+	if not body or not root then
+		return
+	end
+	local look = body.CFrame.LookVector -- 보이는 몸 방향(실전 보스는 서버 루트가 안 돈다)
+	local f = Vector3.new(look.X, 0, look.Z)
+	f = f.Magnitude > 1e-3 and f.Unit or Vector3.new(0, 0, -1)
+	F.f = F.f and F.f:Lerp(f, math.min(1, dt * 2)).Unit or f
+	f = F.f
+	local dir = CFrame.Angles(0, math.rad(F.yaw), 0):VectorToWorldSpace(f)
+	local target = Vector3.new(root.Position.X, body.Position.Y, root.Position.Z)
+	local want = CFrame.lookAt(target + dir * F.dist + Vector3.new(0, F.height, 0), target)
+	F.cur = F.cur and F.cur:Lerp(want, math.min(1, dt * 3)) or want
+	local cam = Workspace.CurrentCamera
+	cam.CameraType = Enum.CameraType.Scriptable
+	cam.CFrame = F.cur
+end)

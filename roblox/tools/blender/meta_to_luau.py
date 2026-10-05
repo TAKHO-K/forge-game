@@ -38,6 +38,9 @@ def convert(path):
         lines.append("\tdeco = { %s }," % ", ".join('["%s"] = "%s"' % kv for kv in d["deco"].items()))
         lines.append("\tdecoMaterial = { %s }," % ", ".join('["%s"] = "%s"' % kv for kv in (d.get("decoMaterial") or {}).items()))
         lines.append("\tlod2 = { %s }," % ", ".join('["%s"] = true' % k for k in (d.get("lod2") or [])))
+    if d.get("texture"):  # BOSS-FRAMEWORK 7 KIT: 아틀라스(ArtAssetIds 키 = bosses/<파일 이름> - image id) · 그 텍스처를 입는 부위
+        t = d["texture"]
+        lines.append('\ttexture = { atlas = "bosses/%s", parts = { %s } },' % (t["atlases"][0].rsplit(".", 1)[0], ", ".join('["%s"] = true' % k for k in t["parts"])))
     lines += ["}", ""]
     os.makedirs(OUT, exist_ok=True)
     out = os.path.join(OUT, rig + ".lua")
