@@ -237,7 +237,7 @@ do
 		},
 		hitstop = 0.05,
 	}
-	-- GUARDIAN-V3 반응 스킬 ② 도약(준비 0.9 = 깊이 웅크림 + 등 수정 발광 → 판정 시각 = 이륙 · 비행 0.8 = 두 팔 머리 위 → 내려오며 두 주먹 해머 → 착지)
+	-- GUARDIAN-V3 반응 스킬 ② 도약(준비 1.1(V3.1) = 깊이 웅크림 + 등 수정 발광 → 판정 시각 = 이륙 · 비행 0.8 = 두 팔 머리 위 → 내려오며 두 주먹 해머 → 착지)
 	local LEAP_CROUCH = merge(crouch(0.5, 14), { Waist = { -30, 0, 0 }, Neck = { 22, 0, 0 }, Shoulder_L = { -25, 0, 20 }, Shoulder_R = { -25, 0, -20 }, Elbow_L = { 25, 0, 0 }, Elbow_R = { 25, 0, 0 },
 		Crystal1 = { -6, 0, 0 }, Crystal2 = { 0, 0, 6 }, Crystal3 = { 0, 0, -6 } })
 	local LEAP_AIR = merge(crouch(0.25), { Waist = { 14, 0, 0 }, Neck = { 6, 0, 0 }, Shoulder_L = { 160, 0, 25 }, Shoulder_R = { 160, 0, -25 }, Elbow_L = { 30, 0, 0 }, Elbow_R = { 30, 0, 0 } })

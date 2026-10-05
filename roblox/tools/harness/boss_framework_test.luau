@@ -388,7 +388,7 @@ do
 		and b.cooldownSeconds == 3 and b.conditions[1].type == "targetBeyondFor" and b.conditions[1].studs == 30 and b.conditions[1].seconds == 1.5 and b.overrides[1].set.count == 3
 	check("V3 바나나(조건 30 stud · 1.5초 · 쿨 3 · 예비 0.45 · 110 stud/s · 리드 50% · 7% · 광폭 3갈래)", bOk == true, b and ("쿨 %d · 예비 %.2f · 속도 %d · 리드 %.0f%% · 최대 체력 %.0f%% · 광폭 %d갈래"):format(
 		b.cooldownSeconds, b.telegraphSeconds, b.speedStuds, b.leadFraction * 100, b.damage.fraction * 100, b.overrides[1].set.count) or "없음")
-	local lOk = l and l.reactive and l.telegraphSeconds == 0.9 and l.lockSeconds == 0.3 and l.flightSeconds == 0.8 and l.maxLeapStuds == 60 and math.abs(l.radiusStuds - (half + 12)) < 1e-6
+	local lOk = l and l.reactive and l.telegraphSeconds == 1.1 and l.lockSeconds == 0.4 and l.flightSeconds == 0.8 and l.maxLeapStuds == 60 and math.abs(l.radiusStuds - (half + 12)) < 1e-6
 		and l.conditions[1].count == 2 and l.conditions[1].seconds == 12 and l.onHit[1].type == "launch"
 	-- 도약 회피: 착지 원은 준비 시작부터 보이고 대상을 따라온다 → 인지(perception)는 고정 전 표시 시간(준비 − 고정 0.6초) 안에 끝난다.
 	--   고정(끝 0.3초) + 비행 0.8 = 1.1초 안에 대상 자리(몸 끝)에서 원 밖으로 = (반경 − 몸 반폭 + 캐릭터 반폭) ÷ 걷기 × 여유 계수
@@ -396,8 +396,10 @@ do
 	local seen = l.telegraphSeconds - l.lockSeconds
 	local need = (l.radiusStuds - l.landShortStuds + dodge.characterHalfWidthStuds) / walk * dodge.marginFactor
 	local have = l.lockSeconds + l.flightSeconds
-	check("V3 도약(빗나감 2회/12초 · 준비 0.9 · 고정 0.3 · 비행 0.8 · 60 stud · 반경 몸 + 12 · 넉백) + 걸어서 회피", lOk == true and have >= need and seen >= dodge.perceptionSeconds,
-		l and ("반경 %.2f(= %.2f + 12) · 고정 전 표시 %.2f초 ≥ 인지 %.2f · 고정 뒤 걷기 %.2f초 ≤ %.2f초(여유 %.2f)"):format(l.radiusStuds, half, seen, dodge.perceptionSeconds, need, have, have - need) or "없음")
+	-- V3.1: 순수 걷기(여유 계수 없이) 여유 ≥ 0.3초(사용자 목표)
+	local raw = (l.radiusStuds - l.landShortStuds + dodge.characterHalfWidthStuds) / walk
+	check("V3.1 도약(빗나감 2회/12초 · 준비 1.1 · 고정 0.4 · 비행 0.8 · 60 stud · 반경 몸 + 12 · 넉백) + 걸어서 회피 여유 ≥ 0.3", lOk == true and have >= need and have - raw >= 0.3 and seen >= dodge.perceptionSeconds,
+		l and ("반경 %.2f(= %.2f + 12) · 고정 전 표시 %.2f초 ≥ 인지 %.2f · 고정 뒤 걷기 %.2f초(× 1.25 = %.2f) ≤ %.2f초(순수 여유 %.2f · 계수 여유 %.2f)"):format(l.radiusStuds, half, seen, dodge.perceptionSeconds, raw, need, have, have - raw, have - need) or "없음")
 	-- 남은 스킬 회피 부등식(돌진 폭이 넓어짐 · 예비 연장) - 서 있는 거리 = 추격 정지
 	local bad = {}
 	for id, s in pairs(g.skills) do

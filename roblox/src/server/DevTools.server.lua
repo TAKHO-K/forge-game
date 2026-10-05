@@ -2153,6 +2153,21 @@ local function handleCommand(player, args)
 				reply(player, ("boss frame %s: 리그 %s · 빠짐 검사 %s(%d줄) · 시험 스위치 %s"):format(key, ok and "O" or "X", cok and "O" or "X", #rows, tostring(workspace:GetAttribute(FrameData.trialAttribute) == true)))
 			end
 		end
+	elseif sub == "boss" and args[2] == "far" then
+		-- BOSS-NIGHT-1 0d: "/gg boss far [reset]" = 지금 싸우는 반응 스킬 보스(수호자 새 몸)의 대상이 30 stud 밖에 있던 시간 비율(BossSim rangedFarShare 0.25 가정 검증)
+		local n = 0
+		for _, m in ipairs(game:GetService("CollectionService"):GetTagged("Monster")) do
+			local fs = BossPatterns.farStat(m, args[3] == "reset")
+			if fs and fs.total > 0 then
+				n += 1
+				local line = ("boss far %s: %d stud 밖 %.1f초 / 전투 %.1f초 = %.1f%%(모형 가정 원거리 0.25 · 근접 0.08)"):format(m.Name, fs.studs, fs.far, fs.total, fs.far / fs.total * 100)
+				print("[BossFar] " .. line)
+				reply(player, line)
+			end
+		end
+		if n == 0 then
+			reply(player, args[3] == "reset" and "boss far: 0부터 다시 잰다" or "boss far: 기록 없음(반응 스킬 보스와 싸우는 중일 때만)")
+		end
 	elseif sub == "boss" and args[2] == "check" and args[3] then
 		-- 29-2(PRD 20.75 B·D): 스킬표를 고친 뒤 바로 돌려 보는 검사 - 회피 부등식(배율 1·최대)과 인접 피해 합.
 		local bossId = args[3]

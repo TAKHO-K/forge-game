@@ -1717,6 +1717,19 @@
   "assetId": 75948236745182,
   "status": "Approved"
  },
+ "fx/guardian_banana_m.fbx": {
+  "sha256": "257b7a6227c535e37e40209cdb19cf6622c166656730446df0243575ef06e8e5",
+  "assetType": "Model",
+  "assetId": 90242288034446,
+  "status": "Approved"
+ },
+ "fx/guardian_banana_m_atlas1.png": {
+  "sha256": "6221fa7083ae40ccc85cbbfdc354b57305ac3505e3778eb77cc10a616ce45551",
+  "assetType": "Decal",
+  "assetId": 102472665401431,
+  "status": "Approved",
+  "imageId": 102282700483797
+ },
  "fx/jelly_bubble.png": {
   "sha256": "0f7df63bba24d67769661b68c9320087f5f4107e7a796aa779df5c62a85aefe0",
   "assetType": "Decal",

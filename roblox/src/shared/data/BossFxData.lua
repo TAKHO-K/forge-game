@@ -69,7 +69,12 @@ return {
 		lightenFill = 0.35, -- 채움은 균열선보다 이만큼 흐리게(바닥이 보이게)
 	},
 	-- 바나나 투사체(교체 슬롯 GuardianBanana - BossFrameworkData.meshSlots): 길이 lengthStuds · 회전 spinHz · 꼬리 트레일 · 풀 최대 poolMax(파티 4 × 3갈래)
-	guardianBanana = { lengthStuds = 5.5, spinHz = 2.2, poolMax = 12, holdSeconds = 0.45, color = Color3.fromRGB(255, 214, 90), glow = Color3.fromRGB(200, 90, 255),
+	-- V3.1: 길이 = 보스 손(Hand_R 메시 가장 긴 변) × handScale(손을 못 찾으면 lengthStuds) · 비행 = 텀블(끝이 넘어가는 회전) spinHz 바퀴/초 ·
+	--   hold = 예비 동안 손에 든 바나나 보라 발광 0 → 1(Highlight 채움 · PointLight) · light = 비행 중 작은 보라 빛 1개 · shards = 맞거나 땅에 닿을 때 보라 조각 파티클
+	guardianBanana = { lengthStuds = 9.7, handScale = 1.3, spinHz = 1.25, poolMax = 12, holdSeconds = 0.45, color = Color3.fromRGB(255, 214, 90), glow = Color3.fromRGB(170, 80, 255),
+		hold = { fillTransparency = 0.45, outlineTransparency = 0.3, lightBrightness = 4, lightRange = 14 },
+		light = { brightness = 1.2, range = 7 },
+		shards = { count = 14, speed = { 14, 26 }, lifetime = { 0.35, 0.7 }, size = 0.9 },
 		trail = { lifetime = 0.25, width0 = 1.6, width1 = 0, transparency0 = 0.2 } },
 
 	-- 돌진 속도감(A4)

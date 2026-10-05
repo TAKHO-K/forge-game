@@ -255,7 +255,7 @@ function BossBR1View.projSpawn(data)
 	if data.style == "banana" then
 		local part = BossBananaView.acquire()
 		if part then
-			BossBananaView.pose(part, data.position, os.clock())
+			BossBananaView.pose(part, data.position, os.clock(), data.dir)
 			projectiles[data.id] = { part = part, position = data.position, dir = data.dir, speed = data.speed, style = { banana = true }, heightMode = data.heightMode, radius = data.radius, scale = 1, traveled = 0, pooled = true }
 		end
 		return
@@ -318,6 +318,7 @@ function BossBR1View.projEnd(data)
 	if p and p.pooled then
 		BossBananaView.release(p.part) -- GUARDIAN-V3: 풀로(파괴 없음)
 		BossFx.ring(data.position, 0.5, 4, Color3.fromRGB(200, 90, 255), 0.3)
+		BossBananaView.burst(data.position) -- V3.1: 보라 조각 파티클
 		return
 	end
 	if p then
@@ -686,7 +687,7 @@ RunService.RenderStepped:Connect(function(dt)
 		p.position += p.dir * p.speed * dt
 		p.traveled = (p.traveled or 0) + p.speed * dt
 		if p.style.banana then
-			BossBananaView.pose(p.part, p.position, os.clock())
+			BossBananaView.pose(p.part, p.position, os.clock(), p.dir)
 		elseif p.part.Parent then
 			local cf = CFrame.lookAt(p.position, p.position + p.dir)
 			if p.style.spin then

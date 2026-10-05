@@ -2271,6 +2271,13 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt, member
 	if data.reactiveOrder then -- GUARDIAN-V3 ⑧: 반응 조건 targetBeyondFor의 시각(스킬이 도는 동안에도 잰다)
 		st.beyondSince = st.beyondSince or {}
 		local distance = targetRoot and Reach.horizontalDistance(targetRoot.Position, position) or 0
+		-- V3.1 /gg boss far: 전투 중 대상이 farStatStuds 밖에 있던 시간 비율(BossSim 원거리 가정 rangedFarShare 검증용 - 기록만)
+		local fs = st.farStat or { total = 0, far = 0, studs = 30 }
+		st.farStat = fs
+		fs.total += dt or 0
+		if distance > fs.studs then
+			fs.far += dt or 0
+		end
 		for _, id in ipairs(data.reactiveOrder) do
 			for _, cond in ipairs(data.skills[id].conditions or {}) do
 				if cond.type == "targetBeyondFor" then
@@ -2351,6 +2358,18 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt, member
 end
 
 -- GUARDIAN-V3: 도약 비행 중(보스 몸이 포물선으로 떠 있다 - primitive leap) - MonsterAI가 높이차로 대상을 놓치지 않게 묻는다
+-- V3.1 /gg boss far: 반응 스킬 보스(지금 수호자 새 몸)의 "대상이 30 stud 밖" 시간 기록 { total, far, studs } · reset = 0부터
+function BossPatterns.farStat(model, reset)
+	local st = MonsterState.getBossPatternState(model)
+	if not st then
+		return nil
+	end
+	if reset then
+		st.farStat = nil
+	end
+	return st.farStat
+end
+
 function BossPatterns.isLeaping(model)
 	local st = MonsterState.getBossPatternState(model)
 	return st ~= nil and st.phase == "leapFlight"

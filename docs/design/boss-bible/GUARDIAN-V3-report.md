@@ -125,3 +125,48 @@ Studio Play(수동 · 무장 안 함 · 개발 계정 스테이지 15):
 6. 비교: `/gg boss frame off` → 다음 스폰부터 옛 수호자(빨간 바닥 전조 그대로).
 
 검수 통과 뒤 실전 교체: `BossFrameworkData.live.section_guardian = "v2"`(별도 지시).
+
+## V3.1 (BOSS-NIGHT-1 0단계 · 10-05)
+
+V3 결정 반영 + 바나나 Meshy 메시 + 도구 복구 + 수치 측정. **실전 스위치(`live`)는 여전히 비어 있다.** 파일 · 에셋 · DataStore 삭제 0 · 저장 구조 변경 0.
+
+### 바뀐 것
+
+| 항목 | 내용 | 파일 |
+|---|---|---|
+| a 결정 반영 | 아는 보스 전멸 21 ~ 27% = 수호자만 예외(목표 20 ~ 35%) · 수치 유지 · 근접 원형 구역 파랑 원 꺼짐 유지(`hideFloor.innerRing = true`) · **도약 준비 0.9 → 1.1초 · 위치 고정 0.3 → 0.4초** | `shared/data/BossFrameworkData.lua` · 하네스 검사 줄 |
+| b 바나나 메시 | `guardian_v1_banana_remesh10k.glb`(10,242) → 새 소품 KIT `prop_kit.py`로 **3,000삼각형** + 구운 색 512 아틀라스 → 슬롯 `GuardianBanana = fx/guardian_banana_m`(옛 임시 메시 `fx/guardian_banana` 그대로 남김) · 업로드 모델 90242288034446 · 아틀라스 Decal 102472665401431(이미지 102282700483797) | `tools/blender/prop_kit.py`(새) · `boss_kit.py`(가져다 쓰도록 main 감쌈) · `art/fx/guardian_banana_m.*` · `ArtAssetIds.lua` |
+| b 바나나 연출 | 크기 = 보스 `Hand_R` 메시 가장 긴 변 × 1.3(실측 11.9 stud) · 예비 0.45초 동안 오른손에 나타나 보라 발광 증가(Highlight 채움 0 → 0.55 · PointLight 1.2 → 4) → 놓는 순간 분리 → 비행 = 텀블(진행 방향 오른쪽 축으로 끝이 넘어감 1.25바퀴/초) + 보라 Trail + 작은 보라 PointLight 1개 → 맞거나 땅에 닿으면 보라 조각 파티클 14개(풀 파트 1개 `Emit`) · 광폭 3갈래도 같은 메시 · 풀 최대 12 그대로 | `client/BossBananaView.lua` · `BossBR1View.lua` · `shared/data/BossFxData.lua` |
+| c meshswap 하네스 복구 | BOSS-FRAMEWORK 뒤 `BossRigSpec`이 `BossSkeleton` · `BossRigV2Data`를 부르는데 하네스 모듈 목록에 없었다 + 스텁 벡터에 `Unit` · `Magnitude` · 나눗셈이 없었다 → 추가 · `===MESH 하네스 O===` | `tools/meshswap_harness/mk_mesh.py` · `mesh_prelude.luau` |
+| d 원거리 비율 기록 | `/gg boss far [reset]` = 반응 스킬 보스와 싸우는 동안 대상이 30 stud 밖에 있던 시간 ÷ 전투 시간(서버 `BossPatterns.farStat` - 기록만) | `server/BossPatterns.lua` · `DevTools.server.lua` |
+
+### 자동 검사
+
+| 검사 | 결과 |
+|---|---|
+| `boss_framework_test.luau` | **40/40** · 도약 줄: 반경 25.88 · 고정 전 표시 0.70초 ≥ 인지 0.5 · 고정 뒤 걷기 0.81초 ≤ 1.20초 → **순수 걷기 여유 0.39초(목표 ≥ 0.3)** · 여유 계수 1.25 적용 여유 0.18초 |
+| `boss_timing_dump` · `boss_motion_test` | 변경 전 소스 대비 diff 0 |
+| `meshswap` 하네스 | O(실제 메타 4종 · 회전 관절 · 깨진 배치 감지) |
+| BossSim 600판(`guardian_v31/s_bosssim.txt`) | 처음 전멸 원거리 45.3 ~ 46.3% · 근접 42.2 ~ 42.3%(≤ 50 충족) · 아는 보스 21.0 ~ 27.8%(수호자 예외 20 ~ 35 안) · 처치 58초 - 도약 준비 연장은 모형 명중 확률이 상수라 수치 변화가 노이즈 수준(±1%p) |
+
+### Studio 측정(수동 Play · 스테이지 15 · 새 몸)
+
+| 항목 | 값 |
+|---|---|
+| 메시 캐시 | 474/474(바나나 1 추가) |
+| 바나나 자연 발동 | 30 stud 밖 원 돌기 32초 동안 3회(손에 듬 → 0.45초 → 던짐 · 명중 2) · 손 바나나 길이 11.88 stud |
+| `/gg boss far` | 위 시험(45 stud 원을 순간이동으로 돔)에서 70.1% - **일부러 멀리 선 시험이라 실전 대표값 아님**. 사용자 실전 플레이에서 재면 모형 가정 0.25를 검증할 수 있다 |
+| 4인 PC(지진파 되풀이 · 내 복제 3) | 60.0fps · p95 18.3ms · 보스 모션 145μs |
+| 폰 설정(세밀 LOD · lite) | 60.0fps · p95 18.5ms · 보스 모션 144μs(첫 측정은 Studio 창 초점을 잃어 15fps - 창을 앞으로 가져와 다시 잼) |
+| 서버 Heartbeat(`/gg perf boss 4`) | 평균 0.96 · p95 1.10ms(같은 Play 수정 여왕 0.88 · 1.04) |
+| 지진파 동시 파트 최대 | **72**(상한 120 · 링당 ≤ 24) |
+| 스크립트 오류 | 0(첫 Play 아틀라스 "생성 중" 1회 - 업로드 직후 로블록스 처리 지연, 다음부터 정상) |
+
+캡처: `guardian_v31/s1_banana_hold_glow.jpg`(손에 든 오염 바나나 · 보라 발광 - 예비 순간을 복제해 세운 정지 진열) · KIT 렌더 `guardian_v31/guardian_banana_m_game_{front,side,34}.png`(렌더의 흰 줄 = Workbench 반사광 · 아틀라스에는 없음).
+
+### 미검증 · 사용자 확인
+
+1. 비행 텀블 · 보라 Trail · 조각 파티클은 눈으로 확인 안 함(영상 금지 · 110 stud/s라 정지 캡처에 안 잡힘).
+2. 손에 든 바나나 쥐는 자리(꼭지 쪽이 손바닥)가 자세마다 맞는지 - 캡처에서는 손 위로 솟아 보인다.
+3. 바나나 11.9 stud가 너무 큰지(지시 = 손 × 1.3).
+4. 확인 순서: GUARDIAN-V3 §7의 3번(바나나) · 4번(광폭 3갈래) 그대로 + 실전 중 `/gg boss far`로 내 원거리 비율 보기.

@@ -846,4 +846,5 @@ def main():
         A.setup_render = orig
 
 
-main()
+if __name__ == "__main__":  # BOSS-NIGHT-1: prop_kit.py가 decimate · bake_atlas를 가져다 쓴다(가져올 때는 main 안 돎)
+    main()

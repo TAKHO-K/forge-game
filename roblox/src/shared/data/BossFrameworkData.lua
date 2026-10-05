@@ -53,14 +53,14 @@ D.v3 = {
 				damage = { kind = "maxHp", fraction = 0.07 }, damageLabel = "바나나",
 				meshSlot = "GuardianBanana",
 			},
-			-- 빗나감 → 도약: 바나나가 대상에 안 맞으면 miss + 1 · 12초 창 안 2회 → 준비 0.9초(웅크림 · 수정 발광 · 착지 균열 원 - 마지막 0.3초 고정) → 포물선 0.8초(최대 60 stud) →
-			--   착지 충격 반경 = 몸 가장자리 + 12 · 넉백. 착지 자리 = 대상 자리에서 몸 가장자리 반폭만큼 앞(몸 끝이 대상 자리에 닿는다 - 고정 뒤 1.1초 = 걸어서 원 밖).
+			-- 빗나감 → 도약: 바나나가 대상에 안 맞으면 miss + 1 · 12초 창 안 2회 → 준비 1.1초(V3.1 · 0.9 → 1.1 · 웅크림 · 수정 발광 · 착지 균열 원 - 마지막 0.4초 고정 · 걸어서 회피 여유 0.39초) → 포물선 0.8초(최대 60 stud) →
+			--   착지 충격 반경 = 몸 가장자리 + 12 · 넉백. 착지 자리 = 대상 자리에서 몸 가장자리 반폭만큼 앞(몸 끝이 대상 자리에 닿는다 - 고정 뒤 1.2초 = 걸어서 원 밖).
 			leap = {
 				primitive = "leap", bubble = "heavy", motion = "fist", reactive = true,
 				conditions = { { type = "missesWithin", key = "banana", count = 2, seconds = 12 } },
 				onStart = { { type = "clearMisses", key = "banana" } },
 				cooldownSeconds = 0, priority = 0,
-				telegraphSeconds = 0.9, lockSeconds = 0.3, flightSeconds = 0.8, apexStuds = 22, maxLeapStuds = 60,
+				telegraphSeconds = 1.1, lockSeconds = 0.4, flightSeconds = 0.8, apexStuds = 22, maxLeapStuds = 60,
 				radiusStuds = 12, radiusFromEdge = true, landShortFromEdge = true,
 				onHit = { { type = "launch", heightStuds = 4, distanceStuds = 16 } },
 				damage = { kind = "attack", multiplier = 1.5 }, damageLabel = "도약",
@@ -72,8 +72,11 @@ D.v3 = {
 	},
 }
 
--- 교체 슬롯 → 메시 캐시 키(ArtAssetIds · ArtMeshCache). 지금 = Blender 임시 자수정 바나나 · Meshy 메시가 오면 이 값만 바꾼다. 캐시가 없으면(아트 스위치 끔) 클라가 파트로 그린다.
-D.meshSlots = { GuardianBanana = "fx/guardian_banana" }
+-- 교체 슬롯 → 메시 캐시 키(ArtAssetIds · ArtMeshCache). 캐시가 없으면(아트 스위치 끔) 클라가 파트로 그린다.
+--   V3.1: Meshy "어둠에 오염되는 바나나"(guardian_v1_banana_remesh10k → prop_kit 3,000삼각형 · 구운 색 512) - 옛 Blender 임시 메시 fx/guardian_banana는 그대로 남김(삭제 금지).
+--   meshSlotTextures = 그 메시에 입힐 아틀라스(ArtAssetIds image id - 없으면 색 재질)
+D.meshSlots = { GuardianBanana = "fx/guardian_banana_m" }
+D.meshSlotTextures = { GuardianBanana = "fx/guardian_banana_m_atlas1" }
 
 -- 예산(바이블 §1-4) - 하네스 · /gg boss frame check가 검사한다
 D.budget = {
