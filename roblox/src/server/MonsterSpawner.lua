@@ -135,6 +135,11 @@ local function buildModel(data, position, variant)
 	local rigKey = (data.isBoss and BossFramework.rigKeyFor(data.id)) or (data.isDecoy and BossFramework.rigKeyFor(data.rigId)) or nil
 	local rig = (rigKey and BossRig.specFor(rigKey)) or (data.isBoss and BossRig.specFor(data.id)) or (data.isDecoy and BossRig.specFor(data.rigId)) or nil
 	local root, body, head
+	local liveScale = sizeScale -- GUARDIAN-V2: 옛 몸 기준 배율(몸 가장자리 증가분 계산)
+	if rig and rigKey and rig.scale then -- 새 몸 크기 배율(바이블 §5 × 1.5 - 보이는 몸 · 판정 사본 · 모션 이동 = 이 배율로 짓는다 · 루트 판정 자리 그대로)
+		sizeScale *= rig.scale
+		look.sizeScale = sizeScale
+	end
 	if rig then
 		look.detail = workspace:GetAttribute(ArtStyleV1Data.attribute) == true -- A2-M1 보스 디테일(장식 · 새 관절 · 테마 색) = ArtStyleV1 스위치 뒤
 		root, body, head = BossRig.build(model, rig, look, position)
@@ -152,7 +157,17 @@ local function buildModel(data, position, variant)
 			end
 		end
 		-- A2-M1 덩치: 몸이 커진 만큼만 플레이어 공격 도달을 넓힌다(Reach.bodyRadius - 조준 · 평타 · 스킬 · 화살) = 몸통 반폭 × (지금 배율 − 옛 배율). 배율이 같으면 0 = 옛 판정.
-		if data.baseSizeScale and sizeScale > data.baseSizeScale + 1e-6 then
+		if rigKey and rig.edgeHalfWidth then -- GUARDIAN-V2: 옛 몸 피격 반경 + 몸 가장자리가 늘어난 만큼(BossFramework.edgeGrowth - 보스 공격 반경과 같은 값)
+			local old = BossRig.specFor(data.isBoss and data.id or data.rigId)
+			local base = 0
+			for _, j in ipairs(old and old.joints or {}) do
+				if j.part == "Body" and data.baseSizeScale then
+					base = math.max(0, j.size.X / 2 * (liveScale - data.baseSizeScale))
+					break
+				end
+			end
+			model:SetAttribute("BodyRadius", base + BossFramework.edgeGrowth(rig, liveScale))
+		elseif data.baseSizeScale and sizeScale > data.baseSizeScale + 1e-6 then
 			for _, j in ipairs(rig.joints) do
 				if j.part == "Body" then
 					model:SetAttribute("BodyRadius", j.size.X / 2 * (sizeScale - data.baseSizeScale))

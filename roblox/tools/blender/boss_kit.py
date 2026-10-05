@@ -11,7 +11,16 @@
 #   9 외곽선 껍데기 ≤ --outlines(12): 큰 부위부터 뒤집은 껍데기(<부위>_Outline - ArtMeshKit가 잉크색 · 용접).
 #   10 내보내기: <out>/<리그 키>.fbx(부위 이름 = 리그 부위 · 원점 = 관절 · 회전 0 - make_boss와 같은 규칙) · .meta.json · 아틀라스 png · 렌더(--render).
 #   다음(이 스크립트 밖): python ../opencloud/upload.py bosses/<키>.fbx bosses/<키>_atlas1.png → meta_to_luau.py <키> → BossKitData에 이미지 id 추가.
+#   GUARDIAN-V2 추가(--kit <json> - 보스별 KIT 설정 · 없으면 옛 동작 그대로):
+#      height(리그 단위 - 원본 높이를 이 값으로 · 발바닥 −1.5 · X · Z 경계 가운데 = 0 · 리그 상자 경계 대신) · yaw · islands(0 ~ 1 - 떨어진 조각(Meshy 돌판)을
+#      면 과반이 가는 부위에 통째로 · 비율이 이 값 미만이면 면마다) · skip(원본 면을 받지 않는 부위 - 생성 Neon · 자리만 있는 턱) ·
+#      faceParts(조각째 보내기에서 빼는 부위 - 머리 돌판 일부인 눈썹) · neonByColor = { parts, minValue, blueOverGreen, maxChannel }(그 부위에서 텍스처 색이 밝은 보라(수정)인 면 → Neon 조각 · 색 = 평균 → 가장 낮은 채널 ≤ maxChannel) ·
+#      generate = [{ part | deco + host, shape = eyes(variant normal · angry · dazed) | rune, at · size(리그 단위) · color }] (Neon 새 메시) ·
+#      texture = "base"(Base Color에 연결된 이미지만 - 거칠기 · 노멀 맵 제외) · decoCap(수정 Neon 조각 삼각형 상한) ·
+#      bake = { size, extrusion, distance }(감량하면 Meshy의 잘게 나뉜 UV가 무너진다 → 감량 부위에 새 UV(Smart UV · 한 장에 묶기) + 원본 고해상 메시 색을
+#      Cycles로 굽기(선택 → 활성 · 색만) = 1024 아틀라스 1장).
 # 실행: bash bl.sh boss_kit.py --rig rigs/section_guardian_v2.rig.json --fake section_guardian [--render 폴더]
+#       bash bl.sh boss_kit.py --rig rigs/section_guardian_v2.rig.json --kit rigs/section_guardian_v2.kit.json --glb <Meshy.glb> --name section_guardian_v2m [--render 폴더]
 import bpy
 import bmesh
 import json
@@ -31,7 +40,7 @@ C, CT = A.C, A.CT
 def parse():
     a = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     o = {"rig": None, "glb": None, "parts": [], "fake": None, "yaw": 0.0, "overlap": 0.18, "budget": 30000, "partCap": 5000, "outlines": 12, "outlineTris": 8000,
-         "atlas": 1024, "out": os.path.join(ART, "bosses"), "render": None, "hull": 0.06, "name": None}
+         "atlas": 1024, "out": os.path.join(ART, "bosses"), "render": None, "hull": 0.06, "name": None, "kit": None}
     i = 0
     while i < len(a):
         k = a[i]
@@ -49,11 +58,18 @@ def parse():
             o[k[2:]] = float(v)
         elif k in ("--budget", "--part-cap", "--outlines", "--outline-tris", "--atlas"):
             o[{"--part-cap": "partCap", "--outline-tris": "outlineTris"}.get(k, k[2:])] = int(v)
-        elif k in ("--out", "--render", "--name"):
+        elif k in ("--out", "--render", "--name", "--kit"):
             o[k[2:]] = v
         i += 2
     if not os.path.isabs(o["rig"]):
         o["rig"] = os.path.join(HERE, o["rig"])
+    o["cfg"] = {}
+    if o["kit"]:
+        path = o["kit"] if os.path.isabs(o["kit"]) else os.path.join(HERE, o["kit"])
+        o["cfg"] = json.load(open(path, encoding="utf-8"))
+        for k in ("yaw", "overlap"):
+            if k in o["cfg"]:
+                o[k] = float(o["cfg"][k])
     return o
 
 
@@ -157,13 +173,57 @@ def fit(obj, parts):
     return s
 
 
+def fit_height(obj, height, bounds=None):
+    """GUARDIAN-V2: 원본 높이 → height(리그 단위) · 발바닥 −1.5 · X · Z 경계 가운데 = 0(리그 상자를 원본 실측으로 맞춘 경우 - 상자 경계는 팔 · 수정이 삐져나와 높이 기준이 못 된다)"""
+    if bounds:  # 같은 변환(굽기 원본 ↔ 감량본)
+        slo, shi = bounds
+    else:
+        vs = [CT @ v.co for v in obj.data.vertices]
+        slo = Vector((min(v.x for v in vs), min(v.y for v in vs), min(v.z for v in vs)))
+        shi = Vector((max(v.x for v in vs), max(v.y for v in vs), max(v.z for v in vs)))
+    s = height / max(shi.y - slo.y, 1e-6)
+    scx, scz = (slo.x + shi.x) / 2, (slo.z + shi.z) / 2
+    for v in obj.data.vertices:
+        r = CT @ v.co
+        v.co = C @ Vector(((r.x - scx) * s, (r.y - slo.y) * s - 1.5, (r.z - scz) * s))
+    if not bounds:
+        print("[KIT] 크기 맞춤(높이) × %.5f · 높이 %.2f · 폭 %.2f · 깊이 %.2f(리그 단위)" % (s, height, (shi.x - slo.x) * s, (shi.z - slo.z) * s))
+    return slo, shi
+
+
+def islands_of(me):
+    """떨어진 조각 번호(면마다) - 꼭짓점 최소 번호 퍼뜨리기(numpy · scipy 없이)"""
+    import numpy as np
+    n = len(me.vertices)
+    e = np.zeros(len(me.edges) * 2, dtype=np.int64)
+    me.edges.foreach_get("vertices", e)
+    e = e.reshape(-1, 2)
+    lab = np.arange(n)
+    while True:
+        m = np.minimum(lab[e[:, 0]], lab[e[:, 1]])
+        np.minimum.at(lab, e[:, 0], m)
+        np.minimum.at(lab, e[:, 1], m)
+        nxt = lab[lab]
+        while not np.array_equal(nxt, lab):
+            lab, nxt = nxt, nxt[nxt]
+        if np.array_equal(lab[e[:, 0]], lab[e[:, 1]]):
+            break
+    first = np.zeros(len(me.polygons), dtype=np.int64)
+    me.polygons.foreach_get("loop_start", first)
+    lv = np.zeros(len(me.loops), dtype=np.int64)
+    me.loops.foreach_get("vertex_index", lv)
+    return lab[lv[first]]
+
+
 # ─────────────────────────── 3 · 4 부위 자르기 + 겹침 ───────────────────────────
-def segment(obj, parts, overlap, forced):
+def segment(obj, parts, overlap, forced, skip=(), islands=0.0, faceParts=()):
     """반환: { 부위 이름: [면 번호] } · forced = { 면 번호: 부위 }(따로 만든 부위 GLB) · Neon 면은 가까운(0.25 안) Neon 리그 부위(눈 · 룬)를 먼저"""
     me = obj.data
     byName = {p["name"]: p for p in parts}
     assign = {p["name"]: [] for p in parts}
-    neonParts = [p for p in parts if p["material"] == "Neon"]
+    neonParts = [p for p in parts if p["material"] == "Neon" and p["name"] not in skip]
+    cutParts = [p for p in parts if p["name"] not in skip]
+    prio = [p for p in cutParts if p["name"] in faceParts]
     centers = []
     for f in me.polygons:
         c = CT @ f.center
@@ -181,15 +241,45 @@ def segment(obj, parts, overlap, forced):
                 assign[np_].append(f.index)
                 continue
         best, bd = None, 1e9
-        for p in parts:
+        for p in cutParts:
             d = sdf(c, p)
             if d < bd:
                 best, bd = p["name"], d
+        for p in prio:  # faceParts = 큰 상자 안에 박힌 작은 부위(눈썹): 상자 안이면 그 부위가 먼저
+            if sdf(c, p) < 0:
+                best = p["name"]
+                break
         assign[best].append(f.index)
+    if islands > 0:  # 떨어진 조각(돌판 · 수정 결정)을 면 과반이 가는 부위에 통째로(자른 틈 · 막은 면 없음)
+        isl = islands_of(me)
+        partOf = {}
+        for name, fs in assign.items():
+            for fi in fs:
+                partOf[fi] = name
+        votes = {}
+        for fi, name in partOf.items():
+            if fi in forced:
+                continue
+            v = votes.setdefault(int(isl[fi]), {})
+            v[name] = v.get(name, 0) + 1
+        winner = {}
+        for k, v in votes.items():
+            name, cnt = max(v.items(), key=lambda kv: kv[1])
+            if cnt >= islands * sum(v.values()):
+                winner[k] = name
+        assign = {p["name"]: [] for p in parts}
+        whole = 0
+        for fi, name in partOf.items():
+            w = winner.get(int(isl[fi]))
+            if w and fi not in forced and name not in faceParts:  # faceParts(눈썹 등 큰 조각의 일부만 움직이는 부위) = 면마다 그대로
+                whole += 1
+                name = w
+            assign[name].append(fi)
+        print("[KIT] 조각 %d개 · 통째로 간 조각 %d · 그 면 %d / %d" % (len(votes), len(winner), whole, len(partOf)))
     copies = 0
     for p in parts:
         par = byName.get(p["parent"])
-        if not par:
+        if not par or overlap <= 0:  # 겹침 0 = 복사 없음(Meshy 돌판은 조각째 가서 틈이 안 보인다 · 같은 면 두 장 = z 싸움)
             continue
         r = overlap * min(p["size"].x, p["size"].y, p["size"].z) + 0.03
         extra = [fi for fi in assign[par["name"]] if sdf(centers[fi], p) <= r]
@@ -323,6 +413,9 @@ def decimate(o, target):
 
 # ─────────────────────────── 8 아틀라스 ───────────────────────────
 def base_color(m):
+    if m and m.get("PaletteRGB"):  # artlib 재질(생성 Neon 등) = 지정 색(새 재질의 노드 기본 색 0.8 회색이 아니라)
+        c = m.diffuse_color
+        return (c[0], c[1], c[2])
     if m and m.use_nodes:
         b = m.node_tree.nodes.get("Principled BSDF")
         if b:
@@ -338,15 +431,184 @@ def lin_to_srgb(x):
     return 12.92 * x if x <= 0.0031308 else 1.055 * (x ** (1 / 2.4)) - 0.055
 
 
-def textures_of(objs):
+def textures_of(objs, base_only=False):
     imgs = []
     for o in objs:
         for m in o.data.materials:
             if m and m.use_nodes:
                 for n in m.node_tree.nodes:
                     if n.type == "TEX_IMAGE" and n.image and n.image not in imgs:
+                        if base_only and not any(l.to_socket.name == "Base Color" for l in n.outputs["Color"].links):
+                            continue  # 거칠기 · 노멀 맵(로블록스 MeshPart TextureID = 색만)
                         imgs.append(n.image)
     return imgs
+
+
+# ─────────────────────────── GUARDIAN-V2 굽기(감량 부위 ← 원본 고해상 색) ───────────────────────────
+def bake_atlas(objs, hi, cfg, path):
+    size = cfg.get("size", 1024)
+    img = bpy.data.images.new("KIT_BAKE", size, size, alpha=False)
+    mat = bpy.data.materials.new("KIT_BAKE")
+    mat.use_nodes = True
+    nt = mat.node_tree
+    tex = nt.nodes.new("ShaderNodeTexImage")
+    tex.image = img
+    nt.links.new(tex.outputs["Color"], nt.nodes["Principled BSDF"].inputs["Base Color"])
+    nt.nodes.active = tex
+    for o in objs:
+        o.data.materials.clear()
+        o.data.materials.append(mat)
+        for uv in list(o.data.uv_layers):
+            o.data.uv_layers.remove(uv)
+        o.data.uv_layers.new(name="UVMap")
+    # 새 UV: 부위 전부를 한 번에 편집 → Smart UV → 한 장에 묶기(부위끼리 겹치지 않음)
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in objs:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = objs[0]
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.uv.smart_project(angle_limit=math.radians(60), island_margin=0.004, area_weight=0.0, scale_to_bounds=False)
+    bpy.ops.uv.pack_islands(margin=0.004, rotate=True)
+    bpy.ops.object.mode_set(mode="OBJECT")
+    sc = bpy.context.scene
+    sc.render.engine = "CYCLES"
+    sc.cycles.device = "CPU"
+    sc.cycles.samples = 1
+    b = sc.render.bake
+    b.use_selected_to_active = True
+    b.use_pass_direct, b.use_pass_indirect, b.use_pass_color = False, False, True
+    b.cage_extrusion = cfg.get("extrusion", 0.04)
+    b.max_ray_distance = cfg.get("distance", 0.12)
+    b.margin = 6
+    b.use_clear = False
+    for o in objs:
+        bpy.ops.object.select_all(action="DESELECT")
+        hi.select_set(True)
+        o.select_set(True)
+        bpy.context.view_layer.objects.active = o
+        bpy.ops.object.bake(type="DIFFUSE", pass_filter={"COLOR"}, use_selected_to_active=True, use_clear=False, margin=6)
+    img.filepath_raw = path
+    img.file_format = "PNG"
+    img.save()
+    print("[KIT] 굽기 %d부위 → %s(%d)" % (len(objs), os.path.basename(path), size))
+
+
+# ─────────────────────────── GUARDIAN-V2 텍스처 색 → Neon · 생성 Neon ───────────────────────────
+def base_image(me):
+    for m in me.materials:
+        if m and m.use_nodes:
+            for n in m.node_tree.nodes:
+                if n.type == "TEX_IMAGE" and n.image and any(l.to_socket.name == "Base Color" for l in n.outputs["Color"].links):
+                    return n.image
+    return None
+
+
+def face_colors(me, img):
+    """면마다 텍스처 색(sRGB 0 ~ 1 - 면 UV 평균 자리 한 점)"""
+    import numpy as np
+    w, h = img.size
+    px = np.zeros(w * h * 4, dtype=np.float32)
+    img.pixels.foreach_get(px)
+    px = px.reshape(h, w, 4)
+    uv = np.zeros(len(me.loops) * 2, dtype=np.float32)
+    me.uv_layers.active.data.foreach_get("uv", uv)
+    uv = uv.reshape(-1, 2)
+    start = np.zeros(len(me.polygons), dtype=np.int64)
+    total = np.zeros(len(me.polygons), dtype=np.int64)
+    me.polygons.foreach_get("loop_start", start)
+    me.polygons.foreach_get("loop_total", total)
+    idx = np.repeat(np.arange(len(me.polygons)), total)
+    su = np.bincount(idx, weights=uv[:, 0]) / total
+    sv = np.bincount(idx, weights=uv[:, 1]) / total
+    x = np.clip((su % 1.0) * w, 0, w - 1).astype(np.int64)
+    y = np.clip((sv % 1.0) * h, 0, h - 1).astype(np.int64)
+    return px[y, x, :3]  # 이미지 픽셀 = sRGB 저장값
+
+
+def neon_by_color(src, assign, cfg):
+    """cfg.parts 부위 면 중 수정 색(밝고 파랑 > 초록) 면 → NEON_ 재질(split_neon이 <부위>_Deco로 뗀다) · 색 = 평균 → 가장 낮은 채널 ≤ maxChannel"""
+    me = src.data
+    img = base_image(me)
+    if not img:
+        return 0
+    col = face_colors(me, img)
+    vmax = col.max(axis=1)
+    hit = (vmax >= cfg.get("minValue", 0.45)) & (col[:, 2] - col[:, 1] >= cfg.get("blueOverGreen", 0.08))
+    n = 0
+    for name in cfg["parts"]:
+        fs = [fi for fi in assign.get(name, []) if hit[fi]]
+        if not fs:
+            print("[KIT] 수정 색 → Neon %-14s 면 0" % name)
+            continue
+        mean = col[fs].mean(axis=0)
+        rgb = [c * 255 for c in mean]
+        top = max(rgb)
+        rgb = [min(255.0, c * 255 / top) for c in rgb]  # 가장 밝은 채널 = 255(빛)
+        cap = cfg.get("maxChannel", 90)
+        lo = min(range(3), key=lambda i: rgb[i])
+        rgb[lo] = min(rgb[lo], cap)  # 흰 날림 방지(Neon 색 = 가장 낮은 채널 ≤ 90)
+        rgb = tuple(int(round(c)) for c in rgb)
+        mat = A.material("NEON_%s" % name, rgb, neon=True)
+        me.materials.append(mat)
+        mi = len(me.materials) - 1
+        for fi in fs:
+            me.polygons[fi].material_index = mi
+        n += len(fs)
+        print("[KIT] 수정 색 → Neon %-14s 면 %6d · 색 %s" % (name, len(fs), rgb))
+    return n
+
+
+def clip_half(poly, nx, ny, c):
+    """볼록 다각형을 nx·x + ny·y ≤ c 쪽만 남긴다(Sutherland-Hodgman)"""
+    out = []
+    for i in range(len(poly)):
+        a, b = poly[i], poly[(i + 1) % len(poly)]
+        da, db = nx * a[0] + ny * a[1] - c, nx * b[0] + ny * b[1] - c
+        if da <= 0:
+            out.append(a)
+        if (da < 0) != (db < 0):
+            k = da / (da - db)
+            out.append((a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k))
+    return out
+
+
+def plate(sec2d, at, depth):
+    """2D 단면(x, y)을 앞(−Z)을 보는 판으로(두께 depth · 가운데 at)"""
+    g = A.loft([A.section_z(sec2d, -depth / 2), A.section_z(sec2d, depth / 2)])
+    return A.xform(g, t=at)
+
+
+def gen_geo(g):
+    at, size = g["at"], g["size"]
+    if g["shape"] == "eyes":  # 두 눈(at = 두 눈 가운데 · size = [눈 사이 거리, 반지름, 두께])
+        gap, r, dep = size
+        geos = []
+        for side in (-1, 1):
+            cx = at[0] + side * gap / 2
+            v = g.get("variant", "normal")
+            if v == "angry":  # 위쪽 안쪽을 비스듬히 깎은 반달(눈썹이 누른 눈)
+                poly = clip_half(A.circle2d(r, 20), -side * 0.6, 1.0, r * 0.12)
+                geos.append(plate(poly, (cx, at[1], at[2]), dep))
+            elif v == "dazed":  # 소용돌이(두 바퀴 · 띠 굵기 r × 0.13)
+                pts = []
+                for i in range(40):
+                    k = i / 39.0
+                    a = side * (k * 4 * math.pi)
+                    rr = r * (0.18 + 0.82 * k)
+                    pts.append((cx + rr * math.cos(a), at[1] + rr * math.sin(a), at[2]))
+                geos.append(A.tube(pts, r * 0.13, sides=5))
+            else:
+                geos.append(plate(A.circle2d(r, 20), (cx, at[1], at[2]), dep))
+        return A.merge(*geos)
+    if g["shape"] == "rune":  # 마름모 판 + 앞으로 솟은 꼭지(빛 맺힘)
+        w, h, dep = size
+        ring = [(0, h / 2), (-w / 2, 0), (0, -h / 2), (w / 2, 0)]
+        back = A.section_z(ring, at[2] + dep / 2)
+        front = A.section_z([(x * 0.55, y * 0.55) for x, y in ring], at[2] - dep / 2)
+        verts, faces = A.loft([back, front], cap0=True, tip1=(0, 0, at[2] - dep))
+        return A.xform((verts, faces), t=(at[0], at[1], 0))
+    raise ValueError("모양 %s" % g["shape"])
 
 
 def palette_atlas(objs, size, path):
@@ -419,16 +681,36 @@ def main():
         bpy.ops.object.join()
         for fi in range(n0, len(src.data.polygons)):
             forced[fi] = part
+    hi = None
+    if o["cfg"].get("bake"):  # 굽기 원본 = 감량 전 고해상(UV 그대로) - 아래에서 같은 크기 맞춤
+        hi = src.copy()
+        hi.data = src.data.copy()
+        bpy.context.scene.collection.objects.link(hi)
+        hi.name = "KIT_HI"
     # 아주 큰 원본은 먼저 전체를 예산 × 4로 줄인다(자르기 속도)
     if tris(src) > o["budget"] * 4:
         decimate(src, o["budget"] * 4)
-    fit(src, parts)
-    assign, copies = segment(src, parts, o["overlap"], forced)
+    cfg = o["cfg"]
+    if cfg.get("height"):
+        bounds = fit_height(hi or src, cfg["height"])
+        if hi:
+            fit_height(src, cfg["height"], bounds)
+    else:
+        fit(src, parts)
+    skip = set(cfg.get("skip", []))
+    assign, copies = segment(src, parts, o["overlap"], forced, skip, cfg.get("islands", 0.0), set(cfg.get("faceParts", [])))
+    if cfg.get("neonByColor"):
+        neon_by_color(src, assign, cfg["neonByColor"])
     col = A.new_collection("KIT_" + name)
     objs, capped, empty = [], 0, []
     byName = {p["name"]: p for p in parts}
+    gens = {g["part"]: g for g in cfg.get("generate", []) if g.get("part")}
     for p in parts:
         faces = assign[p["name"]]
+        if p["name"] in gens:  # 생성 Neon 부위(눈 · 룬 - 원본 면 대신)
+            g = gens[p["name"]]
+            objs.append(A.make_obj(p["name"], gen_geo(g), tuple(g["color"]), col, neon=True, origin=tuple(p["joint"])))
+            continue
         if not faces:
             empty.append(p["name"])
             # 빈 부위 = 관절 자리 아주 작은 상자(끼우기는 되고 옛 상자는 사라진다 - 보이지 않음)
@@ -441,11 +723,18 @@ def main():
         objs.append(ob)
     # Neon 조각 예산(≤ 10 - 리그 Neon 부위 포함): Neon 면이 많은 부위부터 조각으로 떼고, 넘치는 부위의 Neon 면은 일반 면(아틀라스 색)으로 남긴다
     rigNeon = [x for x in objs if byName[x.name]["material"] == "Neon"]
+    genDecos = []
+    for g in cfg.get("generate", []):  # 생성 Neon 장식(표정 눈 모양 - 부위에 용접 · 클라가 보이기를 바꾼다)
+        if g.get("deco"):
+            host = byName[g["host"]]
+            d = A.make_obj(g["deco"], gen_geo(g), tuple(g["color"]), col, neon=True, origin=tuple(host["joint"]))
+            d["Deco"], d["DecoMaterial"], d["Neon"], d["NeonMat"] = g["host"], "Neon", True, 0
+            genDecos.append(d)
     def nfaces(x):
         return sum(1 for p in x.data.polygons if p.material_index < len(x.data.materials) and is_neon(x.data.materials[p.material_index]))
     cands = sorted([x for x in objs if x not in rigNeon and nfaces(x) > 0], key=lambda x: -nfaces(x))
-    room = max(0, 10 - len(rigNeon))
-    decos, demoted = [], []
+    room = max(0, 10 - len(rigNeon) - len(genDecos))
+    decos, demoted = list(genDecos), []
     for x in cands[:room]:
         decos += split_neon(x, col)
     for x in cands[room:]:
@@ -459,13 +748,27 @@ def main():
     if total > o["budget"]:
         k = o["budget"] / total
         for x in objs + decos:
+            if x.name in gens or x in genDecos:  # 생성 Neon(눈 모양 · 룬)은 그대로
+                continue
             decimate(x, min(o["partCap"], max(12, int(tris(x) * k))))
     for x in objs:
         decimate(x, o["partCap"])
+    if cfg.get("decoCap"):  # 수정 Neon 조각 감량(통째로 빛나는 면 - 결정 모양만 남으면 된다)
+        for d in decos:
+            if d not in genDecos:
+                decimate(d, cfg["decoCap"])
     # 8 텍스처(아틀라스)
-    imgs = textures_of(objs)
+    hi_baked = False
+    imgs = textures_of(objs, cfg.get("texture") == "base")
     atlas_files = []
-    if imgs:
+    if hi:
+        fn = "%s_atlas1.png" % name
+        bake_atlas([x for x in objs if x not in rigNeon and x.name not in empty], hi, cfg["bake"], os.path.join(o["out"], fn))
+        atlas_files.append(fn)
+        ncolors = None
+        bpy.data.objects.remove(hi, do_unlink=True)
+        hi_baked = True
+    elif imgs:
         assert len(imgs) <= 3, "원본 텍스처 %d장 > 3(아틀라스로 굽기 필요)" % len(imgs)
         for i, im in enumerate(imgs):
             if max(im.size) > o["atlas"]:
@@ -499,7 +802,7 @@ def main():
     hulls = [A.add_hull(x, thickness=o["hull"], export=True, col=col) for x in cand[: o["outlines"]]]
     ht = sum(tris(h) for h in hulls)
     if ht > o["outlineTris"]:
-        k = o["outlineTris"] / ht
+        k = o["outlineTris"] * 0.95 / ht  # 감량은 목표를 조금 넘긴다(접힘) - 여유 5%
         for h in hulls:
             decimate(h, max(12, int(tris(h) * k)))
     for h in hulls:
@@ -522,8 +825,12 @@ def main():
         "version": "KIT1", "rigId": rigId, "partCap": o["partCap"], "joints": {x.name: x["Joint"] for x in objs},
         "deco": {d.name: d["Deco"] for d in decos}, "decoMaterial": {d.name: "Neon" for d in decos}, "lod2": [], "outlineParts": [h.name for h in hulls],
         "texture": {"atlases": atlas_files, "parts": [x.name for x in objs if x.name not in empty and x not in rigNeon]}, "kit": {"neonDemoted": demoted, "source": os.path.basename(glb), "sourceTris": src_tris, "overlapCopies": copies, "capped": capped, "empty": empty},
-        "space": "sizeScale 1 · 루트 원점 · 발바닥 y −1.5 · 앞 −Z"})
+        "space": "sizeScale 1 · 루트 원점 · 발바닥 y −1.5 · 앞 −Z", "metaName": name})
     A.write_json(os.path.join(o["out"], "%s.meta.json" % name), meta)
+    if hi_baked:  # 원본(유료 · 비공개 라이선스) 텍스처를 .blend에 싸 넣지 않는다 - 구운 아틀라스만 남김
+        for im in list(bpy.data.images):
+            if im.name != "KIT_BAKE":
+                bpy.data.images.remove(im)
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(o["out"], "%s.blend" % name))
     print("[KIT] 내보냄 %s.fbx · .meta.json · .blend · %s" % (os.path.join(o["out"], name), ", ".join(atlas_files)))
     if o["render"]:

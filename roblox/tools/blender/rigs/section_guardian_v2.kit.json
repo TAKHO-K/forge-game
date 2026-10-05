@@ -1,0 +1,114 @@
+{
+ "about": "GUARDIAN-V2 KIT 설정(boss_kit.py --kit) - 원본 = Meshy guardian_v1_meshy71.glb(A-포즈 · 높이 10 = m 단위) · 리그 = BossRigV2Data(K 0.40) · 좌표 = 리그 단위(앞 -Z)",
+ "height": 4.0,
+ "yaw": 180,
+ "islands": 0.6,
+ "skip": [
+  "Eyes",
+  "Mouth",
+  "Rune"
+ ],
+ "texture": "base",
+ "decoCap": 400,
+ "neonByColor": {
+  "parts": [
+   "LeftPauldron",
+   "RightPauldron"
+  ],
+  "minValue": 0.45,
+  "blueOverGreen": 0.08,
+  "maxChannel": 90
+ },
+ "generate": [
+  {
+   "part": "Eyes",
+   "shape": "eyes",
+   "variant": "normal",
+   "at": [
+    0,
+    1.668,
+    -1.032
+   ],
+   "size": [
+    0.44,
+    0.105,
+    0.03
+   ],
+   "color": [
+    205,
+    90,
+    255
+   ]
+  },
+  {
+   "deco": "Eyes_Angry",
+   "host": "Eyes",
+   "shape": "eyes",
+   "variant": "angry",
+   "at": [
+    0,
+    1.668,
+    -1.036
+   ],
+   "size": [
+    0.44,
+    0.115,
+    0.03
+   ],
+   "color": [
+    255,
+    70,
+    200
+   ]
+  },
+  {
+   "deco": "Eyes_Dazed",
+   "host": "Eyes",
+   "shape": "eyes",
+   "variant": "dazed",
+   "at": [
+    0,
+    1.668,
+    -1.036
+   ],
+   "size": [
+    0.44,
+    0.105,
+    0.03
+   ],
+   "color": [
+    205,
+    90,
+    255
+   ]
+  },
+  {
+   "part": "Rune",
+   "shape": "rune",
+   "at": [
+    0,
+    0.16,
+    -0.75
+   ],
+   "size": [
+    0.42,
+    0.74,
+    0.05
+   ],
+   "color": [
+    185,
+    70,
+    255
+   ]
+  }
+ ],
+ "overlap": 0,
+ "bake": {
+  "size": 1024,
+  "extrusion": 0.07,
+  "distance": 0.25
+ },
+ "faceParts": [
+  "Brow"
+ ]
+}

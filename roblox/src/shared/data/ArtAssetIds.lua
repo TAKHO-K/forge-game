@@ -269,6 +269,8 @@ return {
 	["bosses/section_guardian"] = { id = 73336907208395, kind = "Model", status = "Approved" },
 	["bosses/section_guardian_v2"] = { id = 88197704447095, kind = "Model", status = "Approved" },
 	["bosses/section_guardian_v2_atlas1"] = { id = 110428015021521, kind = "Decal", image = 107503596647838, status = "Approved" },
+	["bosses/section_guardian_v2m"] = { id = 101107092195518, kind = "Model", status = "Approved" },
+	["bosses/section_guardian_v2m_atlas1"] = { id = 130419838355140, kind = "Decal", image = 102630430410527, status = "Approved" },
 	["bosses/storm_lord"] = { id = 114400850367342, kind = "Model", status = "Approved" },
 	["extras/cloud_whale"] = { id = 88361825867912, kind = "Model", status = "Approved" },
 	["extras/gate_decor/abyssal_lord"] = { id = 84302773211103, kind = "Model", status = "Approved" },

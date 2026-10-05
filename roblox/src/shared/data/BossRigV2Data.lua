@@ -29,43 +29,115 @@ local function stick(J, name, parent, size, center, rot, color, material, shape)
 	return add(J, { name = name, parent = parent, part = name, size = size, shape = shape, color = color, material = material, at = base, pivot = V(0, -size.Y / 2, 0), rot = rot })
 end
 
--- ─────────────────────────── 구간 수호자 → 너클 보행 수정 골렘(시험) ───────────────────────────
--- 뼈대 = 옛 이족 17 그대로(치수 같음 - 판정 사본 부피 1.00) + 어깨 갑옷 L/R · 가슴 룬 · 허리 갑옷 앞/뒤 · 등 수정 5 · 머리 수정 왕관 · 눈썹 바위 · 턱 바위 = 30관절.
---   깃발 3마디 × 2 → 등 수정으로 대체(네 발 자세에서 깃발이 땅에 끌림 - 바이블 §2-1).
+-- ─────────────────────────── 구간 수호자 → 너클 보행 수정 골렘(GUARDIAN-V2 · Meshy 원본) ───────────────────────────
+-- 상자 · 관절 = Meshy GLB(guardian_v1_meshy71 · A-포즈) 정면 · 옆 실측(모델 높이 10 = "m" 단위 · 발바닥 0 · fwd + = 앞)에 맞춤.
+--   K = m → 리그 단위: 판정 사본(Body + Head) 부피 = 옛 몸 × 1.17(허용 ±20%) · 어깨 폭 = 바이블 §4 목표(15 stud @ S 3.9)에 맞춘 값(키는 그림 비율상 §4 추정보다 낮다 - 보고서).
+--   팔 = Meshy A-포즈 그대로가 기준 자세(위팔 바깥 43° · 아래팔 · 손 앞으로) - 아래로 펴면 거대한 아래팔이 몸통을 뚫는다(고릴라 비율).
+--   scale 1.5 = 바이블 §5 크기 × 1.5(보이는 몸 · 판정 사본 · 모션 이동 모두 - MonsterSpawner가 S × scale로 짓는다).
+--   Jaw = 자리만(움직이지 않음 · 메시 없음) · 눈 · 룬 = KIT가 Neon으로 새로 만든다(rigs/section_guardian_v2.kit.json).
 do
-	local J = BossSkeleton.biped({
-		hips = V(1.6, 0.5, 1.0), torso = V(2.4, 1.7, 1.3), head = V(1.1, 0.95, 1.0),
-		thigh = { w = 0.75, len = 0.8 }, shin = { w = 0.7, len = 0.8 }, foot = V(0.8, 0.3, 1.1),
-		upperArm = { w = 0.75, len = 1.0 }, forearm = { w = 0.8, len = 0.95 }, hand = V(1.05, 1.0, 1.05), shoulderX = 1.5, stance = 0.5,
-	})
-	-- 눈 · 입 = 지금 그림 자리(옛 메시는 머리 상자보다 0.34 · 0.7 아래에 그려졌다 - KIT가 상자로 자르므로 상자를 그림에 맞춘다)
-	BossSkeleton.find(J, "Eyes").at = V(0, -0.34, -0.5)
-	BossSkeleton.find(J, "Jaw").at = V(0, -0.66, -0.5)
-	add(J, { name = "Pauldron_L", parent = "UpperArm_L", part = "LeftPauldron", size = V(1.0, 0.5, 1.15), color = "head", at = V(-0.1, 0.45, 0), pivot = V(0, 0, 0) })
-	add(J, { name = "Pauldron_R", parent = "UpperArm_R", part = "RightPauldron", size = V(1.0, 0.5, 1.15), color = "head", at = V(0.1, 0.45, 0), pivot = V(0, 0, 0) })
-	add(J, { name = "Rune", parent = "Body", part = "Rune", size = V(0.7, 0.7, 0.08), color = "accent", material = "Neon", at = V(0, 0.2, -0.66), pivot = V(0, 0, 0) })
-	add(J, { name = "TassetF", parent = "Hips", part = "TassetF", size = V(1.05, 0.7, 0.16), color = "slab", at = V(0, -0.16, -0.56), pivot = V(0, 0.34, 0), rot = V(-6, 0, 0) })
-	add(J, { name = "TassetB", parent = "Hips", part = "TassetB", size = V(1.05, 0.7, 0.16), color = "slab", at = V(0, -0.16, 0.56), pivot = V(0, 0.34, 0), rot = V(6, 0, 0) })
-	-- 등 수정 5(가운데 큰 것 · 양옆 · 작은 끝 - 옛 장식 자리 그대로 · 50% 변신에 터짐)
-	stick(J, "Crystal1", "Body", V(0.46, 1.7, 0.46), V(0, 0.7, 0.86), V(-22, 45, 0), "accent", "Glass")
-	stick(J, "Crystal2", "Body", V(0.36, 1.2, 0.36), V(-0.6, 0.45, 0.8), V(-16, 45, 24), "accent", "Glass")
-	stick(J, "Crystal3", "Body", V(0.36, 1.2, 0.36), V(0.6, 0.45, 0.8), V(-16, -45, -24), "accent", "Glass")
-	stick(J, "Crystal4", "Body", V(0.26, 0.7, 0.26), V(-0.95, 0.1, 0.72), V(-10, 45, 40), "accent", "Glass")
-	stick(J, "Crystal5", "Body", V(0.26, 0.7, 0.26), V(0.95, 0.1, 0.72), V(-10, -45, -40), "accent", "Glass")
-	stick(J, "Crown", "Head", V(0.3, 0.85, 0.3), V(0, 0.78, 0.05), V(0, 45, 0), "accent", "Glass")
-	add(J, { name = "Brow", parent = "Head", part = "Brow", size = V(1.2, 0.26, 0.34), color = "slab", at = V(0, 0.36, -0.3), pivot = V(0, 0.1, 0.14), rot = V(-12, 0, 0) })
-	add(J, { name = "Chin", parent = "Head", part = "Chin", size = V(0.96, 0.26, 0.38), color = "stone", at = V(0, -0.27, -0.13), pivot = V(0, 0.13, 0.19), rot = V(8, 0, 0) })
+	local K = 0.40
+	local function P(x, z, fwd) -- m 단위 점 → 리그 공간(x = 오른쪽 +)
+		return V(K * x, K * z - 1.5, -K * fwd)
+	end
+	local function Z(w, h, d)
+		return V(K * w, K * h, K * d)
+	end
+	-- 3 × 3 회전(CFrame.Angles(rx, ry, rz) = Rx · Ry · Rz 순서 - 데이터 로드에 CFrame을 안 쓴다)
+	local function E(r)
+		local cx, sx, cy, sy, cz, sz = math.cos(math.rad(r.X)), math.sin(math.rad(r.X)), math.cos(math.rad(r.Y)), math.sin(math.rad(r.Y)), math.cos(math.rad(r.Z)), math.sin(math.rad(r.Z))
+		return {
+			{ cy * cz, -cy * sz, sy },
+			{ cx * sz + sx * sy * cz, cx * cz - sx * sy * sz, -sx * cy },
+			{ sx * sz - cx * sy * cz, sx * cz + cx * sy * sz, cx * cy },
+		}
+	end
+	local function mulT(A, B) -- Aᵀ · B
+		local M = {}
+		for i = 1, 3 do
+			M[i] = {}
+			for j = 1, 3 do
+				M[i][j] = A[1][i] * B[1][j] + A[2][i] * B[2][j] + A[3][i] * B[3][j]
+			end
+		end
+		return M
+	end
+	local function applyT(A, v) -- Aᵀ · v
+		return V(A[1][1] * v.X + A[2][1] * v.Y + A[3][1] * v.Z, A[1][2] * v.X + A[2][2] * v.Y + A[3][2] * v.Z, A[1][3] * v.X + A[2][3] * v.Y + A[3][3] * v.Z)
+	end
+	local function apply(A, v)
+		return V(A[1][1] * v.X + A[1][2] * v.Y + A[1][3] * v.Z, A[2][1] * v.X + A[2][2] * v.Y + A[2][3] * v.Z, A[3][1] * v.X + A[3][2] * v.Y + A[3][3] * v.Z)
+	end
+	local function euler(M) -- Rx · Ry · Rz 분해(도)
+		local ry = math.asin(math.clamp(M[1][3], -1, 1))
+		return V(math.deg(math.atan2(-M[2][3], M[3][3])), math.deg(ry), math.deg(math.atan2(-M[1][2], M[1][1])))
+	end
+	local J, world = {}, { HumanoidRootPart = { R = E(Vector3.zero), c = Vector3.zero } }
+	-- 세계 자리로 부위 하나: o = { name, parent, part, center, size, joint, rot(세계 도) · color · material · query }
+	local function place(o)
+		local par = world[o.parent]
+		local Rw = E(o.rot or Vector3.zero)
+		world[o.part] = { R = Rw, c = o.center }
+		return add(J, { name = o.name, parent = o.parent, part = o.part, size = o.size, color = o.color or "body", material = o.material, query = o.query,
+			at = applyT(par.R, o.joint - par.c), pivot = applyT(Rw, o.joint - o.center), rot = euler(mulT(par.R, Rw)) })
+	end
+	-- 팔 마디: 관절 a → 끝 b(m 단위) · 상자 길이 = 거리 + ext · 세계 회전 = (0, −1, 0)을 a→b로(rz = 바깥 · rx = 앞)
+	local function seg(name, parent, part, a, b, w, d, ext, color)
+		local pa, pb = P(a[1], a[2], a[3]), P(b[1], b[2], b[3])
+		local dir = (pb - pa).Unit
+		local rz = math.deg(math.asin(dir.X))
+		local rx = math.deg(math.atan2(-dir.Z, -dir.Y))
+		local len = (pb - pa).Magnitude + K * ext
+		return place({ name = name, parent = parent, part = part, joint = pa, center = pa + dir * (len / 2 - K * ext * 0.25), size = V(K * w, len, K * d), rot = V(rx, 0, rz), color = color })
+	end
+	place({ name = "RootJoint", parent = "HumanoidRootPart", part = "Hips", center = P(0, 2.55, -0.1), size = Z(4.0, 1.3, 3.0), joint = P(0, 2.55, 0), color = "dark" })
+	place({ name = "Waist", parent = "Hips", part = "Body", center = P(0, 5.3, -0.35), size = Z(5.0, 4.6, 4.0), joint = P(0, 3.2, -0.2), query = true })
+	place({ name = "Neck", parent = "Body", part = "Head", center = P(0, 7.95, 1.6), size = Z(2.8, 3.0, 2.9), joint = P(0, 6.9, 0.7), color = "head", query = true })
+	for _, s in ipairs({ { "L", -1 }, { "R", 1 } }) do
+		local side, x = s[1], s[2]
+		place({ name = "Hip_" .. side, parent = "Hips", part = "Thigh_" .. side, center = P(x * 1.55, 2.15, -0.05), size = Z(1.8, 1.1, 1.9), joint = P(x * 1.5, 2.6, -0.05) })
+		place({ name = "Knee_" .. side, parent = "Thigh_" .. side, part = "Shin_" .. side, center = P(x * 1.65, 1.25, -0.05), size = Z(1.75, 0.9, 1.8), joint = P(x * 1.6, 1.65, 0), color = "dark" })
+		place({ name = "Ankle_" .. side, parent = "Shin_" .. side, part = "Foot_" .. side, center = P(x * 1.8, 0.42, 0.15), size = Z(2.1, 0.85, 2.5), joint = P(x * 1.7, 0.8, -0.1), color = "dark" })
+		seg("Shoulder_" .. side, "Body", "UpperArm_" .. side, { x * 2.9, 6.3, 0 }, { x * 4.6, 4.5, 0.3 }, 2.3, 2.4, 0.5)
+		seg("Elbow_" .. side, "UpperArm_" .. side, "Forearm_" .. side, { x * 4.6, 4.5, 0.3 }, { x * 5.25, 2.35, 1.35 }, 3.2, 2.9, 0.5, "head")
+		seg("Wrist_" .. side, "Forearm_" .. side, "Hand_" .. side, { x * 5.25, 2.35, 1.35 }, { x * 5.0, 0.3, 2.1 }, 3.1, 3.0, 0.2, "head")
+		place({ name = "Pauldron_" .. side, parent = "UpperArm_" .. side, part = side == "L" and "LeftPauldron" or "RightPauldron", center = P(x * 3.35, 6.65, -0.1), size = Z(2.2, 2.0, 2.8), joint = P(x * 3.0, 6.6, 0), color = "head" })
+	end
+	-- 얼굴: 눈(Neon · KIT 생성 - 평소 모양 · 화남 · 헤롱 조각은 장식으로 같은 부위에) · 턱(자리만) · 눈썹 바위(Meshy 눈썹 - 표정)
+	place({ name = "Eyes", parent = "Head", part = "Eyes", center = P(0, 7.92, 2.56), size = Z(1.7, 0.6, 0.12), joint = P(0, 7.92, 2.56), color = Color3.fromRGB(205, 90, 255), material = "Neon" }) -- Neon 색 = 가장 낮은 채널 ≤ 90(흰 날림 방지)
+	place({ name = "Jaw", parent = "Head", part = "Mouth", center = P(0, 7.0, 2.6), size = Z(0.6, 0.2, 0.1), joint = P(0, 7.0, 2.6), color = "mouth" })
+	place({ name = "Brow", parent = "Head", part = "Brow", center = P(0, 8.45, 2.45), size = Z(2.5, 0.55, 0.7), joint = P(0, 8.5, 2.1), color = "slab" })
+	place({ name = "Rune", parent = "Body", part = "Rune", center = P(0, 4.15, 1.86), size = Z(1.0, 1.8, 0.14), joint = P(0, 4.15, 1.86), color = Color3.fromRGB(185, 70, 255), material = "Neon" })
+	place({ name = "TassetF", parent = "Hips", part = "TassetF", center = P(0, 2.2, 1.35), size = Z(2.6, 1.2, 0.5), joint = P(0, 2.75, 1.3), color = "slab" })
+	place({ name = "TassetB", parent = "Hips", part = "TassetB", center = P(0, 2.3, -1.55), size = Z(2.8, 1.3, 0.5), joint = P(0, 2.9, -1.5), color = "slab" })
+	-- 등 수정 5(Meshy 등 수정 무리 실측 - 가운데 큰 것 · 왼쪽 큰 것 · 오른쪽 큰 것(더 눕힘) · 둥근 작은 것 둘) · 관절 = 밑동(흔들림 · 50% 터짐)
+	--   가운데 · 큰 쌍 = Neon(Meshy 수정 면 그대로 빛 - 색 = 텍스처 평균에서 가장 낮은 채널 ≤ 90) · 둥근 둘 = 텍스처
+	local GLOW = Color3.fromRGB(225, 90, 255)
+	local function crystal(name, center, size, rot, glow)
+		local c = P(center[1], center[2], center[3])
+		local base = c - apply(E(rot), V(0, K * size[2] / 2, 0))
+		return place({ name = name, parent = "Body", part = name, center = c, size = Z(size[1], size[2], size[3]), joint = base, rot = rot, color = glow and GLOW or "accent", material = glow and "Neon" or nil })
+	end
+	crystal("Crystal1", { 0, 7.35, -2.65 }, { 1.2, 3.2, 1.2 }, V(20, 0, 0), true)
+	crystal("Crystal2", { -2.0, 8.0, -1.75 }, { 1.5, 4.0, 1.5 }, V(12, 0, 20), true)
+	crystal("Crystal3", { 2.65, 7.9, -1.7 }, { 1.5, 4.0, 1.5 }, V(12, 0, -35), true)
+	crystal("Crystal4", { -1.6, 5.9, -2.45 }, { 1.1, 1.1, 1.1 }, V(30, 0, 0))
+	crystal("Crystal5", { 1.6, 6.0, -2.4 }, { 1.1, 1.1, 1.1 }, V(30, 0, 0))
 	D.rigs.section_guardian_v2 = {
 		bossId = "section_guardian", variant = "v2", status = "trial", plan = "biped", joints = J, accent = Color3.fromRGB(190, 110, 255),
-		attach = { HandR = { part = "Hand_R", at = V(0, -0.5, 0) }, HandL = { part = "Hand_L", at = V(0, -0.5, 0) }, Mouth = { part = "Head", at = V(0, -0.2, -0.5) }, Chest = { part = "Body", at = V(0, 0.2, -0.7) },
-			ShoulderR = { part = "UpperArm_R", at = V(0.1, 0.9, 0) }, ShoulderL = { part = "UpperArm_L", at = V(-0.1, 0.9, 0) }, Back = { part = "Crystal1", at = V(0, 0.85, 0) } },
+		scale = 1.5, -- 바이블 §5 크기 × 1.5(MonsterSpawner · 전시 리그가 S × scale)
+		edgeHalfWidth = K * 4.45, -- 몸 가장자리 반폭(어깨 갑옷 바깥 - 리그 단위 · BossFramework.edgeGrowth)
+		baseEdgeHalfWidth = 2.1, -- 옛 몸(BossRigSpec section_guardian) 가장자리 반폭 = 어깨 1.5 + 갑옷 0.1 + 0.5
+		cameraZoomScale = 1.3, -- 바이블 §5-4 카메라 줌 × 약 1.3(CameraRig)
+		attach = { HandR = { part = "Hand_R", at = V(0, -0.35, 0) }, HandL = { part = "Hand_L", at = V(0, -0.35, 0) }, Mouth = { part = "Head", at = V(0, -0.3, -0.5) }, Chest = { part = "Body", at = V(0, -0.45, -0.85) },
+			ShoulderR = { part = "RightPauldron", at = V(0, 0.4, 0) }, ShoulderL = { part = "LeftPauldron", at = V(0, 0.4, 0) }, Back = { part = "Crystal1", at = V(0, 0.6, 0) } },
 		chains = {
-			{ "TassetF", kind = "cloth", lag = 0.55, sway = 2.5 }, { "TassetB", kind = "cloth", lag = 0.55, sway = 2.5 },
+			{ "TassetF", kind = "crystal", lag = 0.5, sway = 1.2 }, { "TassetB", kind = "crystal", lag = 0.5, sway = 1.2 },
 			{ "Crystal1", kind = "crystal", lag = 0.3, sway = 1.5 }, { "Crystal2", kind = "crystal", lag = 0.3, sway = 1.5 }, { "Crystal3", kind = "crystal", lag = 0.3, sway = 1.5 },
 			{ "Crystal4", kind = "crystal", lag = 0.3, sway = 2 }, { "Crystal5", kind = "crystal", lag = 0.3, sway = 2 },
 		},
-		weight = 1.0,
-		meshKey = "bosses/section_guardian_v2", -- KIT 결과(없으면 상자 리그 그대로)
+		weight = 1.15,
+		meshKey = "bosses/section_guardian_v2m", -- KIT 결과(Meshy 원본 · 옛 가짜 원본 시험 = bosses/section_guardian_v2 그대로 남김)
 		themeColors = { body = Color3.fromRGB(60, 20, 70), head = Color3.fromRGB(90, 30, 100), accent = Color3.fromRGB(190, 110, 255) },
 		recolor = { Hips = "shadow", Shin_L = "shadow", Shin_R = "shadow", Foot_L = "stone", Foot_R = "stone", UpperArm_L = "stone", UpperArm_R = "stone" },
 	}

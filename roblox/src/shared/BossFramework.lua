@@ -24,6 +24,15 @@ function BossFramework.rigKeyFor(bossId)
 	return (key and BossRigSpec.rigs[key]) and key or nil
 end
 
+-- GUARDIAN-V2 몸 가장자리 증가분(stud): 새 몸 가장자리 반폭(edgeHalfWidth × S × scale) − 옛 몸 가장자리 반폭(baseEdgeHalfWidth × S). S = 옛 몸 배율(visualScale).
+--   보스 공격 반경(몸 가장자리 기준 장치 - BossFrameworkData.bodyEdge) · 플레이어 공격 도달(BodyRadius)이 같은 값을 더한다. 새 몸이 아니면 0.
+function BossFramework.edgeGrowth(rig, S)
+	if not (rig and rig.edgeHalfWidth and rig.baseEdgeHalfWidth) then
+		return 0
+	end
+	return math.max(0, rig.edgeHalfWidth * S * (rig.scale or 1) - rig.baseEdgeHalfWidth * S)
+end
+
 -- 리그 검사: 반환 ok, lines(사람이 읽는 줄), stats
 function BossFramework.checkRig(key)
 	local rig = BossRigSpec.rigs[key]

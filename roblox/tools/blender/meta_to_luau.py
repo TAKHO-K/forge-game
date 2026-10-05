@@ -43,7 +43,7 @@ def convert(path):
         lines.append('\ttexture = { atlas = "bosses/%s", parts = { %s } },' % (t["atlases"][0].rsplit(".", 1)[0], ", ".join('["%s"] = true' % k for k in t["parts"])))
     lines += ["}", ""]
     os.makedirs(OUT, exist_ok=True)
-    out = os.path.join(OUT, rig + ".lua")
+    out = os.path.join(OUT, (d.get("metaName") or rig) + ".lua")  # GUARDIAN-V2: KIT --name(같은 리그 다른 메시) = 메시 이름 모듈(ArtMeshKit가 메시 키 이름부터 찾는다)
     open(out, "w", encoding="utf-8", newline="\n").write("\n".join(lines))
     return out
 

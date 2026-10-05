@@ -1081,6 +1081,9 @@ local function startPreview(payload)
 	if payload.scale then
 		S = (data.sizeScale or 3) * payload.scale -- A2-M1 시범: 전시 리그만 배율 강제(/gg boss anim <보스> <동작> [반복] [배율])
 	end
+	if rigKey ~= payload.bossId and rig.scale then -- GUARDIAN-V2: 새 몸 크기 배율(실전 MonsterSpawner와 같은 S × scale)
+		S *= rig.scale
+	end
 	local look = Vector3.new(myRoot.CFrame.LookVector.X, 0, myRoot.CFrame.LookVector.Z)
 	local ahead = look.Magnitude > 1e-3 and look.Unit or Vector3.new(0, 0, -1)
 	local ground = myRoot.Position.Y - 3

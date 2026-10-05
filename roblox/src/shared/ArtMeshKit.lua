@@ -60,6 +60,11 @@ local function metaFor(rigId)
 end
 ArtMeshKit.metaFor = metaFor
 
+-- GUARDIAN-V2: 같은 리그에 다른 메시(KIT --name - "bosses/section_guardian_v2m")는 메시 이름 메타가 먼저 · 없으면 리그 id 메타(옛 규칙 그대로)
+local function metaOf(key, rigId)
+	return metaFor(tostring(key):match("[^/]+$")) or metaFor(rigId)
+end
+
 -- 리그에 메시 끼우기. 반환 count, lines(X일 때만 경고 1줄 - 호출 쪽이 찍는다).
 function ArtMeshKit.applyRig(model, key, rigId, S, lift)
 	local src = ArtMeshKit.get(key)
@@ -87,7 +92,7 @@ function ArtMeshKit.applyRig(model, key, rigId, S, lift)
 			queryKeep[name] = q
 		end
 	end
-	local count, lines, refCF = MeshSwap.swap(model, src, rigId, { scale = S, meta = metaFor(rigId), lift = lift })
+	local count, lines, refCF = MeshSwap.swap(model, src, rigId, { scale = S, meta = metaOf(key, rigId), lift = lift })
 	for name, q in pairs(queryKeep) do
 		local mesh = model:FindFirstChild(name)
 		if mesh and mesh ~= q then
@@ -101,7 +106,7 @@ function ArtMeshKit.applyRig(model, key, rigId, S, lift)
 		end
 	end
 	-- BOSS-FRAMEWORK 7 KIT 메시: 메타 texture(아틀라스 - ArtAssetIds image id)를 입는 부위에 TextureID · 색 흰색(텍스처 색 그대로 - 겉모습만)
-	local texMeta = metaFor(rigId)
+	local texMeta = metaOf(key, rigId)
 	texMeta = texMeta and texMeta.texture
 	if texMeta then
 		local ArtAssetIds = require(ReplicatedStorage.Shared.data.ArtAssetIds)
@@ -122,7 +127,7 @@ function ArtMeshKit.applyRig(model, key, rigId, S, lift)
 	-- 남는 메시(껍데기 · 합치지 않은 장식): 가져온 자리 그대로 붙은 부위에 용접
 	local root = model:FindFirstChild("HumanoidRootPart")
 	local base = root.CFrame * CFrame.new(0, lift or 0, 0)
-	local meta = metaFor(rigId)
+	local meta = metaOf(key, rigId)
 	local outlines = 0
 	for _, p in ipairs(src:GetChildren()) do
 		if p:IsA("BasePart") and not rigNames[p.Name] then

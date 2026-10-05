@@ -1608,6 +1608,19 @@
   "status": "Approved",
   "imageId": 107503596647838
  },
+ "bosses/section_guardian_v2m.fbx": {
+  "sha256": "ff633d35d4cf88085564002c63466808701bc723954ee7c3e0b83d474150020c",
+  "assetType": "Model",
+  "assetId": 101107092195518,
+  "status": "Approved"
+ },
+ "bosses/section_guardian_v2m_atlas1.png": {
+  "sha256": "bde68a11cfbbcfb5dcde595dcc79c0f6bcaadfee672710c5bfbcdf7943270b98",
+  "assetType": "Decal",
+  "assetId": 130419838355140,
+  "status": "Approved",
+  "imageId": 102630430410527
+ },
  "bosses/storm_lord.fbx": {
   "sha256": "13630dd1e802b7665b6404f14101af08470395a5215f27596e733ee171395a19",
   "assetType": "Model",
