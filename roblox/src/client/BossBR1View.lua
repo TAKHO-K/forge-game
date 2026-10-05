@@ -15,6 +15,7 @@ local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local BossFx = require(script.Parent.BossFx)
 local TelegraphStyle = require(script.Parent.TelegraphStyle) -- A2-N2 2-4 전조 공통 테두리(ArtStyleV1 스위치 뒤)
 local BossBananaView = require(script.Parent.BossBananaView) -- GUARDIAN-V3 바나나(풀 · 교체 슬롯)
+local BossMeshShotView = require(script.Parent.BossMeshShotView) -- BOSS-NIGHT-1 메시 투사체(매머드 얼음 상아 - 풀 · 교체 슬롯)
 
 local BossBR1View = {}
 
@@ -204,6 +205,10 @@ function BossBR1View.projTelegraph(data)
 		BossBananaView.hold(data.center, data.seconds)
 		return
 	end
+	if BossMeshShotView.has(data.style) then -- BOSS-NIGHT-1: 머리 위 조준 고리 없음 - 보스 상아 끝에서 얼음이 자란다(예비 동작 · 상아 발광)
+		BossMeshShotView.hold(data.center, data.seconds, data.style)
+		return
+	end
 	local style = STYLE[data.style] or STYLE.orb
 	local up = data.center + Vector3.new(0, data.launchHeight or 9, 0)
 	-- 보스 위에 모이는 구체(개수만큼) - 전조 시간 동안 커진다.
@@ -257,6 +262,14 @@ function BossBR1View.projSpawn(data)
 		if part then
 			BossBananaView.pose(part, data.position, os.clock(), data.dir)
 			projectiles[data.id] = { part = part, position = data.position, dir = data.dir, speed = data.speed, style = { banana = true }, heightMode = data.heightMode, radius = data.radius, scale = 1, traveled = 0, pooled = true }
+		end
+		return
+	end
+	if BossMeshShotView.has(data.style) then
+		local part = BossMeshShotView.acquire(data.style)
+		if part then
+			BossMeshShotView.pose(data.style, part, data.position, os.clock(), data.dir)
+			projectiles[data.id] = { part = part, position = data.position, dir = data.dir, speed = data.speed, style = { meshShot = data.style }, heightMode = data.heightMode, radius = data.radius, scale = 1, traveled = 0, pooled = true }
 		end
 		return
 	end
@@ -315,6 +328,11 @@ end
 function BossBR1View.projEnd(data)
 	local p = projectiles[data.id]
 	projectiles[data.id] = nil
+	if p and p.pooled and p.style.meshShot then -- BOSS-NIGHT-1: 풀로 + 조각
+		BossMeshShotView.release(p.style.meshShot, p.part)
+		BossMeshShotView.burst(p.style.meshShot, data.position)
+		return
+	end
 	if p and p.pooled then
 		BossBananaView.release(p.part) -- GUARDIAN-V3: 풀로(파괴 없음)
 		BossFx.ring(data.position, 0.5, 4, Color3.fromRGB(200, 90, 255), 0.3)
@@ -686,7 +704,9 @@ RunService.RenderStepped:Connect(function(dt)
 	for _, p in pairs(projectiles) do
 		p.position += p.dir * p.speed * dt
 		p.traveled = (p.traveled or 0) + p.speed * dt
-		if p.style.banana then
+		if p.style.meshShot then
+			BossMeshShotView.pose(p.style.meshShot, p.part, p.position, os.clock(), p.dir)
+		elseif p.style.banana then
 			BossBananaView.pose(p.part, p.position, os.clock(), p.dir)
 		elseif p.part.Parent then
 			local cf = CFrame.lookAt(p.position, p.position + p.dir)

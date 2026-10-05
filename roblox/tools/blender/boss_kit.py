@@ -335,8 +335,10 @@ def extract(src, faces, name, origin_rb, col):
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
     edges = [e for e in bm.edges if e.is_boundary]
     capped = 0
+    capFaces = []
     if edges:
         res = bmesh.ops.holes_fill(bm, edges=edges, sides=0)
+        capFaces = list(res.get("faces", []))
         for f in res.get("faces", []):
             # 막은 면 = 둘레에서 가장 많은 재질
             counts = {}
@@ -347,9 +349,20 @@ def extract(src, faces, name, origin_rb, col):
             if counts:
                 f.material_index = max(counts.items(), key=lambda kv: kv[1])[0]
             capped += 1
-    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    # BOSS-NIGHT-1: 원본 면은 원본 감김(법선) 그대로 - 부위 전체 recalc가 털 덩어리 · 겹친 껍데기에서 면 일부(또는 전부)를 안쪽으로 뒤집어
+    #   로블록스(뒷면 안 그림)에서 구멍 + 그 뒤 바깥선 껍데기가 검은 얼룩으로 보였다(매머드). 막은 면만 다시 계산한다.
+    if capFaces:
+        bmesh.ops.recalc_face_normals(bm, faces=capFaces)
     bm.to_mesh(mesh)
     bm.free()
+    # BOSS-NIGHT-1: 겹친 털 덩어리 · 여러 껍데기(Meshy 리메시)에서 recalc가 부위 전체를 안쪽으로 뒤집었다(매머드 엉덩이 8%만 바깥 → 로블록스 뒷면 안 그림 · 바깥선이 비침)
+    #   → 원본 면 법선과 대다수가 반대면 통째로 뒤집는다(원본 면 순서 = 앞쪽 len(faces)개 - 막은 면은 뒤에 붙음)
+    agree = 0
+    for i, fi in enumerate(faces[: len(mesh.polygons)]):
+        agree += 1 if mesh.polygons[i].normal.dot(me.polygons[fi].normal) >= 0 else -1
+    if agree < 0:
+        mesh.flip_normals()
+        print("[KIT]   %s 면 방향 뒤집음(원본과 반대였음)" % name)
     obj = bpy.data.objects.new(name, mesh)
     obj.location = o
     col.objects.link(obj)

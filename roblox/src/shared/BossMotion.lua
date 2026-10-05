@@ -701,7 +701,8 @@ function BossMotion.evaluate(ctx, st, now)
 			local lead = st.prepSeconds or ctx.prepSeconds or 0.25
 			local u = (now - (st.prepAt - lead)) / lead
 			if u >= 0 and u < 1 then
-				info.glow, info.glowAmount = { (st.nextN or ((st.swingN or 0) + 1)) % 2 == 0 and "Hand_R" or "Hand_L" }, u
+				local bp = G.basicParts or { R = "Hand_R", L = "Hand_L" } -- BOSS-NIGHT-1: 보스별 평타 부위(매머드 = 상아)
+				info.glow, info.glowAmount = { (st.nextN or ((st.swingN or 0) + 1)) % 2 == 0 and bp.R or bp.L }, u
 			end
 		end
 	end

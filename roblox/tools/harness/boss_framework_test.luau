@@ -230,11 +230,12 @@ for _, key in ipairs(keys) do
 	check("튐 " .. key, jumpsTotal == 0, ("튐 합 %d(대기 · 걷기 · 스킬 · 변신 - 의도된 타격 창 제외)"):format(jumpsTotal))
 
 	-- 2-4 번쩍: 판정 시각 직전 0.15초에만 · 판정 순간에 꺼짐
-	local sk = data.skills.heavy
+	local sid = data.skills.heavy and "heavy" or ctx.set.signature[1] -- BOSS-NIGHT-1: 강공격이 없는 보스 = 세트 대표 스킬 첫째
+	local sk = data.skills[sid]
 	local hitAt = 0.3 + sk.telegraphSeconds
-	local _, iBefore = BossMotion.evaluate(ctx, { form = "before", inCombat = true, act = "heavy", actAt = 0.3, actHit = sk.telegraphSeconds }, hitAt - 0.2)
-	local _, iIn = BossMotion.evaluate(ctx, { form = "before", inCombat = true, act = "heavy", actAt = 0.3, actHit = sk.telegraphSeconds }, hitAt - 0.05)
-	local _, iAfter = BossMotion.evaluate(ctx, { form = "before", inCombat = true, act = "heavy", actAt = 0.3, actHit = sk.telegraphSeconds }, hitAt + 0.01)
+	local _, iBefore = BossMotion.evaluate(ctx, { form = "before", inCombat = true, act = sid, actAt = 0.3, actHit = sk.telegraphSeconds }, hitAt - 0.2)
+	local _, iIn = BossMotion.evaluate(ctx, { form = "before", inCombat = true, act = sid, actAt = 0.3, actHit = sk.telegraphSeconds }, hitAt - 0.05)
+	local _, iAfter = BossMotion.evaluate(ctx, { form = "before", inCombat = true, act = sid, actAt = 0.3, actHit = sk.telegraphSeconds }, hitAt + 0.01)
 	check("번쩍 창 " .. key, iBefore.rim == nil and iIn.rim ~= nil and iAfter.rim == nil, ("판정 −0.20 %s · −0.05 %s(%s) · +0.01 %s"):format(tostring(iBefore.rim ~= nil), tostring(iIn.rim ~= nil), iIn.rim and table.concat(iIn.rim, "/") or "-", tostring(iAfter.rim ~= nil)))
 
 	-- 2-5 변신: switchAt 전 = before · 뒤 = after
@@ -255,8 +256,12 @@ for _, key in ipairs(keys) do
 	local oldRig = BossRigSpec.rigs[rig.bossId]
 	local oldCtx = BossMotion.context(rig.bossId, oldRig, data.skills, data.moveSpeedStuds)
 	local stWalk = { inCombat = true, speed = 6, gait = 0.3, act = "heavy", actAt = 0, actHit = 2 }
-	local cOld = cost(oldCtx, oldRig, stWalk, 3000)
-	local cNew = cost(ctx, rig, stWalk, 3000)
+	-- BOSS-NIGHT-1: 옛 · 새를 교대로 3번 재 최솟값(먼저 잰 쪽의 쓰레기를 뒤에 잰 쪽이 치르는 잡음 - 같은 보스가 × 1.0 ~ 2.5로 흔들렸다)
+	local cOld, cNew = math.huge, math.huge
+	for _ = 1, 3 do
+		cOld = math.min(cOld, cost(oldCtx, oldRig, stWalk, 1500))
+		cNew = math.min(cNew, cost(ctx, rig, stWalk, 1500))
+	end
 	check("모션 비용(오프라인) " .. key, cNew <= cOld * 1.5, ("옛 %.1fμs → 새 %.1fμs(× %.2f · 합격 ≤ × 1.5)"):format(cOld, cNew, cNew / cOld))
 end
 
@@ -269,13 +274,17 @@ do
 	for _, id in ipairs(ids) do
 		local d = BossRules.buildInstanceData(15, id, 1)
 		local out, edge = BossFramework.applyBodyEdge(d, id .. "_v2", walk)
-		if id ~= "section_guardian" then
+		if not Frame.bodyEdge[id] then -- BOSS-NIGHT-1: 설정이 있는 보스(수호자 · 매머드 …)는 아래 보스별 줄이 본다
 			if out == d and edge == 0 then
 				same += 1
 			end
 		end
 	end
-	check("몸 가장자리 장치 - 다른 5보스 값 변화 0", same == #ids - 1, ("%d / %d(표에 없음 = 사본도 안 만듦)"):format(same, #ids - 1))
+	local nOther = 0
+	for _, id in ipairs(ids) do
+		nOther += Frame.bodyEdge[id] and 0 or 1
+	end
+	check("몸 가장자리 장치 - 설정 없는 보스 값 변화 0", same == nOther, ("%d / %d(표에 없음 = 사본도 안 만듦)"):format(same, nOther))
 	local d = BossRules.buildInstanceData(15, "section_guardian", 1)
 	local g, edge, fitted = BossFramework.applyBodyEdge(d, "section_guardian_v2", walk)
 	local rig = BossRigSpec.rigs.section_guardian_v2
@@ -360,11 +369,12 @@ do
 	local same, ids = 0, sortedKeys(BossData.bosses)
 	for _, id in ipairs(ids) do
 		local d = BossRules.buildInstanceData(15, id, 1)
-		if BossFramework.applyV3(d, id ~= "section_guardian" and (id .. "_v2") or nil) == d then
+		-- 설정 있는 보스 = 옛 몸(리그 nil)으로 · 없는 보스 = 새 몸 리그 키로도 그대로여야
+		if BossFramework.applyV3(d, not Frame.v3[id] and (id .. "_v2") or nil) == d then
 			same += 1
 		end
 	end
-	check("V3 - 다른 5보스 · 옛 몸 수호자 값 변화 0", same == #ids, ("%d / %d"):format(same, #ids))
+	check("V3 - 설정 없는 보스 · 옛 몸 값 변화 0", same == #ids, ("%d / %d"):format(same, #ids))
 	local d = BossRules.buildInstanceData(15, "section_guardian", 1)
 	local e = BossFramework.applyBodyEdge(d, "section_guardian_v2", walk)
 	local g = BossFramework.applyV3(e, "section_guardian_v2")
@@ -465,6 +475,51 @@ do
 	end
 	check("V3 서 있는 키 약 30 stud(직립 머리 꼭대기 ±1)", math.abs(tops.after.head - 30) <= 1,
 		("직립(변신 뒤) 머리 %.1f · 전체 %.1f stud · 너클(변신 전) 머리 %.1f · 전체 %.1f stud"):format(tops.after.head, tops.after.all, tops.before.head, tops.before.all))
+end
+
+-- ─────────────────────────── BOSS-NIGHT-1 1: 빙하 매머드 새 몸(applyBodyEdge → applyV3 · 스테이지 15 · 솔로) ───────────────────────────
+do
+	local BossRules = MODS.BossRules
+	local BossSkillMath = MODS.BossSkillMath
+	local walk = MODS.WorldConfig.playerWalkSpeedStuds
+	local d = BossRules.buildInstanceData(15, "frost_giant", 1)
+	local e, edge = BossFramework.applyBodyEdge(d, "frost_giant_v2", walk)
+	local g = BossFramework.applyV3(e, "frost_giant_v2")
+	local rig = BossRigSpec.rigs.frost_giant_v2
+	local k = d.sizeScale * rig.scale
+	local front, rear, half = rig.frontHalfLength * k, rig.rearHalfLength * k, rig.edgeHalfWidth * k
+	local inOrder = function(id)
+		return table.find(g.skillOrder, id) ~= nil
+	end
+	check("매머드 신규 패턴(얼음 창 → 얼음 상아 · 코 채찍 · 상아 돌진 · 뒷발차기 반응)", g.skills.spear == nil and not inOrder("spear") and inOrder("tuskShot") and inOrder("trunkWhip") and inOrder("gore")
+		and not inOrder("backKick") and g.reactiveOrder[1] == "backKick" and g.skills.backKick.reactive == true,
+		("일반 후보 %d개 · 반응 %s"):format(#g.skillOrder, table.concat(g.reactiveOrder, ",")))
+	local tw, bk, go, ts = g.skills.trunkWhip, g.skills.backKick, g.skills.gore, g.skills.tuskShot
+	check("매머드 앞 · 뒤 구역(반경 = 머리 앞 끝 / 엉덩이 끝 기준)", math.abs(tw.radiusStuds - (12 + front)) < 1e-6 and math.abs(tw.conditions[1].studs - (12 + front)) < 1e-6
+		and math.abs(bk.radiusStuds - (14 + rear)) < 1e-6 and math.abs(bk.conditions[1].studs - (20 + rear)) < 1e-6 and math.abs(go.arenaMarginStuds - (4 + front)) < 1e-6,
+		("앞 끝 %.1f · 엉덩이 끝 %.1f · 옆 %.1f stud · 코 채찍 r %.1f · 뒷발차기 r %.1f(조건 %.1f) · 돌진 벽 여유 %.1f"):format(front, rear, half, tw.radiusStuds, bk.radiusStuds, bk.conditions[1].studs, go.arenaMarginStuds))
+	check("매머드 상아 돌진 경로 반폭 = 몸 반폭 · 균열선", math.abs(go.pathHalfWidthStuds - half) < 1e-6 and go.markStyle == "crack", ("%.2f stud"):format(go.pathHalfWidthStuds))
+	check("매머드 바닥 표시 끔(근접) · 예비 +0.12", g.skills.slam.noFloor and g.skills.innerSmash.noFloor and g.skills.swipe.noFloor and tw.noFloor and bk.noFloor and not g.skills.stomp.noFloor
+		and math.abs(g.skills.slam.telegraphSeconds - (d.skills.slam.telegraphSeconds + 0.12)) < 1e-6 and g.basicNoFloor and g.innerRingHidden,
+		("빙결 강타 %.2f → %.2f · 코 채찍 %.2f · 발 구르기 바닥 표시 유지(점프로 넘기 - 큰 범위)"):format(d.skills.slam.telegraphSeconds, g.skills.slam.telegraphSeconds, tw.telegraphSeconds))
+	check("매머드 피해 계수 × 0.60(신규 · 반응 포함)", math.abs(g.skills.slam.damage.multiplier - d.skills.slam.damage.multiplier * 0.6) < 1e-6 and math.abs(ts.damage.multiplier - 1.8 * 0.6) < 1e-6
+		and math.abs(bk.damage.multiplier - 2.0 * 0.6) < 1e-6, ("빙결 강타 %.2f · 얼음 상아 %.2f · 뒷발차기 %.2f"):format(g.skills.slam.damage.multiplier, ts.damage.multiplier, bk.damage.multiplier))
+	local bad = {}
+	for id, s in pairs(g.skills) do
+		if not s.reactive then
+			for _, c in ipairs(BossSkillMath.dodgeChecks(s, g.chaseStopDistanceStuds, walk)) do
+				if not c.ok then
+					table.insert(bad, ("%s %s %.2f > %.2f"):format(id, c.label, c.requiredSeconds, c.availableSeconds))
+				end
+			end
+		end
+	end
+	-- 뒷발차기(반응): 엉덩이 끝 + 14 부채 밖으로 = 서 있던 자리(조건 반경 안 · 끝에서 6 안쪽 가정) → 옆으로 비키기(부채 120° - 옆 반폭) ≤ 예비 0.9
+	local side = (14 + rear) * math.sin(math.rad(60)) -- 부채 가장자리까지 옆 거리(최악 = 뒤 한가운데)
+	local needKick = (MODS.BossData.mechanics.dodge.perceptionSeconds + 8 / walk) -- 뒤 한가운데에서 비스듬히 8 stud(부채 가장자리 각) = 인지 + 걷기
+	check("매머드 회피 부등식(신규 포함 전 스킬)", #bad == 0, #bad == 0 and "실패 0" or table.concat(bad, " · "))
+	check("매머드 뒷발차기 회피(걷기 - 대시 · 점프 없이)", needKick <= bk.telegraphSeconds, ("인지 0.5 + 옆 8 stud 걷기 = %.2f초 ≤ 예비 %.2f"):format(needKick, bk.telegraphSeconds))
+	check("매머드 크기(등 높이 약 30 · 길이 약 39 stud)", math.abs(0.85 * 2.4 * k - 30) < 1.5, ("등 %.1f · 몸 길이(엉덩이 끝 ~ 머리 앞) %.1f · 상아 끝 ~ 꼬리 %.1f stud · 몸 가장자리 +%.2f · BodyRadius 증가"):format(0.85 * 2.4 * k, front + rear, 1.73 * 2.4 * k, edge))
 end
 
 print(("[FRAME] 끝 %d/%d"):format(pass, total))

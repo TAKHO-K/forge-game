@@ -394,6 +394,10 @@ local function conditionMet(model, st, data, condition)
 		-- GUARDIAN-V3 ⑧ 반응 스킬(바나나): 대상이 studs 밖에 seconds 이상 이어서 있었다(시각 = 매 틱 trackReactive)
 		local since = st.beyondSince and st.beyondSince[condition.studs]
 		return since ~= nil and os.clock() - since >= condition.seconds
+	elseif kind == "targetBehindFor" then
+		-- BOSS-NIGHT-1 반응 스킬(뒷발차기): 대상이 등 뒤 부채에 seconds 이상 이어서 있었다(시각 = 매 틱 반응 조건 추적 · 키 "rear")
+		local since = st.behindSince and st.behindSince["rear"]
+		return since ~= nil and os.clock() - since >= condition.seconds
 	elseif kind == "missesWithin" then
 		-- GUARDIAN-V3 ⑧ 반응 스킬(도약): 최근 seconds 안 빗나감(결과 조각 noteMiss)이 count 이상
 		local log, now, n = st.missLog and st.missLog[condition.key], os.clock(), 0
@@ -480,6 +484,11 @@ local function endSkill(model, st, data, now, interrupted)
 	st.phase = "normal"
 	st.current = nil
 	st.skill = nil
+	if st.lockedFacing then
+		-- BOSS-NIGHT-1 매머드 방향 고정 풀기: 클라가 다시 대상 쪽을 본다 · 등 뒤 판정은 0.3초만 더(그 틈에 반응 스킬 뒷발차기가 이어진다)
+		st.lockedFacing.untilAt = now + 0.3
+		model:SetAttribute("BossFaceLockYaw", nil)
+	end
 	model:SetAttribute("BossAct", nil) -- BR1-4b 모션: 스킬 끝(클라가 동작을 풀어 제자리로)
 	model:SetAttribute("BossActPhase", nil)
 	if id and data.skills[id] and data.skills[id].reactive then
@@ -2227,6 +2236,19 @@ local function startSkill(model, st, data, id, now, position, targetRoot)
 	st.current = id
 	st.skill = skill
 	st.currentStartedAt = now
+	-- BOSS-NIGHT-1 매머드(v3.lockFacing): 스킬 시작 순간 대상 쪽으로 보이는 몸 방향을 고정한다(모델 Attribute BossFaceLockYaw - 클라 BossAnimator가 이 yaw를 따른다 ·
+	--   서버 루트 회전은 그대로 = 다른 패턴 코드의 PivotTo와 다투지 않는다). 그래야 긴 스킬 동안 등 뒤로 돌아간 사람이 생기고(뒷발차기 조건 targetBehindFor) ·
+	--   keepFacing 스킬(뒷발차기)은 그 방향 그대로(엉덩이가 대상 쪽).
+	if data.v3 and data.v3.lockFacing and not skill.keepFacing and targetRoot then
+		local d = Vector3.new(targetRoot.Position.X - position.X, 0, targetRoot.Position.Z - position.Z)
+		if d.Magnitude > 0.5 then
+			st.lockedFacing = { dir = d.Unit, at = position, untilAt = math.huge }
+			model:SetAttribute("BossFaceLockYaw", math.atan2(-d.X, -d.Z))
+		end
+	elseif data.v3 and data.v3.lockFacing and skill.keepFacing and st.lockedFacing then
+		st.lockedFacing.untilAt = math.huge -- 뒷발차기: 직전 스킬 방향 그대로(엉덩이가 대상 쪽)
+		model:SetAttribute("BossFaceLockYaw", math.atan2(-st.lockedFacing.dir.X, -st.lockedFacing.dir.Z))
+	end
 	if not skill.reactive then -- GUARDIAN-V3 ⑧: 반응 스킬은 스케줄러 시계(본 적 · 강공격 줄 · 전조 간격)를 건드리지 않는다
 		BossScheduler.onSkillStart(st.sched, id, now, data.skills, data.scheduler)
 	end
@@ -2285,6 +2307,21 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt, member
 						st.beyondSince[cond.studs] = st.beyondSince[cond.studs] or now
 					else
 						st.beyondSince[cond.studs] = nil
+					end
+				elseif cond.type == "targetBehindFor" then
+					-- BOSS-NIGHT-1 매머드 뒷발차기: 대상이 보스 등 뒤 부채(뒤 방향 ± halfAngleDeg · studs 안)에 이어서 있었던 시각
+					st.behindSince = st.behindSince or {}
+					local key = "rear" -- 보스당 하나(뒤쪽 반응 스킬)
+					local lf = st.lockedFacing
+					local look = (lf and now <= lf.untilAt and (Vector3.new(lf.at.X, 0, lf.at.Z) - Vector3.new(position.X, 0, position.Z)).Magnitude < 3) and lf.dir or nil
+					local back = look and Vector3.new(-look.X, 0, -look.Z) or Vector3.zero
+					local rel = targetRoot and Vector3.new(targetRoot.Position.X - position.X, 0, targetRoot.Position.Z - position.Z) or Vector3.zero
+					local inside = targetRoot ~= nil and back.Magnitude > 1e-3 and rel.Magnitude > 1e-3 and rel.Magnitude <= cond.studs
+						and back.Unit:Dot(rel.Unit) >= math.cos(math.rad(cond.halfAngleDeg))
+					if inside then
+						st.behindSince[key] = st.behindSince[key] or now
+					else
+						st.behindSince[key] = nil
 					end
 				end
 			end

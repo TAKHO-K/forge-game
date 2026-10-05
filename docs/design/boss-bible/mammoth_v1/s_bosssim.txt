@@ -1,0 +1,32 @@
+st100 원거리 아는보스 옛 몸 처치 p50  72.9초 · 받은 피해  90.0% · 전멸  44.8% · 처치율  55.2%
+    회수/판 icefall 0.9 · roar 1.8 · slam 3.5 · spear 0.0 · spike 0.2 · swipe 0.4
+st100 원거리 아는보스 새 몸 처치 p50  71.8초 · 받은 피해  63.3% · 전멸  14.8% · 처치율  85.2%
+    회수/판 backKick 1.2 · gore 0.2 · icefall 1.0 · roar 1.0 · slam 3.8 · trunkWhip 0.7 · tuskShot 0.9
+st100 원거리 처음 옛 몸 처치 p50  72.9초 · 받은 피해  99.8% · 전멸  66.5% · 처치율  33.5%
+    회수/판 icefall 0.8 · roar 1.6 · slam 3.1 · spear 0.0 · spike 0.1 · swipe 0.3
+st100 원거리 처음 새 몸 처치 p50  71.8초 · 받은 피해  82.2% · 전멸  40.8% · 처치율  59.2%
+    회수/판 backKick 1.1 · gore 0.1 · icefall 0.9 · roar 1.0 · slam 3.4 · trunkWhip 0.6 · tuskShot 0.7
+st100 근거리 아는보스 옛 몸 처치 p50  73.7초 · 받은 피해  87.4% · 전멸  43.2% · 처치율  56.8%
+    회수/판 icefall 0.9 · innerSmash 1.0 · roar 1.8 · slam 3.5 · spear 0.0 · spike 0.2 · swipe 0.4
+st100 근거리 아는보스 새 몸 처치 p50  72.7초 · 받은 피해  67.7% · 전멸  18.8% · 처치율  81.2%
+    회수/판 backKick 3.0 · gore 0.8 · icefall 0.9 · innerSmash 1.0 · roar 1.0 · slam 3.0 · swipe 0.0 · trunkWhip 0.7 · tuskShot 0.9
+st100 근거리 처음 옛 몸 처치 p50  73.7초 · 받은 피해  99.6% · 전멸  63.2% · 처치율  36.8%
+    회수/판 icefall 0.8 · innerSmash 1.0 · roar 1.7 · slam 3.1 · spear 0.0 · spike 0.1 · swipe 0.3
+st100 근거리 처음 새 몸 처치 p50  72.7초 · 받은 피해  89.3% · 전멸  46.7% · 처치율  53.3%
+    회수/판 backKick 2.7 · gore 0.6 · icefall 0.8 · innerSmash 1.0 · roar 1.0 · slam 2.7 · swipe 0.0 · trunkWhip 0.6 · tuskShot 0.7
+st500 원거리 아는보스 옛 몸 처치 p50  72.9초 · 받은 피해  90.0% · 전멸  44.8% · 처치율  55.2%
+    회수/판 icefall 0.9 · roar 1.8 · slam 3.5 · spear 0.0 · spike 0.2 · swipe 0.4
+st500 원거리 아는보스 새 몸 처치 p50  71.8초 · 받은 피해  63.3% · 전멸  14.8% · 처치율  85.2%
+    회수/판 backKick 1.2 · gore 0.2 · icefall 1.0 · roar 1.0 · slam 3.8 · trunkWhip 0.7 · tuskShot 0.9
+st500 원거리 처음 옛 몸 처치 p50  72.9초 · 받은 피해  99.8% · 전멸  66.5% · 처치율  33.5%
+    회수/판 icefall 0.8 · roar 1.6 · slam 3.1 · spear 0.0 · spike 0.1 · swipe 0.3
+st500 원거리 처음 새 몸 처치 p50  71.8초 · 받은 피해  82.2% · 전멸  40.8% · 처치율  59.2%
+    회수/판 backKick 1.1 · gore 0.1 · icefall 0.9 · roar 1.0 · slam 3.4 · trunkWhip 0.6 · tuskShot 0.7
+st500 근거리 아는보스 옛 몸 처치 p50  73.7초 · 받은 피해  87.4% · 전멸  43.2% · 처치율  56.8%
+    회수/판 icefall 0.9 · innerSmash 1.0 · roar 1.8 · slam 3.5 · spear 0.0 · spike 0.2 · swipe 0.4
+st500 근거리 아는보스 새 몸 처치 p50  72.7초 · 받은 피해  67.7% · 전멸  18.8% · 처치율  81.2%
+    회수/판 backKick 3.0 · gore 0.8 · icefall 0.9 · innerSmash 1.0 · roar 1.0 · slam 3.0 · swipe 0.0 · trunkWhip 0.7 · tuskShot 0.9
+st500 근거리 처음 옛 몸 처치 p50  73.7초 · 받은 피해  99.7% · 전멸  63.3% · 처치율  36.7%
+    회수/판 icefall 0.8 · innerSmash 1.0 · roar 1.7 · slam 3.1 · spear 0.0 · spike 0.1 · swipe 0.3
+st500 근거리 처음 새 몸 처치 p50  72.7초 · 받은 피해  89.3% · 전멸  46.7% · 처치율  53.3%
+    회수/판 backKick 2.7 · gore 0.6 · icefall 0.8 · innerSmash 1.0 · roar 1.0 · slam 2.7 · swipe 0.0 · trunkWhip 0.6 · tuskShot 0.7

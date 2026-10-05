@@ -14,7 +14,7 @@ end
 
 D.bosses = {
 	section_guardian = { roar = "", step = "", transform = "", skills = skills({ "heavy", "shockwave", "meteor", "charge", "cross", "swipe", "grab", "mirror", "innerSmash", "fists", "orbs", "earthSplit" }) },
-	frost_giant = { roar = "", step = "", transform = "", skills = skills({ "slam", "icefall", "spike", "roar", "swipe", "grab", "mirror", "innerSmash", "spear", "stomp", "snowball" }) },
+	frost_giant = { roar = "", step = "", transform = "", skills = skills({ "slam", "icefall", "spike", "roar", "swipe", "grab", "mirror", "innerSmash", "spear", "stomp", "snowball", "tuskShot", "trunkWhip", "gore", "backKick" }) }, -- BOSS-NIGHT-1: 새 몸 신규 4패턴 자리
 	abyssal_lord = { roar = "", step = "", transform = "", skills = skills({ "sweep", "tide", "spout", "colors", "swipe", "grab", "mirror", "tailSweep", "vortex", "bubbles", "tridentThrow" }) },
 	crystal_queen = { roar = "", step = "", transform = "", skills = skills({ "burst", "drop", "energyBeam", "orgel", "swipe", "grab", "mirror", "spikes", "shards", "mirrorDash" }) },
 	scorpion_queen = { roar = "", step = "", transform = "", skills = skills({ "claw", "sting", "stab", "sandSearch", "swipe", "grab", "armadillo", "stingJab", "ambush", "clawSweep" }) },

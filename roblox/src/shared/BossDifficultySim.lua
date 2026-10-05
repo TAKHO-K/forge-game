@@ -168,9 +168,14 @@ function BossDifficultySim.run(bossId, options)
 	-- GUARDIAN-V3 반응 스킬 상태: 대상이 멀리(30 stud 밖) 있는 구간 · 빗나감 기록
 	local far, farSince, farUntil, missLog = false, nil, 0, {}
 	local farShare = v3sim and (role == "ranged" and v3sim.rangedFarShare or v3sim.meleeFarShare) or 0
+	-- BOSS-NIGHT-1 뒤쪽 반응 스킬(매머드 뒷발차기): 대상이 등 뒤에 머무는 구간(behindShare - 근접 · 원거리 · 평균 behindSegmentSeconds)
+	local behind, behindSince, behindUntil = false, nil, 0
+	local behindShare = (v3sim and v3sim.behindShare) and (v3sim.behindShare[role] or 0) or 0
 	function ctx.conditionMet(condition)
 		local kind = condition.type
-		if kind == "targetBeyondFor" then
+		if kind == "targetBehindFor" then
+			return behind and behindSince ~= nil and t - behindSince >= condition.seconds
+		elseif kind == "targetBeyondFor" then
 			return far and farSince ~= nil and t - farSince >= condition.seconds
 		elseif kind == "missesWithin" then
 			local n = 0
@@ -293,8 +298,19 @@ function BossDifficultySim.run(bossId, options)
 				end
 			end
 		end
+		-- BOSS-NIGHT-1: 등 뒤 구간 굴리기(근접 = 가끔 · 원거리 = 드물게)
+		if behindShare > 0 and t >= behindUntil then
+			local mean = v3sim.behindSegmentSeconds or 3
+			if behind then
+				behind, behindSince = false, nil
+				behindUntil = t + mean * (1 - behindShare) / math.max(behindShare, 1e-3) * (0.5 + rng())
+			else
+				behind, behindSince = true, t
+				behindUntil = t + mean * (0.5 + rng())
+			end
+		end
 		-- GUARDIAN-V3: 멀리 있는 구간 굴리기(원거리 = 대부분 · 근접 = 가끔)
-		if v3sim and t >= farUntil then
+		if v3sim and v3sim.farSegmentSeconds and t >= farUntil then
 			local mean = v3sim.farSegmentSeconds
 			if far then
 				far, farSince = false, nil
@@ -405,6 +421,13 @@ function BossDifficultySim.run(bossId, options)
 							damage(m, j.skill.damage.multiplier / surviveHits, nil, "도약")
 						end
 						far, farSince, farUntil = false, nil, t -- 도약 뒤 = 가까이(다음 틱에 구간을 새로 굴린다)
+					elseif m and v3sim.hit and v3sim.hit[j.reactive] then
+						-- BOSS-NIGHT-1 일반 반응 스킬(뒷발차기): 명중 = hit[id](처음 · 두 번째부터) · 피해 = 공격력 배율 ÷ 생존 타수 · 맞든 아니든 구간 끝(밀려남 · 비킴)
+						local h = v3sim.hit[j.reactive]
+						if rng() < (first and h.first or h.later) * hitScale then
+							damage(m, j.skill.damage.multiplier / surviveHits, nil, j.skill.damageLabel)
+						end
+						behind, behindSince, behindUntil = false, nil, t
 					end
 				elseif j.gateJudge then
 					armed = not j.solved

@@ -1,0 +1,806 @@
+{
+ "parts": {
+  "Hips": {
+   "tris": 4990,
+   "origin": [
+    0.0,
+    -0.348,
+    0.192
+   ],
+   "center": [
+    0.001,
+    -0.421,
+    0.792
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Body": {
+   "tris": 4979,
+   "origin": [
+    0.0,
+    -0.3,
+    0.144
+   ],
+   "center": [
+    0.0,
+    -0.378,
+    -0.386
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Head": {
+   "tris": 3249,
+   "origin": [
+    0.0,
+    0.18,
+    -0.72
+   ],
+   "center": [
+    0.007,
+    0.064,
+    -0.999
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Mouth": {
+   "tris": 12,
+   "origin": [
+    0.0,
+    -0.324,
+    -1.2
+   ],
+   "center": [
+    0.0,
+    -0.372,
+    -1.248
+   ],
+   "neon": false,
+   "color": "#808080"
+  },
+  "HeadIce": {
+   "tris": 279,
+   "origin": [
+    0.0,
+    0.564,
+    -1.128
+   ],
+   "center": [
+    -0.001,
+    0.597,
+    -1.031
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Ear_L": {
+   "tris": 120,
+   "origin": [
+    -0.48,
+    0.084,
+    -0.72
+   ],
+   "center": [
+    -0.549,
+    -0.089,
+    -0.619
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Tusk_L": {
+   "tris": 758,
+   "origin": [
+    -0.216,
+    -0.396,
+    -1.32
+   ],
+   "center": [
+    -0.348,
+    -0.466,
+    -1.547
+   ],
+   "neon": false,
+   "color": null
+  },
+  "UpperArm_L": {
+   "tris": 488,
+   "origin": [
+    -0.456,
+    -0.684,
+    -0.36
+   ],
+   "center": [
+    -0.427,
+    -0.874,
+    -0.357
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Forearm_L": {
+   "tris": 209,
+   "origin": [
+    -0.456,
+    -1.092,
+    -0.36
+   ],
+   "center": [
+    -0.401,
+    -1.18,
+    -0.3
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Hand_L": {
+   "tris": 735,
+   "origin": [
+    -0.456,
+    -1.308,
+    -0.36
+   ],
+   "center": [
+    -0.376,
+    -1.358,
+    -0.255
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Thigh_L": {
+   "tris": 375,
+   "origin": [
+    -0.456,
+    -0.684,
+    0.912
+   ],
+   "center": [
+    -0.42,
+    -0.892,
+    0.911
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Shin_L": {
+   "tris": 272,
+   "origin": [
+    -0.456,
+    -1.092,
+    0.912
+   ],
+   "center": [
+    -0.413,
+    -1.167,
+    0.926
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Foot_L": {
+   "tris": 624,
+   "origin": [
+    -0.456,
+    -1.308,
+    0.912
+   ],
+   "center": [
+    -0.368,
+    -1.336,
+    0.94
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Ear_R": {
+   "tris": 113,
+   "origin": [
+    0.48,
+    0.084,
+    -0.72
+   ],
+   "center": [
+    0.557,
+    -0.019,
+    -0.645
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Tusk_R": {
+   "tris": 748,
+   "origin": [
+    0.216,
+    -0.396,
+    -1.32
+   ],
+   "center": [
+    0.35,
+    -0.473,
+    -1.543
+   ],
+   "neon": false,
+   "color": null
+  },
+  "UpperArm_R": {
+   "tris": 498,
+   "origin": [
+    0.456,
+    -0.684,
+    -0.36
+   ],
+   "center": [
+    0.421,
+    -0.889,
+    -0.353
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Forearm_R": {
+   "tris": 233,
+   "origin": [
+    0.456,
+    -1.092,
+    -0.36
+   ],
+   "center": [
+    0.397,
+    -1.163,
+    -0.306
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Hand_R": {
+   "tris": 722,
+   "origin": [
+    0.456,
+    -1.308,
+    -0.36
+   ],
+   "center": [
+    0.377,
+    -1.359,
+    -0.255
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Thigh_R": {
+   "tris": 439,
+   "origin": [
+    0.456,
+    -0.684,
+    0.912
+   ],
+   "center": [
+    0.42,
+    -0.893,
+    0.902
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Shin_R": {
+   "tris": 268,
+   "origin": [
+    0.456,
+    -1.092,
+    0.912
+   ],
+   "center": [
+    0.417,
+    -1.175,
+    0.919
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Foot_R": {
+   "tris": 577,
+   "origin": [
+    0.456,
+    -1.308,
+    0.912
+   ],
+   "center": [
+    0.369,
+    -1.339,
+    0.94
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Trunk1": {
+   "tris": 250,
+   "origin": [
+    0.0,
+    -0.156,
+    -1.392
+   ],
+   "center": [
+    -0.001,
+    -0.268,
+    -1.377
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Trunk2": {
+   "tris": 210,
+   "origin": [
+    0.0,
+    -0.396,
+    -1.488
+   ],
+   "center": [
+    0.006,
+    -0.521,
+    -1.296
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Trunk3": {
+   "tris": 225,
+   "origin": [
+    0.0,
+    -0.636,
+    -1.464
+   ],
+   "center": [
+    -0.0,
+    -0.752,
+    -1.315
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Trunk4": {
+   "tris": 180,
+   "origin": [
+    0.0,
+    -0.852,
+    -1.416
+   ],
+   "center": [
+    -0.0,
+    -0.858,
+    -1.315
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Trunk5": {
+   "tris": 239,
+   "origin": [
+    0.0,
+    -1.044,
+    -1.344
+   ],
+   "center": [
+    -0.001,
+    -1.108,
+    -1.281
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Trunk6": {
+   "tris": 374,
+   "origin": [
+    0.0,
+    -1.212,
+    -1.248
+   ],
+   "center": [
+    0.001,
+    -1.235,
+    -1.17
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Tail1": {
+   "tris": 275,
+   "origin": [
+    0.0,
+    -0.156,
+    1.296
+   ],
+   "center": [
+    -0.006,
+    -0.227,
+    1.389
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Tail2": {
+   "tris": 464,
+   "origin": [
+    0.0,
+    -0.156,
+    1.584
+   ],
+   "center": [
+    0.001,
+    -0.345,
+    1.658
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Tail3": {
+   "tris": 743,
+   "origin": [
+    0.0,
+    -0.3,
+    1.848
+   ],
+   "center": [
+    0.001,
+    -0.456,
+    1.749
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Fur1": {
+   "tris": 885,
+   "origin": [
+    0.0,
+    0.492,
+    -0.6
+   ],
+   "center": [
+    0.003,
+    0.457,
+    -0.339
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Fur2": {
+   "tris": 373,
+   "origin": [
+    0.0,
+    0.54,
+    -0.072
+   ],
+   "center": [
+    0.015,
+    0.54,
+    0.204
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Fur3": {
+   "tris": 154,
+   "origin": [
+    0.0,
+    0.492,
+    0.552
+   ],
+   "center": [
+    -0.009,
+    0.441,
+    0.825
+   ],
+   "neon": false,
+   "color": null
+  },
+  "BackIce": {
+   "tris": 456,
+   "origin": [
+    0.0,
+    0.588,
+    0.408
+   ],
+   "center": [
+    -0.001,
+    0.631,
+    0.375
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Hips_Outline": {
+   "tris": 2272,
+   "origin": [
+    0.0,
+    -0.348,
+    0.192
+   ],
+   "center": [
+    0.001,
+    -0.405,
+    0.816
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Body_Outline": {
+   "tris": 2268,
+   "origin": [
+    0.0,
+    -0.3,
+    0.144
+   ],
+   "center": [
+    0.002,
+    -0.353,
+    -0.402
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Head_Outline": {
+   "tris": 1479,
+   "origin": [
+    0.0,
+    0.18,
+    -0.72
+   ],
+   "center": [
+    0.006,
+    0.077,
+    -1.01
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Ear_L_Outline": {
+   "tris": 54,
+   "origin": [
+    -0.48,
+    0.084,
+    -0.72
+   ],
+   "center": [
+    -0.588,
+    -0.053,
+    -0.636
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Ear_R_Outline": {
+   "tris": 51,
+   "origin": [
+    0.48,
+    0.084,
+    -0.72
+   ],
+   "center": [
+    0.6,
+    -0.012,
+    -0.634
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Fur2_Outline": {
+   "tris": 169,
+   "origin": [
+    0.0,
+    0.54,
+    -0.072
+   ],
+   "center": [
+    0.016,
+    0.543,
+    0.201
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Fur3_Outline": {
+   "tris": 70,
+   "origin": [
+    0.0,
+    0.492,
+    0.552
+   ],
+   "center": [
+    -0.001,
+    0.431,
+    0.839
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Fur1_Outline": {
+   "tris": 403,
+   "origin": [
+    0.0,
+    0.492,
+    -0.6
+   ],
+   "center": [
+    0.02,
+    0.479,
+    -0.347
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "BackIce_Outline": {
+   "tris": 206,
+   "origin": [
+    0.0,
+    0.588,
+    0.408
+   ],
+   "center": [
+    -0.002,
+    0.635,
+    0.403
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "UpperArm_L_Outline": {
+   "tris": 222,
+   "origin": [
+    -0.456,
+    -0.684,
+    -0.36
+   ],
+   "center": [
+    -0.442,
+    -0.873,
+    -0.355
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Thigh_L_Outline": {
+   "tris": 170,
+   "origin": [
+    -0.456,
+    -0.684,
+    0.912
+   ],
+   "center": [
+    -0.43,
+    -0.889,
+    0.921
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "UpperArm_R_Outline": {
+   "tris": 226,
+   "origin": [
+    0.456,
+    -0.684,
+    -0.36
+   ],
+   "center": [
+    0.443,
+    -0.88,
+    -0.363
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  }
+ },
+ "partCount": 46,
+ "totalTris": 33106,
+ "triBudget": 30000,
+ "budgetUse": 1.104,
+ "version": "KIT1",
+ "rigId": "frost_giant_v2",
+ "partCap": 5000,
+ "joints": {
+  "Hips": "RootJoint",
+  "Body": "Waist",
+  "Head": "Neck",
+  "Mouth": "Jaw",
+  "HeadIce": "HeadIce",
+  "Ear_L": "Ear_L",
+  "Tusk_L": "Tusk_L",
+  "UpperArm_L": "Shoulder_L",
+  "Forearm_L": "Elbow_L",
+  "Hand_L": "Wrist_L",
+  "Thigh_L": "Hip_L",
+  "Shin_L": "Knee_L",
+  "Foot_L": "Ankle_L",
+  "Ear_R": "Ear_R",
+  "Tusk_R": "Tusk_R",
+  "UpperArm_R": "Shoulder_R",
+  "Forearm_R": "Elbow_R",
+  "Hand_R": "Wrist_R",
+  "Thigh_R": "Hip_R",
+  "Shin_R": "Knee_R",
+  "Foot_R": "Ankle_R",
+  "Trunk1": "Trunk1",
+  "Trunk2": "Trunk2",
+  "Trunk3": "Trunk3",
+  "Trunk4": "Trunk4",
+  "Trunk5": "Trunk5",
+  "Trunk6": "Trunk6",
+  "Tail1": "Tail1",
+  "Tail2": "Tail2",
+  "Tail3": "Tail3",
+  "Fur1": "Fur1",
+  "Fur2": "Fur2",
+  "Fur3": "Fur3",
+  "BackIce": "BackIce"
+ },
+ "deco": {},
+ "decoMaterial": {},
+ "lod2": [],
+ "outlineParts": [
+  "Hips_Outline",
+  "Body_Outline",
+  "Head_Outline",
+  "Ear_L_Outline",
+  "Ear_R_Outline",
+  "Fur2_Outline",
+  "Fur3_Outline",
+  "Fur1_Outline",
+  "BackIce_Outline",
+  "UpperArm_L_Outline",
+  "Thigh_L_Outline",
+  "UpperArm_R_Outline"
+ ],
+ "texture": {
+  "atlases": [
+   "frost_giant_v2m_atlas1.png"
+  ],
+  "parts": [
+   "Hips",
+   "Body",
+   "Head",
+   "HeadIce",
+   "Ear_L",
+   "Tusk_L",
+   "UpperArm_L",
+   "Forearm_L",
+   "Hand_L",
+   "Thigh_L",
+   "Shin_L",
+   "Foot_L",
+   "Ear_R",
+   "Tusk_R",
+   "UpperArm_R",
+   "Forearm_R",
+   "Hand_R",
+   "Thigh_R",
+   "Shin_R",
+   "Foot_R",
+   "Trunk1",
+   "Trunk2",
+   "Trunk3",
+   "Trunk4",
+   "Trunk5",
+   "Trunk6",
+   "Tail1",
+   "Tail2",
+   "Tail3",
+   "Fur1",
+   "Fur2",
+   "Fur3",
+   "BackIce"
+  ]
+ },
+ "kit": {
+  "neonDemoted": [],
+  "source": "mammoth_v1_body_remesh30k.glb",
+  "sourceTris": 31257,
+  "overlapCopies": 6953,
+  "capped": 49,
+  "empty": [
+   "Mouth"
+  ]
+ },
+ "space": "sizeScale 1 · 루트 원점 · 발바닥 y −1.5 · 앞 −Z",
+ "metaName": "frost_giant_v2m"
+}

@@ -2040,8 +2040,17 @@ local function handleCommand(player, args)
 			reply(player, "알 수 없는 보스 id: " .. tostring(bossId) .. " (section_guardian · frost_giant · abyssal_lord · crystal_queen · scorpion_queen · storm_lord)")
 			return
 		end
-		if not patternId or not boss.skills[patternId] then
-			reply(player, ("%s 패턴 id: %s"):format(bossId, table.concat(boss.skillOrder, " · ")))
+		-- BOSS-NIGHT-1: 새 몸 설정(BossFrameworkData.v3 - addSkills · 반응 스킬)의 패턴도 받는다(새 몸이 뜰 때만 인스턴스에 있다)
+		local v3 = require(ReplicatedStorage.Shared.data.BossFrameworkData).v3[bossId]
+		local newBodyIds = {}
+		for id in pairs(v3 and v3.addSkills or {}) do
+			table.insert(newBodyIds, id)
+		end
+		for _, id in ipairs(v3 and v3.reactiveOrder or {}) do
+			table.insert(newBodyIds, id)
+		end
+		if not patternId or not (boss.skills[patternId] or table.find(newBodyIds, patternId)) then
+			reply(player, ("%s 패턴 id: %s%s"):format(bossId, table.concat(boss.skillOrder, " · "), #newBodyIds > 0 and (" · 새 몸(/gg boss frame on): " .. table.concat(newBodyIds, " · ")) or ""))
 			return
 		end
 		local stage = tonumber(args[5]) and math.floor(tonumber(args[5])) or 15

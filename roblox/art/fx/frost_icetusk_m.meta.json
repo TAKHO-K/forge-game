@@ -1,0 +1,47 @@
+{
+ "parts": {
+  "frost_icetusk_m": {
+   "tris": 3000,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    0.0,
+    -0.0,
+    0.001
+   ],
+   "neon": false,
+   "color": null
+  }
+ },
+ "partCount": 1,
+ "totalTris": 3000,
+ "triBudget": 3000,
+ "budgetUse": 1.0,
+ "version": "PROP1",
+ "metaName": "frost_icetusk_m",
+ "size": [
+  1.0,
+  0.2437,
+  0.2283
+ ],
+ "texture": {
+  "atlases": [
+   "frost_icetusk_m_atlas1.png"
+  ],
+  "parts": [
+   "frost_icetusk_m"
+  ]
+ },
+ "kit": {
+  "source": "mammoth_v1_icetusk_remesh10k.glb",
+  "sourceTris": 10138,
+  "cut": [],
+  "islandsDropped": 0,
+  "facesDropped": 0,
+  "mirror": false
+ },
+ "space": "원점 = 경계 상자 가운데 · 가장 긴 축 = 1.000 · 축 = 원본 GLB(Roblox Y 위)"
+}

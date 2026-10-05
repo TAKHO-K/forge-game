@@ -468,4 +468,370 @@ do
 	}
 end
 
+
+-- ═══════════════════════════ 빙하 매머드 "빙하 엄니" v2(BOSS-NIGHT-1 1 · Meshy 몸 · 네 발 · 바이블 §2-6 + MAMMOTH-SCORPION-NOTES) ═══════════════════════════
+-- 리그 = BossRigV2Data frost_giant_v2(다리 = 아래로 곧게 · 코 = 아래로 늘어짐 · 상아 = 앞으로). 부호: 다리 rx + = 앞으로 듦 · 무릎/팔꿈치 rx − = 접음 ·
+--   RootJoint rx + = 코가 아래(앞으로 숙임) · − = 뒷다리로 일어섬 · Waist(엉덩이 → 앞몸) rx − = 앞몸 숙임 · Neck rx − = 고개 숙임 · 코 마디 rx + = 앞 · 위로 말아 올림 · rz = 옆으로.
+-- 동작 마지막 키 = 빈 자세({}) → 세트 기본 자세로. 앞발이 들리면 발 접지 보정(가장 낮은 발 = 땅)이 뒷발을 땅에 둔다.
+do
+	local REST_POSE = {}
+	local function trunk(a, side)
+		local z = (side or 0) * 0.7 -- 사슬 끝은 마디 각이 쌓인다(코끝 각속도 - 튐 검사) → 마디마다 작게
+		return { Trunk1 = { a * 0.45, 0, z }, Trunk2 = { a * 0.65, 0, z }, Trunk3 = { a * 0.7, 0, z }, Trunk4 = { a * 0.7, 0, z }, Trunk5 = { a * 0.7, 0, z }, Trunk6 = { a * 0.6, 0, z } }
+	end
+	-- 뒷다리로 일어섬(앞발 듦 · 뒷다리는 몸 기울기만큼 되돌려 땅을 짚음)
+	local function rear(pitch, front)
+		return merge({ RootJoint = { -pitch, 0, 0, 0, 0.12 * pitch / 30, 0.18 * pitch / 30 }, Hip_L = { pitch, 0, 0 }, Hip_R = { pitch, 0, 0 }, Neck = { 12, 0, 0 },
+			Shoulder_L = { front, 0, 0 }, Shoulder_R = { front, 0, 0 }, Elbow_L = { -front * 0.8, 0, 0 }, Elbow_R = { -front * 0.8, 0, 0 } }, trunk(14))
+	end
+	local REAR = rear(28, 70)
+	local REAR_HI = merge(rear(34, 80), trunk(20))
+	-- 앞발로 내리찍음(코 · 머리 숙임)
+	local SLAM = merge({ RootJoint = { 10, 0, 0, 0, -0.06, -0.05 }, Hip_L = { -10, 0, 0 }, Hip_R = { -10, 0, 0 }, Neck = { -18, 0, 0 }, Shoulder_L = { -8, 0, 0 }, Shoulder_R = { -8, 0, 0 },
+		Ear_L = { 0, 0, -18 }, Ear_R = { 0, 0, 18 } }, trunk(-6))
+	local SLAM_LOW = merge(SLAM, { RootJoint = { 13, 0, 0, 0, -0.1, -0.06 }, Neck = { -24, 0, 0 } })
+	local CROUCH = { RootJoint = { 6, 0, 0, 0, -0.08, 0 }, Hip_L = { -6, 0, 0 }, Hip_R = { -6, 0, 0 }, Neck = { -10, 0, 0 } }
+	local HEAD_DOWN = merge({ RootJoint = { 8, 0, 0, 0, -0.05, 0 }, Hip_L = { -8, 0, 0 }, Hip_R = { -8, 0, 0 }, Neck = { -30, 0, 0 } }, trunk(-8))
+	-- 변신 뒤(분노): 고개를 낮추고 상아를 앞으로 · 귀 펼침 · 코 살짝 말림
+	local ANGRY = merge({ Neck = { -10, 0, 0 }, Ear_L = { 0, 0, -16 }, Ear_R = { 0, 0, 16 }, Fur1 = { -6, 0, 0 }, Fur2 = { -6, 0, 0 } }, trunk(6))
+
+	local C = {}
+	-- 1 빙결 강타 slam(원 r18 · 2.25초): 웅크림 → 뒷다리로 일어서 앞발 높이 → 내리찍기(앞발 번쩍)
+	C.m_slam = {
+		pre = {
+			{ f = 0.22, ease = "inout", pose = CROUCH },
+			{ f = 0.66, ease = "inout", pose = REAR },
+			{ f = 1.0, ease = "in", pose = REAR_HI },
+		},
+		post = {
+			{ s = 0.1, ease = "in", pose = SLAM },
+			{ s = 0.4, ease = "out", pose = SLAM_LOW },
+			{ s = 1.4, ease = "inout", pose = REST_POSE },
+		},
+		hitstop = 0.06, squash = 0.3,
+	}
+	-- 2 낙빙 icefall: 몸을 부르르 털어 등 얼음 조각을 날림(등 얼음이 흔들렸다 솟음)
+	local SHAKE_L = merge(CROUCH, { RootJoint = { 4, 0, 9, 0, -0.05, 0 }, Neck = { -6, 10, 6 }, Fur1 = { 0, 0, 10 }, Fur2 = { 0, 0, 12 }, BackIce = { 0, 0, 10 }, Ear_L = { 0, 0, -20 } })
+	local SHAKE_R = merge(CROUCH, { RootJoint = { 4, 0, -9, 0, -0.05, 0 }, Neck = { -6, -10, -6 }, Fur1 = { 0, 0, -10 }, Fur2 = { 0, 0, -12 }, BackIce = { 0, 0, -10 }, Ear_R = { 0, 0, 20 } })
+	C.m_icefall = {
+		pre = {
+			{ f = 0.3, ease = "inout", pose = CROUCH },
+			{ f = 0.5, ease = "inout", pose = SHAKE_L },
+			{ f = 0.7, ease = "inout", pose = SHAKE_R },
+			{ f = 1.0, ease = "out", pose = merge(rear(10, 20), { BackIce = { 0, 0, 0, 0, 0.12, 0 }, Fur2 = { 8, 0, 0 } }) },
+		},
+		post = {
+			{ s = 0.12, ease = "inout", pose = SHAKE_L },
+			{ s = 0.3, ease = "inout", pose = SHAKE_R },
+			{ s = 1.0, ease = "inout", pose = REST_POSE },
+		},
+		hitstop = 0.05,
+		extraStrikes = { pre = { 0.5, 0.7 }, post = { 0.12, 0.3 } },
+	}
+	-- 3 얼음 가시 spike(직선): 상아를 낮춰 땅을 갈며 앞으로 밀어냄
+	C.m_spike = {
+		pre = {
+			{ f = 0.4, ease = "inout", pose = HEAD_DOWN },
+			{ f = 1.0, ease = "in", pose = merge(HEAD_DOWN, { Neck = { -40, 0, 0 }, RootJoint = { 12, 0, 0, 0, -0.08, 0.05 } }) },
+		},
+		post = {
+			{ s = 0.1, ease = "out", pose = merge(HEAD_DOWN, { Neck = { -34, 0, 0 }, RootJoint = { 10, 0, 0, 0, -0.06, -0.12 } }) },
+			{ s = 0.6, ease = "inout", pose = merge(HEAD_DOWN, { Neck = { -26, 0, 0 } }) },
+			{ s = 1.4, ease = "inout", pose = REST_POSE },
+		},
+		hitstop = 0.06, squash = 0.15,
+	}
+	-- 4 눈보라 포효 roar(전멸기 · 등장): 코를 치켜들고 숨 들이쉼 → 포효(틱마다 코 떨림)
+	local ROAR = merge(rear(8, 10), { Neck = { 26, 0, 0 }, Ear_L = { 0, 0, -28 }, Ear_R = { 0, 0, 28 } }, trunk(26))
+	C.roar = {
+		pre = {
+			{ f = 0.6, ease = "inout", pose = merge(CROUCH, { Neck = { -16, 0, 0 } }, trunk(-4)) },
+			{ f = 1.0, ease = "inout", pose = merge(rear(6, 6), { Neck = { 18, 0, 0 } }, trunk(18)) },
+		},
+		post = { { s = 0.14, ease = "out", pose = ROAR } },
+		loop = { period = 0.16, poses = { ROAR, merge(ROAR, { Neck = { 28, 0, 2 } }, trunk(30, 3)) } },
+	}
+	-- 5 강화 평타 swipe(부채 r14): 머리를 오른쪽으로 감았다가 상아로 크게 휘두름(상아 번쩍)
+	C.m_swipe = {
+		pre = {
+			{ f = 0.45, ease = "inout", pose = merge(CROUCH, { Waist = { 0, 14, 0 }, Neck = { -12, 34, 8 } }, trunk(4, 10)) },
+			{ f = 1.0, ease = "out", pose = merge(CROUCH, { Waist = { 0, 18, 0 }, Neck = { -14, 44, 12 } }, trunk(6, 14)) },
+		},
+		post = {
+			{ s = 0.08, ease = "out", pose = merge(CROUCH, { Waist = { 0, -16, 0 }, Neck = { -16, -40, -12 } }, trunk(2, -16)) },
+			{ s = 0.26, ease = "back", pose = merge(CROUCH, { Waist = { 0, -20, 0 }, Neck = { -16, -46, -12 } }, trunk(2, -20)) },
+			{ s = 0.95, ease = "inout", pose = REST_POSE },
+		},
+		hitstop = 0.06, squash = 0.06,
+		tremble = { from = 0.6, amp = 3, joints = { "Neck" } },
+	}
+	-- 6 서리 손아귀 grab: 코를 높이 쳐들어 경고 → 코로 감아 들어 한 바퀴 돌려 던지기(잡기 흐름)
+	local TRUNK_UP = merge(rear(8, 8), { Neck = { 20, 0, 0 } }, trunk(30))
+	C.grab_tele = {
+		pre = {
+			{ f = 0.2, ease = "out", pose = HEAD_DOWN },
+			{ f = 0.8, ease = "inout", pose = TRUNK_UP },
+			{ f = 1.0, ease = "inout", pose = merge(TRUNK_UP, trunk(34)) },
+		},
+		post = { { s = 0.15, ease = "out", pose = merge(TRUNK_UP, { Neck = { 10, 0, 0 } }) } },
+		tremble = { from = 0.75, amp = 2.5, joints = { "Trunk2", "Trunk3" } },
+	}
+	local REACH = merge({ Neck = { -6, 0, 0 }, RootJoint = { 5, 0, 0, 0, -0.03, -0.06 } }, trunk(18))
+	C.grab_reach = {
+		post = { { s = 0.15, ease = "out", pose = REACH } },
+		loop = { period = 0.32, poses = { REACH, merge(REACH, trunk(22, 4)) } },
+		upper = true,
+	}
+	local HOLD = merge({ Neck = { 22, 0, 0 } }, trunk(40))
+	C.grab_hold = {
+		post = { { s = 0.25, ease = "out", pose = HOLD } },
+		loop = { period = 0.5, poses = { HOLD, merge(HOLD, { Neck = { 22, 6, 2 } }, trunk(42, 4)) } },
+	}
+	C.grab_snatch = {
+		post = {
+			{ s = 0.06, ease = "out", pose = trunk(10) },
+			{ s = 0.5, ease = "inout", pose = {} },
+		},
+		hitstop = 0.05,
+	}
+	C.m_throw = { -- 한 바퀴 돌려(몸 비틀기) 내던짐
+		pre = {
+			{ f = 0.5, ease = "inout", pose = merge(HOLD, { Waist = { 0, 30, 0 }, Neck = { 18, 40, 0 } }, trunk(44, 20)) },
+			{ f = 1.0, ease = "inout", pose = merge(HOLD, { Waist = { 0, 34, 0 }, Neck = { 20, 50, 0 } }, trunk(46, 24)) },
+		},
+		post = {
+			{ s = 0.1, ease = "out", pose = merge({ Waist = { 0, -26, 0 }, Neck = { -6, -36, 0 } }, trunk(10, -20)) },
+			{ s = 0.85, ease = "inout", pose = REST_POSE },
+		},
+		hitstop = 0.06,
+	}
+	-- 7 얼음 거울 mirror: 웅크리고 털이 얼어붙음(등 털 · 얼음 맥박)
+	local HUNKER = merge(CROUCH, { RootJoint = { 2, 0, 0, 0, -0.14, 0 }, Neck = { -22, 0, 0 }, Ear_L = { 0, 0, 10 }, Ear_R = { 0, 0, -10 }, Fur1 = { 0, 0, 0, 0, 0.04, 0 }, Fur2 = { 0, 0, 0, 0, 0.05, 0 }, Fur3 = { 0, 0, 0, 0, 0.04, 0 } }, trunk(-10))
+	C.m_mirror = {
+		pre = {
+			{ f = 0.5, ease = "inout", pose = CROUCH },
+			{ f = 1.0, ease = "out", pose = HUNKER },
+		},
+		post = { { s = 0.1, ease = "out", pose = merge(HUNKER, { BackIce = { 0, 0, 0, 0, 0.06, 0 } }) } },
+		loop = { period = 0.6, poses = { HUNKER, merge(HUNKER, { BackIce = { 0, 0, 0, 0, 0.08, 0 }, Fur2 = { 0, 0, 0, 0, 0.08, 0 } }) } },
+		hitstop = 0.05,
+	}
+	-- 8 원 안 짓밟기 innerSmash: 반쯤 일어서 두 앞발로 발치를 짓밟음
+	local REAR_MID = rear(18, 48)
+	C.m_inner = {
+		pre = {
+			{ f = 0.4, ease = "inout", pose = CROUCH },
+			{ f = 1.0, ease = "in", pose = REAR_MID },
+		},
+		post = {
+			{ s = 0.07, ease = "in", pose = SLAM },
+			{ s = 0.3, ease = "out", pose = SLAM_LOW },
+			{ s = 1.0, ease = "inout", pose = REST_POSE },
+		},
+		hitstop = 0.07, squash = 0.25,
+	}
+	-- 9 발 구르기 stomp(r30 · 점프로 넘기): 몸을 왼쪽으로 실어 오른 앞발을 높이 → 쿵
+	local STOMP_UP = merge({ RootJoint = { -8, 0, -6, 0, 0.04, 0 }, Hip_L = { 8, 0, 0 }, Hip_R = { 8, 0, 0 }, Shoulder_R = { 80, 0, -6 }, Elbow_R = { -70, 0, 0 }, Neck = { 10, 10, 0 } }, trunk(10))
+	C.m_stomp = {
+		pre = {
+			{ f = 0.4, ease = "inout", pose = { RootJoint = { 0, 0, -6, 0, 0, 0 }, Neck = { -6, 0, 0 } } },
+			{ f = 1.0, ease = "in", pose = STOMP_UP },
+		},
+		post = {
+			{ s = 0.07, ease = "in", pose = merge({ RootJoint = { 6, 0, 2, 0, -0.06, 0 }, Shoulder_R = { -6, 0, 0 }, Elbow_R = { 0, 0, 0 }, Neck = { -16, 0, 0 } }, trunk(-6)) },
+			{ s = 0.35, ease = "out", pose = merge(SLAM, { RootJoint = { 8, 0, 0, 0, -0.08, 0 } }) },
+			{ s = 1.1, ease = "inout", pose = REST_POSE },
+		},
+		hitstop = 0.08, squash = 0.3,
+	}
+	-- 10 눈덩이 snowball: 코를 땅에 대고 둥글게 굴려 → 앞으로 밀어 보냄(2개 = 좌우)
+	C.m_snowball = {
+		pre = {
+			{ f = 0.45, ease = "inout", pose = merge(HEAD_DOWN, trunk(-14, 12)) },
+			{ f = 1.0, ease = "inout", pose = merge(HEAD_DOWN, { Neck = { -24, 0, 0 } }, trunk(-18, -12)) },
+		},
+		post = {
+			{ s = 0.1, ease = "out", pose = merge({ RootJoint = { 6, 0, 0, 0, -0.03, -0.1 }, Neck = { -12, 0, 0 } }, trunk(24)) },
+			{ s = 0.95, ease = "inout", pose = REST_POSE },
+		},
+		hitstop = 0.05,
+	}
+	-- 11 얼음 상아 발사 tuskShot(얼음 창 대체): 머리 숙임 → 상아에 얼음이 자람(1.4초 · 상아 발광) → 고개를 쳐들며 왼 · 오른 2발(0.4초 간격)
+	C.m_tusk = {
+		pre = {
+			{ f = 0.45, ease = "inout", pose = HEAD_DOWN },
+			{ f = 1.0, ease = "in", pose = merge(HEAD_DOWN, { Neck = { -34, 8, 0 } }) },
+		},
+		post = {
+			{ s = 0.08, ease = "out", pose = merge({ Neck = { 8, 14, 0 }, RootJoint = { -4, 0, 0, 0, 0.02, 0.04 } }, trunk(8)) }, -- 왼 상아 발사
+			{ s = 0.3, ease = "inout", pose = merge(HEAD_DOWN, { Neck = { -20, -8, 0 } }) },
+			{ s = 0.48, ease = "out", pose = merge({ Neck = { 8, -14, 0 }, RootJoint = { -4, 0, 0, 0, 0.02, 0.04 } }, trunk(8)) }, -- 오른 상아 발사
+			{ s = 1.2, ease = "inout", pose = REST_POSE },
+		},
+		hitstop = 0.05,
+		extraStrikes = { post = { 0.48 } },
+	}
+	-- 12 코 채찍 trunkWhip(앞 140° 부채): 코를 오른쪽으로 감아 들었다가 왼쪽으로 크게 휘두름(코 끝 3마디 번쩍)
+	C.m_trunk = {
+		pre = {
+			{ f = 0.45, ease = "inout", pose = merge(CROUCH, { Neck = { -6, 24, 0 }, Waist = { 0, 8, 0 } }, trunk(20, 18)) },
+			{ f = 1.0, ease = "out", pose = merge(CROUCH, { Neck = { -4, 32, 0 }, Waist = { 0, 12, 0 } }, trunk(26, 24)) },
+		},
+		post = {
+			{ s = 0.08, ease = "out", pose = merge(CROUCH, { Neck = { -10, -30, 0 }, Waist = { 0, -12, 0 } }, trunk(14, -26)) },
+			{ s = 0.28, ease = "back", pose = merge(CROUCH, { Neck = { -10, -36, 0 }, Waist = { 0, -14, 0 } }, trunk(10, -30)) },
+			{ s = 1.0, ease = "inout", pose = REST_POSE },
+		},
+		hitstop = 0.06,
+		tremble = { from = 0.65, amp = 3, joints = { "Trunk3", "Trunk4" } },
+	}
+	-- 13 상아 돌진 gore: 고개 숙이고 앞발로 땅 긁기 2번 → 웅크림 → 상아 앞세워 질주(접촉부터 다리 = 네 발 보행 주기)
+	local GORE = merge(HEAD_DOWN, { Neck = { -26, 0, 0 }, Ear_L = { 0, 0, -20 }, Ear_R = { 0, 0, 20 } })
+	C.m_gore = {
+		pre = {
+			{ f = 0.3, ease = "inout", pose = GORE },
+			{ f = 0.45, ease = "out", pose = merge(GORE, { Shoulder_R = { 30, 0, 0 }, Elbow_R = { -30, 0, 0 } }) },
+			{ f = 0.58, ease = "in", pose = merge(GORE, { Shoulder_R = { -12, 0, 0 } }) },
+			{ f = 0.72, ease = "out", pose = merge(GORE, { Shoulder_R = { 30, 0, 0 }, Elbow_R = { -30, 0, 0 } }) },
+			{ f = 0.85, ease = "in", pose = merge(GORE, { Shoulder_R = { -12, 0, 0 } }) },
+			{ f = 1.0, ease = "inout", pose = merge(GORE, { RootJoint = { 12, 0, 0, 0, -0.1, 0.05 } }) },
+		},
+		post = { { s = 0.08, ease = "out", pose = { Neck = { -26, 0, 0 }, RootJoint = { 8, 0, 0, 0, -0.04, 0 } } } },
+		loop = { period = 0.3, poses = { { Neck = { -26, 0, 0 } }, { Neck = { -22, 0, 0 } } } },
+		upper = true, glare = true, hitstop = 0.05,
+		extraStrikes = { pre = { 0.45, 0.58, 0.72, 0.85 } },
+	}
+	-- 14 뒷발차기 backKick(반응 · 뒤 120°): 앞발 버티고 엉덩이를 들어 → 두 뒷다리로 뒤를 걷어참(뒷발 번쩍)
+	local KICK_LOAD = { RootJoint = { 14, 0, 0, 0, -0.04, -0.06 }, Hip_L = { 22, 0, 0 }, Hip_R = { 22, 0, 0 }, Knee_L = { -40, 0, 0 }, Knee_R = { -40, 0, 0 }, Neck = { -16, 0, 0 }, Shoulder_L = { -12, 0, 0 }, Shoulder_R = { -12, 0, 0 } }
+	local KICK = { RootJoint = { 20, 0, 0, 0, -0.06, -0.1 }, Hip_L = { -62, 0, 0 }, Hip_R = { -62, 0, 0 }, Knee_L = { -6, 0, 0 }, Knee_R = { -6, 0, 0 }, Ankle_L = { -20, 0, 0 }, Ankle_R = { -20, 0, 0 },
+		Neck = { -20, 0, 0 }, Shoulder_L = { -16, 0, 0 }, Shoulder_R = { -16, 0, 0 }, Tail1 = { 30, 0, 0 } }
+	C.m_kick = {
+		pre = {
+			{ f = 0.45, ease = "inout", pose = merge(CROUCH, { Neck = { -10, 0, 0 } }) },
+			{ f = 1.0, ease = "in", pose = KICK_LOAD },
+		},
+		post = {
+			{ s = 0.07, ease = "out", pose = KICK },
+			{ s = 0.3, ease = "out", pose = merge(KICK, { Hip_L = { -55, 0, 0 }, Hip_R = { -55, 0, 0 } }) },
+			{ s = 1.0, ease = "inout", pose = REST_POSE },
+		},
+		hitstop = 0.06, squash = 0.2,
+	}
+	-- 환경(빙하 균열 · 50% 뒤 두 번째 시계): 포효하듯 크게 일어서 두 앞발로 땅을 내리찍음
+	C.m_env = {
+		pre = {
+			{ f = 0.25, ease = "inout", pose = CROUCH },
+			{ f = 0.7, ease = "inout", pose = merge(REAR_HI, { Neck = { 22, 0, 0 } }, trunk(28)) },
+			{ f = 1.0, ease = "in", pose = merge(rear(38, 86), trunk(30)) },
+		},
+		post = {
+			{ s = 0.08, ease = "in", pose = SLAM_LOW },
+			{ s = 0.45, ease = "out", pose = merge(SLAM_LOW, { Neck = { -30, 0, 0 } }) },
+			{ s = 1.4, ease = "inout", pose = REST_POSE },
+		},
+		hitstop = 0.08, squash = 0.3,
+	}
+	-- 50% 변신(겉모습 격노): 웅크림 → 크게 일어서 포효(등 얼음이 솟음) → 쿵 → 분노 세트(고개 낮춤 · 귀 펼침)
+	C.m_transform = {
+		pre = {
+			{ f = 0.35, ease = "inout", pose = merge(CROUCH, { Neck = { -20, 0, 0 } }) },
+			{ f = 1.0, ease = "out", pose = merge(REAR_HI, { Neck = { 28, 0, 0 }, BackIce = { 0, 0, 0, 0, 0.1, 0 } }, trunk(30)) },
+		},
+		post = {
+			{ s = 0.0, ease = "out", pose = merge(REAR_HI, { Neck = { 30, 0, 0 }, BackIce = { 0, 0, 0, 0, 0.14, 0 }, Ear_L = { 0, 0, -30 }, Ear_R = { 0, 0, 30 } }, trunk(32)) },
+			{ s = 0.5, ease = "inout", pose = merge(REAR_HI, { Neck = { 26, 0, 2 }, BackIce = { 0, 0, 0, 0, 0.12, 0 } }, trunk(28, 4)) },
+			{ s = 0.9, ease = "in", pose = merge(SLAM_LOW, ANGRY) },
+			{ s = 1.6, ease = "inout", pose = ANGRY },
+		},
+		hitstop = 0.06, align = false,
+	}
+	-- 평타(상아 짧게 찌르기 - 좌우 번갈아)
+	local basicR = {
+		post = {
+			{ s = 0.08, ease = "out", pose = { Neck = { -14, -22, -8 }, RootJoint = { 4, 0, 0, 0, 0, -0.05 } } },
+			{ s = 0.18, ease = "back", pose = { Neck = { -16, -26, -8 } } },
+			{ s = 0.65, ease = "inout", pose = REST_POSE },
+		},
+		hitstop = 0.04,
+	}
+	C.basic_R = basicR
+	C.basic_L = { post = { { s = 0.08, ease = "out", pose = mirror(basicR.post[1].pose) }, { s = 0.18, ease = "back", pose = mirror(basicR.post[2].pose) }, { s = 0.65, ease = "inout", pose = REST_POSE } }, hitstop = 0.04 }
+	local prepR = { Neck = { -6, 18, 6 }, Waist = { 0, 6, 0 } }
+
+	-- plan 덮어쓰기(직립 plan 값 대신 네 발 값): 등장 웅크림 · 피격 · 기절(배를 깔고 주저앉음 + 별) · 처치(옆으로 쓰러짐) · 평타 예비
+	local SIT = merge({ RootJoint = { 4, 0, 0, 0, -0.18, 0 }, Shoulder_L = { 40, 0, 10 }, Shoulder_R = { 40, 0, -10 }, Elbow_L = { -50, 0, 0 }, Elbow_R = { -50, 0, 0 },
+		Hip_L = { -30, 0, -10 }, Hip_R = { -30, 0, 10 }, Knee_L = { -20, 0, 0 }, Knee_R = { -20, 0, 0 }, Neck = { -18, 0, 0 }, Ear_L = { 0, 0, 12 }, Ear_R = { 0, 0, -12 } }, trunk(-10))
+	local STAGGER = merge({ RootJoint = { 4, 0, 10, 0.04, -0.06, 0 }, Neck = { -14, 14, 10 }, Shoulder_L = { 14, 0, -8 }, Hip_R = { -8, 0, 8 } }, trunk(-4, 10))
+	local planPatch = {
+		introCrouch = merge(CROUCH, { RootJoint = { 6, 0, 0, 0, -0.16, 0 }, Neck = { -30, 0, 0 } }, trunk(-10)),
+		introRoar = "roar",
+		flinch = { seconds = 0.3, pose = { Neck = { 8, 0, 4 }, RootJoint = { -3, 0, 0, 0, 0, 0.04 }, Ear_L = { 0, 0, -8 }, Ear_R = { 0, 0, 8 } } },
+		stun = { stagger = STAGGER, sit = SIT, staggerSeconds = 0.5, riseSeconds = 0.9, wobble = { hz = 0.8, neck = 10, waist = 3 }, eyes = { 0, 0, 0 } },
+		death = {
+			keys = {
+				{ s = 0.3, ease = "out", pose = STAGGER },
+				{ s = 0.8, ease = "inout", pose = merge(STAGGER, { RootJoint = { 4, 0, -8, -0.03, -0.08, 0 } }) },
+				{ s = 1.3, ease = "in", pose = SIT }, -- 털썩 주저앉음
+				{ s = 1.6, ease = "out", pose = merge(SIT, { RootJoint = { 6, 0, 22, 0, -0.26, 0 }, Neck = { -28, 0, 16 } }, trunk(-14)) }, -- 옆으로 기울며 고개 떨굼
+			},
+			hitstopAt = 1.3, fadeFrom = 2.1, fadeSeconds = 0.5, scatterFrom = 1.85, eyes = { 0, 0, 0 }, stars = true, slowSeconds = 0.8, slowRate = 0.4,
+		},
+		basicPrep = { R = prepR, L = mirror(prepR) },
+	}
+
+	local SKILLS = {
+		slam = "m_slam", icefall = "m_icefall", spike = "m_spike", roar = "roar", swipe = "m_swipe", grab = "@grab", mirror = "m_mirror", innerSmash = "m_inner",
+		spear = "m_tusk", stomp = "m_stomp", snowball = "m_snowball",
+		tuskShot = "m_tusk", trunkWhip = "m_trunk", gore = "m_gore", backKick = "m_kick", -- BOSS-NIGHT-1 새 몸 신규 4패턴(BossFrameworkData.v3.frost_giant · 얼음 창 spear = 옛 스킬표 자리 - 새 몸에선 빠짐)
+	}
+	local MOTIONS = { idle = "gait", walk = "gait", intro = "plan:introCrouch", death = "plan:death", env = "m_env", flinch = "plan:flinch", stun = "plan:stun" }
+	local TUSKS, FRONT_FEET = { "Tusk_L", "Tusk_R" }, { "Hand_L", "Hand_R" }
+	D.frost_giant_v2 = {
+		plan = "biped",
+		planPatch = planPatch,
+		stunStars = true,
+		forms = {
+			before = {
+				gait = "quad", stance = {}, guard = {}, contacts = { "Foot_L", "Foot_R", "Hand_L", "Hand_R" },
+				walk = { stride = 0.5, knee = 18, arm = 0, bob = 0.03, lean = 3, twist = 2, turnLean = 3, runAt = 1.6, armSwing = 1.0, armLift = 18, legLift = 20 },
+				motions = MOTIONS, skills = SKILLS, env = "m_env", throw = "m_throw",
+			},
+			after = {
+				gait = "quad", stance = ANGRY, guard = ANGRY, contacts = { "Foot_L", "Foot_R", "Hand_L", "Hand_R" },
+				walk = { stride = 0.56, knee = 20, arm = 0, bob = 0.04, lean = 4, twist = 3, turnLean = 4, runAt = 1.6, armSwing = 1.0, armLift = 20, legLift = 22 },
+				motions = MOTIONS, skills = SKILLS, env = "m_env", throw = "m_throw",
+			},
+		},
+		transform = { clip = "m_transform", hit = 1.0, switchAt = 1.6, seconds = 2.8 },
+		intro = { style = "iceBreak", depth = 0.9, riseFrac = 0.4, riseEase = "back" },
+		signature = { "slam", "roar", "gore", "tuskShot", "stomp", "trunkWhip", "backKick", "icefall", "spike", "snowball", "innerSmash", "mirror" },
+		flash = {
+			slam = FRONT_FEET, icefall = { "BackIce" }, spike = TUSKS, roar = { "Head" }, swipe = TUSKS, grab = { "Trunk5", "Trunk6" }, mirror = { "Fur2" }, innerSmash = FRONT_FEET,
+			spear = TUSKS, stomp = { "Hand_R" }, snowball = { "Trunk6" },
+			tuskShot = TUSKS, trunkWhip = { "Trunk4", "Trunk5", "Trunk6" }, gore = { "Tusk_L", "Tusk_R", "Head" }, backKick = { "Foot_L", "Foot_R" },
+		},
+		impacts = {
+			m_slam = { kind = "ground", parts = FRONT_FEET, size = 0.3, shake = 1.1, heavy = true },
+			m_icefall = { kind = "spark", parts = { "BackIce" }, size = 1.1 },
+			m_spike = { kind = "ground", parts = TUSKS, size = 0.8, shake = 0.6, floorDust = true },
+			m_swipe = { kind = "whoosh", parts = { "Tusk_R" }, size = 1.2 },
+			m_mirror = { kind = "spark", parts = { "Fur2" }, size = 1.0 },
+			m_inner = { kind = "ground", parts = FRONT_FEET, size = 0.28, shake = 1.0, heavy = true },
+			m_stomp = { kind = "ground", parts = { "Hand_R" }, size = 0.4, shake = 1.2, heavy = true },
+			m_snowball = { kind = "whoosh", parts = { "Trunk6" }, size = 1.0, floorDust = true },
+			m_tusk = { kind = "spark", parts = TUSKS, size = 1.0 },
+			m_trunk = { kind = "whoosh", parts = { "Trunk6" }, size = 1.2 },
+			m_gore = { kind = "roar", parts = { "Head" }, size = 0.8, shake = 0.5 },
+			m_kick = { kind = "ground", parts = { "Foot_L", "Foot_R" }, size = 0.5, shake = 0.8 },
+			m_env = { kind = "ground", parts = FRONT_FEET, size = 1.3, shake = 1.3 },
+			m_throw = { kind = "whoosh", parts = { "Trunk6" }, size = 1.0 },
+			m_transform = { kind = "roar", parts = { "Head" }, size = 1.3, shake = 0.9 },
+			roar = { kind = "roar", parts = { "Head" }, size = 1.2, shake = 0.8 },
+			basic_R = { kind = "whoosh", parts = { "Tusk_R" }, size = 0.6 },
+			basic_L = { kind = "whoosh", parts = { "Tusk_L" }, size = 0.6 },
+		},
+		clips = C,
+	}
+end
+
 return D

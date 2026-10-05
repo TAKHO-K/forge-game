@@ -5,7 +5,7 @@ local D = {}
 --   live = 실전(라이브 포함) - **설계 담당이 수호자 시험을 검수한 뒤에만 채운다**(지금 비어 있음 = 6보스 모두 옛 몸).
 --   studioTrial = Studio에서 workspace Attribute BossFrameworkTrial = true일 때만(시험 · 촬영 · 하네스) - 라이브 서버에서는 무시.
 D.live = {}
-D.studioTrial = { section_guardian = "v2" }
+D.studioTrial = { section_guardian = "v2", frost_giant = "v2" } -- BOSS-NIGHT-1: 매머드 새 몸(시험 스위치로만)
 D.trialAttribute = "BossFrameworkTrial"
 
 -- GUARDIAN-V2 몸 가장자리 기준 근접 반경(바이블 §5 - 공통 장치 · 보스별 · 기본 끔 = 표에 없음): 새 몸(리그 v2 · edgeHalfWidth)이 뜰 때만
@@ -16,6 +16,9 @@ D.bodyEdge = {
 	-- GUARDIAN-V3 6(사용자 목표: 첫 조우 전멸 ≤ 50% - 근접 · 원거리 각각): 키 30 · 돌진 폭 = 몸 폭 · 바나나 · 도약이 더해진 V3 모형에서 체력 × 0.85 · 피해 × 0.62
 	--   (BossSim 600판 · 스테이지 100 · 500 - 처음 전멸 원거리 약 46% · 근접 약 43% · 처치 58초 · guardian_v3/s6_bosssim.txt). 아는 보스 전멸 약 24 ~ 28%(바이블 30 ~ 50 하한 아래 - 보고서 결정 필요).
 	section_guardian = { skills = { heavy = true, innerSmash = true, swipe = true, mirror = true }, innerSafe = true, chaseStop = true, damageScale = 0.62, hpScale = 0.85 },
+	-- BOSS-NIGHT-1 1 매머드: 보스 중심 원 · 부채(빙결 강타 r18 · 원 안 짓밟기 · 강화 평타 · 발 구르기 r30 · 얼음 거울) = 몸 가장자리 기준 · 밸런스 = BossSim(mammoth_v1/s_bosssim.txt)
+	--   피해 × 0.60(600판 · 처음 전멸 원거리 약 41% · 근접 약 48% ≤ 50 · 아는 보스 약 14 ~ 21% = 바이블 30 ~ 50 하한 아래 - 수호자와 같은 구조 · 보고서 결정 필요)
+	frost_giant = { skills = { slam = true, innerSmash = true, swipe = true, stomp = true, mirror = true }, innerSafe = true, chaseStop = true, damageScale = 0.60, hpScale = 1.0 },
 }
 
 -- GUARDIAN-V3(사용자 시험 피드백 · 바이블 §11): 새 몸이 뜰 때만(BossFramework.applyV3 - 몸 가장자리 장치 뒤 · 인스턴스 사본 · BossData 원본 · 라이브 무변경).
@@ -70,13 +73,73 @@ D.v3 = {
 		-- 원거리가 30 stud 밖에 있는 비율 0.25: 활 사거리 15(10 × 1.5) + 새 몸 피격 반경 약 6.2 = 보스 중심 약 21 stud 안에서 때린다 → 30 밖 = 피하기 · 물러남 동안만(보스 질주 15.6이 따라붙음)
 		sim = { rangedFarShare = 0.25, meleeFarShare = 0.08, farSegmentSeconds = 3, bananaHit = { first = 0.45, later = 0.3 }, leapHit = { first = 0.55, later = 0.35 } },
 	},
+	-- BOSS-NIGHT-1 1 빙하 매머드 "빙하 엄니"(설계 메모 MAMMOTH-SCORPION-NOTES · 새 몸이 뜰 때만): 수호자와 같은 근접 규칙(바닥 표시 없음 · 예비 +0.12 · 엄니/코/발 발광) +
+	--   신규 4패턴 = 얼음 상아 발사 tuskShot(얼음 창 spear 대체 · 고드름처럼 자기 축 회전 2발) · 코 채찍 trunkWhip · 상아 돌진 gore(경로 폭 = 몸 폭 · 균열선) · 뒷발차기 backKick(반응 - 뒤쪽 1.5초).
+	--   앞 구역 = 상아 · 코 · 앞발(radiusFrom = "front" - 몸 중심 → 머리 앞 끝) · 뒤 구역 = 뒷발차기(radiusFrom = "rear" - 몸 중심 → 엉덩이 끝) · 옆구리는 상대 안전.
+	frost_giant = {
+		hideFloor = { slam = true, innerSmash = true, swipe = true, trunkWhip = true, backKick = true, basic = true, innerRing = true },
+		windup = { seconds = 0.12, skills = { slam = true, innerSmash = true, swipe = true, trunkWhip = true }, basic = true },
+		glow = { color = Color3.fromRGB(120, 200, 255), fillPeak = 0.55, outline = 0.35, skills = { slam = true, innerSmash = true, swipe = true, trunkWhip = true, backKick = true, tuskShot = true, gore = true }, basic = true,
+			basicParts = { R = "Tusk_R", L = "Tusk_L" } },
+		marks = { color = LAVENDER, crackColor = Color3.fromRGB(160, 90, 255), transparency = 0.6, crackTransparency = 0.25, crackWidth = 0.35 },
+		bodyCharges = { gore = true }, -- 돌진 경로 반폭 = 몸 가장자리 반폭 · 균열선
+		lockFacing = true, -- 스킬 시작 순간 대상 쪽으로 몸 방향 고정(스킬 동안 안 돎 → 등 뒤가 생긴다 - 뒷발차기) · 스킬 끝 = 다시 대상을 봄
+		displayNameNote = "빙하 엄니", -- 표시 이름 = BossData displayName(전 몸 공통 - 사용자 확정)
+		removeSkills = { "spear" }, -- 얼음 창 → 얼음 상아 발사(tuskShot)
+		addSkills = {
+			-- 얼음 상아 발사: 머리 숙임 → 상아에 얼음이 자람(1.4초) → 얼음 상아 복제 2발(왼 → 오른 0.4초 간격 · 자기 축 회전) · 상아 본체는 그대로
+			tuskShot = {
+				primitive = "projectile", bubble = "meteor", motion = "tusk", projectileStyle = "icetusk",
+				cooldownSeconds = 12, priority = 0, starvationSeconds = 45,
+				telegraphSeconds = 1.4, count = 2, spreadDeg = 10, launchIntervalSeconds = 0.4,
+				speedStuds = 70, turnRateDeg = 0, radiusStuds = 2.5, lifetimeSeconds = 3, heightMode = "air", launchHeightStuds = 12,
+				targetRule = "target", leadSeconds = 0.6, leadFraction = 0.5, reflectable = true,
+				damage = { kind = "attack", multiplier = 1.8 }, damageLabel = "얼음 상아",
+				meshSlot = "FrostIceTusk",
+			},
+			-- 코 채찍: 코를 옆으로 감았다가 휘두름(앞 140° 부채 · 반경 = 머리 앞 끝 + 12) · 번쩍 = 코 끝 3마디 · 맞으면 옆으로 밀림
+			trunkWhip = {
+				primitive = "sector", bubble = "swipe", motion = "trunk",
+				cooldownSeconds = 9, priority = 0, starvationSeconds = 45,
+				conditions = { { type = "targetWithin", studs = 12 } },
+				telegraphSeconds = 1.2, angleDeg = 140, radiusStuds = 12, radiusFrom = "front", facing = "target",
+				dodge = { distanceStuds = 7.1 },
+				onHit = { { type = "launch", heightStuds = 3, distanceStuds = 12 } },
+				damage = { kind = "attack", multiplier = 1.6 }, damageLabel = "코 채찍",
+			},
+			-- 상아 돌진: 고개 숙이고 발 구름(2.2초) → 직선 돌진(경로 폭 = 몸 폭 · 연보라 균열선) → 벽에서 헤롱
+			gore = {
+				primitive = "charge", bubble = "charge", motion = "tusk",
+				cooldownSeconds = 16, priority = 0, starvationSeconds = 45,
+				conditions = { { type = "notAfter", skills = { "grab" } } },
+				telegraphSeconds = 2.2, speedStuds = 55, pathHalfWidthStuds = 4, dashCount = 1,
+				recoverSeconds = 3.5, dazeSinkStuds = 1.2, dazeTiltDeg = 12,
+				arenaMarginStuds = 4, marginFrom = "front", -- 벽 멈춤 = 머리 앞 끝 + 4(긴 몸이 벽에 묻히지 않게)
+				damage = { kind = "attack", multiplier = 2.1 }, damageLabel = "상아 돌진",
+			},
+		},
+		reactiveOrder = { "backKick" },
+		skills = {
+			-- 뒷발차기(반응): 대상이 엉덩이 쪽 부채(뒤 ±60° · 엉덩이 끝 + 20 안)에 1.5초 → 앞발 버티고 두 뒷다리 차기(예비 1.1 · 뒤 120° · 엉덩이 끝 + 14) · 넉백 큼
+			backKick = {
+				primitive = "sector", bubble = "swipe", motion = "kick", reactive = true, facing = "target", keepFacing = true, -- 직전 스킬 방향 그대로(엉덩이가 대상 쪽)
+				conditions = { { type = "targetBehindFor", seconds = 1.5, halfAngleDeg = 60, studs = 20, from = "rear" } },
+				cooldownSeconds = 6, priority = 0,
+				telegraphSeconds = 1.1, angleDeg = 120, radiusStuds = 14, radiusFrom = "rear", -- 예비 1.1 ≥ 인지 0.5 + 옆 8 stud 걷기 0.5(대시 없이 피함)
+				onHit = { { type = "launch", heightStuds = 6, distanceStuds = 28 } },
+				damage = { kind = "attack", multiplier = 2.0 }, damageLabel = "뒷발차기",
+			},
+		},
+		-- BossDifficultySim 가정: 뒤쪽에 머무는 구간 비율(근접 · 원거리) · 평균 구간 길이 · 반응 스킬 명중(처음 · 두 번째부터)
+		sim = { behindShare = { melee = 0.18, ranged = 0.04 }, behindSegmentSeconds = 3, hit = { backKick = { first = 0.6, later = 0.35 } } },
+	},
 }
 
 -- 교체 슬롯 → 메시 캐시 키(ArtAssetIds · ArtMeshCache). 캐시가 없으면(아트 스위치 끔) 클라가 파트로 그린다.
 --   V3.1: Meshy "어둠에 오염되는 바나나"(guardian_v1_banana_remesh10k → prop_kit 3,000삼각형 · 구운 색 512) - 옛 Blender 임시 메시 fx/guardian_banana는 그대로 남김(삭제 금지).
 --   meshSlotTextures = 그 메시에 입힐 아틀라스(ArtAssetIds image id - 없으면 색 재질)
-D.meshSlots = { GuardianBanana = "fx/guardian_banana_m" }
-D.meshSlotTextures = { GuardianBanana = "fx/guardian_banana_m_atlas1" }
+D.meshSlots = { GuardianBanana = "fx/guardian_banana_m", FrostIceTusk = "fx/frost_icetusk_m" }
+D.meshSlotTextures = { GuardianBanana = "fx/guardian_banana_m_atlas1", FrostIceTusk = "fx/frost_icetusk_m_atlas1" }
 
 -- 예산(바이블 §1-4) - 하네스 · /gg boss frame check가 검사한다
 D.budget = {

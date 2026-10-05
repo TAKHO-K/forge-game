@@ -122,6 +122,8 @@ end
 
 -- GUARDIAN-V3(BossFrameworkData.v3[보스] - 새 몸이 뜰 때만 · applyBodyEdge 뒤): 인스턴스 사본에 바닥 표시 끔 · 예비 동작 연장 · 돌진 폭 = 몸 폭 · 이속 · 질주 ·
 --   지진파 그림 · 반응 스킬(바나나 · 도약 - 몸 가장자리 기준 반경) · 첫 보스 도움 설정을 얹는다. 반환 data(사본 - 설정이 없으면 그대로).
+--   BOSS-NIGHT-1: 보스마다 쓰는 노브만 있어도 된다(없는 노브 = 끔) · removeSkills(빼기) · addSkills(일반 후보에 더하기 - skillOrder 뒤) ·
+--   bodyCharges(돌진 경로 반폭 = 몸 반폭) · radiusFrom = "edge" | "front" | "rear"(반경 + 몸 중심 → 옆 · 머리 앞 끝 · 엉덩이 끝 - 긴 몸) · marginFrom(돌진 벽 여유).
 function BossFramework.applyV3(data, rigKey)
 	local cfg = data and Data.v3[data.id]
 	local rig = rigKey and BossRigSpec.rigs[rigKey]
@@ -129,27 +131,87 @@ function BossFramework.applyV3(data, rigKey)
 		return data
 	end
 	local S = data.sizeScale or 1
-	local bodyHalf = rig.edgeHalfWidth and rig.edgeHalfWidth * S * (rig.scale or 1) or 0 -- 새 몸 가장자리 반폭(stud)
+	local k = S * (rig.scale or 1)
+	local bodyHalf = rig.edgeHalfWidth and rig.edgeHalfWidth * k or 0 -- 새 몸 가장자리 반폭(stud)
+	local reach = { edge = bodyHalf, front = rig.frontHalfLength and rig.frontHalfLength * k or bodyHalf, rear = rig.rearHalfLength and rig.rearHalfLength * k or bodyHalf }
+	local hideFloor = cfg.hideFloor or {}
+	local windup = cfg.windup or { seconds = 0, skills = {} }
 	local out = table.clone(data)
 	out.v3 = cfg
 	out.bodyHalfWidthStuds = bodyHalf
+	out.bodyReachStuds = reach
 	local skills = table.clone(out.skills or {})
+	local order = table.clone(out.skillOrder or {})
+	for _, id in ipairs(cfg.removeSkills or {}) do
+		skills[id] = nil
+		local i = table.find(order, id)
+		if i then
+			table.remove(order, i)
+		end
+	end
+	-- 새 일반 스킬: 반경 기준(radiusFrom) · 대상 거리 조건 · 피해 계수(몸 가장자리 장치 damageScale)
+	local addIds = {}
+	for id in pairs(cfg.addSkills or {}) do
+		table.insert(addIds, id)
+	end
+	table.sort(addIds)
+	local function fromReach(s)
+		if s.radiusFrom and reach[s.radiusFrom] then
+			local add = reach[s.radiusFrom]
+			s.radiusStuds += add
+			if s.conditions then
+				local list = {}
+				for i, c in ipairs(s.conditions) do
+					list[i] = table.clone(c)
+					if c.type == "targetWithin" and c.studs then
+						list[i].studs = c.studs + add
+					end
+				end
+				s.conditions = list
+			end
+		end
+		if s.marginFrom and reach[s.marginFrom] then
+			s.arenaMarginStuds = (s.arenaMarginStuds or 0) + reach[s.marginFrom]
+		end
+		if s.conditions then
+			for i, c in ipairs(s.conditions) do
+				if c.type == "targetBehindFor" and c.from and reach[c.from] then
+					s.conditions = table.clone(s.conditions)
+					s.conditions[i] = table.clone(c)
+					s.conditions[i].studs = c.studs + reach[c.from]
+				end
+			end
+		end
+		if s.damage and s.damage.multiplier and out.bodyEdgeDamageScale then
+			s.damage = table.clone(s.damage)
+			s.damage.multiplier *= out.bodyEdgeDamageScale
+		end
+	end
+	for _, id in ipairs(addIds) do
+		local s = table.clone(cfg.addSkills[id])
+		fromReach(s)
+		skills[id] = s
+		if not table.find(order, id) then
+			table.insert(order, id)
+		end
+	end
 	for id, s in pairs(skills) do
-		local hide = cfg.hideFloor[id]
-		local longer = cfg.windup.skills[id]
-		if hide or longer or (id == "charge" and cfg.chargeHalfWidth == "body") or (s.primitive == "ring" and cfg.ringStyle) then
+		local hide = hideFloor[id]
+		local longer = windup.skills[id]
+		local bodyCharge = (id == "charge" and cfg.chargeHalfWidth == "body") or (cfg.bodyCharges and cfg.bodyCharges[id])
+		if hide or longer or bodyCharge or (s.primitive == "ring" and cfg.ringStyle) then
 			s = table.clone(s)
 			if hide then
 				s.noFloor = true
 			end
 			if longer then
-				s.telegraphSeconds += cfg.windup.seconds
+				s.telegraphSeconds += windup.seconds
 			end
-			if id == "charge" and cfg.chargeHalfWidth == "body" then
+			if bodyCharge then
 				s.pathHalfWidthStuds = bodyHalf
 				s.markStyle = "crack"
 			end
-			if s.primitive == "ring" then
+			if s.primitive == "ring" and cfg.ringStyle then
 				s.ringStyle = cfg.ringStyle
 			end
 			skills[id] = s
@@ -165,25 +227,26 @@ function BossFramework.applyV3(data, rigKey)
 			if s.landShortFromEdge then
 				s.landShortStuds = bodyHalf
 			end
-			-- 새 몸 밸런스의 피해 계수(몸 가장자리 장치 damageScale)는 공격력 배율(multiplier)에만 - 최대 체력 비율(바나나 7%)은 지시 값 그대로
-			if s.damage and s.damage.multiplier and out.bodyEdgeDamageScale then
-				s.damage = table.clone(s.damage)
-				s.damage.multiplier *= out.bodyEdgeDamageScale
+			if hideFloor[id] then
+				s.noFloor = true
 			end
+			-- 새 몸 밸런스의 피해 계수(몸 가장자리 장치 damageScale)는 공격력 배율(multiplier)에만 - 최대 체력 비율(바나나 7%)은 지시 값 그대로
+			fromReach(s)
 			skills[id] = s
 			table.insert(reactive, id)
 		end
 	end
 	out.skills = skills
+	out.skillOrder = order
 	out.reactiveOrder = reactive
 	if out.moveSpeedStuds and cfg.move then
 		out.moveSpeedStuds *= cfg.move.speedScale
 		out.sprintBeyondStuds = cfg.move.sprintBeyondStuds
 		out.sprintMultiplier = cfg.move.sprintMultiplier
 	end
-	out.basicNoFloor = cfg.hideFloor.basic == true
-	out.innerRingHidden = cfg.hideFloor.innerRing == true
-	out.basicWindupExtraSeconds = cfg.windup.basic and cfg.windup.seconds or nil
+	out.basicNoFloor = hideFloor.basic == true
+	out.innerRingHidden = hideFloor.innerRing == true
+	out.basicWindupExtraSeconds = windup.basic and windup.seconds or nil
 	out.firstAssist = cfg.firstAssist
 	return out
 end

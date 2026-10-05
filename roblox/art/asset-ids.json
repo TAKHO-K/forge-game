@@ -1583,6 +1583,19 @@
   "assetId": 94028837621068,
   "status": "Approved"
  },
+ "bosses/frost_giant_v2m.fbx": {
+  "sha256": "0a8d87ec6cd94d99c4150d4d4c92a313c2eea9a5d6b1f63143c04c08df75a564",
+  "assetType": "Model",
+  "assetId": 115027132119150,
+  "status": "Approved"
+ },
+ "bosses/frost_giant_v2m_atlas1.png": {
+  "sha256": "e80469a570237c92723c39245ca73395ad36d5047885c0a5aa968319a0bb0987",
+  "assetType": "Decal",
+  "assetId": 82594753204871,
+  "status": "Approved",
+  "imageId": 105761212016673
+ },
  "bosses/scorpion_queen.fbx": {
   "sha256": "68d96abe901ecb03cd1c49d9589d747a11d2e12bc2492e0eb1d830f6530af05d",
   "assetType": "Model",
@@ -1609,7 +1622,7 @@
   "imageId": 107503596647838
  },
  "bosses/section_guardian_v2m.fbx": {
-  "sha256": "ff633d35d4cf88085564002c63466808701bc723954ee7c3e0b83d474150020c",
+  "sha256": "70c9986f5c8a0d3ca8f147190ad3b8ce41b708280ad71d04573560927373a5aa",
   "assetType": "Model",
   "assetId": 101107092195518,
   "status": "Approved"
@@ -1710,6 +1723,19 @@
   "assetType": "Model",
   "assetId": 115551353990807,
   "status": "Approved"
+ },
+ "fx/frost_icetusk_m.fbx": {
+  "sha256": "e04abea665b753779fc2608f65e4ab601ff8202bc6615367f77b5fc368607052",
+  "assetType": "Model",
+  "assetId": 101638882658481,
+  "status": "Approved"
+ },
+ "fx/frost_icetusk_m_atlas1.png": {
+  "sha256": "d7c9869b367e105f6cee43e7875c38cb3b656bb8774bfb4dd7c28687dd18886b",
+  "assetType": "Decal",
+  "assetId": 120098585664432,
+  "status": "Approved",
+  "imageId": 83556018865634
  },
  "fx/guardian_banana.fbx": {
   "sha256": "ba3de3a395bc94bf9865cc6bc0b893bbc27ba8d54852005d16f155f7052abaff",

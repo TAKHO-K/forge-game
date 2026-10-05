@@ -146,30 +146,126 @@ do
 	}
 end
 
--- ─────────────────────────── 서리 거인 → 빙하 매머드(초안 · 네 발) ───────────────────────────
-do
-	local J = BossSkeleton.quadruped({
-		hips = V(1.7, 1.3, 1.3), body = V(1.9, 1.6, 1.6), chest = V(1.8, 1.7, 1.1), head = V(1.0, 1.0, 0.9), neckY = 0.35,
-		legFront = { upper = 0.95, lower = 0.85, foot = V(0.7, 0.3, 0.7), w = 0.62 }, legRear = { upper = 0.9, lower = 0.8, foot = V(0.7, 0.3, 0.7), w = 0.62 },
-		stanceX = 0.62, rearZ = 1.1,
-	})
-	add(J, { name = "Ear_L", parent = "Head", part = "Ear_L", size = V(0.1, 0.8, 0.7), color = "head", at = V(-0.5, 0.15, 0.15), pivot = V(0, 0.3, 0), rot = V(0, 0, -20) })
-	add(J, { name = "Ear_R", parent = "Head", part = "Ear_R", size = V(0.1, 0.8, 0.7), color = "head", at = V(0.5, 0.15, 0.15), pivot = V(0, 0.3, 0), rot = V(0, 0, 20) })
-	chain(J, { prefix = "Trunk", parent = "Head", count = 6, length = 0.32, w0 = 0.42, w1 = 0.18, at = V(0, -0.2, -0.45), rot0 = V(10, 0, 0), rotStep = V(-6, 0, 0), color = "head" })
-	add(J, { name = "Tusk_L", parent = "Head", part = "Tusk_L", size = V(0.16, 1.2, 0.16), color = "light", at = V(-0.3, -0.3, -0.35), pivot = V(0, 0.6, 0), rot = V(60, 0, -10) })
-	add(J, { name = "Tusk_R", parent = "Head", part = "Tusk_R", size = V(0.16, 1.2, 0.16), color = "light", at = V(0.3, -0.3, -0.35), pivot = V(0, 0.6, 0), rot = V(60, 0, 10) })
-	chain(J, { prefix = "Tail", parent = "Hips", count = 3, length = 0.3, w0 = 0.2, w1 = 0.1, at = V(0, 0.3, 0.65), rot0 = V(-20, 0, 0), rotStep = V(-5, 0, 0), color = "body" })
-	chain(J, { prefix = "Fur", parent = "Body", count = 3, length = 0.5, w0 = 1.8, w1 = 1.9, thick = 0.15, at = V(0, 0.8, 0.2), rot0 = V(-90, 0, 0), rotStep = V(8, 0, 0), color = "light", material = "Fabric" })
-	for i, x in ipairs({ -0.35, 0, 0.35 }) do
-		stick(J, "Ice" .. i, "Chest", V(0.22, 0.7, 0.22), V(x, 1.05, 0.1), V(-10, 45, x * 40), "accent", "Ice")
+-- ─────────────────────────── BOSS-NIGHT-1 공용: Meshy 실측 좌표로 부위 놓기(수호자 v2와 같은 규칙 - 그 블록은 그대로 둔다) ───────────────────────────
+--   K = 실측 단위(Meshy 모델 높이 1 = "H") → 리그 단위 · P(x, z, fwd) = 오른쪽 x · 높이 z(발바닥 0) · 앞 fwd(+ = 앞 = 리그 −Z).
+--   place{ name, parent, part, center, size, joint, rot(세계 도) } · seg(관절 a → 끝 b 막대) · chainPts(점 목록 → 사슬 마디).
+local function placer(K)
+	local L = {}
+	function L.P(x, z, fwd)
+		return V(K * x, K * z - 1.5, -K * fwd)
 	end
+	function L.Z(w, h, d)
+		return V(K * w, K * h, K * d)
+	end
+	local function E(r)
+		local cx, sx, cy, sy, cz, sz = math.cos(math.rad(r.X)), math.sin(math.rad(r.X)), math.cos(math.rad(r.Y)), math.sin(math.rad(r.Y)), math.cos(math.rad(r.Z)), math.sin(math.rad(r.Z))
+		return {
+			{ cy * cz, -cy * sz, sy },
+			{ cx * sz + sx * sy * cz, cx * cz - sx * sy * sz, -sx * cy },
+			{ sx * sz - cx * sy * cz, sx * cz + cx * sy * sz, cx * cy },
+		}
+	end
+	local function mulT(A, B)
+		local M = {}
+		for i = 1, 3 do
+			M[i] = {}
+			for j = 1, 3 do
+				M[i][j] = A[1][i] * B[1][j] + A[2][i] * B[2][j] + A[3][i] * B[3][j]
+			end
+		end
+		return M
+	end
+	local function applyT(A, v)
+		return V(A[1][1] * v.X + A[2][1] * v.Y + A[3][1] * v.Z, A[1][2] * v.X + A[2][2] * v.Y + A[3][2] * v.Z, A[1][3] * v.X + A[2][3] * v.Y + A[3][3] * v.Z)
+	end
+	local function euler(M)
+		local ry = math.asin(math.clamp(M[1][3], -1, 1))
+		return V(math.deg(math.atan2(-M[2][3], M[3][3])), math.deg(ry), math.deg(math.atan2(-M[1][2], M[1][1])))
+	end
+	L.J = {}
+	local world = { HumanoidRootPart = { R = E(Vector3.zero), c = Vector3.zero } }
+	function L.place(o)
+		local par = world[o.parent]
+		local Rw = E(o.rot or Vector3.zero)
+		world[o.part] = { R = Rw, c = o.center }
+		return add(L.J, { name = o.name, parent = o.parent, part = o.part, size = o.size, color = o.color or "body", material = o.material, query = o.query, shape = o.shape,
+			at = applyT(par.R, o.joint - par.c), pivot = applyT(Rw, o.joint - o.center), rot = euler(mulT(par.R, Rw)) })
+	end
+	-- 막대 마디: 관절 a → 끝 b(실측 좌표) · 단면 w × d · 세계 회전 = (0, −1, 0)을 a → b로
+	function L.seg(name, parent, part, a, b, w, d, ext, color, extra)
+		local pa, pb = L.P(a[1], a[2], a[3]), L.P(b[1], b[2], b[3])
+		local dir = (pb - pa).Unit
+		local rz = math.deg(math.asin(math.clamp(dir.X, -1, 1)))
+		local rx = math.deg(math.atan2(-dir.Z, -dir.Y))
+		local len = (pb - pa).Magnitude + K * (ext or 0)
+		local o = { name = name, parent = parent, part = part, joint = pa, center = pa + dir * (len / 2 - K * (ext or 0) * 0.25), size = V(K * w, len, K * d), rot = V(rx, 0, rz), color = color }
+		for k, v in pairs(extra or {}) do
+			o[k] = v
+		end
+		return L.place(o)
+	end
+	-- 점 목록 → 사슬(prefix1 .. n): 마디 i = 점 i → 점 i + 1 · 굵기 w0 → w1
+	function L.chainPts(prefix, parent, pts, w0, w1, d0, d1, color, extra)
+		local prev = parent
+		for i = 1, #pts - 1 do
+			local u = (i - 1) / math.max(#pts - 2, 1)
+			local w, d = w0 + (w1 - w0) * u, (d0 or w0) + ((d1 or w1) - (d0 or w0)) * u
+			L.seg(prefix .. i, prev, prefix .. i, pts[i], pts[i + 1], w, d, 0.02, color, extra)
+			prev = prefix .. i
+		end
+	end
+	return L
+end
+D.placer = placer
+
+-- ─────────────────────────── 서리 거인 → 빙하 매머드 "빙하 엄니"(BOSS-NIGHT-1 1 · Meshy 원본 실측 · 네 발) ───────────────────────────
+-- 상자 · 관절 = Meshy mammoth_v1_body(remesh30k · 원본과 같은 모양) 옆 · 앞 · 위 실측(모델 높이 1 = H · 발바닥 0 · fwd + = 머리 쪽).
+--   K 2.4 = 판정 사본(Body · Hips · Head) 부피 = 옛 몸 × 1.14(허용 ±20%) · scale 3.3 = 등 높이(0.85 H) 30 stud(바이블 §5 × 1.5 목표 - 수호자 V3처럼 K 대신 scale로 크기).
+--   다리 = 짧고 굵은 인형 비율(보이는 다리 0.15 H) · 앞다리 Shoulder · Elbow · Wrist(Hand = 앞발) · 뒷다리 Hip · Knee · Ankle(quad 보행 이름) ·
+--   코 6마디(평면 자르기 = 리그 상자) · 상아 L/R 밑동 분리 · 귀 L/R · 꼬리 3(말린 꼬리) · 등 털 3(사슬) · 등 얼음 1(낙빙 흔들림) · 이마 털 얼음 1 · 턱(자리만).
+--   앞 구역(상아 · 코 · 앞발) / 뒤 구역(뒷발차기) = 판정 구역은 스킬 데이터(BossFrameworkData.v3.frost_giant).
+do
+	local L = placer(2.4)
+	local P, Z, place, seg, chainPts = L.P, L.Z, L.place, L.seg, L.chainPts
+	place({ name = "RootJoint", parent = "HumanoidRootPart", part = "Hips", center = P(0, 0.48, -0.3), size = Z(0.6, 0.66, 0.5), joint = P(0, 0.48, -0.08), query = true })
+	place({ name = "Waist", parent = "Hips", part = "Body", center = P(0, 0.5, 0.15), size = Z(0.62, 0.7, 0.42), joint = P(0, 0.5, -0.06), query = true })
+	place({ name = "Neck", parent = "Body", part = "Head", center = P(0, 0.68, 0.45), size = Z(0.36, 0.4, 0.3), joint = P(0, 0.7, 0.3), color = "head", query = true })
+	place({ name = "Jaw", parent = "Head", part = "Mouth", center = P(0, 0.47, 0.52), size = Z(0.08, 0.03, 0.05), joint = P(0, 0.49, 0.5), color = "mouth" })
+	place({ name = "HeadIce", parent = "Head", part = "HeadIce", center = P(0, 0.91, 0.47), size = Z(0.16, 0.1, 0.14), joint = P(0, 0.86, 0.47), color = "accent" })
+	for _, s in ipairs({ { "L", -1 }, { "R", 1 } }) do
+		local side, x = s[1], s[2]
+		place({ name = "Ear_" .. side, parent = "Head", part = "Ear_" .. side, center = P(x * 0.275, 0.58, 0.23), size = Z(0.12, 0.4, 0.3), joint = P(x * 0.2, 0.66, 0.3), color = "head" })
+		seg("Tusk_" .. side, "Head", "Tusk_" .. side, { x * 0.09, 0.46, 0.55 }, { x * 0.22, 0.5, 0.88 }, 0.08, 0.16, 0.02, "light")
+		-- 앞다리(앞발 = Hand) · 뒷다리(뒷발 = Foot) - 발바닥 0
+		seg("Shoulder_" .. side, "Body", "UpperArm_" .. side, { x * 0.19, 0.34, 0.15 }, { x * 0.19, 0.17, 0.15 }, 0.17, 0.18, 0.02)
+		seg("Elbow_" .. side, "UpperArm_" .. side, "Forearm_" .. side, { x * 0.19, 0.17, 0.15 }, { x * 0.19, 0.08, 0.15 }, 0.16, 0.17, 0.02)
+		place({ name = "Wrist_" .. side, parent = "Forearm_" .. side, part = "Hand_" .. side, center = P(x * 0.19, 0.04, 0.16), size = Z(0.18, 0.08, 0.2), joint = P(x * 0.19, 0.08, 0.15), color = "dark" })
+		seg("Hip_" .. side, "Hips", "Thigh_" .. side, { x * 0.19, 0.34, -0.38 }, { x * 0.19, 0.17, -0.38 }, 0.17, 0.18, 0.02)
+		seg("Knee_" .. side, "Thigh_" .. side, "Shin_" .. side, { x * 0.19, 0.17, -0.38 }, { x * 0.19, 0.08, -0.38 }, 0.16, 0.17, 0.02)
+		place({ name = "Ankle_" .. side, parent = "Shin_" .. side, part = "Foot_" .. side, center = P(x * 0.19, 0.04, -0.37), size = Z(0.18, 0.08, 0.2), joint = P(x * 0.19, 0.08, -0.38), color = "dark" })
+	end
+	-- 코 6마디(코끝 말림까지) · 꼬리 3(말린 꼬리) · 등 털 3(등 위 판 - 사슬) · 등 얼음 덩어리
+	chainPts("Trunk", "Head", { { 0, 0.56, 0.58 }, { 0, 0.46, 0.62 }, { 0, 0.36, 0.61 }, { 0, 0.27, 0.59 }, { 0, 0.19, 0.56 }, { 0, 0.12, 0.52 }, { 0, 0.05, 0.47 } }, 0.13, 0.08, 0.13, 0.08, "head")
+	chainPts("Tail", "Hips", { { 0, 0.56, -0.54 }, { 0, 0.56, -0.66 }, { 0, 0.5, -0.77 }, { 0, 0.4, -0.8 } }, 0.12, 0.1, 0.2, 0.2, "body")
+	place({ name = "Fur1", parent = "Body", part = "Fur1", center = P(0, 0.83, 0.14), size = Z(0.5, 0.1, 0.22), joint = P(0, 0.83, 0.25), color = "light" })
+	place({ name = "Fur2", parent = "Fur1", part = "Fur2", center = P(0, 0.85, -0.1), size = Z(0.52, 0.1, 0.26), joint = P(0, 0.85, 0.03), color = "light" })
+	place({ name = "Fur3", parent = "Fur2", part = "Fur3", center = P(0, 0.8, -0.36), size = Z(0.5, 0.1, 0.26), joint = P(0, 0.83, -0.23), color = "light" })
+	place({ name = "BackIce", parent = "Fur2", part = "BackIce", center = P(0, 0.93, -0.17), size = Z(0.24, 0.16, 0.28), joint = P(0, 0.87, -0.17), color = "accent" })
 	D.rigs.frost_giant_v2 = {
-		bossId = "frost_giant", variant = "v2", status = "draft", plan = "quad", joints = J, accent = Color3.fromRGB(200, 240, 255),
-		attach = { HandR = { part = "Trunk6", at = V(0, -0.2, 0) }, HandL = { part = "Tusk_L", at = V(0, -0.6, 0) }, ShoulderR = { part = "Tusk_R", at = V(0, -0.6, 0) }, ShoulderL = { part = "Chest", at = V(0, 0.9, 0) }, Mouth = { part = "Head", at = V(0, -0.3, -0.45) } },
+		bossId = "frost_giant", variant = "v2", status = "trial", plan = "quad", joints = L.J, accent = Color3.fromRGB(200, 240, 255),
+		scale = 3.3, -- 등 높이 0.85 H × K 2.4 × S 4.455 × 3.3 = 30 stud(바이블 §5)
+		edgeHalfWidth = 2.4 * 0.31, -- 몸 가장자리 반폭(옆구리 털 바깥 - 리그 단위)
+		frontHalfLength = 2.4 * 0.62, rearHalfLength = 2.4 * 0.56, -- 몸 중심(루트) → 머리 · 코 앞 끝 / 엉덩이 끝(앞 구역 · 뒤 구역 반경 - BossFramework.applyV3 radiusFrom)
+		baseEdgeHalfWidth = 1.6, -- 옛 몸(서리 거인 직립) 가장자리 반폭 = 몸 0.95 + 팔 0.65
+		cameraZoomScale = 1.3, -- 38 → 49.4(설계 메모: 50 상한)
+		attach = { HandR = { part = "Trunk6", at = V(0, -0.1, 0) }, HandL = { part = "Tusk_L", at = V(0, -0.35, 0) }, ShoulderR = { part = "Tusk_R", at = V(0, -0.35, 0) }, ShoulderL = { part = "BackIce", at = V(0, 0.2, 0) },
+			Mouth = { part = "Head", at = V(0, -0.25, -0.35) }, TuskTipL = { part = "Tusk_L", at = V(0, -0.4, 0) }, TuskTipR = { part = "Tusk_R", at = V(0, -0.4, 0) }, Back = { part = "BackIce", at = V(0, 0.2, 0) } },
 		chains = { { "Trunk1", "Trunk2", "Trunk3", "Trunk4", "Trunk5", "Trunk6", kind = "trunk", lag = 0.5, sway = 6 }, { "Tail1", "Tail2", "Tail3", kind = "tail", lag = 0.5, sway = 5 },
 			{ "Fur1", "Fur2", "Fur3", kind = "fur", lag = 0.55, sway = 2 }, { "Ear_L", kind = "cloth", lag = 0.5, sway = 4 }, { "Ear_R", kind = "cloth", lag = 0.5, sway = 4 } },
-		weight = 1.4,
+		weight = 1.5,
 		contacts = { "Foot_L", "Foot_R", "Hand_L", "Hand_R" },
+		meshKey = "bosses/frost_giant_v2m",
+		themeColors = { body = Color3.fromRGB(235, 240, 248), head = Color3.fromRGB(225, 232, 242), accent = Color3.fromRGB(150, 215, 255) },
 	}
 end
 

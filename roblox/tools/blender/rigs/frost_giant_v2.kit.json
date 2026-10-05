@@ -1,0 +1,10 @@
+{
+ "about": "BOSS-NIGHT-1 1 매머드 KIT 설정(boss_kit.py --kit) - 원본 = Meshy mammoth_v1_body(remesh30k 기본 · meshy71 비교) · 리그 = BossRigV2Data frost_giant_v2(K 2.4 = 높이 1 H) · 좌표 = 리그 단위(앞 -Z)",
+ "height": 2.4,
+ "yaw": 180,
+ "islands": 0,
+ "skip": ["Mouth"],
+ "texture": "base",
+ "overlap": 0.1,
+ "bake": {"size": 1024, "extrusion": 0.04, "distance": 0.15}
+}

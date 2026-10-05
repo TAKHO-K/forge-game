@@ -77,6 +77,13 @@ return {
 		shards = { count = 14, speed = { 14, 26 }, lifetime = { 0.35, 0.7 }, size = 0.9 },
 		trail = { lifetime = 0.25, width0 = 1.6, width1 = 0, transparency0 = 0.2 } },
 
+	-- BOSS-NIGHT-1 메시 투사체(client/BossMeshShotView - 스타일별): slot = 교체 슬롯(BossFrameworkData.meshSlots) · 길이 · 회전(roll = 자기 축 · tumble) · 전조 동안 holdParts 끝(holdAt = 부위 길이 비율)에서 자람
+	meshShots = {
+		icetusk = { slot = "FrostIceTusk", lengthStuds = 16, spin = "roll", spinHz = 2.0, poolMax = 10, color = Color3.fromRGB(170, 225, 255), glow = Color3.fromRGB(90, 190, 255),
+			holdParts = { "Tusk_L", "Tusk_R" }, holdAt = 0.5, light = { brightness = 1.2, range = 8 },
+			shards = { count = 14, speed = { 14, 26 }, lifetime = { 0.35, 0.7 }, size = 0.9 }, trail = { lifetime = 0.22, width0 = 1.4, transparency0 = 0.25 } },
+	},
+
 	-- 돌진 속도감(A4)
 	charge = {
 		scrapeInterval = 0.28, scrapeDust = 3, -- 전조 동안 발 긁기 먼지(보스 뒤쪽)

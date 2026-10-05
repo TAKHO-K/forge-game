@@ -642,6 +642,11 @@ local function updateEntry(e, now, dt, camPos)
 			yawT = (d and d.Magnitude > 0.5) and math.atan2(-d.X, -d.Z) or e.visYaw
 		end
 	end
+	-- BOSS-NIGHT-1(매머드 v3.lockFacing): 서버가 스킬 시작 순간 고정한 방향(BossFaceLockYaw) - 스킬 동안 몸이 대상을 따라 돌지 않는다(등 뒤가 생긴다 · 뒷발차기)
+	local lockYaw = not e.isClone and e.model:GetAttribute("BossFaceLockYaw")
+	if lockYaw then
+		yawT = lockYaw
+	end
 	-- A2-M1 등장 동안 보이는 몸은 나(파티) 쪽을 본다(서버 루트 방향 = 판정은 그대로 - 스폰 방향이 입장 반대쪽이라 옛 연출은 등을 보였다). 등장 첫 프레임은 바로 그 방향으로.
 	local st0 = e.st
 	if st0.introAt and st0.introSeconds and now < st0.introAt + st0.introSeconds + 0.15 then
