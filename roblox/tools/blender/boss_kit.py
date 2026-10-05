@@ -294,9 +294,10 @@ def place_addon(spec, gi, byName, glbDir):
         s = min(boxS[i] / max(ps[i], 1e-6) for i in range(3))
     s *= spec.get("fill", 1.0)
     mx = -1.0 if spec.get("mirror") else 1.0
+    st = spec.get("stretch", [1, 1, 1])  # 맞춘 뒤 축별 배율(로블록스 상자 축 - 나가 삼지창 자루 굵게)
     for v, p in zip(obj.data.vertices, pts):
         q = (p - pc) * s
-        q = Vector((q.x * mx, q.y, q.z))
+        q = Vector((q.x * mx * st[0], q.y * st[1], q.z * st[2]))
         v.co = C @ (boxC + boxR @ q)
     if spec.get("mirror"):
         obj.data.flip_normals()

@@ -1571,6 +1571,26 @@
   "assetId": 91598985273376,
   "status": "Approved"
  },
+ "bosses/abyssal_lord_v2m.fbx": {
+  "sha256": "477bc5d89e9d1805ca52c74dcf908c72a5889bdc9855893530c3fe0d32e10512",
+  "assetType": "Model",
+  "assetId": 77901930226694,
+  "status": "Approved"
+ },
+ "bosses/abyssal_lord_v2m_atlas1.png": {
+  "sha256": "908bd65c6ab8f017f12719e2fc364e400a885da346ec42086c7d1576ffb15531",
+  "assetType": "Decal",
+  "assetId": 73747447038153,
+  "status": "Approved",
+  "imageId": 136692234279725
+ },
+ "bosses/abyssal_lord_v2m_atlas2.png": {
+  "sha256": "fe2b7f13f2955d037c597863df354ebbdfabdff4b11c602eab7c5d5db804197b",
+  "assetType": "Decal",
+  "assetId": 89404729025840,
+  "status": "Approved",
+  "imageId": 73632317713148
+ },
  "bosses/crystal_queen.fbx": {
   "sha256": "839429863a6205a6170a99d6fe63c2d35be127ec8050bc4aa76f92c0abac49f6",
   "assetType": "Model",

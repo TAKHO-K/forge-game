@@ -39,7 +39,9 @@ function BossFramework.applyBodyEdge(data, rigKey, walk)
 	local cfg = data and Data.bodyEdge[data.id]
 	local rig = rigKey and BossRigSpec.rigs[rigKey]
 	local edge = (cfg and rig) and BossFramework.edgeGrowth(rig, data.sizeScale or 1) or 0
-	if edge <= 0 then
+	-- BOSS-NIGHT-1: 새 몸이 옛 몸보다 넓지 않아도(나가 - 증가 0) 밸런스 계수(damageScale · hpScale)는 적용한다
+	local balance = cfg and rig and ((cfg.damageScale and cfg.damageScale ~= 1) or (cfg.hpScale and cfg.hpScale ~= 1))
+	if edge <= 0 and not balance then
 		return data, 0, {}
 	end
 	local out = table.clone(data)

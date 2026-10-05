@@ -1135,4 +1135,152 @@ do
 	}
 end
 
+
+-- ═══════════════════════════ 심해 군주 v2 — 나가(BOSS-NIGHT-1 3 · Meshy 몸 + 삼지창 · 바이블 §2-3) ═══════════════════════════
+-- 리그 = BossRigV2Data abyssal_lord_v2(상체 A-포즈 · 꼬리 12마디가 바닥에 감김 · 삼지창 = 오른손 자식). 보행 = 뱀(꼬리 S자 파동 - BossMotion baseSerpent · 꼬리 마디 ry).
+--   꼬리 마디 각: ry = 옆으로 휨(파동과 같은 축) · rx = 위아래. 변신(50% 판 털기 전) = 꼬리를 들어 올리며 포효 → 분노 세트(상체 숙임 · 꼬리 높게).
+do
+	local REST_POSE = {}
+	local function tail(ry, rx, from, to)
+		local p = {}
+		for i = from or 1, to or 12 do
+			p["Tail" .. i] = { rx or 0, ry, 0 }
+		end
+		return p
+	end
+	local HOLD = { Shoulder_R = { 26, 0, -20 }, Elbow_R = { 48, 0, 0 }, Wrist_R = { -60, 0, 0 }, Shoulder_L = { 10, 0, 22 }, Elbow_L = { 20, 0, 0 } } -- 삼지창을 세워 쥠
+	local ANGRY = merge(HOLD, { Waist = { -10, 0, 0 }, Neck = { 6, 0, 0 }, Crest = { -12, 0, 0 } }, tail(0, -6, 10, 12))
+	local TRI_UP = merge(HOLD, { Shoulder_R = { 165, 0, -10 }, Elbow_R = { 10, 0, 0 }, Wrist_R = { -10, 0, 0 }, Waist = { 10, 0, 0 }, Neck = { 14, 0, 0 } })
+	local TRI_POINT = merge(HOLD, { Shoulder_R = { 95, 0, -6 }, Elbow_R = { 0, 0, 0 }, Wrist_R = { 70, 0, 0 }, Waist = { -6, 0, 0 } }) -- 창끝을 대상 쪽으로
+	local RISE = { RootJoint = { -6, 0, 0, 0, 0.4, 0 }, Tail1 = { -20, 0, 0 }, Tail2 = { -14, 0, 0 } } -- 꼬리로 서서 높아짐
+	local C = {}
+	-- 꼬리 휩쓸기 sweep(도넛 안 9 · 밖 24): 몸을 감고(꼬리 오른쪽으로 감음) → 몸을 한 바퀴 돌리며 꼬리로 휩쓸기
+	C.n_sweep = {
+		pre = { { f = 0.5, ease = "inout", pose = merge(HOLD, { Waist = { -10, 30, 0 } }, tail(14)) }, { f = 1.0, ease = "in", pose = merge(HOLD, { Waist = { -12, 40, 0 } }, tail(20)) } },
+		post = { { s = 0.08, ease = "out", pose = merge(HOLD, { Waist = { -10, -50, 0 } }, tail(-24)) }, { s = 0.35, ease = "out", pose = merge(HOLD, { Waist = { -8, -60, 0 } }, tail(-28)) },
+			{ s = 0.6, ease = "inout", pose = merge(HOLD, { Waist = { -6, -30, 0 } }, tail(-10)) }, { s = 1.3, ease = "inout", pose = REST_POSE } },
+		hitstop = 0.06, extraStrikes = { post = { 0.35, 0.6 } },
+	}
+	-- 해일 tide(고리 3번 - 1.5초 간격): 꼬리로 높이 서서 삼지창 자루로 수면 내리침 × 3
+	local SLAM = merge(HOLD, { RootJoint = { 10, 0, 0, 0, -0.1, 0 }, Waist = { -24, 0, 0 }, Shoulder_R = { 60, 0, -10 }, Elbow_R = { 20, 0, 0 }, Wrist_R = { -40, 0, 0 } })
+	C.n_tide = {
+		pre = { { f = 0.5, ease = "inout", pose = merge(TRI_UP, RISE) }, { f = 1.0, ease = "in", pose = merge(TRI_UP, RISE, { Shoulder_R = { 172, 0, -6 } }) } },
+		post = { { s = 0.08, ease = "in", pose = SLAM }, { s = 0.8, ease = "inout", pose = merge(TRI_UP, RISE) }, { s = 1.5, ease = "in", pose = SLAM },
+			{ s = 2.3, ease = "inout", pose = merge(TRI_UP, RISE) }, { s = 3.0, ease = "in", pose = SLAM }, { s = 3.8, ease = "inout", pose = REST_POSE } },
+		hitstop = 0.07, squash = 0.2, extraStrikes = { post = { 1.5, 3.0 } },
+	}
+	-- 물기둥 spout(5번 차례로): 삼지창으로 대상을 겨눔(겨눌 때마다 찌름)
+	C.n_spout = {
+		pre = { { f = 1.0, ease = "inout", pose = TRI_POINT } },
+		post = { { s = 0.08, ease = "out", pose = merge(TRI_POINT, { Shoulder_R = { 100, 0, -6 } }) }, { s = 0.55, ease = "inout", pose = TRI_POINT }, { s = 1.05, ease = "out", pose = merge(TRI_POINT, { Shoulder_R = { 102, 0, -2 } }) },
+			{ s = 1.6, ease = "inout", pose = TRI_POINT }, { s = 2.1, ease = "out", pose = merge(TRI_POINT, { Shoulder_R = { 100, 0, -8 } }) }, { s = 3.0, ease = "inout", pose = REST_POSE } },
+		hitstop = 0.05, extraStrikes = { post = { 1.05, 2.1 } },
+	}
+	-- 색 맞추기 colors(전멸기): 삼지창을 높이 들고 버팀(머리 위 표시)
+	C.n_colors = { pre = { { f = 1.0, ease = "inout", pose = merge(TRI_UP, RISE) } }, post = { { s = 0.2, ease = "out", pose = merge(TRI_UP, RISE) } },
+		loop = { period = 1.2, poses = { merge(TRI_UP, RISE), merge(TRI_UP, RISE, { RootJoint = { -6, 0, 0, 0, 0.45, 0 } }) } } }
+	-- 강화 평타 swipe: 삼지창 가로 베기(창날 번쩍)
+	C.n_swipe = {
+		pre = { { f = 0.45, ease = "inout", pose = merge(HOLD, { Waist = { 0, 36, 0 }, Shoulder_R = { 75, 0, -70 }, Elbow_R = { 30, 0, 0 }, Wrist_R = { 0, 0, -70 } }) },
+			{ f = 1.0, ease = "out", pose = merge(HOLD, { Waist = { 0, 44, 0 }, Shoulder_R = { 78, 0, -78 }, Elbow_R = { 34, 0, 0 }, Wrist_R = { 0, 0, -75 } }) } },
+		post = { { s = 0.08, ease = "out", pose = merge(HOLD, { Waist = { 0, -40, 0 }, Shoulder_R = { 85, 0, 30 }, Elbow_R = { 8, 0, 0 }, Wrist_R = { 0, 0, -75 } }) },
+			{ s = 0.26, ease = "back", pose = merge(HOLD, { Waist = { 0, -46, 0 }, Shoulder_R = { 85, 0, 38 }, Wrist_R = { 0, 0, -75 } }) }, { s = 0.95, ease = "inout", pose = REST_POSE } },
+		hitstop = 0.06, tremble = { from = 0.6, amp = 3, joints = { "Shoulder_R" } },
+	}
+	-- 꼬리 감기 grab: 꼬리 끝을 높이 쳐들어 경고 → 꼬리로 감아 들고 → 던짐
+	local TAIL_UP = merge(HOLD, tail(0, -22, 8, 12))
+	C.grab_tele = { pre = { { f = 0.8, ease = "inout", pose = TAIL_UP }, { f = 1.0, ease = "inout", pose = merge(TAIL_UP, tail(0, -26, 9, 12)) } }, post = { { s = 0.15, ease = "out", pose = TAIL_UP } },
+		tremble = { from = 0.75, amp = 2.5, joints = { "Tail10", "Tail11" } } }
+	local REACH = merge(HOLD, tail(-12, -10, 6, 12))
+	C.grab_reach = { post = { { s = 0.15, ease = "out", pose = REACH } }, loop = { period = 0.32, poses = { REACH, merge(REACH, tail(-16, -12, 6, 12)) } }, upper = true }
+	local COIL = merge(HOLD, tail(18, -24, 8, 12))
+	C.grab_hold = { post = { { s = 0.25, ease = "out", pose = COIL } }, loop = { period = 0.5, poses = { COIL, merge(COIL, tail(22, -26, 8, 12)) } } }
+	C.grab_snatch = { post = { { s = 0.06, ease = "out", pose = tail(8, -6, 9, 12) }, { s = 0.5, ease = "inout", pose = {} } }, hitstop = 0.05 }
+	C.n_throw = { pre = { { f = 1.0, ease = "inout", pose = merge(HOLD, tail(26, -28, 7, 12)) } },
+		post = { { s = 0.1, ease = "out", pose = merge(HOLD, tail(-28, -10, 7, 12)) }, { s = 0.9, ease = "inout", pose = REST_POSE } }, hitstop = 0.06 }
+	-- 물의 장막 mirror: 두 팔로 물을 감아 소용돌이 장막(삼지창 세움 · 꼬리 몸 둘레)
+	local CURTAIN = merge(HOLD, { Shoulder_L = { 110, 0, 40 }, Elbow_L = { 60, 0, 0 }, Waist = { -6, 0, 0 } }, tail(10))
+	C.n_mirror = { pre = { { f = 1.0, ease = "inout", pose = CURTAIN } }, post = { { s = 0.1, ease = "out", pose = CURTAIN } },
+		loop = { period = 0.7, poses = { CURTAIN, merge(CURTAIN, { Shoulder_L = { 120, 0, 30 } }, tail(14)) } }, hitstop = 0.05 }
+	-- 꼬리 반원 tailSweep(180° - 보이는 몸이 대상 반대로 돌아 꼬리가 대상 쪽 · BossMotionData.tailToTarget): 꼬리를 감았다가 반원으로 휘두름(꼬리 끝 번쩍)
+	C.n_tailsweep = {
+		pre = { { f = 0.5, ease = "inout", pose = merge(HOLD, tail(16, -8)) }, { f = 1.0, ease = "in", pose = merge(HOLD, tail(24, -10)) } },
+		post = { { s = 0.08, ease = "out", pose = merge(HOLD, tail(-22, -6)) }, { s = 0.3, ease = "back", pose = merge(HOLD, tail(-26, -4)) }, { s = 1.0, ease = "inout", pose = REST_POSE } },
+		hitstop = 0.07, squash = 0.15,
+	}
+	-- 소용돌이 vortex(끌림 5.3초): 꼬리로 나선을 그리며 몸을 흔듦(삼지창 돌림)
+	local SPIN_A = merge(TRI_UP, { Waist = { 0, 40, 0 } }, tail(20))
+	local SPIN_B = merge(TRI_UP, { Waist = { 0, -40, 0 } }, tail(-20))
+	C.n_vortex = { pre = { { f = 0.3, ease = "inout", pose = SPIN_A }, { f = 0.6, ease = "inout", pose = SPIN_B }, { f = 1.0, ease = "inout", pose = SPIN_A } },
+		post = { { s = 0.1, ease = "out", pose = merge(SLAM, tail(-10)) }, { s = 1.0, ease = "inout", pose = REST_POSE } }, hitstop = 0.06, extraStrikes = { pre = { 0.3, 0.6 } } }
+	-- 거품탄 bubbles: 고개를 들고 입으로 거품(왼손을 입 앞에)
+	C.n_bubbles = { pre = { { f = 1.0, ease = "inout", pose = merge(HOLD, { Neck = { 18, 0, 0 }, Shoulder_L = { 110, 0, -10 }, Elbow_L = { 90, 0, 0 } }) } },
+		post = { { s = 0.08, ease = "out", pose = merge(HOLD, { Neck = { 8, 0, 0 }, Waist = { -10, 0, 0 } }) }, { s = 0.9, ease = "inout", pose = REST_POSE } }, hitstop = 0.05 }
+	-- 삼지창 던지기 tridentThrow(전용 - 옛 기본 돌진 클립 고침): 삼지창을 어깨 뒤로 → 던짐(창은 그림이 따로 날아갔다 돌아옴)
+	C.n_trident = {
+		pre = { { f = 1.0, ease = "inout", pose = merge(HOLD, { Waist = { 8, -26, 0 }, Shoulder_R = { 160, 0, -30 }, Elbow_R = { 80, 0, 0 }, Wrist_R = { 0, 0, 0 }, Neck = { 0, 16, 0 } }) } },
+		post = { { s = 0.08, ease = "out", pose = merge(HOLD, { Waist = { -12, 26, 0 }, Shoulder_R = { 90, 0, -6 }, Elbow_R = { 4, 0, 0 }, Wrist_R = { 30, 0, 0 } }) },
+			{ s = 0.6, ease = "inout", pose = merge(HOLD, { Shoulder_R = { 80, 0, -20 }, Elbow_R = { 40, 0, 0 } }) }, { s = 1.3, ease = "inout", pose = REST_POSE } },
+		hitstop = 0.06,
+	}
+	-- 환경(판 털기 50% 뒤): 꼬리로 높이 서서 꼬리 끝을 휘감아 올림 → 내리침
+	C.n_env = { pre = { { f = 0.5, ease = "inout", pose = merge(TRI_UP, RISE, tail(0, -20, 8, 12)) }, { f = 1.0, ease = "in", pose = merge(TRI_UP, RISE, tail(0, -30, 8, 12)) } },
+		post = { { s = 0.08, ease = "in", pose = merge(SLAM, tail(0, 10, 8, 12)) }, { s = 1.3, ease = "inout", pose = REST_POSE } }, hitstop = 0.08, squash = 0.25 }
+	-- 50% 변신(겉모습 격노): 꼬리로 높이 서며 삼지창을 들어 포효 → 분노 세트
+	local ROAR = merge(TRI_UP, RISE, { Neck = { 24, 0, 0 }, Shoulder_L = { 60, 0, 60 }, Elbow_L = { 20, 0, 0 } })
+	C.n_transform = { pre = { { f = 1.0, ease = "inout", pose = ROAR } },
+		post = { { s = 0.0, ease = "out", pose = ROAR }, { s = 0.6, ease = "inout", pose = merge(ROAR, { Neck = { 26, 0, 3 } }) }, { s = 1.6, ease = "inout", pose = ANGRY } }, hitstop = 0.06, align = false }
+	C.roar = { pre = { { f = 1.0, ease = "inout", pose = merge(HOLD, { Neck = { -14, 0, 0 }, Waist = { -14, 0, 0 } }) } }, post = { { s = 0.15, ease = "out", pose = ROAR } },
+		loop = { period = 0.18, poses = { ROAR, merge(ROAR, { Neck = { 26, 0, 2 } }) } } }
+	local basicR = { post = { { s = 0.07, ease = "out", pose = { Waist = { -6, -20, 0 }, Shoulder_R = { 75, 0, -10 }, Elbow_R = { 6, 0, 0 }, Wrist_R = { 60, 0, 0 } } },
+		{ s = 0.17, ease = "back", pose = { Waist = { -8, -24, 0 }, Shoulder_R = { 78, 0, -8 }, Wrist_R = { 60, 0, 0 } } }, { s = 0.6, ease = "inout", pose = REST_POSE } }, hitstop = 0.04 }
+	C.basic_R = basicR
+	C.basic_L = { post = { { s = 0.07, ease = "out", pose = mirror(basicR.post[1].pose) }, { s = 0.17, ease = "back", pose = mirror(basicR.post[2].pose) }, { s = 0.6, ease = "inout", pose = REST_POSE } }, hitstop = 0.04 }
+	local prepR = { Waist = { 4, 20, 0 }, Shoulder_R = { 50, 0, -40 }, Elbow_R = { 60, 0, 0 } }
+	local SLUMP = merge(HOLD, { RootJoint = { 6, 0, 0, 0, -0.35, 0 }, Waist = { -20, 0, 0 }, Neck = { -20, 0, 0 }, Shoulder_L = { -10, 0, 30 } })
+	local STAGGER = merge(HOLD, { Waist = { -12, 0, 12 }, Neck = { -14, 0, 14 }, RootJoint = { 0, 0, 10, 0.05, -0.1, 0 } }, tail(6))
+	local planPatch = {
+		introCrouch = merge(HOLD, { RootJoint = { 0, 0, 0, 0, -0.5, 0 }, Waist = { -30, 0, 0 }, Neck = { -24, 0, 0 } }),
+		introRoar = "roar",
+		flinch = { seconds = 0.3, pose = { Waist = { 7, 0, 4 }, Neck = { 9, 0, 0 }, RootJoint = { 0, 0, 0, 0, 0, 0.06 } } },
+		stun = { stagger = STAGGER, sit = SLUMP, staggerSeconds = 0.5, riseSeconds = 0.8, wobble = { hz = 0.9, neck = 12, waist = 5 }, eyes = { 0, 0, 0 } },
+		death = {
+			keys = { { s = 0.3, ease = "out", pose = STAGGER }, { s = 0.8, ease = "inout", pose = merge(STAGGER, { Waist = { -10, 0, -12 } }) }, { s = 1.3, ease = "in", pose = SLUMP },
+				{ s = 1.6, ease = "out", pose = merge(SLUMP, { Waist = { -30, 0, 0 }, Neck = { -30, 0, 0 } }) } },
+			hitstopAt = 1.3, fadeFrom = 2.0, fadeSeconds = 0.5, scatterFrom = 1.75, eyes = { 0, 0, 0 }, stars = true, slowSeconds = 0.8, slowRate = 0.4,
+		},
+		basicPrep = { R = prepR, L = mirror(prepR) },
+	}
+	local SK = { sweep = "n_sweep", tide = "n_tide", spout = "n_spout", colors = "n_colors", swipe = "n_swipe", grab = "@grab", tailSweep = "n_tailsweep", vortex = "n_vortex",
+		bubbles = "n_bubbles", mirror = "n_mirror", tridentThrow = "n_trident" }
+	local MOTIONS = { idle = "gait", walk = "gait", intro = "plan:introCrouch", death = "plan:death", env = "n_env", flinch = "plan:flinch", stun = "plan:stun" }
+	local TAIL_TIP = { "Tail10", "Tail11", "Tail12" }
+	D.abyssal_lord_v2 = {
+		plan = "biped",
+		planPatch = planPatch,
+		stunStars = true,
+		forms = {
+			before = { gait = "serpent", stance = HOLD, guard = HOLD, contacts = { "Tail5", "Tail6", "Tail7" }, walk = { stride = 0.6, wave = 12, waves = 1, phaseStep = 0.6, runAt = 1.6 }, motions = MOTIONS, skills = SK, env = "n_env", throw = "n_throw" },
+			after = { gait = "serpent", stance = ANGRY, guard = ANGRY, contacts = { "Tail5", "Tail6", "Tail7" }, walk = { stride = 0.65, wave = 14, waves = 1.0, phaseStep = 0.6, runAt = 1.6 }, motions = MOTIONS, skills = SK, env = "n_env", throw = "n_throw" },
+		},
+		transform = { clip = "n_transform", hit = 1.0, switchAt = 1.6, seconds = 2.6 },
+		intro = { style = "emerge", depth = 3.0, riseFrac = 0.46, riseEase = "sine" },
+		signature = { "tailSweep", "sweep", "tide", "vortex", "spout", "tridentThrow", "bubbles", "swipe", "colors", "mirror" },
+		flash = {
+			sweep = TAIL_TIP, tide = { "TridentHead" }, spout = { "TridentHead" }, colors = { "TridentHead" }, swipe = { "TridentHead" }, grab = TAIL_TIP, tailSweep = TAIL_TIP,
+			vortex = TAIL_TIP, bubbles = { "Head" }, mirror = { "Hand_L" }, tridentThrow = { "TridentHead" },
+		},
+		impacts = {
+			n_sweep = { kind = "whoosh", parts = TAIL_TIP, size = 1.3, floorDust = true }, n_tide = { kind = "ground", parts = { "TridentHead" }, size = 1.0, shake = 0.8 },
+			n_spout = { kind = "spark", parts = { "TridentHead" }, size = 0.9 }, n_swipe = { kind = "whoosh", parts = { "TridentHead" }, size = 1.1 },
+			n_tailsweep = { kind = "whoosh", parts = TAIL_TIP, size = 1.3, floorDust = true }, n_vortex = { kind = "whoosh", parts = TAIL_TIP, size = 1.2 },
+			n_bubbles = { kind = "spark", parts = { "Head" }, size = 0.8 }, n_mirror = { kind = "spark", parts = { "Hand_L" }, size = 1.0 }, n_trident = { kind = "whoosh", parts = { "Hand_R" }, size = 1.1 },
+			n_env = { kind = "ground", parts = TAIL_TIP, size = 1.3, shake = 1.2 }, n_throw = { kind = "whoosh", parts = TAIL_TIP, size = 1.0 },
+			n_transform = { kind = "roar", parts = { "Head" }, size = 1.2, shake = 0.8 }, roar = { kind = "roar", parts = { "Head" }, size = 1.0, shake = 0.7 },
+			basic_R = { kind = "whoosh", parts = { "TridentHead" }, size = 0.55 }, basic_L = { kind = "whoosh", parts = { "Hand_L" }, size = 0.55 },
+		},
+		clips = C,
+	}
+end
+
 return D

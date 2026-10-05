@@ -184,6 +184,11 @@ local function placer(K)
 	end
 	L.J = {}
 	local world = { HumanoidRootPart = { R = E(Vector3.zero), c = Vector3.zero } }
+	-- 그 부위 국소 좌표에서 월드 아래쪽(배 · 땅 닿는 쪽) 점(접지 - 누운 꼬리 마디)
+	function L.downOf(part, dist)
+		local w = world[part]
+		return applyT(w.R, V(0, -dist, 0))
+	end
 	function L.place(o)
 		local par = world[o.parent]
 		local Rw = E(o.rot or Vector3.zero)
@@ -269,32 +274,54 @@ do
 	}
 end
 
--- ─────────────────────────── 심해 군주 → 나가(초안 · 뱀 하체 12마디) ───────────────────────────
+-- ─────────────────────────── 심해 군주 → 나가(BOSS-NIGHT-1 3 · Meshy 원본 실측 · 뱀 하체 12마디 · 삼지창 = 키 × 1.1) ───────────────────────────
+-- 상자 · 관절 = Meshy abyssal_v1_meshy71 정면 · 옆 · 위 실측(높이 1 = H · 상체 세운 키). Meshy 꼬리 = 허리 밑에서 내려와 오른쪽 → 뒤 → 왼쪽으로 감기고 지느러미가 왼쪽 뒤에서 솟음
+--   (실측 x는 정면 그림의 반대 - yaw 180). K 7.1 = 판정 사본(Body · Head) 부피 = 옛 몸 × 1.10 · 키 7.1 × S 3.6 = 25.6 stud = 바이블 §5 "상체 약 25"(scale 1.0).
+--   삼지창 = 오른손 자식 · 길이 1.1 H(약 28 stud) · 자루 굵게(KIT 상자 폭) · 창날 = 위 0.2 H. 접지 = 바닥에 누운 꼬리 마디 배 쪽(downOf).
 do
-	local J = BossSkeleton.serpent({
-		upper = { hips = V(1.5, 0.5, 1.1), torso = V(2.3, 1.6, 1.4), head = V(1.1, 0.9, 1.1), thigh = { w = 0.66, len = 0.72 }, shin = { w = 0.6, len = 0.72 }, foot = V(0.8, 0.25, 1.15),
-			upperArm = { w = 0.62, len = 0.95 }, forearm = { w = 0.6, len = 0.9 }, hand = V(0.72, 0.72, 0.72), shoulderX = 1.42, stance = 0.46 },
-		tail = { count = 12, length = 0.6, w0 = 1.0, w1 = 0.3, at = V(0, -0.2, 0.1), rots = { V(-15, 0, 0), V(-20, 0, 0), V(-25, 0, 0), V(-30, 0, 0), V(0, 0, 0), V(0, 0, 0), V(0, 0, 0), V(0, 0, 0), V(0, 0, 0), V(0, 0, 0), V(5, 0, 0), V(5, 0, 0) }, query = 3 },
-		fin = V(0.9, 0.7, 0.12),
-	})
-	add(J, { name = "Fin_L", parent = "Head", part = "LeftFin", size = V(0.25, 0.8, 0.9), shape = "wedge", color = "accent", at = V(-0.6, 0.1, 0.1), pivot = V(0, -0.2, 0), rot = V(0, 0, 35) })
-	add(J, { name = "Fin_R", parent = "Head", part = "RightFin", size = V(0.25, 0.8, 0.9), shape = "wedge", color = "accent", at = V(0.6, 0.1, 0.1), pivot = V(0, -0.2, 0), rot = V(0, 0, -35) })
-	add(J, { name = "Crest", parent = "Body", part = "BackFin", size = V(0.25, 1.1, 1.2), shape = "wedge", color = "accent", at = V(0, 0.4, 0.7), pivot = V(0, -0.3, 0), rot = V(0, 180, 0) })
-	for i, x in ipairs({ -0.3, 0, 0.3 }) do
-		chain(J, { prefix = "Hair" .. i .. "_", parent = "Head", count = 1, length = 0.7, w0 = 0.25, w1 = 0.25, thick = 0.06, at = V(x, 0.3, 0.45), rot0 = V(-40, 0, x * 30), rotStep = V(0, 0, 0), color = "accent" })
+	local L = placer(7.1)
+	local P, Z, place, seg, chainPts = L.P, L.Z, L.place, L.seg, L.chainPts
+	place({ name = "RootJoint", parent = "HumanoidRootPart", part = "Hips", center = P(0, 0.44, 0.2), size = Z(0.22, 0.12, 0.2), joint = P(0, 0.46, 0.2), color = "dark" })
+	place({ name = "Waist", parent = "Hips", part = "Body", center = P(0, 0.63, 0.2), size = Z(0.26, 0.3, 0.2), joint = P(0, 0.5, 0.2), query = true })
+	place({ name = "Neck", parent = "Body", part = "Head", center = P(0, 0.86, 0.21), size = Z(0.15, 0.16, 0.15), joint = P(0, 0.79, 0.2), color = "head", query = true })
+	place({ name = "Crest", parent = "Head", part = "BackFin", center = P(0, 0.96, 0.18), size = Z(0.2, 0.08, 0.13), joint = P(0, 0.93, 0.18), color = "accent" })
+	place({ name = "Jaw", parent = "Head", part = "Mouth", center = P(0, 0.81, 0.28), size = Z(0.05, 0.02, 0.03), joint = P(0, 0.82, 0.27), color = "mouth" })
+	for _, s in ipairs({ { "L", -1 }, { "R", 1 } }) do
+		local side, x = s[1], s[2]
+		place({ name = "Fin_" .. side, parent = "Head", part = side == "L" and "LeftFin" or "RightFin", center = P(x * 0.1, 0.9, 0.18), size = Z(0.07, 0.1, 0.1), joint = P(x * 0.07, 0.88, 0.19), color = "accent" })
+		seg("Shoulder_" .. side, "Body", "UpperArm_" .. side, { x * 0.17, 0.72, 0.2 }, { x * 0.27, 0.58, 0.22 }, 0.09, 0.09, 0.02)
+		seg("Elbow_" .. side, "UpperArm_" .. side, "Forearm_" .. side, { x * 0.27, 0.58, 0.22 }, { x * 0.33, 0.45, 0.22 }, 0.085, 0.085, 0.02)
+		seg("Wrist_" .. side, "Forearm_" .. side, "Hand_" .. side, { x * 0.33, 0.45, 0.22 }, { x * 0.34, 0.38, 0.23 }, 0.07, 0.06, 0.01)
 	end
-	add(J, { name = "Trident", parent = "Hand_R", part = "Trident", size = V(0.22, 4.2, 0.22), shape = "cyl", color = "accent", at = V(0, -0.3, 0), pivot = V(0, -0.6, 0) })
-	add(J, { name = "TridentHead", parent = "Trident", part = "TridentHead", size = V(0.9, 0.7, 0.15), shape = "wedge", color = "accent", material = "Neon", at = V(0, 2.1, 0), pivot = V(0, -0.35, 0) })
+	-- 뱀 꼬리 12마디(허리 밑 → 바닥 → 오른쪽 · 뒤 · 왼쪽으로 감김) + 꼬리 지느러미
+	local tailPts = { { 0, 0.38, 0.2 }, { -0.05, 0.2, 0.22 }, { -0.15, 0.07, 0.2 }, { -0.3, 0.06, 0.08 }, { -0.35, 0.06, -0.08 }, { -0.3, 0.06, -0.2 }, { -0.18, 0.05, -0.3 },
+		{ -0.02, 0.05, -0.33 }, { 0.12, 0.06, -0.32 }, { 0.22, 0.08, -0.3 }, { 0.29, 0.12, -0.3 }, { 0.33, 0.2, -0.3 }, { 0.35, 0.27, -0.3 } }
+	chainPts("Tail", "Hips", tailPts, 0.2, 0.08, 0.17, 0.08, "body")
+	place({ name = "TailFin", parent = "Tail12", part = "TailFin", center = P(0.3, 0.22, -0.31), size = Z(0.14, 0.24, 0.16), joint = P(0.34, 0.24, -0.3), color = "accent" })
+	-- 삼지창(오른손 · 땅에서 키 × 1.1 높이까지) · 창날
+	place({ name = "Trident", parent = "Hand_R", part = "Trident", center = P(0.36, 0.42, 0.24), size = Z(0.09, 0.9, 0.09), joint = P(0.345, 0.4, 0.23), color = "accent" })
+	place({ name = "TridentHead", parent = "Trident", part = "TridentHead", center = P(0.36, 0.97, 0.24), size = Z(0.32, 0.24, 0.08), joint = P(0.36, 0.87, 0.24), color = "accent" })
 	local tail = { kind = "tail", lag = 0.45, sway = 6 }
 	for i = 1, 12 do
 		tail[i] = "Tail" .. i
 	end
+	local contacts = {}
+	for _, i in ipairs({ 5, 6, 7 }) do -- 바닥에 누운 마디(꼬리 시작 · 끝은 들림)
+		table.insert(contacts, { part = "Tail" .. i, at = L.downOf("Tail" .. i, 7.1 * 0.085) })
+	end
 	D.rigs.abyssal_lord_v2 = {
-		bossId = "abyssal_lord", variant = "v2", status = "draft", plan = "serpent", joints = J, accent = Color3.fromRGB(60, 200, 255),
-		attach = { ShoulderR = { part = "UpperArm_R", at = V(0.1, 0.8, 0) }, ShoulderL = { part = "UpperArm_L", at = V(-0.1, 0.8, 0) }, HandR = { part = "Hand_R", at = V(0, -0.4, 0) }, HandL = { part = "Hand_L", at = V(0, -0.4, 0) }, Mouth = { part = "Head", at = V(0, -0.2, -0.55) }, TailTip = { part = "Tail12", at = V(0, -0.3, 0) } },
-		chains = { tail, { "Hair1_1", kind = "fur", lag = 0.4, sway = 4 }, { "Hair2_1", kind = "fur", lag = 0.4, sway = 4 }, { "Hair3_1", kind = "fur", lag = 0.4, sway = 4 } },
+		bossId = "abyssal_lord", variant = "v2", status = "trial", plan = "serpent", joints = L.J, accent = Color3.fromRGB(60, 200, 255),
+		scale = 1.0, -- 상체 세운 키 = 1 H × K 7.1 × S 3.6 = 25.6 stud(바이블 §5)
+		edgeHalfWidth = 7.1 * 0.2, -- 몸 가장자리 반폭(어깨 갑옷 바깥)
+		baseEdgeHalfWidth = 1.6, -- 옛 몸(심해 군주) = 어깨 1.42 + 0.18
+		cameraZoomScale = 1.3,
+		attach = { ShoulderR = { part = "UpperArm_R", at = V(0, 0.3, 0) }, ShoulderL = { part = "UpperArm_L", at = V(0, 0.3, 0) }, HandR = { part = "Hand_R", at = V(0, -0.2, 0) }, HandL = { part = "Hand_L", at = V(0, -0.2, 0) },
+			Mouth = { part = "Head", at = V(0, -0.3, -0.5) }, TailTip = { part = "Tail12", at = V(0, -0.3, 0) }, TridentTip = { part = "TridentHead", at = V(0, 0.5, 0) } },
+		chains = { tail, { "Crest", kind = "fur", lag = 0.4, sway = 3 }, { "Fin_L", kind = "fur", lag = 0.4, sway = 4 }, { "Fin_R", kind = "fur", lag = 0.4, sway = 4 } },
 		weight = 1.1,
-		contacts = { { part = "Tail5", at = V(0, 0, -0.37) }, { part = "Tail8", at = V(0, 0, -0.29) }, { part = "Tail11", at = V(0, 0, -0.2) } }, -- 누운 꼬리 = 배 쪽(마디 국소 −Z)
+		contacts = contacts,
+		meshKey = "bosses/abyssal_lord_v2m",
+		themeColors = { body = Color3.fromRGB(40, 150, 150), head = Color3.fromRGB(230, 225, 215), accent = Color3.fromRGB(60, 200, 255) },
 	}
 end
 

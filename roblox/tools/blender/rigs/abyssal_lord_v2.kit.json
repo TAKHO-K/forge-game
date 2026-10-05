@@ -1,0 +1,45 @@
+{
+ "about": "BOSS-NIGHT-1 3 나가 KIT 설정 - 몸 = Meshy abyssal_v1_meshy71(원본 - 리메시본 없음 · 몸 복셀 리메시 후 감량) + 삼지창 GLB(addons · 키 × 1.1 · 자루 굵게)",
+ "height": 7.1,
+ "yaw": 180,
+ "islands": 0,
+ "skip": [
+  "Mouth"
+ ],
+ "texture": "base",
+ "overlap": 0.1,
+ "bodyPreTris": 200000,
+ "bodyVoxel": 0.012,
+ "bake": {
+  "size": 1024,
+  "extrusion": 0.03,
+  "distance": 0.12
+ },
+ "addons": [
+  {
+   "glb": "abyssal_v1_trident.glb",
+   "parts": [
+    "Trident",
+    "TridentHead"
+   ],
+   "fit": "union",
+   "scaleAxis": "y",
+   "islands": 0.02,
+   "stretch": [
+    1.6,
+    1,
+    1.6
+   ]
+  }
+ ],
+ "partTris": {
+  "Trident": 3200,
+  "TridentHead": 800
+ },
+ "atlasGroups": [
+  [
+   "Trident",
+   "TridentHead"
+  ]
+ ]
+}

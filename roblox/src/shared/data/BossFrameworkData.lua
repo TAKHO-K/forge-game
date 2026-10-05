@@ -5,7 +5,7 @@ local D = {}
 --   live = 실전(라이브 포함) - **설계 담당이 수호자 시험을 검수한 뒤에만 채운다**(지금 비어 있음 = 6보스 모두 옛 몸).
 --   studioTrial = Studio에서 workspace Attribute BossFrameworkTrial = true일 때만(시험 · 촬영 · 하네스) - 라이브 서버에서는 무시.
 D.live = {}
-D.studioTrial = { section_guardian = "v2", frost_giant = "v2", storm_lord = "v2" } -- BOSS-NIGHT-1: 매머드 · 폭풍 새 몸(시험 스위치로만)
+D.studioTrial = { section_guardian = "v2", frost_giant = "v2", storm_lord = "v2", abyssal_lord = "v2" } -- BOSS-NIGHT-1: 매머드 · 폭풍 · 나가 새 몸(시험 스위치로만)
 D.trialAttribute = "BossFrameworkTrial"
 
 -- GUARDIAN-V2 몸 가장자리 기준 근접 반경(바이블 §5 - 공통 장치 · 보스별 · 기본 끔 = 표에 없음): 새 몸(리그 v2 · edgeHalfWidth)이 뜰 때만
@@ -22,6 +22,9 @@ D.bodyEdge = {
 	-- BOSS-NIGHT-1 2 폭풍 군주: 강화 평타 · 원 안 낙뢰 · 번개 결계 = 몸 가장자리 기준 · 밸런스 = BossSim(storm_v1/s_bosssim.txt)
 	--   피해 × 0.95(600판 · 처음 전멸 원거리 약 33% · 근접 약 45% ≤ 50 · × 1.0이면 근접 52%) - 아는 보스 12 ~ 18%(30 ~ 50 아래 - 다른 보스와 같은 구조)
 	storm_lord = { skills = { swipe = true, innerSmash = true, mirror = true }, innerSafe = true, chaseStop = true, damageScale = 0.95, hpScale = 1.0 },
+	-- BOSS-NIGHT-1 3 나가: 꼬리 휩쓸기(도넛 안 · 밖) · 꼬리 반원 · 강화 평타 · 물의 장막 = 몸 가장자리 기준 · 밸런스 = BossSim(abyssal_v1/s_bosssim.txt)
+	--   피해 × 0.75(600판 · 처음 원거리 47% · 근접 49% · 아는 보스 33 ~ 34% - 두 목표 모두 안) · 새 몸이 옛 몸보다 넓지 않아 몸 가장자리 증가 0(밸런스 계수만)
+	abyssal_lord = { skills = { sweep = true, tailSweep = true, swipe = true, mirror = true }, chaseStop = true, damageScale = 0.75, hpScale = 1.0 },
 }
 
 -- GUARDIAN-V3(사용자 시험 피드백 · 바이블 §11): 새 몸이 뜰 때만(BossFramework.applyV3 - 몸 가장자리 장치 뒤 · 인스턴스 사본 · BossData 원본 · 라이브 무변경).
@@ -145,6 +148,14 @@ D.v3 = {
 			basicParts = { R = "Hand_R", L = "Hand_L" } },
 		marks = { color = LAVENDER, crackColor = Color3.fromRGB(160, 90, 255), transparency = 0.6, crackTransparency = 0.25, crackWidth = 0.35 },
 		transformGuard = { hpBelow = 0.5, seconds = 2.8 },
+	},
+	-- BOSS-NIGHT-1 3 나가(바이블 §2-3): 근접 규칙(강화 평타 · 평타 바닥 표시 없음 · 예비 +0.12 · 삼지창 · 꼬리 청록 발광) - 꼬리 휩쓸기 · 꼬리 반원(큰 범위 · 점프)은 바닥 표시 유지 · 스킬표 무변경
+	abyssal_lord = {
+		hideFloor = { swipe = true, basic = true, innerRing = true },
+		windup = { seconds = 0.12, skills = { swipe = true }, basic = true },
+		glow = { color = Color3.fromRGB(60, 200, 255), fillPeak = 0.55, outline = 0.35, skills = { swipe = true, sweep = true, tailSweep = true, tide = true, tridentThrow = true, spout = true }, basic = true,
+			basicParts = { R = "TridentHead", L = "Hand_L" } },
+		marks = { color = LAVENDER, crackColor = Color3.fromRGB(160, 90, 255), transparency = 0.6, crackTransparency = 0.25, crackWidth = 0.35 },
 	},
 }
 

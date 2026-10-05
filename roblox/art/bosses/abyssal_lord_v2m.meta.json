@@ -1,0 +1,734 @@
+{
+ "parts": {
+  "Hips": {
+   "tris": 2194,
+   "origin": [
+    0.0,
+    1.766,
+    -1.42
+   ],
+   "center": [
+    -0.15,
+    1.478,
+    -1.456
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Body": {
+   "tris": 4993,
+   "origin": [
+    0.0,
+    2.05,
+    -1.42
+   ],
+   "center": [
+    -0.062,
+    2.976,
+    -1.394
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Head": {
+   "tris": 2005,
+   "origin": [
+    0.0,
+    4.109,
+    -1.42
+   ],
+   "center": [
+    -0.042,
+    4.564,
+    -1.27
+   ],
+   "neon": false,
+   "color": null
+  },
+  "BackFin": {
+   "tris": 441,
+   "origin": [
+    0.0,
+    5.103,
+    -1.278
+   ],
+   "center": [
+    0.181,
+    5.159,
+    -1.131
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Mouth": {
+   "tris": 33,
+   "origin": [
+    0.0,
+    4.322,
+    -1.917
+   ],
+   "center": [
+    -0.005,
+    4.247,
+    -1.907
+   ],
+   "neon": false,
+   "color": null
+  },
+  "LeftFin": {
+   "tris": 731,
+   "origin": [
+    -0.497,
+    4.748,
+    -1.349
+   ],
+   "center": [
+    -0.746,
+    4.723,
+    -1.209
+   ],
+   "neon": false,
+   "color": null
+  },
+  "UpperArm_L": {
+   "tris": 1504,
+   "origin": [
+    -1.207,
+    3.612,
+    -1.42
+   ],
+   "center": [
+    -1.589,
+    3.074,
+    -1.216
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Forearm_L": {
+   "tris": 1380,
+   "origin": [
+    -1.917,
+    2.618,
+    -1.562
+   ],
+   "center": [
+    -2.092,
+    2.139,
+    -1.48
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Hand_L": {
+   "tris": 388,
+   "origin": [
+    -2.343,
+    1.695,
+    -1.562
+   ],
+   "center": [
+    -2.076,
+    1.415,
+    -1.716
+   ],
+   "neon": false,
+   "color": null
+  },
+  "RightFin": {
+   "tris": 375,
+   "origin": [
+    0.497,
+    4.748,
+    -1.349
+   ],
+   "center": [
+    0.593,
+    4.753,
+    -1.206
+   ],
+   "neon": false,
+   "color": null
+  },
+  "UpperArm_R": {
+   "tris": 963,
+   "origin": [
+    1.207,
+    3.612,
+    -1.42
+   ],
+   "center": [
+    1.466,
+    2.977,
+    -1.261
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Forearm_R": {
+   "tris": 1203,
+   "origin": [
+    1.917,
+    2.618,
+    -1.562
+   ],
+   "center": [
+    1.801,
+    2.074,
+    -1.479
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Hand_R": {
+   "tris": 293,
+   "origin": [
+    2.343,
+    1.695,
+    -1.562
+   ],
+   "center": [
+    2.142,
+    1.511,
+    -1.685
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Tail1": {
+   "tris": 1455,
+   "origin": [
+    0.0,
+    1.198,
+    -1.42
+   ],
+   "center": [
+    -0.181,
+    0.184,
+    -1.477
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Tail2": {
+   "tris": 780,
+   "origin": [
+    -0.355,
+    -0.08,
+    -1.562
+   ],
+   "center": [
+    -0.616,
+    -0.482,
+    -1.277
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Tail3": {
+   "tris": 466,
+   "origin": [
+    -1.065,
+    -1.003,
+    -1.42
+   ],
+   "center": [
+    -1.364,
+    -0.775,
+    -0.73
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Tail4": {
+   "tris": 366,
+   "origin": [
+    -2.13,
+    -1.074,
+    -0.568
+   ],
+   "center": [
+    -1.613,
+    -0.781,
+    0.078
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Tail5": {
+   "tris": 228,
+   "origin": [
+    -2.485,
+    -1.074,
+    0.568
+   ],
+   "center": [
+    -1.605,
+    -0.85,
+    0.755
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Tail6": {
+   "tris": 326,
+   "origin": [
+    -2.13,
+    -1.074,
+    1.42
+   ],
+   "center": [
+    -1.303,
+    -0.926,
+    1.246
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Tail7": {
+   "tris": 258,
+   "origin": [
+    -1.278,
+    -1.145,
+    2.13
+   ],
+   "center": [
+    -0.539,
+    -1.018,
+    1.451
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Tail8": {
+   "tris": 517,
+   "origin": [
+    -0.142,
+    -1.145,
+    2.343
+   ],
+   "center": [
+    0.325,
+    -0.591,
+    1.81
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Tail9": {
+   "tris": 475,
+   "origin": [
+    0.852,
+    -1.074,
+    2.272
+   ],
+   "center": [
+    1.1,
+    -0.631,
+    2.081
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Tail10": {
+   "tris": 127,
+   "origin": [
+    1.562,
+    -0.932,
+    2.13
+   ],
+   "center": [
+    1.642,
+    -0.62,
+    2.002
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Tail11": {
+   "tris": 51,
+   "origin": [
+    2.059,
+    -0.648,
+    2.13
+   ],
+   "center": [
+    2.164,
+    -0.391,
+    2.047
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Tail12": {
+   "tris": 71,
+   "origin": [
+    2.343,
+    -0.08,
+    2.13
+   ],
+   "center": [
+    2.544,
+    0.112,
+    2.026
+   ],
+   "neon": false,
+   "color": null
+  },
+  "TailFin": {
+   "tris": 839,
+   "origin": [
+    2.414,
+    0.204,
+    2.13
+   ],
+   "center": [
+    1.713,
+    0.016,
+    2.236
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Trident": {
+   "tris": 3178,
+   "origin": [
+    2.4495,
+    1.34,
+    -1.633
+   ],
+   "center": [
+    2.53,
+    1.493,
+    -1.71
+   ],
+   "neon": false,
+   "color": null
+  },
+  "TridentHead": {
+   "tris": 1416,
+   "origin": [
+    2.556,
+    4.677,
+    -1.704
+   ],
+   "center": [
+    2.517,
+    4.787,
+    -1.669
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Body_Outline": {
+   "tris": 2630,
+   "origin": [
+    0.0,
+    2.05,
+    -1.42
+   ],
+   "center": [
+    -0.043,
+    3.007,
+    -1.386
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Tail1_Outline": {
+   "tris": 766,
+   "origin": [
+    0.0,
+    1.198,
+    -1.42
+   ],
+   "center": [
+    -0.196,
+    0.172,
+    -1.479
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Tail3_Outline": {
+   "tris": 243,
+   "origin": [
+    -1.065,
+    -1.003,
+    -1.42
+   ],
+   "center": [
+    -1.374,
+    -0.776,
+    -0.755
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Tail2_Outline": {
+   "tris": 410,
+   "origin": [
+    -0.355,
+    -0.08,
+    -1.562
+   ],
+   "center": [
+    -0.622,
+    -0.486,
+    -1.276
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "TailFin_Outline": {
+   "tris": 441,
+   "origin": [
+    2.414,
+    0.204,
+    2.13
+   ],
+   "center": [
+    1.713,
+    0.022,
+    2.239
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Hips_Outline": {
+   "tris": 1155,
+   "origin": [
+    0.0,
+    1.766,
+    -1.42
+   ],
+   "center": [
+    -0.145,
+    1.475,
+    -1.457
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Tail4_Outline": {
+   "tris": 190,
+   "origin": [
+    -2.13,
+    -1.074,
+    -0.568
+   ],
+   "center": [
+    -1.617,
+    -0.789,
+    0.092
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Head_Outline": {
+   "tris": 1055,
+   "origin": [
+    0.0,
+    4.109,
+    -1.42
+   ],
+   "center": [
+    -0.034,
+    4.574,
+    -1.284
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Tail6_Outline": {
+   "tris": 170,
+   "origin": [
+    -2.13,
+    -1.074,
+    1.42
+   ],
+   "center": [
+    -1.297,
+    -0.928,
+    1.248
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Tail5_Outline": {
+   "tris": 119,
+   "origin": [
+    -2.485,
+    -1.074,
+    0.568
+   ],
+   "center": [
+    -1.604,
+    -0.843,
+    0.775
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Tail7_Outline": {
+   "tris": 134,
+   "origin": [
+    -1.278,
+    -1.145,
+    2.13
+   ],
+   "center": [
+    -0.551,
+    -1.021,
+    1.457
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Tail8_Outline": {
+   "tris": 271,
+   "origin": [
+    -0.142,
+    -1.145,
+    2.343
+   ],
+   "center": [
+    0.322,
+    -0.605,
+    1.812
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  }
+ },
+ "partCount": 40,
+ "totalTris": 34640,
+ "triBudget": 28000,
+ "budgetUse": 1.237,
+ "version": "KIT1",
+ "rigId": "abyssal_lord_v2",
+ "partCap": 5000,
+ "joints": {
+  "Hips": "RootJoint",
+  "Body": "Waist",
+  "Head": "Neck",
+  "BackFin": "Crest",
+  "Mouth": "Jaw",
+  "LeftFin": "Fin_L",
+  "UpperArm_L": "Shoulder_L",
+  "Forearm_L": "Elbow_L",
+  "Hand_L": "Wrist_L",
+  "RightFin": "Fin_R",
+  "UpperArm_R": "Shoulder_R",
+  "Forearm_R": "Elbow_R",
+  "Hand_R": "Wrist_R",
+  "Tail1": "Tail1",
+  "Tail2": "Tail2",
+  "Tail3": "Tail3",
+  "Tail4": "Tail4",
+  "Tail5": "Tail5",
+  "Tail6": "Tail6",
+  "Tail7": "Tail7",
+  "Tail8": "Tail8",
+  "Tail9": "Tail9",
+  "Tail10": "Tail10",
+  "Tail11": "Tail11",
+  "Tail12": "Tail12",
+  "TailFin": "TailFin",
+  "Trident": "Trident",
+  "TridentHead": "TridentHead"
+ },
+ "deco": {},
+ "decoMaterial": {},
+ "lod2": [],
+ "outlineParts": [
+  "Body_Outline",
+  "Tail1_Outline",
+  "Tail3_Outline",
+  "Tail2_Outline",
+  "TailFin_Outline",
+  "Hips_Outline",
+  "Tail4_Outline",
+  "Head_Outline",
+  "Tail6_Outline",
+  "Tail5_Outline",
+  "Tail7_Outline",
+  "Tail8_Outline"
+ ],
+ "texture": {
+  "atlases": [
+   "abyssal_lord_v2m_atlas1.png",
+   "abyssal_lord_v2m_atlas2.png"
+  ],
+  "parts": [
+   "Hips",
+   "Body",
+   "Head",
+   "BackFin",
+   "Mouth",
+   "LeftFin",
+   "UpperArm_L",
+   "Forearm_L",
+   "Hand_L",
+   "RightFin",
+   "UpperArm_R",
+   "Forearm_R",
+   "Hand_R",
+   "Tail1",
+   "Tail2",
+   "Tail3",
+   "Tail4",
+   "Tail5",
+   "Tail6",
+   "Tail7",
+   "Tail8",
+   "Tail9",
+   "Tail10",
+   "Tail11",
+   "Tail12",
+   "TailFin",
+   "Trident",
+   "TridentHead"
+  ],
+  "partAtlas": {
+   "Hips": 1,
+   "Body": 1,
+   "Head": 1,
+   "BackFin": 1,
+   "Mouth": 1,
+   "LeftFin": 1,
+   "UpperArm_L": 1,
+   "Forearm_L": 1,
+   "Hand_L": 1,
+   "RightFin": 1,
+   "UpperArm_R": 1,
+   "Forearm_R": 1,
+   "Hand_R": 1,
+   "Tail1": 1,
+   "Tail2": 1,
+   "Tail3": 1,
+   "Tail4": 1,
+   "Tail5": 1,
+   "Tail6": 1,
+   "Tail7": 1,
+   "Tail8": 1,
+   "Tail9": 1,
+   "Tail10": 1,
+   "Tail11": 1,
+   "Tail12": 1,
+   "TailFin": 1,
+   "Trident": 2,
+   "TridentHead": 2
+  }
+ },
+ "kit": {
+  "neonDemoted": [],
+  "source": "abyssal_v1_meshy71.glb",
+  "sourceTris": 155999,
+  "overlapCopies": 8582,
+  "capped": 1845,
+  "empty": []
+ },
+ "space": "sizeScale 1 · 루트 원점 · 발바닥 y −1.5 · 앞 −Z",
+ "metaName": "abyssal_lord_v2m"
+}
