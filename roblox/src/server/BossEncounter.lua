@@ -49,6 +49,7 @@ local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local BossArenaKit = require(script.Parent.BossArenaKit)
 -- P3a C: 원형 아레나 · 보스별 테마 맵 · 구조물(기반은 슬롯마다 한 번, 테마 · 장식 · 구조물은 보스전마다).
 local BossArenaMap = require(script.Parent.BossArenaMap)
+local BossFirstAssist = require(script.Parent.BossFirstAssist) -- GUARDIAN-V3 첫 보스 도움
 local BossArenaContainment = require(script.Parent.BossArenaContainment) -- P3c A5: 맵 이탈 방지(원 밖 · 바닥 아래 → 피해 없이 안쪽으로)
 
 local BossEncounter = {}
@@ -400,6 +401,12 @@ local function spawnEncounter(data, stage, members, party, size, owner, isTutori
 			print(("[forge-game] %s 몸 가장자리 +%.2f stud(반경 · 근접 원 · 추격 정지) · 피해 × %.2f · 체력 × %.2f%s"):format(data.displayName or data.id, edge, data.bodyEdgeDamageScale or 1, data.bodyEdgeHpScale or 1,
 				#f > 0 and (" · 전조 맞춤 " .. table.concat(f, ", ")) or ""))
 		end
+		-- GUARDIAN-V3: 근접 바닥 표시 끔 · 예비 연장 · 돌진 폭 = 몸 폭 · 이속 · 반응 스킬(바나나 · 도약) · 첫 보스 도움(BossFrameworkData.v3 - 새 몸만)
+		data = BossFramework.applyV3(data, edgeKey)
+		if data.v3 then
+			print(("[forge-game] %s V3: 몸 반폭 %.2f · 이속 %.1f(질주 %.1f stud 밖 × %.1f) · 반응 스킬 %s · 돌진 반폭 %.2f"):format(data.displayName or data.id, data.bodyHalfWidthStuds,
+				data.moveSpeedStuds, data.sprintBeyondStuds or 0, data.sprintMultiplier or 1, table.concat(data.reactiveOrder or {}, ","), data.skills.charge and data.skills.charge.pathHalfWidthStuds or 0))
+		end
 	end
 	local slot = allocateSlot()
 	local zoneKey = zoneKeyForSlot(slot)
@@ -446,6 +453,8 @@ local function spawnEncounter(data, stage, members, party, size, owner, isTutori
 	end
 	encounterByModel[model] = encounter
 	model:SetAttribute("BossInnerCircle", data.innerSafeRadiusStuds) -- BR1-2 근접 원형 구역(클라가 바닥에 원을 그린다 · 없는 보스는 nil)
+	model:SetAttribute("BossInnerCircleHidden", data.innerRingHidden or nil) -- GUARDIAN-V3: 원은 판정에 그대로 · 바닥 그림만 끔
+	model:SetAttribute("BossPrepSeconds", data.basicWindupExtraSeconds and (BossData.basicPrepSeconds + data.basicWindupExtraSeconds) or nil) -- GUARDIAN-V3: 평타 예비 길이(클라 동작 · 손 발광)
 	encounter.kitParts = BossArenaKit.build(data.arenaKit, zone, ARENA_FLOOR_TOP_Y)
 	BossPatterns.setGrace(model, data, data.scheduler.entryGraceSeconds) -- 입장 2초 유예(20.44 [3](다))
 	-- 29-1: 힌트 단계 - 같은 보스에게 이번 세션에 전멸한 적이 있으면 그 단계로 시작한다.
@@ -454,6 +463,7 @@ local function spawnEncounter(data, stage, members, party, size, owner, isTutori
 		BossPatterns.setHintLevel(model, data, hintLevelFor(encounter.hintOwner, data.id))
 	end
 	BossArenaContainment.track(encounter)
+	BossFirstAssist.apply(encounter) -- GUARDIAN-V3 첫 보스 도움(전멸 수 → 받는 피해 배율)
 	fireListeners(startedListeners, encounter)
 	-- A2-M1 진입 연출: 이 보스(종)를 처음 만나는 멤버(저장 hints.bossIntroSeen - 아래 첫 만남 카드와 같은 기록)가 있으면 첫 조우판(3초), 아니면 짧은 판(1.2초)
 	local full = false
@@ -669,6 +679,7 @@ end
 local function endEncounter(encounter, destroyModel)
 	SoulService.clearEncounter(encounter) -- Q8: 보스전 끝 = 영혼 전원 복귀
 	BossTrap.releaseAll(encounter.members, "reset") -- 29-1: 잡힌 채로 사냥터에 돌아가지 않는다
+	BossFirstAssist.clear(encounter) -- GUARDIAN-V3: 받는 피해 배율(첫 보스 도움)은 보스전 동안만
 	if encounter.model then -- G1-4: 잔류 중에는 보스 모델이 없다
 		BossPatterns.clearProps(encounter.model, encounter.members) -- 29-3: 동적 지형(얼음 기둥)은 보스전과 함께 사라진다
 	end
@@ -890,6 +901,7 @@ function BossEncounter.resetFor(player)
 		BossPatterns.setHintLevel(model, data, hintLevelFor(encounter.hintOwner, data.id))
 		print(("[forge-game] 힌트 단계: %s에게 전멸 %d회 → %d단계"):format(data.displayName, record.wipes, hintLevelFor(encounter.hintOwner, data.id)))
 	end
+	BossFirstAssist.onWipe(encounter) -- GUARDIAN-V3: 처치 전 전멸 1회 = 받는 피해 −10%(최대 −30%)
 	MonsterSpawner.updateHpLabel(model)
 	MonsterState.setAiState(model, "idle")
 	MonsterState.setAiTarget(model, nil)

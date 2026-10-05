@@ -286,6 +286,7 @@ return {
 	["extras/vfx/TelegraphCone"] = { id = 81468530579734, kind = "Model", status = "Approved" },
 	["extras/vfx/TelegraphLine"] = { id = 110504585989678, kind = "Model", status = "Approved" },
 	["extras/vfx/WarnPillar"] = { id = 115551353990807, kind = "Model", status = "Approved" },
+	["fx/guardian_banana"] = { id = 75948236745182, kind = "Model", status = "Approved" },
 	["fx/jelly_bubble"] = { id = 99754566334551, kind = "Decal", image = 113003755273709, status = "Approved" },
 	["fx/soft_glow"] = { id = 95819361311277, kind = "Decal", image = 105594125885210, status = "Approved" },
 	["gear/pilot/A/pilotA_armor_greatsword_legendary_stoneplains"] = { id = 96891752692714, kind = "Model", status = "Approved" },

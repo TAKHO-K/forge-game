@@ -136,6 +136,7 @@ local function readState(e, now)
 		st.env, st.envEndAt = nil, nil
 	end
 	st.swingAt, st.swingN = m:GetAttribute("BossSwingAt"), m:GetAttribute("BossSwingN")
+	st.prepSeconds = m:GetAttribute("BossPrepSeconds") -- GUARDIAN-V3: 평타 예비 길이(새 몸 수호자 연장 - 없으면 BossData.basicPrepSeconds)
 	st.prepAt = m:GetAttribute("BossSwingPrepAt") -- A2-N3 결정 ②: 평타 예비 동작(예정 타격 서버 시각) · QUEUE-ALL1 C-1: 전투 가독성 = 아트 끔에서도(스위치 예외)
 	st.nextN = m:GetAttribute("BossSwingNextN") -- QUEUE-ALL1 C-1: 다음 휘두를 쪽(서버가 불규칙으로 정함)
 	st.hopAt, st.hopSeconds = m:GetAttribute("BossHopAt"), m:GetAttribute("BossHopSeconds")
@@ -277,6 +278,45 @@ local function applyFlash(e, info)
 	elseif e.flashPart then
 		e.flashPart.Color, e.flashPart.Material = e.flashColor, e.flashMaterial
 		e.flashPart = nil
+	end
+end
+
+-- GUARDIAN-V3 손 수정 발광: info.glow = 부위 이름들 · glowAmount 0 ~ 1 → 부위마다 Highlight(보라 채움 · 테 - 위험색 아님) · 흰 테(rim)가 켜진 부위는 끈다
+local function applyGlow(e, info)
+	e.glows = e.glows or {}
+	local on = {}
+	local G = e.ctx.glow
+	local rimOn = {}
+	if info.rim and (info.rimAmount or 0) > 0 then
+		for _, name in ipairs(info.rim) do
+			rimOn[name] = true
+		end
+	end
+	if G and info.glow and (info.glowAmount or 0) > 0 then
+		for _, name in ipairs(info.glow) do
+			local part = e.model:FindFirstChild(name)
+			if part and part:IsA("BasePart") and not rimOn[name] then
+				on[name] = true
+				local h = e.glows[name]
+				if not h or not h.Parent then
+					h = Instance.new("Highlight")
+					h.Name = "CrystalGlow_" .. name
+					h.FillColor, h.OutlineColor = G.color, G.color
+					h.DepthMode = Enum.HighlightDepthMode.Occluded
+					h.Adornee = part
+					h.Parent = e.model
+					e.glows[name] = h
+				end
+				h.Enabled = true
+				h.FillTransparency = 1 - G.fillPeak * info.glowAmount
+				h.OutlineTransparency = 1 - (1 - G.outline) * info.glowAmount
+			end
+		end
+	end
+	for name, h in pairs(e.glows) do
+		if not on[name] and h.Enabled then
+			h.Enabled = false
+		end
 	end
 end
 
@@ -531,7 +571,8 @@ local function updateEntry(e, now, dt, camPos)
 		readState(e, now)
 		-- A2-N4 §3-3(A2-N3 결정 ④): 평타 예비 동안 약한 흰 번쩍임(팔이 화면 밖이어도 전조가 읽히게 - 겉모습만)
 		local prepAt, flash = e.st.prepAt, BossMotionData.prepFlash
-		local u = prepAt and flash and (now - (prepAt - BossData.basicPrepSeconds)) / BossData.basicPrepSeconds
+		local prepLead = e.st.prepSeconds or BossData.basicPrepSeconds
+		local u = prepAt and flash and (now - (prepAt - prepLead)) / prepLead
 		if u and u >= 0 and u <= 1 then
 			if not e.prepHighlight then
 				local h = Instance.new("Highlight")
@@ -821,6 +862,7 @@ local function updateEntry(e, now, dt, camPos)
 	end
 	if not e.isClone then
 		if e.ctx.set then
+			applyGlow(e, info) -- GUARDIAN-V3 손 수정 발광(예비 동작 내내 - 흰 테가 켜진 부위는 흰 테가 덮는다)
 			applyRim(e, info) -- BOSS-FRAMEWORK 5 때리는 부위 흰 테(옛 무기 번쩍 대신)
 		else
 			applyFlash(e, info)

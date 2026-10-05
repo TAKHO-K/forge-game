@@ -37,6 +37,7 @@ local BossRhythmView = require(script.Parent.BossRhythmView) -- P3c A: 점프 �
 local BossRegrowView = require(script.Parent.BossRegrowView) -- P3d D: 지형 재생성 전조(그림자 + 금 빛) · 솟음 · 끼임 표시
 local BossMotionView = require(script.Parent.BossMotionView) -- P3d A1 · A2 · A4: 보스 찍기 · 돌진 모션(인형) · 풍압 · 속도감
 local BossCraterView = require(script.Parent.BossCraterView) -- A2-N4 §2-5 지진파 구덩이 흔적
+local BossQuakeView = require(script.Parent.BossQuakeView) -- GUARDIAN-V3 연보라 균열 표시 · 지진파 돌판 · 수정 조각
 local function isPhoneLook() -- A2-N4: 폰(터치 · 짧은 변 < 500)은 먼지를 줄인다(BossArenaDressing과 같은 잣대)
 	local cam = workspace.CurrentCamera
 	local vp = cam and cam.ViewportSize or Vector2.new(1920, 1080)
@@ -779,28 +780,51 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 	elseif kind == "daze" then
 		showBubble("daze", data.seconds)
 	elseif kind == "heavyTelegraph" then
-		heavyTelegraph(data)
+		if not data.noFloor then -- GUARDIAN-V3: 새 몸 수호자 근접 = 바닥 전조 없음(예비 동작 · 손 발광)
+			heavyTelegraph(data)
+		end
 	elseif kind == "heavyImpact" then
-		heavyImpact(data)
+		if not data.noFloor then
+			heavyImpact(data)
+		end
 	elseif kind == "shockTelegraph" then
-		shockTelegraph(data)
+		if data.style then
+			BossQuakeView.quakeTelegraph(data) -- GUARDIAN-V3: 발밑 균열 링(옛 빨강 원판 대신)
+		else
+			shockTelegraph(data)
+		end
 		BossMotionView.slamWindup(data) -- P3d A1: 크게 들어 올리는 예비 동작
 	elseif kind == "shockwave" then
-		shockwave(data)
+		if data.style then
+			BossQuakeView.quakeWave(data) -- GUARDIAN-V3: 돌판 링 · 바닥 균열 · 공중 수정 조각 링(옛 띠 · 구덩이 대신)
+		else
+			shockwave(data)
+		end
 		BossRhythmView.waveCue(data)
 		if (data.layer or 1) == 1 then
 			BossMotionView.slamImpact(data) -- P3d A2: 내려찍는 순간 풍압 · 흔들림
-			if not data.air then
+			if not data.air and not data.style then
 				BossCraterView.add(data.center, data.floorColor) -- A2-N4 §2-5: 찍은 자리 얕은 구덩이 흔적(겉모습만)
 			end
 		end
 	elseif kind == "focus" then
-		focus(data)
+		if data.markStyle == "crack" then
+			BossQuakeView.chargeCrack(data) -- GUARDIAN-V3: 연보라 균열선(폭 = 몸 폭)
+		else
+			focus(data)
+		end
 		BossRhythmView.chargeTarget(data)
 		BossMotionView.chargeWindup(data) -- P3d A4: 발 긁기
 	elseif kind == "charge" then
+		BossQuakeView.chargeEnd(data)
 		charge(data)
 		BossMotionView.chargeRun(data) -- P3d A4: 속도선 · 잔상 · 먼지 꼬리 · 도착 임팩트
+	elseif kind == "leapTelegraph" then
+		BossQuakeView.leapTelegraph(data) -- GUARDIAN-V3 도약 착지 균열 원
+	elseif kind == "leapAim" then
+		BossQuakeView.leapAim(data)
+	elseif kind == "leapImpact" then
+		BossQuakeView.leapImpact(data)
 	elseif kind == "meteor" then
 		meteor(data)
 	elseif kind == "meteorLock" then
@@ -812,12 +836,16 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 	elseif kind == "crossFire" then
 		crossFire(data)
 	elseif kind == "sector" then
-		BossBR1View.sector(data)
-		if data.outline then
-			BossBR13View.swipeOutline(data)
+		if not data.noFloor then -- GUARDIAN-V3: 새 몸 수호자 강화 평타 = 바닥 부채꼴 · 테두리 없음
+			BossBR1View.sector(data)
+			if data.outline then
+				BossBR13View.swipeOutline(data)
+			end
 		end
 	elseif kind == "sectorImpact" then
-		BossBR1View.sectorImpact(data)
+		if not data.noFloor then
+			BossBR1View.sectorImpact(data)
+		end
 	elseif kind == "projTelegraph" then
 		BossBR1View.projTelegraph(data)
 	elseif kind == "projSpawn" then
@@ -938,7 +966,9 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 	elseif kind == "colorEnd" then
 		BossColorView.finish()
 	elseif kind == "basicSweep" then
-		BossInnerCircleView.sweep(data)
+		if not data.noFloor then -- GUARDIAN-V3: 새 몸 수호자 평타 = 바닥 쓸기 궤적 없음(빨간 방사 칼날 - 사용자 "빨간 별")
+			BossInnerCircleView.sweep(data)
+		end
 	elseif kind == "bossAirborne" then -- BR1-2 보스 에어본: 발밑 먼지 고리 + 흔들림(보스 몸은 서버가 띄운다)
 		BossFx.ring(data.position - Vector3.new(0, 1.5, 0), 2, 12, Color3.new(1, 1, 1), 0.4)
 		BossFx.shake(data.position, 0.7)
@@ -983,6 +1013,7 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		BossRegrowView.spawn(data)
 	elseif kind == "reset" then
 		resetAll()
+		BossQuakeView.reset() -- GUARDIAN-V3
 		BossRhythmView.clear()
 		BossMotionView.reset()
 		BossRegrowView.clear() -- 리뷰 2: 끼임 표시도(서버가 풀었다는 알림을 못 받았어도 리셋이면 지운다)

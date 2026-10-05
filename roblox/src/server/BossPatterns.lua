@@ -390,6 +390,17 @@ local function conditionMet(model, st, data, condition)
 			end
 		end
 		return false
+	elseif kind == "targetBeyondFor" then
+		-- GUARDIAN-V3 ⑧ 반응 스킬(바나나): 대상이 studs 밖에 seconds 이상 이어서 있었다(시각 = 매 틱 trackReactive)
+		local since = st.beyondSince and st.beyondSince[condition.studs]
+		return since ~= nil and os.clock() - since >= condition.seconds
+	elseif kind == "missesWithin" then
+		-- GUARDIAN-V3 ⑧ 반응 스킬(도약): 최근 seconds 안 빗나감(결과 조각 noteMiss)이 count 이상
+		local log, now, n = st.missLog and st.missLog[condition.key], os.clock(), 0
+		for _, at in ipairs(log or {}) do
+			n += (now - at <= condition.seconds) and 1 or 0
+		end
+		return n >= condition.count
 	elseif kind == "memberAirborne" then
 		-- BR1 대공 투사체(얼음 창 · 뇌격 창): 지금 떠 있는 사람이 있다(없으면 쏘지 않는다).
 		local now = os.clock()
@@ -471,6 +482,10 @@ local function endSkill(model, st, data, now, interrupted)
 	st.skill = nil
 	model:SetAttribute("BossAct", nil) -- BR1-4b 모션: 스킬 끝(클라가 동작을 풀어 제자리로)
 	model:SetAttribute("BossActPhase", nil)
+	if id and data.skills[id] and data.skills[id].reactive then
+		BossScheduler.onReactiveEnd(st.sched, data.skills, id, now) -- GUARDIAN-V3 ⑧: 전역 쿨 · 직전 스킬 그대로(내부 쿨만)
+		return
+	end
 	BossScheduler.onSkillEnd(st.sched, data.skills, id, now, data.scheduler)
 	if not (BossData.mechanics.lanes and BossData.mechanics.lanes.enabled) then
 		MonsterState.setLastAttackTick(model, now) -- 스킬 직후 바로 평타가 또 나가지 않게(15-1과 같다) · A2-N4 평타 줄: 스킬이 평타 주기를 리셋하지 않는다(예비 0.25초가 대신)
@@ -655,6 +670,16 @@ runEffects = function(c, effects, info)
 		elseif effect.type == "regrowObstacles" then
 			regrowObstacles(c, effect) -- P3d D
 			continue
+		elseif effect.type == "noteMiss" then -- GUARDIAN-V3: 빗나감 기록(투사체가 대상에 안 맞고 끝남 - BossHandlersBR1) · 반응 조건 missesWithin이 읽는다
+			c.st.missLog = c.st.missLog or {}
+			c.st.missLog[effect.key] = c.st.missLog[effect.key] or {}
+			table.insert(c.st.missLog[effect.key], os.clock())
+			continue
+		elseif effect.type == "clearMisses" then
+			if c.st.missLog then
+				c.st.missLog[effect.key] = {}
+			end
+			continue
 		end
 		local def = c.data.props and c.data.props[effect.prop]
 		if not def then
@@ -825,6 +850,7 @@ local function beginPulse(c)
 		radius = pulse.radiusStuds,
 		innerRadius = (pulse.innerRadiusStuds or 0) > 0 and pulse.innerRadiusStuds or nil,
 		seconds = skill.telegraphSeconds,
+		noFloor = skill.noFloor, -- GUARDIAN-V3: 바닥 전조 없음(예비 동작 · 손 발광으로 읽는다 - 판정 그대로)
 	})
 end
 
@@ -857,6 +883,7 @@ HANDLERS.circleBoss = {
 			center = Vector3.new(c.position.X, st.floorY, c.position.Z),
 			radius = pulse.radiusStuds,
 			innerRadius = inner > 0 and inner or nil,
+			noFloor = skill.noFloor,
 		})
 		runEffects(c, skill.onImpact, { center = c.position, radius = pulse.radiusStuds })
 		if st.pulseIndex < #pulses then
@@ -883,6 +910,7 @@ local function startHop(c, seconds)
 		center = Vector3.new(st.hopBase.X, st.floorY, st.hopBase.Z),
 		seconds = seconds,
 		hopHeight = skill.hopHeightStuds,
+		style = skill.ringStyle, -- GUARDIAN-V3: 지진파 그림(균열 링 · 돌판 · 수정 조각 - 클라 BossQuakeView)
 		bossId = c.data.id, waveIndex = st.wavesSpawned + 1, waveCount = #st.ringWaves, -- P3d A1: 클라가 보스별 찍기 모션(BossFxData.bosses)을 고른다(연출만)
 	})
 end
@@ -1002,7 +1030,7 @@ local function slam(c)
 			speed = wave.speedStuds,
 			thickness = skill.waveThicknessStuds,
 			maxRadius = maxRadius,
-			waveIndex = st.wavesSpawned + 1, layer = layer, waveCount = #st.ringWaves,
+			waveIndex = st.wavesSpawned + 1, layer = layer, waveCount = #st.ringWaves, style = skill.ringStyle,
 			air = wave.air, -- BR1 공중 파동(클라가 띠를 발 높이 [min, max]에 띄워 그린다)
 			bossId = c.data.id, -- P3d A2 · A3: 임팩트 모션 · 풍압 · 땅 파도(연출만)
 			floorColor = (BossArenaMap.getTheme(MonsterState.getZoneKey(c.model)) or BossArenaMapData.default).floor.color,
@@ -1455,6 +1483,7 @@ local function startDash(c, fromPosition, dashIndex)
 		floorY = st.floorY,
 		targetUserId = targetUserId, -- P3c A2: 클라가 이 사람 머리 위에 표식을 띄운다(방향선 = 위 경로선)
 		bossId = c.data.id, dashIndex = dashIndex, burrow = skill.burrow ~= nil, -- P3d A4: 발 긁기 · 잠행 연출(연출만)
+		markStyle = skill.markStyle, -- GUARDIAN-V3: 연보라 균열선(폭 = 몸 폭)
 	})
 	print(("[forge-game] 돌진 대상 확정: %s(%d번째 돌진) - 보스에서 %.1fstud, 경로 %.1fstud%s"):format(
 		tostring(targetPlayer and targetPlayer.Name or "어그로 대상"), dashIndex, (snapshot - origin).Magnitude, length, obstacleId and (" · 구조물 #" .. obstacleId .. "에서 멈춤") or ""))
@@ -2107,6 +2136,9 @@ local kit = {
 	endSkill = endSkill, runHitEffects = runHitEffects, judgeBegin = judgeBegin, judgeEnd = judgeEnd,
 	debugEvent = debugEvent, serverNow = serverNow, rng = scatterRng, setBodyColor = setBodyColor, clearDaze = clearDaze,
 	kitZones = kitZones, groundAt = groundAt, sendPropsRemoved = sendPropsRemoved,
+	runEffects = function(...) -- GUARDIAN-V3: 투사체 빗나감(onMiss = noteMiss) - BossHandlersBR1
+		return runEffects(...)
+	end,
 }
 BossPatterns.kit = kit -- M1-2c 검증: 보스 발사를 최대 수치로 같은 서버 경로(runHitEffects)에 넣는다
 -- BR1: 보스를 seconds 동안 기절시킨다(환경 기믹 파훼 - 수정 공중 정원). 돌던 스킬을 끊고 헤롱 자세 · 그동안 스킬 · 추격 · 평타 없음(step이 true).
@@ -2150,6 +2182,7 @@ end
 BossHandlersBR1.register(HANDLERS, kit)
 BossAirGrab.register(HANDLERS, kit)
 require(script.Parent.BossSonic).register(HANDLERS, kit) -- BR1-2 음파 포효(primitive sonic)
+require(script.Parent.BossLeap).register(HANDLERS, kit) -- GUARDIAN-V3 도약(primitive leap)
 require(script.Parent.BossColorMatch).register(HANDLERS, kit) -- BR1-2 색 맞추기(primitive colorMatch)
 require(script.Parent.BossLightningRods).register(HANDLERS, kit) -- BR1-2 번개 조준경(primitive lightningRods)
 local BossSandSearch = require(script.Parent.BossSandSearch)
@@ -2175,10 +2208,28 @@ end
 
 local function startSkill(model, st, data, id, now, position, targetRoot)
 	local skill = data.skills[id]
+	-- GUARDIAN-V3: 체력 구간 덮어쓰기(skill.overrides = { { hpBelow, set = { 키 = 값 } } } - 광폭 바나나 3갈래) - 시작 순간 체력으로 한 번 고른다
+	for i, o in ipairs(skill.overrides or {}) do
+		if MonsterState.getHpRatio(model) <= o.hpBelow then
+			st.overrideCache = st.overrideCache or {}
+			local key = id .. "#" .. i
+			if not st.overrideCache[key] then
+				local merged = table.clone(skill)
+				for k, v in pairs(o.set) do
+					merged[k] = v
+				end
+				st.overrideCache[key] = merged
+			end
+			skill = st.overrideCache[key]
+			break
+		end
+	end
 	st.current = id
 	st.skill = skill
 	st.currentStartedAt = now
-	BossScheduler.onSkillStart(st.sched, id, now, data.skills, data.scheduler)
+	if not skill.reactive then -- GUARDIAN-V3 ⑧: 반응 스킬은 스케줄러 시계(본 적 · 강공격 줄 · 전조 간격)를 건드리지 않는다
+		BossScheduler.onSkillStart(st.sched, id, now, data.skills, data.scheduler)
+	end
 	BossMechanics.beginActivation(model) -- %최대체력 피해의 발동당 1인 누적을 비운다
 	print(("[forge-game] 보스 패턴 시작: %s (직전 종료 후 %.2f초)"):format(id, now - st.sched.lastEndAt))
 	local c = context(model, st, data, now, position, targetRoot)
@@ -2217,6 +2268,21 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt, member
 	BossHandlersBR1.stepProjectiles(model, st, data, now, dt) -- BR1: 쏜 투사체는 스킬과 떨어져 난다
 	BossHandlersBR1.stepSpikes(model, st, now) -- BR1-3 아르마딜로 반격 가시(스킬이 끝나도 떨어진다)
 	BossEnvironment.step(model, st, data, now, dt) -- BR1: 환경 변화(두 번째 시계 - 기본 패턴과 겹친다)
+	if data.reactiveOrder then -- GUARDIAN-V3 ⑧: 반응 조건 targetBeyondFor의 시각(스킬이 도는 동안에도 잰다)
+		st.beyondSince = st.beyondSince or {}
+		local distance = targetRoot and Reach.horizontalDistance(targetRoot.Position, position) or 0
+		for _, id in ipairs(data.reactiveOrder) do
+			for _, cond in ipairs(data.skills[id].conditions or {}) do
+				if cond.type == "targetBeyondFor" then
+					if distance > cond.studs then
+						st.beyondSince[cond.studs] = st.beyondSince[cond.studs] or now
+					else
+						st.beyondSince[cond.studs] = nil
+					end
+				end
+			end
+		end
+	end
 	if st.airborne then -- BR1-2 보스 에어본: 떠올랐다(rise) 떨어진다(fall) - 그 뒤는 아래 기절(stunUntil)
 		local cfg = BossData.mechanics.bossAirborne
 		local a = st.airborne
@@ -2270,12 +2336,24 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt, member
 			startSkill(model, st, data, pick, now, position, targetRoot)
 			return true
 		end
+		-- GUARDIAN-V3 ⑧ 반응 스킬(바나나 · 도약): 패턴이 안 도는 틈 - 전역 쿨과 무관
+		local reactive = data.reactiveOrder and BossScheduler.pickReactive(st.sched, data.skills, data.reactiveOrder, pickCtx)
+		if reactive then
+			startSkill(model, st, data, reactive, now, position, targetRoot)
+			return true
+		end
 		return false
 	end
 
 	local handler = HANDLERS[st.skill.primitive]
 	handler.step(context(model, st, data, now, position, targetRoot))
 	return true
+end
+
+-- GUARDIAN-V3: 도약 비행 중(보스 몸이 포물선으로 떠 있다 - primitive leap) - MonsterAI가 높이차로 대상을 놓치지 않게 묻는다
+function BossPatterns.isLeaping(model)
+	local st = MonsterState.getBossPatternState(model)
+	return st ~= nil and st.phase == "leapFlight"
 end
 
 -- 진행 중인 스킬을 즉시 취소한다(대상 사망·퇴장·리쉬). 안 하면 다음에 다시 어그로를 잡았을 때 지난 예고가

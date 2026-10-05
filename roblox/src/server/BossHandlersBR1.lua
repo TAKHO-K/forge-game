@@ -66,6 +66,7 @@ local function beginSectorVolley(c, centerDeg)
 		seconds = volley.telegraphSeconds, jumpable = skill.jumpable == true,
 		bossId = c.data.id, motion = skill.motion, volley = st.sectorVolley,
 		outline = skill.outline, weaponFlash = skill.weaponFlash, -- BR1-3 강화 평타: 흰 테두리 두 줄 · 무기 번쩍
+		noFloor = skill.noFloor, -- GUARDIAN-V3: 바닥 전조 없음(판정 그대로)
 		zoneCenter = kit.zoneOf(c.model).center, zoneRadius = kit.zoneOf(c.model).radius,
 	})
 end
@@ -118,7 +119,7 @@ BossHandlersBR1.sector = {
 		kit.judgeEnd(c, { kind = "sector", origin = Vector3.new(st.sectorOrigin.X, st.floorY, st.sectorOrigin.Z), angleDeg = st.sectorCenterDeg, widthDeg = volley.angleDeg, radius = st.sectorRadius, inner = inner })
 		kit.send(st, "sectorImpact", {
 			center = Vector3.new(st.sectorOrigin.X, st.floorY, st.sectorOrigin.Z), angleDeg = st.sectorCenterDeg, widthDeg = volley.angleDeg,
-			radius = st.sectorRadius, innerRadius = skill.innerRadiusStuds, bossId = c.data.id, motion = skill.motion,
+			radius = st.sectorRadius, innerRadius = skill.innerRadiusStuds, bossId = c.data.id, motion = skill.motion, noFloor = skill.noFloor,
 		})
 		if skill.afterField then -- BR1 판정 뒤 남는 장(빙판 - 미끄러짐은 클라 관성 · 판정 없음)
 			kit.send(st, "field", { kind = skill.afterField.kind, center = Vector3.new(st.sectorOrigin.X, st.floorY, st.sectorOrigin.Z), radius = skill.afterField.radiusStuds, seconds = skill.afterField.seconds })
@@ -164,7 +165,7 @@ local function predictedAim(skill, from, root, heightMode)
 			velocity = Vector3.new(velocity.X, 0, velocity.Z)
 		end
 		local t = math.min((at - from).Magnitude / math.max(skill.speedStuds, 1), lead)
-		at += velocity * t
+		at += velocity * t * (skill.leadFraction or 1) -- GUARDIAN-V3: 리드 조준 비율(바나나 50%)
 	end
 	return at
 end
@@ -203,7 +204,11 @@ local function launchProjectile(c, index, target)
 		bouncesLeft = skill.bounces or 0,
 		-- BR1-2 반사 대비(K 성기사 패링 · 반사 대결): 소유자 · 반사 가능 · 반사 횟수
 		owner = { kind = "boss", model = c.model }, reflectable = skill.reflectable ~= false, reflections = 0,
+		throw = st.projThrow, -- GUARDIAN-V3: 한 번 던진 묶음(부채 3갈래 포함) - 묶음 전부가 대상을 못 맞히면 빗나감(onMiss)
 	}
+	if st.projThrow then
+		st.projThrow.left += 1
+	end
 	st.projectiles = st.projectiles or {}
 	table.insert(st.projectiles, projectile)
 	kit.send(st, "projSpawn", {
@@ -223,6 +228,7 @@ BossHandlersBR1.projectile = {
 		st.phaseEndsAt = c.now + skill.telegraphSeconds
 		st.projTargets = pickProjectileTargets(c)
 		st.projLaunched = 0
+		st.projThrow = skill.onMiss and { left = 0, hit = false, skill = skill, data = c.data } or nil
 		local userIds = {}
 		for _, v in ipairs(st.projTargets) do
 			table.insert(userIds, typeof(v.player) == "Instance" and v.player.UserId or 0)
@@ -526,6 +532,15 @@ function BossHandlersBR1.stepProjectiles(model, st, data, now, dt)
 			end
 		end
 		stepRiders(model, st, p, now, bounced, done)
+		if done and p.throw then
+			local g = p.throw
+			g.hit = g.hit or p.hitBy[p.target] == true -- 대상(조준한 사람)에게 맞았는가
+			g.left -= 1
+			if g.left <= 0 and not g.hit then
+				kit.runEffects({ model = model, st = st, data = g.data, skill = g.skill, now = now, position = p.position }, g.skill.onMiss, {})
+				kit.debugEvent("projectileMiss", { at = now, skill = g.skill.damageLabel })
+			end
+		end
 		if done then
 			table.insert(ended, { id = p.id, position = p.position })
 		else

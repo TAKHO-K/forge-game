@@ -14,6 +14,7 @@ local Workspace = game:GetService("Workspace")
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local BossFx = require(script.Parent.BossFx)
 local TelegraphStyle = require(script.Parent.TelegraphStyle) -- A2-N2 2-4 전조 공통 테두리(ArtStyleV1 스위치 뒤)
+local BossBananaView = require(script.Parent.BossBananaView) -- GUARDIAN-V3 바나나(풀 · 교체 슬롯)
 
 local BossBR1View = {}
 
@@ -199,6 +200,10 @@ local function playerByUserId(userId)
 end
 
 function BossBR1View.projTelegraph(data)
+	if data.style == "banana" then -- GUARDIAN-V3: 바닥 · 머리 위 표시 없음 - 보스 손에 든 바나나가 빛난다(예비 동작)
+		BossBananaView.hold(data.center, data.seconds)
+		return
+	end
 	local style = STYLE[data.style] or STYLE.orb
 	local up = data.center + Vector3.new(0, data.launchHeight or 9, 0)
 	-- 보스 위에 모이는 구체(개수만큼) - 전조 시간 동안 커진다.
@@ -247,6 +252,14 @@ function BossBR1View.projTelegraph(data)
 end
 
 function BossBR1View.projSpawn(data)
+	if data.style == "banana" then
+		local part = BossBananaView.acquire()
+		if part then
+			BossBananaView.pose(part, data.position, os.clock())
+			projectiles[data.id] = { part = part, position = data.position, dir = data.dir, speed = data.speed, style = { banana = true }, heightMode = data.heightMode, radius = data.radius, scale = 1, traveled = 0, pooled = true }
+		end
+		return
+	end
 	local style = STYLE[data.style] or STYLE.orb
 	local shape = style.shape == "ball" and Enum.PartType.Ball or (style.shape == "cylinder" and Enum.PartType.Cylinder or Enum.PartType.Block)
 	local part = newPart(style.size(data.radius), style.color or DANGER, style.transparency or 0.15, shape)
@@ -302,6 +315,11 @@ end
 function BossBR1View.projEnd(data)
 	local p = projectiles[data.id]
 	projectiles[data.id] = nil
+	if p and p.pooled then
+		BossBananaView.release(p.part) -- GUARDIAN-V3: 풀로(파괴 없음)
+		BossFx.ring(data.position, 0.5, 4, Color3.fromRGB(200, 90, 255), 0.3)
+		return
+	end
 	if p then
 		destroy(p.part)
 		if p.tornado then
@@ -667,7 +685,9 @@ RunService.RenderStepped:Connect(function(dt)
 	for _, p in pairs(projectiles) do
 		p.position += p.dir * p.speed * dt
 		p.traveled = (p.traveled or 0) + p.speed * dt
-		if p.part.Parent then
+		if p.style.banana then
+			BossBananaView.pose(p.part, p.position, os.clock())
+		elseif p.part.Parent then
 			local cf = CFrame.lookAt(p.position, p.position + p.dir)
 			if p.style.spin then
 				cf = CFrame.new(p.position) * CFrame.Angles(0, os.clock() * 8, math.rad(90))

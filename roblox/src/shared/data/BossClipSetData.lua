@@ -181,8 +181,8 @@ do
 			{ f = 1.0, ease = "out", pose = merge(crouch(0.2), { Waist = { -12, 40, 0 }, Neck = { 8, -26, 0 }, Shoulder_R = { 76, 0, -55 }, Elbow_R = { 85, 0, 0 }, Shoulder_L = { 24, 0, -12 } }) },
 		},
 		post = {
-			{ s = 0.08, ease = "out", pose = merge(crouch(0.2), { Waist = { -14, -38, 0 }, Neck = { 6, 22, 0 }, Shoulder_R = { 40, 0, 40 }, Elbow_R = { 86, 0, 0 }, Shoulder_L = { 20, 0, 6 } }) }, -- 손등 = 부채 r14 + 몸 가장자리 안(FK 15.8 stud)
-			{ s = 0.24, ease = "back", pose = merge(crouch(0.2), { Waist = { -14, -46, 0 }, Neck = { 6, 26, 0 }, Shoulder_R = { 42, 0, 50 }, Elbow_R = { 72, 0, 0 } }) },
+			{ s = 0.08, ease = "out", pose = merge(crouch(0.2), { Waist = { -14, -38, 0 }, Neck = { 6, 22, 0 }, Shoulder_R = { 40, 0, 40 }, Elbow_R = { 96, 0, 0 }, Shoulder_L = { 20, 0, 6 } }) }, -- 손등 = 부채 r14 + 몸 가장자리 안(V2 FK 15.8 stud · V3 크기 × 2.0 = 팔꿈치 86 → 96)
+			{ s = 0.24, ease = "back", pose = merge(crouch(0.2), { Waist = { -14, -46, 0 }, Neck = { 6, 26, 0 }, Shoulder_R = { 42, 0, 50 }, Elbow_R = { 80, 0, 0 } }) },
 			{ s = 0.9, ease = "inout", pose = REST_POSE },
 		},
 		hitstop = 0.06, squash = 0.06,
@@ -224,6 +224,35 @@ do
 			{ s = 0.8, ease = "inout", pose = REST_POSE },
 		},
 		hitstop = 0.06,
+	}
+	-- GUARDIAN-V3 반응 스킬 ① 바나나 던지기(예비 0.45 = 오른팔 머리 뒤로 · 바나나 발광 → 놓는 순간 = 판정 시작 → 앞으로 내던짐)
+	C.k_banana = {
+		pre = {
+			{ f = 0.55, ease = "inout", pose = merge(crouch(0.1), { Waist = { 10, 22, 0 }, Neck = { 8, -16, 0 }, Shoulder_R = { 165, 0, -25 }, Elbow_R = { 80, 0, 0 }, Shoulder_L = { 40, 0, 25 } }) },
+			{ f = 1.0, ease = "in", pose = merge(crouch(0.12), { Waist = { 16, 30, 0 }, Neck = { 10, -20, 0 }, Shoulder_R = { 175, 0, -30 }, Elbow_R = { 95, 0, 0 }, Shoulder_L = { 50, 0, 30 } }) },
+		},
+		post = {
+			{ s = 0.07, ease = "out", pose = merge(crouch(0.2, 6), { Waist = { -22, -24, 0 }, Neck = { 16, 14, 0 }, Shoulder_R = { 70, 0, -8 }, Elbow_R = { 8, 0, 0 }, Shoulder_L = { 20, 0, 10 } }) },
+			{ s = 0.6, ease = "inout", pose = REST_POSE },
+		},
+		hitstop = 0.05,
+	}
+	-- GUARDIAN-V3 반응 스킬 ② 도약(준비 0.9 = 깊이 웅크림 + 등 수정 발광 → 판정 시각 = 이륙 · 비행 0.8 = 두 팔 머리 위 → 내려오며 두 주먹 해머 → 착지)
+	local LEAP_CROUCH = merge(crouch(0.5, 14), { Waist = { -30, 0, 0 }, Neck = { 22, 0, 0 }, Shoulder_L = { -25, 0, 20 }, Shoulder_R = { -25, 0, -20 }, Elbow_L = { 25, 0, 0 }, Elbow_R = { 25, 0, 0 },
+		Crystal1 = { -6, 0, 0 }, Crystal2 = { 0, 0, 6 }, Crystal3 = { 0, 0, -6 } })
+	local LEAP_AIR = merge(crouch(0.25), { Waist = { 14, 0, 0 }, Neck = { 6, 0, 0 }, Shoulder_L = { 160, 0, 25 }, Shoulder_R = { 160, 0, -25 }, Elbow_L = { 30, 0, 0 }, Elbow_R = { 30, 0, 0 } })
+	C.k_leap = {
+		pre = {
+			{ f = 0.6, ease = "inout", pose = LEAP_CROUCH },
+			{ f = 1.0, ease = "in", pose = merge(LEAP_CROUCH, { RootJoint = { 6, 0, 0, 0, -0.55, 0 } }) },
+		},
+		post = {
+			{ s = 0.2, ease = "out", pose = LEAP_AIR },
+			{ s = 0.55, ease = "inout", pose = merge(LEAP_AIR, { Waist = { 20, 0, 0 }, Shoulder_L = { 170, 0, 15 }, Shoulder_R = { 170, 0, -15 }, Elbow_L = { 50, 0, 0 }, Elbow_R = { 50, 0, 0 } }) },
+			{ s = 0.8, ease = "in", pose = SLAM }, -- 착지 = 두 주먹 땅(서버 착지 판정과 같은 시각)
+			{ s = 1.5, ease = "inout", pose = REST_POSE },
+		},
+		hitstop = 0, squash = 0.2,
 	}
 	-- 8 방패 거울 mirror: 웅크리고 팔로 몸을 감싼 채 등 수정이 돔처럼 빛남(반사 자세 동안 수정이 맥박)
 	local HUNCH = merge(crouch(0.4, 12), { Waist = { -34, 0, 0 }, Neck = { -18, 0, 0 }, Shoulder_L = { 55, 0, 40 }, Shoulder_R = { 55, 0, -40 }, Elbow_L = { 70, 0, 0 }, Elbow_R = { 70, 0, 0 },
@@ -381,6 +410,7 @@ do
 	local SKILLS = {
 		heavy = "k_heavy", shockwave = "k_shock", meteor = "k_meteor", charge = "k_charge", cross = "k_cross", swipe = "k_swipe", grab = "@grab", mirror = "k_mirror",
 		innerSmash = "k_inner", fists = "k_fists", orbs = "k_orbs", earthSplit = "k_split",
+		banana = "k_banana", leap = "k_leap", -- GUARDIAN-V3 반응 스킬(새 몸 - BossFrameworkData.v3)
 	}
 	local SKILLS_AFTER = table.clone(SKILLS)
 	SKILLS_AFTER.charge = "u_charge" -- 변신 뒤 = 어깨 들이받기
@@ -409,6 +439,7 @@ do
 			heavy = { "Hand_L", "Hand_R" }, shockwave = { "Hand_L", "Hand_R" }, meteor = { "Hand_R" }, charge = { "Head", "RightPauldron", "LeftPauldron" }, cross = { "Hand_L", "Hand_R" },
 			swipe = { "Hand_R" }, grab = { "Hand_L", "Hand_R" }, mirror = { "Crystal1", "Crystal2", "Crystal3" }, innerSmash = { "Hand_L", "Hand_R" }, fists = { "Hand_R" },
 			orbs = { "Crystal2", "Crystal3" }, earthSplit = { "Hand_R" },
+			banana = { "Hand_R" }, leap = { "Crystal1", "Crystal2", "Crystal3" }, -- GUARDIAN-V3 반응 스킬(바나나 = 던지는 손 · 도약 = 등 수정)
 		},
 		impacts = {
 			k_heavy = { kind = "ground", parts = { "Hand_L", "Hand_R" }, size = 0.26, shake = 1.0, heavy = true },
@@ -427,6 +458,7 @@ do
 			k_split = { kind = "whoosh", parts = { "Hand_R" }, size = 1.2, floorDust = true },
 			k_env = { kind = "ground", parts = { "Hand_L", "Hand_R" }, size = 1.3, shake = 1.2 },
 			k_throw = { kind = "whoosh", parts = { "Hand_R", "Hand_L" }, size = 1.0 },
+			k_banana = { kind = "whoosh", parts = { "Hand_R" }, size = 1.0 }, -- GUARDIAN-V3(도약 착지 먼지 = BossQuakeView.leapImpact)
 			k_transform = { kind = "roar", parts = { "Body" }, size = 1.2, shake = 0.8 },
 			roar = { kind = "roar", parts = { "Head" }, size = 1.0, shake = 0.7 },
 			basic_R = { kind = "whoosh", parts = { "Hand_R" }, size = 0.55 },

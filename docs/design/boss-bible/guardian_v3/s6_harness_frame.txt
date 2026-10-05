@@ -1,0 +1,68 @@
+[FRAME] O 리그 abyssal_lord_v2(draft) - 관절 32 ≤ 60 O · 판정 사본 Body · Head · Tail3(Body · Head 필수 · ≤ 3) O · 판정 사본 부피 6.24 → 6.81(× 1.09 · 허용 ±20%) O · 부위 이름 겹침 0 · 부모 없는 관절 0 O
+[FRAME] O 접지 abyssal_lord_v2 - 접지 부위 3 · 최저 -1.50(Tail5) · 최고 -1.36 · 기준 −1.50
+[FRAME] O 리그 crystal_queen_v2(draft) - 관절 39 ≤ 60 O · 판정 사본 Body · Head(Body · Head 필수 · ≤ 3) O · 판정 사본 부피 2.70 → 2.70(× 1.00 · 허용 ±20%) O · 부위 이름 겹침 0 · 부모 없는 관절 0 O
+[FRAME] O 접지 crystal_queen_v2 - 접지 부위 2 · 최저 -1.50(Foot_L) · 최고 -1.50 · 기준 −1.50
+[FRAME] O 리그 frost_giant_v2(draft) - 관절 37 ≤ 60 O · 판정 사본 Body · Head(Body · Head 필수 · ≤ 3) O · 판정 사본 부피 5.15 → 5.76(× 1.12 · 허용 ±20%) O · 부위 이름 겹침 0 · 부모 없는 관절 0 O
+[FRAME] O 접지 frost_giant_v2 - 접지 부위 4 · 최저 -1.50(Foot_L) · 최고 -1.26 · 기준 −1.50
+[FRAME] O 리그 section_guardian_v2(trial) - 관절 28 ≤ 60 O · 판정 사본 Body · Head(Body · Head 필수 · ≤ 3) O · 판정 사본 부피 6.35 → 7.45(× 1.17 · 허용 ±20%) O · 부위 이름 겹침 0 · 부모 없는 관절 0 O
+[FRAME] O 접지 section_guardian_v2 - 접지 부위 2 · 최저 -1.50(Foot_L) · 최고 -1.50 · 기준 −1.50
+[FRAME] O 리그 storm_lord_v2(draft) - 관절 34 ≤ 60 O · 판정 사본 Body · Head(Body · Head 필수 · ≤ 3) O · 판정 사본 부피 3.96 → 3.96(× 1.00 · 허용 ±20%) O · 부위 이름 겹침 0 · 부모 없는 관절 0 O
+[FRAME] O 접지 storm_lord_v2 - 접지 부위 2 · 최저 -1.50(Foot_L) · 최고 -1.50 · 기준 −1.50
+[FRAME] O 옛 리그 frost_giant - 관절 28
+[FRAME] O 옛 리그 abyssal_lord - 관절 37
+[FRAME] O 옛 리그 scorpion_queen - 관절 51
+[FRAME] O 옛 리그 crystal_queen - 관절 35
+[FRAME] O 옛 리그 section_guardian - 관절 28
+[FRAME] O 옛 리그 storm_lord - 관절 31
+[FRAME] O 실전 스위치 비어 있음
+[FRAME] O 빠짐 검사 section_guardian_v2 - 줄 66 · 전용 32 · 빌림 0
+[FRAME] O 접지 자세 section_guardian_v2 before - Foot_L -1.47 · Foot_R -1.47 · Hand_L -1.57 · Hand_R -1.56 · 높이 차 0.10(< 0.20) · 보행 knuckle
+[FRAME] O 접지 자세 section_guardian_v2 after - Foot_L -1.50 · Foot_R -1.46 · 높이 차 0.03(< 0.20) · 보행 biped
+  MOTION section_guardian_v2 before:idle jumps=0 worst=0.00(Mouth @ 0.33)
+  MOTION section_guardian_v2 before:walk jumps=0 worst=0.47(Shin_L @ 1.32)
+  MOTION section_guardian_v2 before:charge(k_charge) jumps=0 worst=0.08(Crystal2 @ 4.85) contact-hit=0.000
+  MOTION section_guardian_v2 before:cross(k_cross) jumps=0 worst=0.58(Hand_R @ 2.45) contact-hit=0.000
+  MOTION section_guardian_v2 before:earthSplit(k_split) jumps=0 worst=0.44(Forearm_R @ 2.57) contact-hit=0.000
+  MOTION section_guardian_v2 before:fists(k_fists) jumps=0 worst=0.22(Hand_L @ 1.73) contact-hit=0.000
+  MOTION section_guardian_v2 before:heavy(k_heavy) jumps=0 worst=0.14(Hand_R @ 1.10) contact-hit=0.000
+  MOTION section_guardian_v2 before:innerSmash(k_inner) jumps=0 worst=0.16(Forearm_L @ 0.60) contact-hit=0.000
+  MOTION section_guardian_v2 before:meteor(k_meteor) jumps=0 worst=0.44(Hand_R @ 1.02) contact-hit=0.000
+  MOTION section_guardian_v2 before:mirror(k_mirror) jumps=0 worst=0.43(Forearm_R @ 3.88) contact-hit=0.000
+  MOTION section_guardian_v2 before:orbs(k_orbs) jumps=0 worst=0.11(Hand_R @ 0.92) contact-hit=0.000
+  MOTION section_guardian_v2 before:shockwave(k_shock) jumps=0 worst=0.17(Mouth @ 0.47) contact-hit=0.000
+  MOTION section_guardian_v2 before:swipe(k_swipe) jumps=0 worst=0.83(Forearm_R @ 1.47) contact-hit=0.000
+  MOTION section_guardian_v2 after:idle jumps=0 worst=0.00(Mouth @ 0.30)
+  MOTION section_guardian_v2 after:walk jumps=0 worst=0.68(Shin_L @ 4.67)
+  MOTION section_guardian_v2 after:charge(u_charge) jumps=0 worst=0.20(Crystal1 @ 4.88) contact-hit=0.000
+  MOTION section_guardian_v2 after:cross(k_cross) jumps=0 worst=0.59(Hand_R @ 2.45) contact-hit=0.000
+  MOTION section_guardian_v2 after:earthSplit(k_split) jumps=0 worst=0.44(Forearm_R @ 2.57) contact-hit=0.000
+  MOTION section_guardian_v2 after:fists(k_fists) jumps=0 worst=0.22(Hand_L @ 1.73) contact-hit=0.000
+  MOTION section_guardian_v2 after:heavy(k_heavy) jumps=0 worst=0.13(Hand_R @ 1.10) contact-hit=0.000
+  MOTION section_guardian_v2 after:innerSmash(k_inner) jumps=0 worst=0.15(Hand_L @ 0.60) contact-hit=0.000
+  MOTION section_guardian_v2 after:meteor(k_meteor) jumps=0 worst=0.46(Hand_R @ 1.02) contact-hit=0.000
+  MOTION section_guardian_v2 after:mirror(k_mirror) jumps=0 worst=0.38(Hand_R @ 3.88) contact-hit=0.000
+  MOTION section_guardian_v2 after:orbs(k_orbs) jumps=0 worst=0.11(Forearm_L @ 0.92) contact-hit=0.000
+  MOTION section_guardian_v2 after:shockwave(k_shock) jumps=0 worst=0.17(Mouth @ 0.37) contact-hit=0.000
+  MOTION section_guardian_v2 after:swipe(k_swipe) jumps=0 worst=0.83(Forearm_R @ 1.47) contact-hit=0.000
+  MOTION section_guardian_v2 transform jumps=0 worst=0.33(Mouth @ 0.67)
+[FRAME] O 튐 section_guardian_v2 - 튐 합 0(대기 · 걷기 · 스킬 · 변신 - 의도된 타격 창 제외)
+[FRAME] O 번쩍 창 section_guardian_v2 - 판정 −0.20 false · −0.05 true(Hand_L/Hand_R) · +0.01 false
+[FRAME] O 변신 세트 교체 section_guardian_v2 - 1.30초 전 before · 뒤 after
+[FRAME] O 모션 비용(오프라인) section_guardian_v2 - 옛 168.6μs → 새 187.6μs(× 1.11 · 합격 ≤ × 1.5)
+[FRAME] O 몸 가장자리 장치 - 다른 5보스 값 변화 0 - 5 / 5(표에 없음 = 사본도 안 만듦)
+[FRAME] O 몸 가장자리 수호자 +5.69 stud - 강공격 r 15.1 → 20.8 · 원 안 내려찍기 r 12.0 → 17.7 · 강화 평타 부채 r 15.1 → 20.8 · 강화 평타 대상 거리 14.0 → 19.7 · 반사 결계 r 7.0 → 12.7 · 근접 원형 구역 r 12.0 → 17.7 · 추격 정지 8.0 → 13.7 · 전조 맞춤 다시 0개(서 있는 거리도 같이 늘어 0이어야)
+[FRAME] O 크기 × 2 - 판정 사본 부피 377 → 3534 stud³(× 9.38 = 2.00³ × 1.17) · 몸통 판정 9.4×6.6×5.1 → 15.6×14.4×12.5 · 가장자리 반폭 8.2 → 13.9 stud · 카메라 34 → 58.8(× 1.73)
+[FRAME] O 때리는 부위 = 전조 안 - heavy/before 20.0 ≤ 20.8 · 높이 -1.58 · heavy/after 20.0 ≤ 20.8 · 높이 -1.58 · innerSmash/before 14.2 ≤ 17.7 · 높이 -1.51 · innerSmash/after 14.2 ≤ 17.7 · 높이 -1.51 · swipe/before 19.5 ≤ 20.8 · swipe/after 18.6 ≤ 20.8
+[FRAME] O V3 - 다른 5보스 · 옛 몸 수호자 값 변화 0 - 6 / 6
+[FRAME] O V3 근접 바닥 표시 끔(평타 · 내려찍기 · 안쪽 원 · 휘두르기 - 대지 가르기는 남김) - 강공격 true · 원 안 true · 강화 평타 true · 대지 가르기 nil · 평타 true · 근접 원 true
+[FRAME] O V3 예비 동작 +0.12초(0.1 ~ 0.15) - 강공격 2.00 → 2.12 · 원 안 1.30 → 1.42 · 강화 평타 1.30 → 1.42 · 평타 예비 + 0.12
+[FRAME] O V3 돌진 경로 반폭 = 몸 반폭 - 4.30 → 13.88 stud(몸 가장자리 반폭)
+[FRAME] O V3 이속 × 1.3 · 질주 25 stud 밖 × 1.5 - 8.0 → 10.4 · 질주 15.6 stud/s(걷기 16)
+[FRAME] O V3 바나나(조건 30 stud · 1.5초 · 쿨 3 · 예비 0.45 · 110 stud/s · 리드 50% · 7% · 광폭 3갈래) - 쿨 3 · 예비 0.45 · 속도 110 · 리드 50% · 최대 체력 7% · 광폭 3갈래
+[FRAME] O V3 도약(빗나감 2회/12초 · 준비 0.9 · 고정 0.3 · 비행 0.8 · 60 stud · 반경 몸 + 12 · 넉백) + 걸어서 회피 - 반경 25.88(= 13.88 + 12) · 고정 전 표시 0.60초 ≥ 인지 0.50 · 고정 뒤 걷기 1.02초 ≤ 1.10초(여유 0.08)
+[FRAME] O V3 회피 부등식(전 스킬) - 실패 0
+[FRAME] O V3 스케줄러 ⑧ 반응 스킬 - 멀지 않음 nil · 멂 banana · 쿨 중 nil · 쿨 뒤 banana · 빗나감 2 leap · 전역 쿨 그대로 true · 일반 후보 아님 true
+[FRAME] O V3 첫 보스 도움(−10%/실패 · 최대 −30% · 클리어 뒤 끝) - 1.00 · 0.90 · 0.70 · 0.70 · 클리어 1.00
+[FRAME] O V3 실전 스위치 live 비어 있음 - live = {}
+[FRAME] O V3 서 있는 키 약 30 stud(직립 머리 꼭대기 ±1) - 직립(변신 뒤) 머리 29.8 · 전체 29.8 stud · 너클(변신 전) 머리 27.0 · 전체 30.0 stud
+[FRAME] 끝 40/40

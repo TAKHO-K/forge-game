@@ -2551,6 +2551,53 @@ function PlayerProfile.markBossIntroSeen(player, bossId)
 	return true
 end
 
+-- GUARDIAN-V3 첫 보스 도움(hints.bossAssist - v75): 이 보스 전멸 수 · 처치했는가. 저장은 다음 정기 저장.
+function PlayerProfile.getBossAssist(player, bossId)
+	local profile = profiles[player]
+	local rec = profile and type(profile.hints.bossAssist) == "table" and profile.hints.bossAssist[bossId]
+	if type(rec) ~= "table" then
+		return 0, false
+	end
+	return tonumber(rec.fails) or 0, rec.cleared == true
+end
+
+local function assistRecord(player, bossId)
+	local profile = profiles[player]
+	if not profile or type(bossId) ~= "string" then
+		return nil
+	end
+	profile.hints.bossAssist = type(profile.hints.bossAssist) == "table" and profile.hints.bossAssist or {}
+	local rec = profile.hints.bossAssist[bossId]
+	if type(rec) ~= "table" then
+		rec = { fails = 0, cleared = false }
+		profile.hints.bossAssist[bossId] = rec
+	end
+	return rec
+end
+
+function PlayerProfile.noteBossAssistFail(player, bossId)
+	local rec = assistRecord(player, bossId)
+	if rec and not rec.cleared then
+		rec.fails = (tonumber(rec.fails) or 0) + 1
+	end
+	return rec and rec.fails or 0
+end
+
+function PlayerProfile.markBossAssistCleared(player, bossId)
+	local rec = assistRecord(player, bossId)
+	if rec then
+		rec.cleared = true
+	end
+end
+
+-- 개발 명령(/gg boss assist reset): 이 보스의 도움 기록을 지운다(값만 - 구조 그대로)
+function PlayerProfile.debugClearBossAssist(player, bossId)
+	local profile = profiles[player]
+	if profile and type(profile.hints.bossAssist) == "table" then
+		profile.hints.bossAssist[bossId] = nil
+	end
+end
+
 -- A2-M1 개발 명령(/gg boss introreset): 보스 첫 만남 기록을 지운다(첫 조우 진입 연출 · 첫 만남 카드를 다시 보려고). bossId = nil이면 전부. 저장 구조는 그대로(값만).
 function PlayerProfile.debugClearBossIntroSeen(player, bossId)
 	local profile = profiles[player]

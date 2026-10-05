@@ -120,6 +120,82 @@ function BossFramework.applyBodyEdge(data, rigKey, walk)
 	return out, edge, fitted
 end
 
+-- GUARDIAN-V3(BossFrameworkData.v3[보스] - 새 몸이 뜰 때만 · applyBodyEdge 뒤): 인스턴스 사본에 바닥 표시 끔 · 예비 동작 연장 · 돌진 폭 = 몸 폭 · 이속 · 질주 ·
+--   지진파 그림 · 반응 스킬(바나나 · 도약 - 몸 가장자리 기준 반경) · 첫 보스 도움 설정을 얹는다. 반환 data(사본 - 설정이 없으면 그대로).
+function BossFramework.applyV3(data, rigKey)
+	local cfg = data and Data.v3[data.id]
+	local rig = rigKey and BossRigSpec.rigs[rigKey]
+	if not (cfg and rig) then
+		return data
+	end
+	local S = data.sizeScale or 1
+	local bodyHalf = rig.edgeHalfWidth and rig.edgeHalfWidth * S * (rig.scale or 1) or 0 -- 새 몸 가장자리 반폭(stud)
+	local out = table.clone(data)
+	out.v3 = cfg
+	out.bodyHalfWidthStuds = bodyHalf
+	local skills = table.clone(out.skills or {})
+	for id, s in pairs(skills) do
+		local hide = cfg.hideFloor[id]
+		local longer = cfg.windup.skills[id]
+		if hide or longer or (id == "charge" and cfg.chargeHalfWidth == "body") or (s.primitive == "ring" and cfg.ringStyle) then
+			s = table.clone(s)
+			if hide then
+				s.noFloor = true
+			end
+			if longer then
+				s.telegraphSeconds += cfg.windup.seconds
+			end
+			if id == "charge" and cfg.chargeHalfWidth == "body" then
+				s.pathHalfWidthStuds = bodyHalf
+				s.markStyle = "crack"
+			end
+			if s.primitive == "ring" then
+				s.ringStyle = cfg.ringStyle
+			end
+			skills[id] = s
+		end
+	end
+	local reactive = {}
+	for _, id in ipairs(cfg.reactiveOrder or {}) do
+		local s = cfg.skills[id] and table.clone(cfg.skills[id])
+		if s then
+			if s.radiusFromEdge then
+				s.radiusStuds += bodyHalf
+			end
+			if s.landShortFromEdge then
+				s.landShortStuds = bodyHalf
+			end
+			-- 새 몸 밸런스의 피해 계수(몸 가장자리 장치 damageScale)는 공격력 배율(multiplier)에만 - 최대 체력 비율(바나나 7%)은 지시 값 그대로
+			if s.damage and s.damage.multiplier and out.bodyEdgeDamageScale then
+				s.damage = table.clone(s.damage)
+				s.damage.multiplier *= out.bodyEdgeDamageScale
+			end
+			skills[id] = s
+			table.insert(reactive, id)
+		end
+	end
+	out.skills = skills
+	out.reactiveOrder = reactive
+	if out.moveSpeedStuds and cfg.move then
+		out.moveSpeedStuds *= cfg.move.speedScale
+		out.sprintBeyondStuds = cfg.move.sprintBeyondStuds
+		out.sprintMultiplier = cfg.move.sprintMultiplier
+	end
+	out.basicNoFloor = cfg.hideFloor.basic == true
+	out.innerRingHidden = cfg.hideFloor.innerRing == true
+	out.basicWindupExtraSeconds = cfg.windup.basic and cfg.windup.seconds or nil
+	out.firstAssist = cfg.firstAssist
+	return out
+end
+
+-- 첫 보스 도움 배율(실패 횟수 → 받는 피해 배율 · 첫 클리어 뒤 1): BossFrameworkData.v3[보스].firstAssist
+function BossFramework.assistMultiplier(assist, fails, cleared)
+	if not assist or cleared then
+		return 1
+	end
+	return 1 - math.min((fails or 0) * assist.perFail, assist.max)
+end
+
 -- 카메라 줌 배율(새 몸 rig.cameraZoomScale - 모델 BossRigKey)
 function BossFramework.cameraZoomScaleOf(model)
 	local key = model and model:GetAttribute("BossRigKey")

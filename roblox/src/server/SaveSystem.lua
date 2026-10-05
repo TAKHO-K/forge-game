@@ -284,7 +284,8 @@ local function defaultProfile()
 		--   gemMerchantUsed: 보석상인에서 변환 · 리롤(변환권 구매 포함)을 한 번이라도 성공했는가 - true면 보석 탭의 위치 안내 줄이 작은 회색 한 줄로 줄어든다.
 		--   bossIntroSeen(BR1-2, v37): 전멸기 설명 카드를 본 보스 id 집합({ [bossId 문자열] = true }) - 처음 만난 보스만 카드가 뜬다.
 		--   stealLockSeen(C1 마무리, v42): 잠긴 몹(다른 유저가 사냥 중)을 처음 때렸을 때 말풍선을 봤는가 - 계정당 1회.
-		hints = { gemMerchantUsed = false, bossIntroSeen = {}, stealLockSeen = false },
+		--   bossAssist(GUARDIAN-V3, v75): 첫 보스 도움 기록({ [bossId 문자열] = { fails = 전멸 수, cleared = 처치했는가 } }) - 처치 전까지 전멸마다 받는 피해 −10%(최대 −30%).
+		hints = { gemMerchantUsed = false, bossIntroSeen = {}, stealLockSeen = false, bossAssist = {} },
 
 		-- M1(v38): 세계 이동 - portals = 입구 캠프 첫 방문으로 연 포탈({ [구역 키 문자열] = true }) · 계정 공유.
 		-- M1-3(v40): bossGates = 관문을 직접 찾아가 등록한 보스({ [bossId 문자열] = true }) - 등록된 보스는 어디서든 원격 입장(파티 = 한 명이라도 등록).
@@ -1571,6 +1572,14 @@ local function migrate(data)
 		end
 		data.version = 74
 	end
+	if data.version < 75 then
+		-- GUARDIAN-V3 6: 첫 보스 도움 기록(hints.bossAssist) - 옛 세이브 = 빈 표(전멸 0 · 처치 기록 없음 - 추가만)
+		data.hints = type(data.hints) == "table" and data.hints or {}
+		if type(data.hints.bossAssist) ~= "table" then
+			data.hints.bossAssist = {}
+		end
+		data.version = 75
+	end
 
 	data.savedAt = data.savedAt or 0
 	SaveSystem.clampStageCap(data) -- S1 리뷰 7: 불러온 옛 값도 상한으로
@@ -1614,6 +1623,7 @@ local function isValidProfile(data)
 		or type(data.hints) ~= "table"
 		or (data.hints.gemMerchantUsed ~= nil and type(data.hints.gemMerchantUsed) ~= "boolean")
 		or (data.hints.bossIntroSeen ~= nil and type(data.hints.bossIntroSeen) ~= "table") -- v37
+		or (data.hints.bossAssist ~= nil and type(data.hints.bossAssist) ~= "table") -- v75
 		or (data.hints.stealLockSeen ~= nil and type(data.hints.stealLockSeen) ~= "boolean") -- v42
 		or type(data.world) ~= "table" or type(data.world.portals) ~= "table" -- v38
 		or type(data.peakLevel) ~= "number" or data.peakLevel < 1 -- v38
@@ -1872,6 +1882,10 @@ function SaveSystem.repairProfile(data)
 	if hints.bossIntroSeen ~= nil and type(hints.bossIntroSeen) ~= "table" then
 		hints.bossIntroSeen = {}
 		note("hints.bossIntroSeen")
+	end
+	if hints.bossAssist ~= nil and type(hints.bossAssist) ~= "table" then -- v75
+		hints.bossAssist = {}
+		note("hints.bossAssist")
 	end
 	if hints.stealLockSeen ~= nil and type(hints.stealLockSeen) ~= "boolean" then
 		hints.stealLockSeen = false

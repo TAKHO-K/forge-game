@@ -421,7 +421,7 @@ local function tryBossBasic(model, data, monsterPosition, targetPlayer, targetRo
 			pendingSwing[model] = nil
 		end
 		if not due then
-			local lead = BossData.basicPrepSeconds
+			local lead = BossData.basicPrepSeconds + (data.basicWindupExtraSeconds or 0) -- GUARDIAN-V3: 새 몸 수호자 평타 예비 연장(BossFrameworkData.v3.windup.basic)
 			if now >= (last or -math.huge) + data.attackCooldownSeconds - lead and (PlayerState.getHp(targetPlayer) or 0) > 0 and Reach.within(targetRoot.Position, monsterPosition, farRange) then
 				due = math.max(now + lead, (last or -math.huge) + data.attackCooldownSeconds)
 				if prepSentFor[model] == nil then
@@ -443,7 +443,7 @@ local function tryBossBasic(model, data, monsterPosition, targetPlayer, targetRo
 		pendingSwing[model] = nil
 	elseif last and now - last < data.attackCooldownSeconds then
 		-- A2-N3 결정 ②: 예비 동작 신호만(판정 · 타이밍 무관) - 쿨 끝 basicPrepSeconds 전 · 이번 주기 1회 · 대상이 지금 사거리 안이면
-		local lead = BossData.basicPrepSeconds
+		local lead = BossData.basicPrepSeconds + (data.basicWindupExtraSeconds or 0)
 		local remaining = data.attackCooldownSeconds - (now - last)
 		if lead and remaining <= lead and prepSentFor[model] ~= last and (PlayerState.getHp(targetPlayer) or 0) > 0 and Reach.within(targetRoot.Position, monsterPosition, farRange) then
 			if prepSentFor[model] == nil then
@@ -486,6 +486,7 @@ local function tryBossBasic(model, data, monsterPosition, targetPlayer, targetRo
 	BossPatterns.sendEvent(model, "basicSweep", {
 		center = monsterPosition, inner = data.innerSafeRadiusStuds or 0, outer = data.attackRangeStuds, innerSwing = (lanesOn and data.innerSafeRadiusStuds) and true or nil,
 		angleDeg = math.deg(math.atan2(face.Z, face.X)), widthDeg = data.innerSafeRadiusStuds and 360 or BossData.basicSweepWidthDeg, side = swingN % 2 == 0 and "R" or "L",
+		noFloor = data.basicNoFloor, -- GUARDIAN-V3: 바닥 쓸기 궤적 없음(판정 그대로 - 손 발광 · 예비 동작으로 읽는다)
 	})
 	-- 피해 = 화면 접촉 순간(휘두름 시작 + basicContactSeconds - STATUS ⑩-7 "0.07초 먼저" 정렬) · 양 · 간격 불변
 	task.delay(BossData.basicContactSeconds, function()
@@ -520,12 +521,15 @@ local function tryBossAttack(model, data, monsterPosition, targetPlayer, targetR
 	end
 	-- 정지 거리(BossData.chaseStopDistanceStuds) 밖에서만 다가간다 - 몸통 충돌이 없는 보스가
 	-- 플레이어와 겹치지 않게(21-3).
-	if Reach.horizontalDistance(targetRoot.Position, monsterPosition) > data.chaseStopDistanceStuds then
+	local chaseDistance = Reach.horizontalDistance(targetRoot.Position, monsterPosition)
+	if chaseDistance > data.chaseStopDistanceStuds then
+		-- GUARDIAN-V3: 대상이 sprintBeyondStuds 밖이면 질주(× sprintMultiplier - 새 몸 수호자만 · 데이터 노브)
+		local speed = data.moveSpeedStuds * ((data.sprintBeyondStuds and chaseDistance > data.sprintBeyondStuds) and data.sprintMultiplier or 1)
 		-- BR1-3: 무너진 바닥(피자 조각 · 들린 판)으로는 걷지 않는다 - 다음 걸음이 그 안이면 멈춰 선다
 		local toward = Vector3.new(targetRoot.Position.X - monsterPosition.X, 0, targetRoot.Position.Z - monsterPosition.Z)
-		local ahead = monsterPosition + (toward.Magnitude > 1e-3 and toward.Unit or Vector3.zero) * math.max(data.moveSpeedStuds * dt, 1)
+		local ahead = monsterPosition + (toward.Magnitude > 1e-3 and toward.Unit or Vector3.zero) * math.max(speed * dt, 1)
 		if not BossEnvironment.blocksBoss(model, ahead) then
-			stepToward(model, monsterPosition, targetRoot.Position, data.moveSpeedStuds, dt, true)
+			stepToward(model, monsterPosition, targetRoot.Position, speed, dt, true)
 		end
 	end
 	tryBossBasic(model, data, monsterPosition, targetPlayer, targetRoot) -- BR1-2
@@ -656,7 +660,7 @@ RunService.Heartbeat:Connect(function(dt)
 					or (not data.isBoss and targetRoot and Temperament.inSafeZone(targetRoot.Position)) -- M2: 안전 지대 진입 금지
 					or isOutsideZoneBounds(position, zoneKey)
 					or (targetRoot and not GroundProbe.sameGroundLayer(position, targetRoot.Position)
-						and not (data.isBoss and BossEnvironment.onGardenPlatform(model, targetRoot.Position))) then -- 29-4: 뜬 대상은 발밑 지면으로 판단한다 · BR1 리뷰 1: 수정 공중 정원 발판 위 대상은 놓치지 않는다
+						and not (data.isBoss and (BossEnvironment.onGardenPlatform(model, targetRoot.Position) or BossPatterns.isLeaping(model)))) then -- 29-4: 뜬 대상은 발밑 지면으로 판단한다 · BR1 리뷰 1: 수정 공중 정원 발판 위 대상은 놓치지 않는다 · GUARDIAN-V3: 도약 비행 중(보스가 높이 뜸)도 놓치지 않는다
 					-- 대상을 놓쳤거나(퇴장) 죽었거나(리스폰된 새 캐릭터를 이어서 쫓아가면 안 된다 -
 					-- 스폰 지점이 리쉬 범위 안이면 즉시 재사망 루프가 생긴다) 집에서 너무
 					-- 멀어졌거나(리쉬), 구역 경계를 벗어났다(16-6 - 구역 경계가 리쉬의 진짜

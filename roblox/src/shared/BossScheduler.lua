@@ -28,6 +28,11 @@
 -- notAfter만 이 모듈이 직접 판정한다(직전 스킬은 스케줄러 상태다). 나머지는 호출부가 ctx.conditionMet으로 답한다 -
 -- 서버는 실제 월드에서, 모형은 가정에서.
 --
+-- ⑧ 반응 스킬(GUARDIAN-V3 - skill.reactive · data.reactiveOrder): 일반 후보(skillOrder)에 없다. 패턴이 안 도는 틈(phase normal)에 pickReactive가
+--   reactiveOrder 순서로 "내부 쿨이 찼고 조건이 전부 참인" 첫 스킬을 고른다 - 전역 쿨 · 강공격 줄 · 연속 금지를 보지 않고(입장 유예만 본다),
+--   끝나도 전역 쿨 · 직전 스킬을 건드리지 않는다(onReactiveEnd - 내부 쿨만). 조건 조각:
+--   targetBeyondFor { studs, seconds }  대상이 studs 밖에 seconds 이상 이어서 있었다(호출부가 시각을 잰다)
+--   missesWithin { key, count, seconds } 최근 seconds 안 빗나감 기록(key)이 count 이상(결과 조각 noteMiss · clearMisses)
 -- 선행 조건(skill.precondition = { type, ..., otherwise = 스킬 id }, 29-3 - 규칙 ⑦): conditions와 달리 "후보에서 빼는"
 -- 것이 아니라 "고른 뒤 다른 스킬로 바꿔 시작한다". 종류:
 --   membersNearSafeSpot { prop, studs, marginStuds } 살아 있는(안 잡힌) 멤버 전원에게 studs 안에 그 지형의 "뒤 자리"가 있다
@@ -218,6 +223,26 @@ function BossScheduler.onSkillEnd(state, skills, id, now, config)
 		state.lastUsedAt[id] = now
 		state.lastSkillId = id
 	end
+end
+
+-- ⑧ 반응 스킬 고르기(위 주석). 반환 id 또는 nil.
+function BossScheduler.pickReactive(state, skills, reactiveOrder, ctx)
+	if not reactiveOrder or ctx.now < (ctx.graceUntil or 0) then
+		return nil
+	end
+	state.reactiveReadyAt = state.reactiveReadyAt or {}
+	for _, id in ipairs(reactiveOrder) do
+		local skill = skills[id]
+		if isLive(skill) and ctx.now >= (state.reactiveReadyAt[id] or -math.huge) and conditionsMet(state, skill, ctx) then
+			return id
+		end
+	end
+	return nil
+end
+
+function BossScheduler.onReactiveEnd(state, skills, id, now)
+	state.reactiveReadyAt = state.reactiveReadyAt or {}
+	state.reactiveReadyAt[id] = now + (skills[id] and skills[id].cooldownSeconds or 0)
 end
 
 -- DevTools 전용 - 다음 선택에서 이 스킬이 바로 나가게 한다(전역 쿨·유예·쿨 무시).

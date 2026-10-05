@@ -125,10 +125,13 @@ do
 	crystal("Crystal5", { 1.6, 6.0, -2.4 }, { 1.1, 1.1, 1.1 }, V(30, 0, 0))
 	D.rigs.section_guardian_v2 = {
 		bossId = "section_guardian", variant = "v2", status = "trial", plan = "biped", joints = J, accent = Color3.fromRGB(190, 110, 255),
-		scale = 1.5, -- 바이블 §5 크기 × 1.5(MonsterSpawner · 전시 리그가 S × scale)
+		-- 바이블 §5 크기 × 1.5(MonsterSpawner · 전시 리그가 S × scale) → GUARDIAN-V3 6(사용자): 서 있는 키 약 30 stud = 직립(변신 뒤) 머리 꼭대기 FK 실측
+		--   × 1.92에서 28.6(Studio 28.7 ~ 29.0) → 2.0에서 29.8. K(0.40)를 바꾸면 메시를 다시 굽고 올려야 한다 - K와 scale은 둘 다 균일 배율이라 결과가 같아 scale로 맞춘다
+		--   (판정 사본 · 몸 가장자리 · 모션 이동이 같이 커진다).
+		scale = 2.0,
 		edgeHalfWidth = K * 4.45, -- 몸 가장자리 반폭(어깨 갑옷 바깥 - 리그 단위 · BossFramework.edgeGrowth)
 		baseEdgeHalfWidth = 2.1, -- 옛 몸(BossRigSpec section_guardian) 가장자리 반폭 = 어깨 1.5 + 갑옷 0.1 + 0.5
-		cameraZoomScale = 1.3, -- 바이블 §5-4 카메라 줌 × 약 1.3(CameraRig)
+		cameraZoomScale = 1.73, -- 바이블 §5-4 카메라 줌 × 약 1.3(크기 × 1.5일 때) → GUARDIAN-V3: 크기 비례 1.3 × 2.0 ÷ 1.5 = 1.73(CameraRig)
 		attach = { HandR = { part = "Hand_R", at = V(0, -0.35, 0) }, HandL = { part = "Hand_L", at = V(0, -0.35, 0) }, Mouth = { part = "Head", at = V(0, -0.3, -0.5) }, Chest = { part = "Body", at = V(0, -0.45, -0.85) },
 			ShoulderR = { part = "RightPauldron", at = V(0, 0.4, 0) }, ShoulderL = { part = "LeftPauldron", at = V(0, 0.4, 0) }, Back = { part = "Crystal1", at = V(0, 0.6, 0) } },
 		chains = {

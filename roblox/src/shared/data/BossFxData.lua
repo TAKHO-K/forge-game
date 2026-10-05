@@ -55,6 +55,23 @@ return {
 		-- A2-N4 §2-5: 찍은 자리 얕은 구덩이 흔적(클라 파트만 - 충돌 · 조준 · 판정 없음 = 충돌 변화 0) · 아레나당 maxCraters(넘으면 옛 것부터) · 보스전이 끝나면 전부 치움
 		crater = { radius = 5.5, depthLook = 0.35, rimRocks = 7, rockSize = { 0.8, 1.5 }, maxCraters = 8, fadeInSeconds = 0.25 } },
 
+	-- GUARDIAN-V3 새 몸 수호자 그림(클라 BossQuakeView · BossBananaView - 판정 무관 · 파트 풀 = 생성/파괴 반복 없음). 색 = BossFrameworkData.v3.marks(연보라 · 빨강 금지).
+	--   지진파(옛 링 대신 광폭 땅꺼짐의 돌판 · 균열 · 자수정 조각): 땅 파동 = 파도 앞면 돌판 slabs개(솟았다 가라앉음) + 바닥 균열 cracks줄(가운데 → 앞면) · 공중 파동 = 떠다니는 수정 조각 shards개.
+	--   링당 조각 ≤ 24(slabs + cracks = 24 · shards = 24) · 동시 링 maxRings(넘으면 가장 오래된 링부터 거둔다 = 파트 ≤ 24 × maxRings).
+	guardianQuake = {
+		slabs = 16, cracks = 8, shards = 24, maxRings = 5,
+		slab = { height = { 1.4, 2.6 }, depth = 2.4, rise = 1.2, bobHz = 2.2, tiltDeg = 18, color = Color3.fromRGB(58, 50, 46), material = Enum.Material.Slate, fill = 0.82 },
+		crack = { width = 0.35, lift = 0.12 },
+		shard = { size = Vector3.new(1.3, 3.4, 1.3), height = 9, bob = 1.2, spinHz = 0.5, color = Color3.fromRGB(200, 90, 255), transparency = 0.15, material = Enum.Material.Neon },
+		telegraph = { radius0 = 10, radius1 = 15, segments = 20, jitter = 0.7 }, -- 찍기 전 발밑 균열 링(옛 빨강 원판 대신)
+		leap = { segments = 24, jitter = 0.6, fill = 0.82, lockFlash = 0.1 }, -- 도약 착지 균열 원
+		charge = { step = 6, jitter = 0.45, fill = 0.85 }, -- 돌진 경로 균열선(가장자리 두 줄 · 폭 = 몸 폭)
+		lightenFill = 0.35, -- 채움은 균열선보다 이만큼 흐리게(바닥이 보이게)
+	},
+	-- 바나나 투사체(교체 슬롯 GuardianBanana - BossFrameworkData.meshSlots): 길이 lengthStuds · 회전 spinHz · 꼬리 트레일 · 풀 최대 poolMax(파티 4 × 3갈래)
+	guardianBanana = { lengthStuds = 5.5, spinHz = 2.2, poolMax = 12, holdSeconds = 0.45, color = Color3.fromRGB(255, 214, 90), glow = Color3.fromRGB(200, 90, 255),
+		trail = { lifetime = 0.25, width0 = 1.6, width1 = 0, transparency0 = 0.2 } },
+
 	-- 돌진 속도감(A4)
 	charge = {
 		scrapeInterval = 0.28, scrapeDust = 3, -- 전조 동안 발 긁기 먼지(보스 뒤쪽)

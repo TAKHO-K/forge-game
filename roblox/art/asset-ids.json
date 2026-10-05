@@ -1711,6 +1711,12 @@
   "assetId": 115551353990807,
   "status": "Approved"
  },
+ "fx/guardian_banana.fbx": {
+  "sha256": "ba3de3a395bc94bf9865cc6bc0b893bbc27ba8d54852005d16f155f7052abaff",
+  "assetType": "Model",
+  "assetId": 75948236745182,
+  "status": "Approved"
+ },
  "fx/jelly_bubble.png": {
   "sha256": "0f7df63bba24d67769661b68c9320087f5f4107e7a796aa779df5c62a85aefe0",
   "assetType": "Decal",

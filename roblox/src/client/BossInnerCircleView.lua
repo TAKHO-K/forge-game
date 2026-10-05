@@ -35,7 +35,7 @@ end
 
 RunService.RenderStepped:Connect(function()
 	for model, entry in pairs(rings) do
-		if not model.Parent or not model:GetAttribute("BossInnerCircle") then
+		if not model.Parent or not model:GetAttribute("BossInnerCircle") or model:GetAttribute("BossInnerCircleHidden") then
 			for _, part in ipairs(entry.parts) do
 				part:Destroy()
 			end
@@ -44,6 +44,9 @@ RunService.RenderStepped:Connect(function()
 	end
 	for _, model in ipairs(Workspace:GetChildren()) do
 		local radius = model:IsA("Model") and model:GetAttribute("BossInnerCircle")
+		if radius and model:GetAttribute("BossInnerCircleHidden") then -- GUARDIAN-V3: 원은 판정에 그대로 · 바닥 그림만 끔(새 몸 수호자)
+			radius = nil
+		end
 		if radius then
 			local entry = rings[model]
 			if not entry then

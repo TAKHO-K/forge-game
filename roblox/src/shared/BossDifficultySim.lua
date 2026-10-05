@@ -103,7 +103,10 @@ local function judgmentsOf(skill, surviveHits, standoff)
 	return list
 end
 
--- options = { partySize(1), seed, role("ranged"/"melee"), familiar(false), stage(100), bodyEdgeRig(GUARDIAN-V2 - 새 몸 리그 키: 실전 스폰과 같은 몸 가장자리 반경 · 밸런스 사본) }
+-- options = { partySize(1), seed, role("ranged"/"melee"), familiar(false), stage(100), bodyEdgeRig(GUARDIAN-V2 - 새 몸 리그 키: 실전 스폰과 같은 몸 가장자리 반경 · 밸런스 사본),
+--   noV3(GUARDIAN-V3 - true면 V3 설정을 얹지 않는다 = V2 비교), assistFails(첫 보스 도움 - 이번 판 앞의 전멸 수 → 받는 피해 배율) }
+-- GUARDIAN-V3 반응 스킬(바나나 · 도약 - BossScheduler ⑧): 대상이 30 stud 밖인 구간을 가정으로 굴린다(원거리 rangedFarShare · 근접 meleeFarShare - 구간 평균 farSegmentSeconds) →
+--   조건이 차면 패턴이 안 도는 틈에 시작 · 바나나 명중 = bananaHit(처음 · 두 번째부터) · 빗나감 2회/12초 → 도약(leapHit) · 도약 뒤 대상은 가까이(구간 끝). 가정 값 = BossFrameworkData.v3[보스].sim.
 function BossDifficultySim.run(bossId, options)
 	options = options or {}
 	local sim = BossData.mechanics.sim
@@ -116,8 +119,13 @@ function BossDifficultySim.run(bossId, options)
 	local surviveHits = BalanceAnchorConfig.surviveTargetHits
 	local data = BossRules.buildInstanceData(stage, bossId, n) -- 곡선 · 파티 전역 쿨이 얹힌 인스턴스 표
 	if options.bodyEdgeRig then
-		data = require(ReplicatedStorage.Shared.BossFramework).applyBodyEdge(data, options.bodyEdgeRig, WorldConfig.playerWalkSpeedStuds)
+		local BossFramework = require(ReplicatedStorage.Shared.BossFramework)
+		data = BossFramework.applyBodyEdge(data, options.bodyEdgeRig, WorldConfig.playerWalkSpeedStuds)
+		if not options.noV3 then
+			data = BossFramework.applyV3(data, options.bodyEdgeRig) -- GUARDIAN-V3(실전 spawnEncounter와 같은 순서)
+		end
 	end
+	local v3sim = data.v3 and data.v3.sim
 	local boss = BossData.bosses[bossId]
 	local skills, order, config = data.skills, data.skillOrder, data.scheduler
 	local gateMultiplier = BossRules.gateDamageTakenMultiplier()
@@ -128,6 +136,9 @@ function BossDifficultySim.run(bossId, options)
 	local familiar = options.familiar == true
 	local hitScale = familiar and cfg.familiar.hitScale or 1
 	local protect = PlayerCombat.getNewbieDamageMultiplier(stage) -- 스테이지 1 ~ 30 신규 보호(최고 스테이지 = 이 스테이지로 본다)
+	if data.firstAssist and options.assistFails then -- GUARDIAN-V3 첫 보스 도움(받는 피해 배율 - 모든 피해)
+		protect *= require(ReplicatedStorage.Shared.BossFramework).assistMultiplier(data.firstAssist, options.assistFails, false)
+	end
 	local exposureCfg = cfg.basicExposureBR12
 	local innerCircle = data.innerSafeRadiusStuds ~= nil
 	local exposure = role == "melee" and (innerCircle and exposureCfg.innerCircleMelee or exposureCfg.melee) or exposureCfg.ranged
@@ -154,9 +165,20 @@ function BossDifficultySim.run(bossId, options)
 	local shieldUntil = -1 -- 수정 부수기(보호막) - 이때까지 딜 0
 
 	local ctx = { graceUntil = config.entryGraceSeconds }
+	-- GUARDIAN-V3 반응 스킬 상태: 대상이 멀리(30 stud 밖) 있는 구간 · 빗나감 기록
+	local far, farSince, farUntil, missLog = false, nil, 0, {}
+	local farShare = v3sim and (role == "ranged" and v3sim.rangedFarShare or v3sim.meleeFarShare) or 0
 	function ctx.conditionMet(condition)
 		local kind = condition.type
-		if kind == "hpBelow" then
+		if kind == "targetBeyondFor" then
+			return far and farSince ~= nil and t - farSince >= condition.seconds
+		elseif kind == "missesWithin" then
+			local n = 0
+			for _, at in ipairs(missLog) do
+				n += (t - at <= condition.seconds) and 1 or 0
+			end
+			return n >= condition.count
+		elseif kind == "hpBelow" then
 			return hp / maxHp <= condition.value
 		elseif kind == "hpAbove" then
 			return hp / maxHp > condition.value
@@ -271,6 +293,17 @@ function BossDifficultySim.run(bossId, options)
 				end
 			end
 		end
+		-- GUARDIAN-V3: 멀리 있는 구간 굴리기(원거리 = 대부분 · 근접 = 가끔)
+		if v3sim and t >= farUntil then
+			local mean = v3sim.farSegmentSeconds
+			if far then
+				far, farSince = false, nil
+				farUntil = t + mean * (1 - farShare) / math.max(farShare, 1e-3) * (0.5 + rng())
+			else
+				far, farSince = true, t
+				farUntil = t + mean * (0.5 + rng())
+			end
+		end
 		if not current and t >= shieldUntil then -- 수정 부수기 동안 보스는 패턴을 쓰지 않는다(사용자)
 			ctx.now = t
 			ctx.enraged = hp / maxHp <= config.enragedHpFraction
@@ -313,13 +346,67 @@ function BossDifficultySim.run(bossId, options)
 				end
 			end
 		end
+		-- GUARDIAN-V3 ⑧ 반응 스킬: 패턴이 안 도는 틈 · 전역 쿨 무관
+		if not current and t >= shieldUntil and data.reactiveOrder then
+			ctx.now = t
+			local id = BossScheduler.pickReactive(state, skills, data.reactiveOrder, ctx)
+			if id then
+				local skill = skills[id]
+				counts[id] = (counts[id] or 0) + 1
+				for _, o in ipairs(skill.overrides or {}) do
+					if hp / maxHp <= o.hpBelow then
+						skill = table.clone(skill)
+						for k, v in pairs(o.set) do
+							skill[k] = v
+						end
+						break
+					end
+				end
+				if id == "leap" then
+					missLog = {}
+				end
+				local flight = skill.flightSeconds or 0.3
+				current, currentEnd = id, t + skill.telegraphSeconds + flight
+				table.insert(pending, { at = t + skill.telegraphSeconds + flight, reactive = id, skill = skills[id], shots = skill.count or 1, id = id })
+			end
+		end
 		-- 판정
 		for i = #pending, 1, -1 do
 			local j = pending[i]
 			if t >= j.at then
 				table.remove(pending, i)
 				seenCount[j.skill] = (seenCount[j.skill] or 0) + 1
-				if j.gateJudge then
+				if j.reactive then
+					-- GUARDIAN-V3 바나나 · 도약: 대상 한 명(살아 있는 사람 중 무작위)
+					local alive = {}
+					for _, m in ipairs(members) do
+						if m.alive and t >= m.trappedUntil then
+							table.insert(alive, m)
+						end
+					end
+					local m = alive[1 + math.floor(rng() * math.max(#alive, 1))]
+					local first = (seenCount[j.skill] or 0) <= 1 and not familiar
+					if m and j.reactive == "banana" then
+						local hc = (first and v3sim.bananaHit.first or v3sim.bananaHit.later) * hitScale
+						local hits = 0
+						for k = 1, j.shots do
+							if rng() < hc * (k > 1 and cfg.extraProjectileHit or 1) then
+								hits += 1
+							end
+						end
+						if hits > 0 then
+							damage(m, j.skill.damage.fraction * hits, nil, "바나나")
+						else
+							table.insert(missLog, t)
+						end
+					elseif m and j.reactive == "leap" then
+						local hc = (first and v3sim.leapHit.first or v3sim.leapHit.later) * hitScale
+						if rng() < hc then
+							damage(m, j.skill.damage.multiplier / surviveHits, nil, "도약")
+						end
+						far, farSince, farUntil = false, nil, t -- 도약 뒤 = 가까이(다음 틱에 구간을 새로 굴린다)
+					end
+				elseif j.gateJudge then
 					armed = not j.solved
 					if j.solved and j.skill.gate.breakWindow then
 						windowMultiplier, windowUntil = j.skill.gate.breakWindow.damageTakenMultiplier, t + j.skill.gate.breakWindow.seconds
@@ -469,7 +556,11 @@ function BossDifficultySim.run(bossId, options)
 			end
 		end
 		if current and t >= currentEnd then
-			BossScheduler.onSkillEnd(state, skills, current, t, config)
+			if skills[current] and skills[current].reactive then
+				BossScheduler.onReactiveEnd(state, skills, current, t) -- GUARDIAN-V3 ⑧: 전역 쿨 그대로
+			else
+				BossScheduler.onSkillEnd(state, skills, current, t, config)
+			end
 			current = nil
 		end
 		for _, m in ipairs(members) do

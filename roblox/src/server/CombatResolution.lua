@@ -196,6 +196,7 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 		-- (Loot.rollBossFirstClearDrop), 재도전은 확정 1개(Loot.rollBossRetryDrop, 28-1 [2-2] - D1부터 토벌 표).
 		-- 재입장 자체는 막지 않는다(지시 원문) - 막는 것은 등급 상승뿐이다.
 		local stage = monsterData.stageNumber
+		require(script.Parent.BossFirstAssist).noteClear(recipient, monsterData) -- GUARDIAN-V3: 이 보스 첫 클리어 = 첫 보스 도움 끝(새 몸 설정이 있을 때만)
 		local fightEncounter = BossEncounter.getEncounterByModel(target)
 		local classChanged = not BossEncounter.firstClearClassOk(fightEncounter, recipient, classId) -- QUEUE-ALL10 0-2: 입장 직업과 다르면 첫 클리어 아님
 		if classChanged then

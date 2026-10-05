@@ -542,7 +542,7 @@ function BossMotion.evaluate(ctx, st, now)
 	-- A2-N3 결정 ②: 평타 예비 동작(서버 BossSwingPrepAt = 예정 타격 시각 · 그 전 BossData.basicPrepSeconds 동안 다음에 휘두를 팔을 들어 올림 - 판정 무관)
 	--   다음 휘두름 = swingN + 1(좌우 번갈아) · 휘두름이 오면(swingAt ≥ 예정 − 0.2) 평타 층이 넘겨받는다 · 안 오면(대상이 빠짐) 0.4초에 걸쳐 내린다.
 	if P.basicPrep and st.prepAt and not (st.swingAt and st.swingAt >= st.prepAt - 0.2) then
-		local lead = ctx.prepSeconds or 0.25
+		local lead = st.prepSeconds or ctx.prepSeconds or 0.25 -- GUARDIAN-V3: 모델 BossPrepSeconds(새 몸 수호자 예비 연장)가 있으면 그 값
 		local u = (now - (st.prepAt - lead)) / lead
 		if u > 0 and u < 2 then
 			local w = ease("out", clamp01(u)) * (1 - clamp01((u - 1.2) / 0.4))
@@ -686,6 +686,23 @@ function BossMotion.evaluate(ctx, st, now)
 		local W0 = FrameData.flash.seconds
 		if list and u >= -W0 and u < 0 then
 			info.rim, info.rimAmount = list, 0.35 + 0.65 * ((u + W0) / W0)
+		end
+	end
+	-- GUARDIAN-V3 손 수정 발광(ctx.glow = BossFrameworkData.v3[보스].glow - 새 몸만): 예비 동작(전조) 내내 때리는 부위가 0 → 1로 빛난다 · 평타 = 예비 동안 휘두를 손
+	local G = ctx.glow
+	if G and ctx.set then
+		if st.act and st.actAt and (st.actHit or 0) > 0 and G.skills[st.act] then
+			local list = ctx.set.flash and ctx.set.flash[st.act]
+			local u = (now - st.actAt) / st.actHit
+			if list and u >= 0 and u < 1 then
+				info.glow, info.glowAmount = list, u
+			end
+		elseif G.basic and st.prepAt and not (st.swingAt and st.swingAt >= st.prepAt - 0.2) then
+			local lead = st.prepSeconds or ctx.prepSeconds or 0.25
+			local u = (now - (st.prepAt - lead)) / lead
+			if u >= 0 and u < 1 then
+				info.glow, info.glowAmount = { (st.nextN or ((st.swingN or 0) + 1)) % 2 == 0 and "Hand_R" or "Hand_L" }, u
+			end
 		end
 	end
 	-- 낚아챔(더하는 층 - 히트스톱 + 표정)
@@ -915,6 +932,7 @@ function BossMotion.context(rigId, rig, skills, moveSpeed)
 			ctx.plan = P
 		end
 		ctx.boss = { intro = set.intro, signature = set.signature }
+		ctx.glow = rig.bossId and FrameData.v3[rig.bossId] and FrameData.v3[rig.bossId].glow or nil -- GUARDIAN-V3 손 수정 발광
 		ctx.walks = {}
 		for name, F in pairs(set.forms) do
 			local w = {}
