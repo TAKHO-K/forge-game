@@ -13,6 +13,7 @@ local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local WorldLabelStyle = require(ReplicatedStorage.Shared.WorldLabelStyle)
 local BossLook = require(ReplicatedStorage.Shared.BossLook)
 local BossRig = require(ReplicatedStorage.Shared.BossRig)
+local BossFramework = require(ReplicatedStorage.Shared.BossFramework) -- BOSS-FRAMEWORK 1 새 몸 스위치
 local ArtStyleV1Data = require(ReplicatedStorage.Shared.data.ArtStyleV1Data) -- A2-S 아트 샘플 몸체(스위치 뒤 · 겉모습만)
 local ArtImportData = require(ReplicatedStorage.Shared.data.ArtImportData) -- A2-N3 Open Cloud 메시(스위치 뒤)
 local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit)
@@ -130,14 +131,19 @@ local function buildModel(data, position, variant)
 	-- G1-1: 루트 · 몸통 · 머리 조립은 shared/BossLook(서버 · 클라 뷰포트 공용 - 값 · 순서 · 이름 그대로 옮김).
 	local look = { sizeScale = sizeScale, bodyColor = bodyColor, headColor = headColor, bodyAspect = bodyAspect, attachments = data.attachments }
 	-- BR1-4b: 보스(분신 포함 - 겉모습이 같아야 한다)는 관절 리그(shared/BossRig · BossRigSpec)로 짓는다 - 루트는 그대로 서버 Anchored(판정 위치) · 부위는 Motor6D · 모션 = 클라(BossAnimator).
-	local rig = (data.isBoss and BossRig.specFor(data.id)) or (data.isDecoy and BossRig.specFor(data.rigId)) or nil
+	-- BOSS-FRAMEWORK 1: 새 몸(리그 v2) = BossFramework.rigKeyFor(실전 live · Studio 시험 스위치) - 없으면 옛 몸. 분신도 같은 몸.
+	local rigKey = (data.isBoss and BossFramework.rigKeyFor(data.id)) or (data.isDecoy and BossFramework.rigKeyFor(data.rigId)) or nil
+	local rig = (rigKey and BossRig.specFor(rigKey)) or (data.isBoss and BossRig.specFor(data.id)) or (data.isDecoy and BossRig.specFor(data.rigId)) or nil
 	local root, body, head
 	if rig then
 		look.detail = workspace:GetAttribute(ArtStyleV1Data.attribute) == true -- A2-M1 보스 디테일(장식 · 새 관절 · 테마 색) = ArtStyleV1 스위치 뒤
 		root, body, head = BossRig.build(model, rig, look, position)
 		model:SetAttribute("BossRig", data.isBoss and data.id or data.rigId)
-		local rigId = data.isBoss and data.id or data.rigId
-		local meshKey = "bosses/" .. tostring(rigId)
+		if rigKey then
+			model:SetAttribute("BossRigKey", rigKey)
+		end
+		local rigId = rigKey or (data.isBoss and data.id or data.rigId)
+		local meshKey = rig.meshKey or ("bosses/" .. tostring(rigId))
 		if ArtMeshKit.get(meshKey) then -- A2-N3 Open Cloud 메시(ArtStyleV1 뒤 · 겉모습만 - 루트 · 조준 파트 판정 그대로)
 			local n, lines = ArtMeshKit.applyRig(model, meshKey, rigId, sizeScale, BossRig.rootLift(rig, sizeScale))
 			body, head = model:FindFirstChild("Body") or body, model:FindFirstChild("Head") or head

@@ -6,6 +6,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local D = require(ReplicatedStorage.Shared.data.BossMotionData)
 local Easing = require(ReplicatedStorage.Shared.Easing)
+local BossClipSet = require(ReplicatedStorage.Shared.BossClipSet) -- BOSS-FRAMEWORK 2: 새 몸(리그 v2) 동작 세트
+local FrameData = require(ReplicatedStorage.Shared.data.BossFrameworkData)
 
 local BossMotion = {}
 
@@ -120,11 +122,21 @@ function BossMotion.planOf(rigId, rig)
 	return D[rig.plan] or D.biped
 end
 function BossMotion.clip(rigId, rig, name)
+	local set = rig and rig.variant and BossClipSet.get(rigId)
+	if set then
+		return (BossClipSet.clip(set, name))
+	end
 	local own = D.bossClips[rigId]
 	return (own and own[name]) or BossMotion.planOf(rigId, rig).clips[name]
 end
--- 스킬 id → 동작 이름(보스 표 → primitive 기본표 → 없음)
-function BossMotion.clipNameForSkill(rigId, rig, skillId, skill)
+-- 스킬 id → 동작 이름(보스 표 → primitive 기본표 → 없음). BOSS-FRAMEWORK: 새 몸 = 그 세트(form = "before" | "after")의 skills - 기본표로 떨어지지 않는다("@grab" = 잡기 흐름).
+function BossMotion.clipNameForSkill(rigId, rig, skillId, skill, form)
+	local set = rig and rig.variant and BossClipSet.get(rigId)
+	if set then
+		local F = set.forms[form or "before"] or set.forms.before
+		local name = F.skills and F.skills[skillId]
+		return name ~= "@grab" and name or nil
+	end
 	local boss = D.bosses[rigId]
 	local name = boss and boss.skills[skillId]
 	if name then
@@ -297,7 +309,7 @@ function BossMotion.strideScale(ctx, speed)
 	return math.clamp((speed or 0) / math.max(ctx.moveSpeed or 8, 1), 1, 3) ^ 0.75
 end
 
-local function baseBiped(ctx, st, now, pose)
+local function baseBiped(ctx, st, now, pose, Wv)
 	local P = ctx.plan
 	local I = P.idle
 	local b = math.sin(TAU * now / I.breath.period)
@@ -310,7 +322,7 @@ local function baseBiped(ctx, st, now, pose)
 		Elbow_R = { 6, 0, 0 }, Elbow_L = { 6, 0, 0 },
 	}, 1)
 	-- 걷기 · 달리기
-	local W = ctx.walk
+	local W = Wv or ctx.walk
 	local walkW = ease("sine", (st.speed or 0) / 2.5) -- A2-M1: 속도 → 걷기 가중치를 사인으로(옛 직선은 걷기 시작 · 멈춤에서 다리 각속도가 꺾였다)
 	if walkW > 0 then
 		local legLen = ctx.legLen or 1.6
@@ -366,6 +378,95 @@ local function baseScorpion(ctx, st, now, pose)
 	return W
 end
 
+-- ─────────────────────────── BOSS-FRAMEWORK 2 새 몸 보행(동작 세트 gait) ───────────────────────────
+-- 공통: 세트 stance(늘 깔리는 자세)를 먼저 깔고 호흡 · 보행 주기는 그 위에 더한다(더하기 층 - 자세가 무엇이든 같은 주기).
+local function breathAdd(ctx, now, pose, scale)
+	local I = ctx.plan.idle
+	local b = math.sin(TAU * now / I.breath.period)
+	add(pose, { Waist = { I.breath.waist * b * scale, 0, 0 }, RootJoint = { 0, 0, 0, 0, I.breath.lift * b, 0 },
+		Shoulder_R = { 0, 0, I.breath.shoulder * (b + 1) * 0.25 }, Shoulder_L = { 0, 0, -I.breath.shoulder * (b + 1) * 0.25 } }, 1)
+end
+
+-- 네 발 · 너클: 뒷다리 = Hip · Knee · Ankle(위상 g · g+0.5) · 앞다리 = Shoulder · Elbow · Wrist(g+0.25 · g+0.75 - 옆걸음 순서). 발 앞뒤 = 보폭 ÷ 다리 길이(gaitLeg - 미끄러짐 없음).
+local function baseQuad(ctx, st, now, pose, F, W)
+	blend(pose, F.stance or {}, 1)
+	breathAdd(ctx, now, pose, 0.6)
+	local walkW = ease("sine", (st.speed or 0) / 2.5)
+	if walkW > 0 then
+		local g = st.gait or 0
+		local half = W.stride * BossMotion.strideScale(ctx, st.speed) / 2
+		local legLift, armLift = W.legLift or 26, W.armLift or 22
+		local aL, bL = gaitLeg(g, half, ctx.legLen or 1.6)
+		local aR, bR = gaitLeg(g + 0.5, half, ctx.legLen or 1.6)
+		local fL, cL = gaitLeg(g + 0.25, half, ctx.armLen or 2.4)
+		local fR, cR = gaitLeg(g + 0.75, half, ctx.armLen or 2.4)
+		local s = math.sin(TAU * g * 2)
+		local k = W.armSwing or 1
+		add(pose, {
+			Hip_L = { aL + 0.45 * legLift * bL, 0, 0 }, Hip_R = { aR + 0.45 * legLift * bR, 0, 0 },
+			Knee_L = { -legLift * bL, 0, 0 }, Knee_R = { -legLift * bR, 0, 0 },
+			Ankle_L = { 0.25 * legLift * bL - 0.3 * aL, 0, 0 }, Ankle_R = { 0.25 * legLift * bR - 0.3 * aR, 0, 0 },
+			Shoulder_L = { fL * k + 0.35 * armLift * cL, 0, 0 }, Shoulder_R = { fR * k + 0.35 * armLift * cR, 0, 0 },
+			Elbow_L = { armLift * cL, 0, 0 }, Elbow_R = { armLift * cR, 0, 0 },
+			Wrist_L = { -0.4 * fL * k - 0.5 * armLift * cL, 0, 0 }, Wrist_R = { -0.4 * fR * k - 0.5 * armLift * cR, 0, 0 },
+			RootJoint = { 0, 0, 0, 0, -(W.bob or 0.05) * s * s, 0 },
+			Waist = { 0, (W.twist or 3) * math.sin(TAU * g), 0 }, Neck = { 0, -(W.twist or 3) * 0.6 * math.sin(TAU * g), 0 },
+		}, walkW)
+	end
+	return W
+end
+
+-- 뱀 하체: 꼬리 사슬(첫 kind = tail 사슬)이 이동 거리만큼 S자로 흐른다(위상 = 걸음 위상 × waves − 마디 × phaseStep) · 서 있으면 작게 출렁
+local function baseSerpent(ctx, st, now, pose, F, W)
+	blend(pose, F.stance or {}, 1)
+	breathAdd(ctx, now, pose, 1)
+	local tail
+	for _, c in ipairs(ctx.rig.chains or {}) do
+		if c.kind == "tail" then
+			tail = c
+			break
+		end
+	end
+	if tail then
+		local walkW = ease("sine", (st.speed or 0) / 2.5)
+		local amp = (W.wave or 14) * (0.25 + 0.75 * walkW)
+		local phase = TAU * ((st.gait or 0) * (W.waves or 1) + now * 0.15 * (1 - walkW))
+		for i, joint in ipairs(tail) do
+			addTo(pose, joint, 2, amp * math.sin(phase - i * (W.phaseStep or 0.6)) * (i == 1 and 0.4 or 1))
+		end
+	end
+	return W
+end
+
+-- 떠 있기: 세트 stance(다리 · 드레스 늘어뜨림) + 루트를 hover 높이에서 위아래로(판정 무변경 - 보이는 몸만) · 발 접지 보정 끔(info.airborne)
+local function baseHover(ctx, st, now, pose, F, W)
+	blend(pose, F.stance or {}, 1)
+	breathAdd(ctx, now, pose, 1)
+	local H = F.hover or { height = 2, bob = 0.15, period = 2.4 }
+	local lean = ease("sine", (st.speed or 0) / 4) * (W.lean or 10)
+	add(pose, { RootJoint = { -lean, 0, 0, 0, H.height + H.bob * math.sin(TAU * now / H.period), 0 } }, 1)
+	return W
+end
+
+local GAIT_BASE = { knuckle = baseQuad, quad = baseQuad, serpent = baseSerpent, hover = baseHover }
+
+-- 세트 하나(before · after)와 그 걷기 값
+function BossMotion.formOf(ctx, st, now)
+	local set = ctx.set
+	if not set then
+		return nil, nil
+	end
+	local name = st.form
+	if not name then
+		local T = set.transform
+		name = (st.transformAt and T and now >= st.transformAt + T.switchAt) and "after" or "before"
+	end
+	return set.forms[name] or set.forms.before, name
+end
+function BossMotion.walkFor(ctx, formName)
+	return (ctx.walks and ctx.walks[formName or "before"]) or ctx.walk
+end
+
 -- 사슬 흔들림(꼬리 · 망토 · 수염 · 치마 - 결정적 sine · 사슬마다 위상이 다르다). 클라가 여기에 스프링 여운을 더한다.
 local function chainSway(ctx, now, pose)
 	for ci, chain in ipairs(ctx.rig.chains or {}) do
@@ -388,7 +489,31 @@ function BossMotion.evaluate(ctx, st, now)
 	local pose, info = {}, {}
 	local P = ctx.plan
 	local weight = ctx.weight or 1
-	local W = (ctx.rig.plan == "scorpion" and baseScorpion or baseBiped)(ctx, st, now, pose)
+	-- BOSS-FRAMEWORK 2: 새 몸 = 세트(변신 전 · 후)의 보행 · 기본 자세 · 루트 높이 오프셋(보이는 몸만 - 판정 무변경)
+	local F, formName = BossMotion.formOf(ctx, st, now)
+	local W
+	if F then
+		local Wf = BossMotion.walkFor(ctx, formName)
+		local base = GAIT_BASE[F.gait]
+		if base then
+			W = base(ctx, st, now, pose, F, Wf)
+		elseif F.gait == "hexapod" then
+			W = baseScorpion(ctx, st, now, pose)
+		else
+			W = baseBiped(ctx, st, now, pose, Wf)
+			if F.stance then
+				blend(pose, F.stance, 1)
+			end
+		end
+		if F.rootOffset then
+			addTo(pose, "RootJoint", 5, F.rootOffset)
+		end
+		info.form = formName
+		info.contacts = F.contacts
+		info.airborne = F.gait == "hover" or nil
+	else
+		W = (ctx.rig.plan == "scorpion" and baseScorpion or baseBiped)(ctx, st, now, pose)
+	end
 
 	-- 두리번(머리가 먼저 → 몸이 따라감) · 방향 전환 때 몸을 먼저 기울임
 	local neckYaw, bodyYaw
@@ -409,9 +534,10 @@ function BossMotion.evaluate(ctx, st, now)
 	local combat = st.inCombat and 1 or (st.swingAt and clamp01(1 - (now - st.swingAt - 3) / 1) or 0)
 	-- A2-M1: 걷는 동안 다리는 걸음이 그린다 - 옛 "속도 > 1이면 다리 끔" 필터가 속도 1을 넘나들 때 다리 자세를 한 프레임에 바꿨다 → 다리 가중치를 속도로 부드럽게
 	local legK = 1 - ease("sine", ((st.speed or 0) - 0.3) / 1.6)
-	if combat > 0 and P.guard then
-		blend(pose, P.guard, combat * 0.85, isUpper)
-		blend(pose, P.guard, combat * 0.85 * legK, isLeg)
+	local guard = (F and F.guard) or P.guard
+	if combat > 0 and guard then
+		blend(pose, guard, combat * 0.85, isUpper)
+		blend(pose, guard, combat * 0.85 * legK, isLeg)
 	end
 	-- A2-N3 결정 ②: 평타 예비 동작(서버 BossSwingPrepAt = 예정 타격 시각 · 그 전 BossData.basicPrepSeconds 동안 다음에 휘두를 팔을 들어 올림 - 판정 무관)
 	--   다음 휘두름 = swingN + 1(좌우 번갈아) · 휘두름이 오면(swingAt ≥ 예정 − 0.2) 평타 층이 넘겨받는다 · 안 오면(대상이 빠짐) 0.4초에 걸쳐 내린다.
@@ -493,7 +619,7 @@ function BossMotion.evaluate(ctx, st, now)
 		return w
 	end
 	if st.env then
-		actLayer(ctx.boss and ctx.boss.env or "cast", st.envAt, st.envHit, st.envEndAt)
+		actLayer((F and F.env) or (ctx.boss and ctx.boss.env) or "cast", st.envAt, st.envHit, st.envEndAt)
 	end
 	if st.act then
 		local skill = ctx.skills and ctx.skills[st.act]
@@ -519,10 +645,10 @@ function BossMotion.evaluate(ctx, st, now)
 				end
 			end
 			if throwK > 0 then
-				actLayer(ctx.boss and ctx.boss.throw or "throw_overhead", st.throwPlan - P.throwWindup, P.throwWindup)
+				actLayer((F and F.throw) or (ctx.boss and ctx.boss.throw) or "throw_overhead", st.throwPlan - P.throwWindup, P.throwWindup)
 			end
 		else
-			actLayer(BossMotion.clipNameForSkill(ctx.rigId, ctx.rig, st.act, skill), st.actAt, st.actHit, st.actEndAt)
+			actLayer(BossMotion.clipNameForSkill(ctx.rigId, ctx.rig, st.act, skill, formName), st.actAt, st.actHit, st.actEndAt)
 			-- BR1-4c: 지진파 뛰어오름마다 웅크림 → 공중 → 내려찍기(서버 BossHopAt · 뛰는 시간 = 착지 = 파동)
 			if st.hopAt and st.hopSeconds and st.hopAt >= st.actAt and P.clips.hopSlam and now - st.hopAt < st.hopSeconds + 0.8 then
 				actLayer("hopSlam", st.hopAt, st.hopSeconds, st.actEndAt)
@@ -537,7 +663,30 @@ function BossMotion.evaluate(ctx, st, now)
 	end
 	-- 던진 순간부터 회복까지(스킬이 이미 끝났어도 - 전조와 같은 시간축)
 	if st.throwAt and now >= st.throwAt and now - st.throwAt < 1.4 then
-		actLayer(ctx.boss and ctx.boss.throw or "throw_overhead", st.throwAt - P.throwWindup, P.throwWindup)
+		actLayer((F and F.throw) or (ctx.boss and ctx.boss.throw) or "throw_overhead", st.throwAt - P.throwWindup, P.throwWindup)
+	end
+	-- BOSS-FRAMEWORK 4 변신(50% - 클라가 st.transformAt을 정한다 · 서버 무변경): 변신 동작 1회(세트 교체 = switchAt - 동작이 온몸을 덮는 구간).
+	--   변신 중 스킬 · 환경이 새로 시작하면 변신 층을 그 순간부터 0.3초에 거둔다(스킬 동작 · 전조 가독성 우선).
+	local TF = ctx.set and ctx.set.transform
+	if TF and st.transformAt and now >= st.transformAt and now - st.transformAt < TF.seconds + 0.35 then
+		local endAt = st.transformAt + TF.seconds
+		if st.act and st.actAt and st.actAt > st.transformAt then
+			endAt = math.min(endAt, st.actAt)
+		end
+		if st.env and st.envAt and st.envAt > st.transformAt then
+			endAt = math.min(endAt, st.envAt)
+		end
+		actLayer(TF.clip, st.transformAt, TF.hit, endAt)
+		info.transforming = true
+	end
+	-- BOSS-FRAMEWORK 5 번쩍(때리는 부위 흰 테): 스킬 전조 끝(판정 시각 = actAt + actHit) 직전 FrameData.flash.seconds초 · 세기 0.35 → 1(끝에서 최대)
+	if ctx.set and st.act and st.actAt and (st.actHit or 0) > 0 then
+		local list = ctx.set.flash and ctx.set.flash[st.act]
+		local u = now - (st.actAt + st.actHit)
+		local W0 = FrameData.flash.seconds
+		if list and u >= -W0 and u < 0 then
+			info.rim, info.rimAmount = list, 0.35 + 0.65 * ((u + W0) / W0)
+		end
 	end
 	-- 낚아챔(더하는 층 - 히트스톱 + 표정)
 	if st.pickAt and now - st.pickAt < 0.7 then
@@ -713,10 +862,41 @@ function BossMotion.context(rigId, rig, skills, moveSpeed)
 		walk[k] = v
 	end
 	local legReach = rig.plan == "scorpion" and scorpionLegReach(rig) or nil
-	return {
+	local ctx = {
 		rig = rig, rigId = rigId, plan = plan, boss = boss, walk = walk, legLen = BossMotion.legLength(rig), legReach = legReach,
 		moveSpeed = moveSpeed, weight = rig.weight or 1, skills = skills,
 	}
+	-- BOSS-FRAMEWORK 2: 새 몸 = 동작 세트(변신 전 · 후 걷기 값 · 등장 · 대표 동작)
+	local set = rig.variant and BossClipSet.get(rigId)
+	if set then
+		ctx.set = set
+		ctx.plan = D[set.plan or "biped"] or D.biped
+		ctx.boss = { intro = set.intro, signature = set.signature }
+		ctx.walks = {}
+		for name, F in pairs(set.forms) do
+			local w = {}
+			for k, v in pairs(ctx.plan.walk) do
+				w[k] = v
+			end
+			for k, v in pairs(F.walk or {}) do
+				w[k] = v
+			end
+			ctx.walks[name] = w
+		end
+		ctx.walk = ctx.walks.before
+		local upper, fore, hand = 0, 0, 0
+		for _, j in ipairs(rig.joints) do
+			if j.part == "UpperArm_L" then
+				upper = j.size.Y
+			elseif j.part == "Forearm_L" then
+				fore = j.size.Y
+			elseif j.part == "Hand_L" then
+				hand = j.size.Y
+			end
+		end
+		ctx.armLen = upper + fore + hand * 0.5
+	end
+	return ctx
 end
 
 return BossMotion

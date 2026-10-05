@@ -149,8 +149,7 @@ end
 -- 반환: 루트 자리, 부착점 이름(없으면 nil = 옛 머리 위 둘레).
 local rigCache = {}
 local function rigHoldPoint(c, index)
-	local rigId = c.model:GetAttribute("BossRig")
-	local rig = rigId and BossRigSpec.rigs[rigId]
+	local rig, rigId = BossRigSpec.rigOf(c.model) -- BOSS-FRAMEWORK 1: 새 몸(BossRigKey)이면 그 리그 FK
 	local root = c.model.PrimaryPart
 	if not rig or not root then
 		return nil

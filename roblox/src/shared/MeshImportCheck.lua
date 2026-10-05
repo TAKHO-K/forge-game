@@ -99,7 +99,7 @@ function MeshImportCheck.lookFor(rigId)
 		end
 	elseif kind == "boss" then
 		local BossData = require(ReplicatedStorage.Shared.data.BossData)
-		local b = BossData.bosses and BossData.bosses[rigId]
+		local b = BossData.bosses and BossData.bosses[rig.bossId or rigId] -- BOSS-FRAMEWORK: 새 몸 리그 키(<보스>_v2) = 그 보스 색
 		local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
 		local zoneKey
 		for _, z in ipairs(WorldMapData.zones or {}) do

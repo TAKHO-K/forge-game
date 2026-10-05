@@ -93,8 +93,10 @@ end
 local rows = {}
 local totalEvents = 0
 local ids = {}
-for id in pairs(BossRigSpec.rigs) do
-	table.insert(ids, id)
+for id, rig in pairs(BossRigSpec.rigs) do
+	if not rig.variant then -- BOSS-FRAMEWORK: 새 몸(리그 v2)은 boss_framework_test가 돈다
+		table.insert(ids, id)
+	end
 end
 table.sort(ids)
 local function add(rigId, action, ev, worst, part, t, contactOff)

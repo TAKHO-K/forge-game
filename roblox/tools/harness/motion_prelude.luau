@@ -81,6 +81,7 @@ CFMT.__index = function(c, k)
 	if k == "RightVector" then return Vector3.new(c.r[1], c.r[4], c.r[7]) end
 	if k == "PointToWorldSpace" then return function(self, v) return self * v end end
 	if k == "VectorToObjectSpace" then return function(self, v) local r = self.r return Vector3.new(r[1]*v.X+r[4]*v.Y+r[7]*v.Z, r[2]*v.X+r[5]*v.Y+r[8]*v.Z, r[3]*v.X+r[6]*v.Y+r[9]*v.Z) end end
+	if k == "VectorToWorldSpace" then return function(self, v) local r = self.r return Vector3.new(r[1]*v.X+r[2]*v.Y+r[3]*v.Z, r[4]*v.X+r[5]*v.Y+r[6]*v.Z, r[7]*v.X+r[8]*v.Y+r[9]*v.Z) end end -- BOSS-FRAMEWORK
 	if k == "X" then return c.x end
 	if k == "Y" then return c.y end
 	if k == "Z" then return c.z end

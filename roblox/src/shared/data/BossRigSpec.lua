@@ -11,49 +11,9 @@ local BossRigSpec = {}
 
 local V = Vector3.new
 
--- ─────────────────────────── 두 발 몸(수호자 · 서리 거인 · 심해 군주 · 수정 여왕 · 폭풍 군주 공통 뼈대) ───────────────────────────
--- o = { hips, torso, head(크기), headShape, thigh = { w, len }, shin = { w, len }, foot(크기), upperArm = { w, len }, forearm = { w, len }, hand(크기), shoulderX, stance(엉덩이 반폭) }
-local function biped(o)
-	local J = {}
-	local function add(j)
-		table.insert(J, j)
-	end
-	local legLen = o.thigh.len + o.shin.len
-	local hipJointY = -1.5 + o.foot.Y + legLen
-	add({ name = "RootJoint", parent = "HumanoidRootPart", part = "Hips", size = o.hips, color = "dark", at = V(0, hipJointY + o.hips.Y / 2, 0), pivot = V(0, 0, 0) })
-	add({ name = "Waist", parent = "Hips", part = "Body", size = o.torso, color = "body", at = V(0, o.hips.Y / 2, 0), pivot = V(0, -o.torso.Y / 2, 0), query = true })
-	add({ name = "Neck", parent = "Body", part = "Head", size = o.head, shape = o.headShape or "block", color = "head", at = V(0, o.torso.Y / 2, 0), pivot = V(0, -o.head.Y * 0.45, 0), query = true })
-	for _, s in ipairs({ { "L", -1 }, { "R", 1 } }) do
-		local side, x = s[1], s[2]
-		add({ name = "Hip_" .. side, parent = "Hips", part = "Thigh_" .. side, size = V(o.thigh.w, o.thigh.len, o.thigh.w), color = "body", at = V(x * o.stance, -o.hips.Y / 2, 0), pivot = V(0, o.thigh.len / 2, 0) })
-		add({ name = "Knee_" .. side, parent = "Thigh_" .. side, part = "Shin_" .. side, size = V(o.shin.w, o.shin.len, o.shin.w), color = "dark", at = V(0, -o.thigh.len / 2, 0), pivot = V(0, o.shin.len / 2, 0) })
-		add({ name = "Ankle_" .. side, parent = "Shin_" .. side, part = "Foot_" .. side, size = o.foot, color = "dark", at = V(0, -o.shin.len / 2, 0), pivot = V(0, o.foot.Y / 2, o.foot.Z * 0.25) })
-		add({ name = "Shoulder_" .. side, parent = "Body", part = "UpperArm_" .. side, size = V(o.upperArm.w, o.upperArm.len, o.upperArm.w), color = "body",
-			at = V(x * o.shoulderX, o.torso.Y / 2 - o.upperArm.w * 0.45, 0), pivot = V(0, o.upperArm.len / 2 - o.upperArm.w * 0.3, 0), rot = V(0, 0, x * 6) })
-		add({ name = "Elbow_" .. side, parent = "UpperArm_" .. side, part = "Forearm_" .. side, size = V(o.forearm.w, o.forearm.len, o.forearm.w), color = "head", at = V(0, -o.upperArm.len / 2, 0), pivot = V(0, o.forearm.len / 2, 0), rot = V(8, 0, 0) })
-		add({ name = "Wrist_" .. side, parent = "Forearm_" .. side, part = "Hand_" .. side, size = o.hand, color = "head", at = V(0, -o.forearm.len / 2, 0), pivot = V(0, o.hand.Y / 2, 0) })
-	end
-	-- 얼굴(표정 - 4b-4 낚아채는 순간): 눈 · 입
-	add({ name = "Eyes", parent = "Head", part = "Eyes", size = V(o.head.X * 0.62, o.head.Y * 0.14, 0.08), color = "eye", material = "Neon", at = V(0, o.head.Y * 0.12, -o.head.Z / 2), pivot = V(0, 0, 0.02) })
-	add({ name = "Jaw", parent = "Head", part = "Mouth", size = V(o.head.X * 0.42, o.head.Y * 0.1, 0.08), color = "mouth", at = V(0, -o.head.Y * 0.22, -o.head.Z / 2), pivot = V(0, o.head.Y * 0.04, 0.02) })
-	return J
-end
-
--- 사슬(꼬리 · 망토 · 수염 · 치마): n마디, 마디마다 length · 굵기 w0 → w1(끝으로 가늘어짐) · 첫 마디 기준 자세 rot0 · 다음 마디부터 rotStep.
-local function chain(J, o)
-	local parent = o.parent
-	for i = 1, o.count do
-		local f = (i - 1) / math.max(o.count - 1, 1)
-		local w = o.w0 + (o.w1 - o.w0) * f
-		local name = ("%s%d"):format(o.prefix, i)
-		table.insert(J, {
-			name = name, parent = parent, part = name, size = V(w * (o.flat or 1), o.length, w), color = (i == o.count and o.tipColor) or o.color or "body",
-			material = (i == o.count and o.tipMaterial) or nil, shape = (i == o.count and o.tipShape) or "block",
-			at = i == 1 and o.at or V(0, -o.length / 2, 0), pivot = V(0, o.length / 2, 0), rot = i == 1 and o.rot0 or o.rotStep,
-		})
-		parent = name
-	end
-end
+-- 두 발 몸 · 사슬 = shared/BossSkeleton(BOSS-FRAMEWORK 1 - 식 그대로 옮김 · 새 몸 구조 생성기와 같이 쓴다)
+local BossSkeleton = require(script.Parent.Parent.BossSkeleton)
+local biped, chain = BossSkeleton.biped, BossSkeleton.chain
 
 local function add(J, j)
 	table.insert(J, j)
@@ -210,16 +170,49 @@ do
 	}
 end
 
+-- BOSS-FRAMEWORK 1: 새 몸(리그 v2 - shared/data/BossRigV2Data)을 "<보스 id>_v2" 키로 같이 등록한다(모델 Attribute BossRigKey가 고른다 · BossRig = 보스 id 그대로).
+--   어느 몸이 뜨는지 = shared/data/BossFrameworkData(실전 live · Studio 시험 스위치) - 등록만으로는 아무 보스도 바뀌지 않는다.
+local BossRigV2Data = require(script.Parent.BossRigV2Data)
+for key, rig in pairs(BossRigV2Data.rigs) do
+	rig.key = key
+	BossRigSpec.rigs[key] = rig
+end
+
 -- BR1-4c c-10 발 접지: 발바닥 점(클라 BossAnimator가 매 프레임 가장 낮은 발을 땅에 맞춘다 - 뜬 발 · 바닥 관통 없음). 두 발 = 발 파트 밑면 · 전갈 = 다리 끝.
+--   v2 = rig.contacts(접지 부위 이름 - 네 발 · 너클 · 뱀 꼬리)가 있으면 그것 · contactAt = 모든 부위의 밑점(동작 세트가 바꿔 고른다 - BossClipSetData contacts).
 for _, rig in pairs(BossRigSpec.rigs) do
 	rig.feet = {}
+	if rig.variant then
+		rig.contactAt = {}
+		for _, j in ipairs(rig.joints) do
+			rig.contactAt[j.part] = V(0, -j.size.Y / 2, 0)
+		end
+	end
 	for _, j in ipairs(rig.joints) do
-		if j.part == "Foot_L" or j.part == "Foot_R" then
+		if rig.contacts then
+			for _, c in ipairs(rig.contacts) do -- 이름(밑점 = 아래 끝) 또는 { part, at }(누운 꼬리 - 배 쪽 점)
+				if c == j.part then
+					table.insert(rig.feet, { part = j.part, at = V(0, -j.size.Y / 2, 0) })
+				elseif type(c) == "table" and c.part == j.part then
+					table.insert(rig.feet, { part = j.part, at = c.at })
+					rig.contactAt[j.part] = c.at
+				end
+			end
+		elseif j.part == "Foot_L" or j.part == "Foot_R" then
 			table.insert(rig.feet, { part = j.part, at = V(0, -j.size.Y / 2, 0) })
 		elseif j.part:match("^Shin%d_[LR]$") then
 			table.insert(rig.feet, { part = j.part, at = V(0, -j.size.Y / 2, 0) })
 		end
 	end
+end
+
+-- 모델 → 리그 키(BossRigKey가 있으면 v2 · 없으면 보스 id = 옛 리그)
+function BossRigSpec.keyOf(model)
+	return model:GetAttribute("BossRigKey") or model:GetAttribute("BossRig")
+end
+function BossRigSpec.rigOf(model)
+	local key = BossRigSpec.keyOf(model)
+	return key and BossRigSpec.rigs[key] or nil, key
 end
 
 -- 색 역할 → 실제 색(bodyColor · headColor = BossData · accent = 위 표 · 나머지 = 파생).
