@@ -1597,6 +1597,26 @@
   "assetId": 115896469134708,
   "status": "Approved"
  },
+ "bosses/crystal_queen_v2m.fbx": {
+  "sha256": "2d5ee4bd6f44e6686fb4bffe0da057990d14095bc58595aef0221a4591a81cf5",
+  "assetType": "Model",
+  "assetId": 110971378828615,
+  "status": "Approved"
+ },
+ "bosses/crystal_queen_v2m_atlas1.png": {
+  "sha256": "107757aa4ade44c618c1bc5e181e8398021fe0929e0efc64d7cd5ef10da765b8",
+  "assetType": "Decal",
+  "assetId": 100446466548359,
+  "status": "Approved",
+  "imageId": 86986221521128
+ },
+ "bosses/crystal_queen_v2m_atlas2.png": {
+  "sha256": "03d8cbc01548b8d7c18f1f974e0bcdec107ebd29df4e062f6023af8bb5dda16c",
+  "assetType": "Decal",
+  "assetId": 89835617955323,
+  "status": "Approved",
+  "imageId": 140080194398182
+ },
  "bosses/frost_giant.fbx": {
   "sha256": "0062bdc186dd5f89dc520c6347f6c3c4852902977c3df6b913e2e89224ee2f5c",
   "assetType": "Model",

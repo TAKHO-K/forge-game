@@ -15,7 +15,7 @@
 #      height(리그 단위 - 원본 높이를 이 값으로 · 발바닥 −1.5 · X · Z 경계 가운데 = 0 · 리그 상자 경계 대신) · yaw · islands(0 ~ 1 - 떨어진 조각(Meshy 돌판)을
 #      면 과반이 가는 부위에 통째로 · 비율이 이 값 미만이면 면마다) · skip(원본 면을 받지 않는 부위 - 생성 Neon · 자리만 있는 턱) ·
 #      faceParts(조각째 보내기에서 빼는 부위 - 머리 돌판 일부인 눈썹) · neonByColor = { parts, minValue, blueOverGreen, maxChannel }(그 부위에서 텍스처 색이 밝은 보라(수정)인 면 → Neon 조각 · 색 = 평균 → 가장 낮은 채널 ≤ maxChannel) ·
-#      generate = [{ part | deco + host, shape = eyes(variant normal · angry · dazed) | rune, at · size(리그 단위) · color }] (Neon 새 메시) ·
+#      generate = [{ part | deco + host, shape = eyes(variant normal · angry · dazed) | rune | bell(profile · neon false = 리그 색 · 굽기 제외), at · size(리그 단위) · color }] (Neon 새 메시) ·
 #      texture = "base"(Base Color에 연결된 이미지만 - 거칠기 · 노멀 맵 제외) · decoCap(수정 Neon 조각 삼각형 상한) ·
 #      bake = { size, extrusion, distance }(감량하면 Meshy의 잘게 나뉜 UV가 무너진다 → 감량 부위에 새 UV(Smart UV · 한 장에 묶기) + 원본 고해상 메시 색을
 #      Cycles로 굽기(선택 → 활성 · 색만) = 1024 아틀라스 1장).
@@ -760,6 +760,22 @@ def gen_geo(g):
         front = A.section_z([(x * 0.55, y * 0.55) for x, y in ring], at[2] - dep / 2)
         verts, faces = A.loft([back, front], cap0=True, tip1=(0, 0, at[2] - dep))
         return A.xform((verts, faces), t=(at[0], at[1], 0))
+    if g["shape"] == "bell":  # BOSS-NIGHT-1 4: 닫힌 종 모양 치마(at = 허리 가운데 · profile = [[y, 반지름] …] 위 → 아래 · 두께 size[0] · 안팎 양면 + 단 = 닫힌 껍데기)
+        seg_n, th = int(g.get("segments", 32)), size[0]
+        prof = g["profile"]
+        rings = [(y, r) for y, r in prof] + [(y, max(0.01, r - th)) for y, r in reversed(prof)]
+        verts, faces = [], []
+        for y, r in rings:
+            for i in range(seg_n):
+                a = 2 * math.pi * i / seg_n
+                verts.append((at[0] + r * math.cos(a), y, at[2] + r * math.sin(a)))
+        n = len(rings)
+        for k in range(n):  # 마지막 고리 → 첫 고리(허리 위 테두리)까지 이어 닫는다
+            k2 = (k + 1) % n
+            for i in range(seg_n):
+                i2 = (i + 1) % seg_n
+                faces.append((k * seg_n + i, k * seg_n + i2, k2 * seg_n + i2, k2 * seg_n + i))
+        return verts, faces
     raise ValueError("모양 %s" % g["shape"])
 
 
@@ -900,7 +916,7 @@ def main():
         faces = assign[p["name"]]
         if p["name"] in gens:  # 생성 Neon 부위(눈 · 룬 - 원본 면 대신)
             g = gens[p["name"]]
-            objs.append(A.make_obj(p["name"], gen_geo(g), tuple(g["color"]), col, neon=True, origin=tuple(p["joint"])))
+            objs.append(A.make_obj(p["name"], gen_geo(g), tuple(g["color"]), col, neon=g.get("neon", True), origin=tuple(p["joint"]), smooth=not g.get("neon", True)))
             continue
         if not faces:
             empty.append(p["name"])
@@ -959,7 +975,7 @@ def main():
     atlas_files = []
     partAtlas = {}
     if hi:
-        bakeObjs = [x for x in objs if x not in rigNeon and x.name not in empty]
+        bakeObjs = [x for x in objs if x not in rigNeon and x.name not in empty and x.name not in gens]  # 생성 부위(종 치마) = 리그 색 그대로(굽지 않음)
         groups = [set(g) for g in cfg.get("atlasGroups", [])]  # BOSS-NIGHT-1: 아틀라스 2 · 3장째로 보낼 부위(나머지 = 1장째) - 1024 × 3장 예산 안에서 해상도
         lists = [[x for x in bakeObjs if not any(x.name in g for g in groups)]] + [[x for x in bakeObjs if x.name in g] for g in groups]
         for ai, lst in enumerate(lists):
@@ -1030,7 +1046,7 @@ def main():
     meta = A.meta_of(allo, o["budget"], {
         "version": "KIT1", "rigId": rigId, "partCap": o["partCap"], "joints": {x.name: x["Joint"] for x in objs},
         "deco": {d.name: d["Deco"] for d in decos}, "decoMaterial": {d.name: "Neon" for d in decos}, "lod2": [], "outlineParts": [h.name for h in hulls],
-        "texture": dict({"atlases": atlas_files, "parts": [x.name for x in objs if x.name not in empty and x not in rigNeon]}, **({"partAtlas": partAtlas} if len(atlas_files) > 1 else {})), "kit": {"neonDemoted": demoted, "source": os.path.basename(glb), "sourceTris": src_tris, "overlapCopies": copies, "capped": capped, "empty": empty},
+        "texture": dict({"atlases": atlas_files, "parts": [x.name for x in objs if x.name not in empty and x not in rigNeon and not (hi_baked and x.name in gens)]}, **({"partAtlas": partAtlas} if len(atlas_files) > 1 else {})), "kit": {"neonDemoted": demoted, "source": os.path.basename(glb), "sourceTris": src_tris, "overlapCopies": copies, "capped": capped, "empty": empty},
         "space": "sizeScale 1 · 루트 원점 · 발바닥 y −1.5 · 앞 −Z", "metaName": name})
     A.write_json(os.path.join(o["out"], "%s.meta.json" % name), meta)
     if hi_baked:  # 원본(유료 · 비공개 라이선스) 텍스처를 .blend에 싸 넣지 않는다 - 구운 아틀라스만 남김

@@ -5,7 +5,7 @@ local D = {}
 --   live = 실전(라이브 포함) - **설계 담당이 수호자 시험을 검수한 뒤에만 채운다**(지금 비어 있음 = 6보스 모두 옛 몸).
 --   studioTrial = Studio에서 workspace Attribute BossFrameworkTrial = true일 때만(시험 · 촬영 · 하네스) - 라이브 서버에서는 무시.
 D.live = {}
-D.studioTrial = { section_guardian = "v2", frost_giant = "v2", storm_lord = "v2", abyssal_lord = "v2" } -- BOSS-NIGHT-1: 매머드 · 폭풍 · 나가 새 몸(시험 스위치로만)
+D.studioTrial = { section_guardian = "v2", frost_giant = "v2", storm_lord = "v2", abyssal_lord = "v2", crystal_queen = "v2" } -- BOSS-NIGHT-1: 매머드 · 폭풍 · 나가 · 수정 여왕 새 몸(시험 스위치로만)
 D.trialAttribute = "BossFrameworkTrial"
 
 -- GUARDIAN-V2 몸 가장자리 기준 근접 반경(바이블 §5 - 공통 장치 · 보스별 · 기본 끔 = 표에 없음): 새 몸(리그 v2 · edgeHalfWidth)이 뜰 때만
@@ -25,6 +25,7 @@ D.bodyEdge = {
 	-- BOSS-NIGHT-1 3 나가: 꼬리 휩쓸기(도넛 안 · 밖) · 꼬리 반원 · 강화 평타 · 물의 장막 = 몸 가장자리 기준 · 밸런스 = BossSim(abyssal_v1/s_bosssim.txt)
 	--   피해 × 0.75(600판 · 처음 원거리 47% · 근접 49% · 아는 보스 33 ~ 34% - 두 목표 모두 안) · 새 몸이 옛 몸보다 넓지 않아 몸 가장자리 증가 0(밸런스 계수만)
 	abyssal_lord = { skills = { sweep = true, tailSweep = true, swipe = true, mirror = true }, chaseStop = true, damageScale = 0.75, hpScale = 1.0 },
+	crystal_queen = { skills = { burst = true, swipe = true, mirror = true }, chaseStop = true, damageScale = 1.0, hpScale = 1.0 },
 }
 
 -- GUARDIAN-V3(사용자 시험 피드백 · 바이블 §11): 새 몸이 뜰 때만(BossFramework.applyV3 - 몸 가장자리 장치 뒤 · 인스턴스 사본 · BossData 원본 · 라이브 무변경).
@@ -155,6 +156,14 @@ D.v3 = {
 		windup = { seconds = 0.12, skills = { swipe = true }, basic = true },
 		glow = { color = Color3.fromRGB(60, 200, 255), fillPeak = 0.55, outline = 0.35, skills = { swipe = true, sweep = true, tailSweep = true, tide = true, tridentThrow = true, spout = true }, basic = true,
 			basicParts = { R = "TridentHead", L = "Hand_L" } },
+		marks = { color = LAVENDER, crackColor = Color3.fromRGB(160, 90, 255), transparency = 0.6, crackTransparency = 0.25, crackWidth = 0.35 },
+	},
+	-- BOSS-NIGHT-1 4 수정 나비 여왕: 근접(강화 평타 · 평타 · 근접 원) = 바닥 표시 없음 + 예비 +0.12 · 홀 보석 · 왼손 청록 발광(파편 폭발 = 큰 범위 · 바닥 표시 유지)
+	crystal_queen = {
+		hideFloor = { swipe = true, basic = true, innerRing = true },
+		windup = { seconds = 0.12, skills = { swipe = true }, basic = true },
+		glow = { color = Color3.fromRGB(150, 240, 255), fillPeak = 0.55, outline = 0.35, skills = { swipe = true, burst = true, spikes = true, energyBeam = true, shards = true, drop = true }, basic = true,
+			basicParts = { R = "ScepterGem", L = "Hand_L" } },
 		marks = { color = LAVENDER, crackColor = Color3.fromRGB(160, 90, 255), transparency = 0.6, crackTransparency = 0.25, crackWidth = 0.35 },
 	},
 }

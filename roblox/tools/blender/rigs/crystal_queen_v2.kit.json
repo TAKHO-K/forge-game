@@ -1,0 +1,127 @@
+{
+ "about": "BOSS-NIGHT-1 4 수정 나비 여왕 KIT 설정 - 몸 = Meshy crystal_v1_body_meshy71(복셀 리메시 후 감량) + 날개 GLB(위 · 아래 L/R 8마디) + 홀 GLB(오른손) · §8 = 짧은 꽃잎 치마 · 블루머 · 맨 정강이를 덮는 닫힌 종 치마(generate bell · 리그 색 · 굽기 제외) · 치마 속(허벅지 · 엉덩이)은 안 보여 300씩",
+ "height": 7.0,
+ "yaw": 180,
+ "islands": 0,
+ "skip": [
+  "Skirt"
+ ],
+ "texture": "base",
+ "overlap": 0.1,
+ "bodyPreTris": 200000,
+ "bodyVoxel": 0.012,
+ "bake": {
+  "size": 1024,
+  "extrusion": 0.03,
+  "distance": 0.12
+ },
+ "generate": [
+  {
+   "part": "Skirt",
+   "shape": "bell",
+   "neon": false,
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "size": [
+    0.06
+   ],
+   "segments": 32,
+   "color": [
+    165,
+    125,
+    215
+   ],
+   "profile": [
+    [
+     2.42,
+     0.72
+    ],
+    [
+     2.15,
+     0.92
+    ],
+    [
+     1.75,
+     1.15
+    ],
+    [
+     1.1,
+     1.35
+    ],
+    [
+     0.2,
+     1.5
+    ],
+    [
+     -0.6,
+     1.6
+    ],
+    [
+     -1.08,
+     1.65
+    ]
+   ]
+  }
+ ],
+ "addons": [
+  {
+   "glb": "crystal_v1_wings_meshy71.glb",
+   "parts": [
+    "WingF_L1",
+    "WingF_L2",
+    "WingF_R1",
+    "WingF_R2",
+    "WingB_L1",
+    "WingB_L2",
+    "WingB_R1",
+    "WingB_R2"
+   ],
+   "fit": "union",
+   "scaleAxis": "x",
+   "yaw": 180,
+   "islands": 0.01
+  },
+  {
+   "glb": "crystal_v1_scepter_meshy71.glb",
+   "parts": [
+    "Scepter",
+    "ScepterGem"
+   ],
+   "fit": "union",
+   "scaleAxis": "y",
+   "islands": 0.01
+  }
+ ],
+ "partTris": {
+  "WingF_L1": 450,
+  "WingF_L2": 450,
+  "WingF_R1": 450,
+  "WingF_R2": 450,
+  "WingB_L1": 350,
+  "WingB_L2": 350,
+  "WingB_R1": 350,
+  "WingB_R2": 350,
+  "Scepter": 1200,
+  "ScepterGem": 1000,
+  "Thigh_L": 300,
+  "Thigh_R": 300,
+  "Hips": 300
+ },
+ "atlasGroups": [
+  [
+   "WingF_L1",
+   "WingF_L2",
+   "WingF_R1",
+   "WingF_R2",
+   "WingB_L1",
+   "WingB_L2",
+   "WingB_R1",
+   "WingB_R2",
+   "Scepter",
+   "ScepterGem"
+  ]
+ ]
+}

@@ -569,4 +569,29 @@ do
 	check("폭풍 크기(키 약 31 stud)", math.abs(7.2 * 3.75 * rig.scale - 31) < 1.5, ("키 %.1f stud(K 7.2 × S 3.75 × %.2f)"):format(7.2 * 3.75 * rig.scale, rig.scale))
 end
 
+-- ─────────────────────────── BOSS-NIGHT-1 4: 수정 나비 여왕 새 몸(떠 있기 · 닫힌 종 치마 §8 · 근접 표시) ───────────────────────────
+do
+	local BossRules = MODS.BossRules
+	local walk = MODS.WorldConfig.playerWalkSpeedStuds
+	local d = BossRules.buildInstanceData(15, "crystal_queen", 1)
+	local e, edge = BossFramework.applyBodyEdge(d, "crystal_queen_v2", walk)
+	local g = BossFramework.applyV3(e, "crystal_queen_v2")
+	local rig = BossRigSpec.rigs.crystal_queen_v2
+	local set = MODS.BossClipSet.get("crystal_queen_v2")
+	check("수정 근접 바닥 표시 끔 · 예비 +0.12 · 파편 폭발(큰 범위) 바닥 표시 유지", g.skills.swipe.noFloor == true and g.basicNoFloor and g.innerRingHidden and not g.skills.burst.noFloor
+		and math.abs(g.skills.swipe.telegraphSeconds - (d.skills.swipe.telegraphSeconds + 0.12)) < 1e-6 and g.skills.energyBeam.telegraphSeconds == d.skills.energyBeam.telegraphSeconds,
+		("강화 평타 %.2f → %.2f · 몸 가장자리 +%.2f"):format(d.skills.swipe.telegraphSeconds, g.skills.swipe.telegraphSeconds, edge))
+	local S = d.sizeScale
+	local h = 7.0 * S * rig.scale
+	check("수정 크기(키 약 29 stud) · 두 폼 떠 있기", math.abs(h - 29) < 1.5 and set.forms.before.gait == "hover" and set.forms.after.gait == "hover", ("키 %.1f stud(K 7.0 × S %.2f × %.2f)"):format(h, S, rig.scale))
+	-- §8: 닫힌 종 치마(허리 → 발목 위) - 판정 사본 아님 · 발목(0.05 H) 근처까지 덮음 · 다리(허벅지 · 정강이)가 치마 상자 안
+	local skirt, legsIn = nil, true
+	for _, j in ipairs(rig.joints) do
+		if j.part == "Skirt" then
+			skirt = j
+		end
+	end
+	check("수정 §8 닫힌 종 치마(허리 → 발목 위 · 판정 아님)", skirt ~= nil and not skirt.query and skirt.size.Y >= 7.0 * 0.45, skirt and ("치마 높이 %.2f(키 7.0의 %.0f%%)"):format(skirt.size.Y, skirt.size.Y / 7.0 * 100) or "없음")
+end
+
 print(("[FRAME] 끝 %d/%d"):format(pass, total))

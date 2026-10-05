@@ -325,39 +325,57 @@ do
 	}
 end
 
--- ─────────────────────────── 수정 여왕 → 수정 나비 여왕(초안 · 날개 4장 × 2마디 · 떠 있음) ───────────────────────────
+-- ─────────────────────────── 수정 여왕 → 수정 나비 여왕(BOSS-NIGHT-1 4 · Meshy 몸 + 날개 + 홀 · 떠 있음 · 바이블 §2-2 · §8) ───────────────────────────
+-- 상자 · 관절 = Meshy crystal_v1_body 정면 · 옆 실측(높이 1 = H · 더듬이 끝 포함 · 턱 0.70 · 어깨 0.68 · 손 0.43 ~ 0.49 = KIT 첫 굽기 부위 경계에서 다시 잼). K 7.0 = 판정 사본(Body · Head) 부피 = 옛 몸 × 1.10 · scale 1.15 = 키 약 29 stud(§5).
+--   §8 노출 기준: Meshy 몸은 짧은 꽃잎 치마 + 무릎 블루머 + 맨 정강이 → KIT가 허리 → 발목 위까지 **닫힌 종 모양 치마(Skirt · 안팎 양면 · 드레스색)**를 새로 만들어 덮는다(다리는 발목 아래만).
+--   날개 = 날개 GLB 한 장(위 · 아래 날개 L/R) → 위 날개 2마디 · 아래 날개 2마디 × 좌우 = 8. 홀 = 오른손 자식(보석 따로).
 do
-	local J = BossSkeleton.biped({
-		hips = V(1.2, 0.5, 0.9), torso = V(1.5, 1.7, 0.9), head = V(0.9, 0.95, 0.9), headShape = "ball",
-		thigh = { w = 0.5, len = 0.9 }, shin = { w = 0.45, len = 0.9 }, foot = V(0.55, 0.25, 0.9),
-		upperArm = { w = 0.45, len = 0.95 }, forearm = { w = 0.42, len = 0.9 }, hand = V(0.5, 0.6, 0.5), shoulderX = 0.95, stance = 0.35,
-	})
-	for i, s in ipairs({ { "F", V(0, 0, -0.45), V(12, 0, 0) }, { "B", V(0, 0, 0.45), V(-12, 0, 0) }, { "L", V(-0.6, 0, 0), V(0, 0, -12) }, { "R", V(0.6, 0, 0), V(0, 0, 12) } }) do
-		chain(J, { prefix = "Skirt" .. s[1], parent = "Hips", count = 2, length = 0.75, w0 = i <= 2 and 1.25 or 0.95, w1 = i <= 2 and 1.35 or 1.05, at = s[2] + V(0, -0.1, 0), rot0 = s[3], rotStep = s[3] * 0.5, color = "head", tipColor = "accent", tipMaterial = "Glass" })
+	local L = placer(7.0)
+	local P, Z, place, seg, chainPts = L.P, L.Z, L.place, L.seg, L.chainPts
+	local DRESS = Color3.fromRGB(165, 125, 215)
+	place({ name = "RootJoint", parent = "HumanoidRootPart", part = "Hips", center = P(0, 0.5, 0), size = Z(0.16, 0.08, 0.1), joint = P(0, 0.52, 0), color = "dark" })
+	place({ name = "Waist", parent = "Hips", part = "Body", center = P(0, 0.6125, 0.005), size = Z(0.18, 0.145, 0.12), joint = P(0, 0.54, 0), query = true })
+	place({ name = "Neck", parent = "Body", part = "Head", center = P(0, 0.81, 0.02), size = Z(0.19, 0.22, 0.21), joint = P(0, 0.695, 0), color = "head", query = true, shape = "ball" }) -- 판정 사본 = 공(부피 옛 몸 × 1.0 · KIT 자르기는 상자 그대로)
+	place({ name = "Hair", parent = "Head", part = "Hair", center = P(0, 0.66, -0.1), size = Z(0.26, 0.4, 0.1), joint = P(0, 0.84, -0.06), color = "head" })
+	place({ name = "Crown", parent = "Head", part = "Crown", center = P(0, 0.925, 0.0), size = Z(0.12, 0.05, 0.1), joint = P(0, 0.905, 0), color = "accent" })
+	place({ name = "ChestGem", parent = "Body", part = "ChestGem", center = P(0, 0.6, 0.08), size = Z(0.05, 0.05, 0.03), joint = P(0, 0.6, 0.07), color = "accent" }) -- 드레스 보석(텍스처 - Neon 단색은 가슴 면을 통째로 덮었다)
+	place({ name = "Skirt", parent = "Hips", part = "Skirt", center = P(0, 0.31, 0), size = Z(0.48, 0.5, 0.48), joint = P(0, 0.55, 0), color = DRESS })
+	for _, s in ipairs({ { "L", -1 }, { "R", 1 } }) do
+		local side, x = s[1], s[2]
+		seg("Hip_" .. side, "Hips", "Thigh_" .. side, { x * 0.05, 0.5, 0 }, { x * 0.05, 0.26, 0.005 }, 0.08, 0.08, 0.02)
+		seg("Knee_" .. side, "Thigh_" .. side, "Shin_" .. side, { x * 0.05, 0.26, 0.005 }, { x * 0.045, 0.05, 0 }, 0.07, 0.07, 0.02, "dark")
+		place({ name = "Ankle_" .. side, parent = "Shin_" .. side, part = "Foot_" .. side, center = P(x * 0.045, 0.02, 0.02), size = Z(0.06, 0.04, 0.09), joint = P(x * 0.045, 0.05, 0), color = "dark" })
+		seg("Shoulder_" .. side, "Body", "UpperArm_" .. side, { x * 0.07, 0.68, 0 }, { x * 0.16, 0.58, 0 }, 0.05, 0.05, 0.01)
+		seg("Elbow_" .. side, "UpperArm_" .. side, "Forearm_" .. side, { x * 0.16, 0.58, 0 }, { x * 0.215, 0.49, 0.01 }, 0.045, 0.045, 0.01)
+		seg("Wrist_" .. side, "Forearm_" .. side, "Hand_" .. side, { x * 0.215, 0.49, 0.01 }, { x * 0.26, 0.435, 0.02 }, 0.045, 0.035, 0.01)
+		place({ name = "Antenna_" .. side, parent = "Head", part = "Antenna_" .. side, center = P(x * 0.04, 0.96, 0.0), size = Z(0.03, 0.08, 0.03), joint = P(x * 0.035, 0.92, 0), color = "accent" })
+		-- 날개(등 위쪽): 위 날개(크다) 안 · 밖 / 아래 날개 안 · 밖
+		place({ name = "WingF_" .. side .. "1", parent = "Body", part = "WingF_" .. side .. "1", center = P(x * 0.11, 0.87, -0.1), size = Z(0.18, 0.34, 0.06), joint = P(x * 0.03, 0.74, -0.08), color = "accent" })
+		place({ name = "WingF_" .. side .. "2", parent = "WingF_" .. side .. "1", part = "WingF_" .. side .. "2", center = P(x * 0.31, 0.87, -0.11), size = Z(0.22, 0.34, 0.06), joint = P(x * 0.2, 0.84, -0.1), color = "accent" })
+		place({ name = "WingB_" .. side .. "1", parent = "Body", part = "WingB_" .. side .. "1", center = P(x * 0.085, 0.56, -0.1), size = Z(0.13, 0.28, 0.06), joint = P(x * 0.03, 0.68, -0.08), color = "accent" })
+		place({ name = "WingB_" .. side .. "2", parent = "WingB_" .. side .. "1", part = "WingB_" .. side .. "2", center = P(x * 0.225, 0.56, -0.11), size = Z(0.15, 0.28, 0.06), joint = P(x * 0.15, 0.6, -0.1), color = "accent" })
 	end
-	add(J, { name = "Crown", parent = "Head", part = "Crown", size = V(0.8, 0.5, 0.8), shape = "cyl", color = "accent", material = "Neon", at = V(0, 0.5, 0), pivot = V(0, -0.2, 0), rot = V(0, 0, 90) })
-	BossSkeleton.wings(J, "Body", {
-		{ tag = "F", at = V(0.35, 0.55, 0.45), rot0 = V(-10, -30, 55), rotStep = V(0, 0, 10), count = 2, length = 1.1, w0 = 1.1, w1 = 0.9 },
-		{ tag = "B", at = V(0.3, 0.1, 0.45), rot0 = V(-15, -35, 105), rotStep = V(0, 0, 8), count = 2, length = 0.9, w0 = 0.9, w1 = 0.7 },
-	}, "accent", "Glass")
-	add(J, { name = "Antenna_L", parent = "Head", part = "Antenna_L", size = V(0.06, 0.7, 0.06), color = "accent", at = V(-0.2, 0.4, -0.2), pivot = V(0, -0.35, 0), rot = V(25, 0, -20) })
-	add(J, { name = "Antenna_R", parent = "Head", part = "Antenna_R", size = V(0.06, 0.7, 0.06), color = "accent", at = V(0.2, 0.4, -0.2), pivot = V(0, -0.35, 0), rot = V(25, 0, 20) })
-	add(J, { name = "ChestGem", parent = "Body", part = "ChestGem", size = V(0.4, 0.4, 0.2), shape = "ball", color = "accent", material = "Neon", at = V(0, 0.3, -0.45), pivot = V(0, 0, 0) })
-	add(J, { name = "Scepter", parent = "Hand_R", part = "Scepter", size = V(0.18, 2.4, 0.18), shape = "cyl", color = "head", at = V(0, -0.25, 0), pivot = V(0, -0.5, 0) })
-	add(J, { name = "ScepterGem", parent = "Scepter", part = "ScepterGem", size = V(0.5, 0.5, 0.5), shape = "ball", color = "accent", material = "Neon", at = V(0, 1.25, 0), pivot = V(0, 0, 0) })
+	-- 홀(오른손 · 손 아래로 0.25 · 위로 0.35) + 보석
+	place({ name = "Scepter", parent = "Hand_R", part = "Scepter", center = P(0.285, 0.43, 0.04), size = Z(0.05, 0.5, 0.05), joint = P(0.275, 0.45, 0.03), color = "head" })
+	place({ name = "ScepterGem", parent = "Scepter", part = "ScepterGem", center = P(0.285, 0.74, 0.04), size = Z(0.3, 0.12, 0.08), joint = P(0.285, 0.69, 0.04), color = "accent" })
 	local chains = {}
 	for _, w in ipairs({ "WingF_L", "WingF_R", "WingB_L", "WingB_R" }) do
 		table.insert(chains, { w .. "1", w .. "2", kind = "wing", lag = 0.4, sway = 3 })
 	end
-	for _, s in ipairs({ "F", "B", "L", "R" }) do
-		table.insert(chains, { "Skirt" .. s .. "1", "Skirt" .. s .. "2", kind = "cloth", lag = 0.4, sway = 3 })
-	end
+	table.insert(chains, { "Hair", kind = "cloth", lag = 0.5, sway = 2 })
+	table.insert(chains, { "Skirt", kind = "cloth", lag = 0.5, sway = 1.5 })
 	table.insert(chains, { "Antenna_L", kind = "fur", lag = 0.3, sway = 5 })
 	table.insert(chains, { "Antenna_R", kind = "fur", lag = 0.3, sway = 5 })
 	D.rigs.crystal_queen_v2 = {
-		bossId = "crystal_queen", variant = "v2", status = "draft", plan = "biped", joints = J, accent = Color3.fromRGB(150, 240, 255),
-		attach = { ShoulderR = { part = "UpperArm_R", at = V(0.1, 0.8, 0) }, ShoulderL = { part = "UpperArm_L", at = V(-0.1, 0.8, 0) }, HandR = { part = "Hand_R", at = V(0, -0.3, 0) }, HandL = { part = "Hand_L", at = V(0, -0.3, 0) }, Mouth = { part = "Head", at = V(0, -0.2, -0.45) }, Gem = { part = "ScepterGem", at = V(0, 0, 0) } },
+		bossId = "crystal_queen", variant = "v2", status = "trial", plan = "biped", joints = L.J, accent = Color3.fromRGB(150, 240, 255),
+		scale = 1.15, -- 키 1 H × K 7.0 × S 3.6 × 1.15 = 29 stud(바이블 §5 · 떠 있음은 동작 세트 hover)
+		edgeHalfWidth = 7.0 * 0.13, baseEdgeHalfWidth = 1.25, -- 몸 가장자리(머리카락 · 소매 바깥) - 옛 몸보다 좁으면 증가 0
+		cameraZoomScale = 1.3,
+		attach = { ShoulderR = { part = "UpperArm_R", at = V(0, 0.2, 0) }, ShoulderL = { part = "UpperArm_L", at = V(0, 0.2, 0) }, HandR = { part = "Hand_R", at = V(0, -0.15, 0) }, HandL = { part = "Hand_L", at = V(0, -0.15, 0) },
+			Mouth = { part = "Head", at = V(0, -0.2, -0.45) }, Gem = { part = "ScepterGem", at = V(0, 0, 0) }, Chest = { part = "ChestGem", at = V(0, 0, 0) } },
 		chains = chains, weight = 0.8,
+		meshKey = "bosses/crystal_queen_v2m",
+		themeColors = { body = Color3.fromRGB(190, 160, 230), head = Color3.fromRGB(220, 210, 235), accent = Color3.fromRGB(150, 240, 255) },
 	}
 end
 

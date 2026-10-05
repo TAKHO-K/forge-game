@@ -1283,4 +1283,138 @@ do
 	}
 end
 
+-- ═══════════════════════════ 수정 여왕 v2 — 수정 나비 여왕(BOSS-NIGHT-1 4 · Meshy 몸 + 날개 + 홀 · 바이블 §2-2 · §8) ═══════════════════════════
+-- 리그 = BossRigV2Data crystal_queen_v2(A-포즈 · 닫힌 종 치마 · 날개 4장 × 2마디 · 홀 = 오른손 자식). 보행 = 떠 있기(hover - 발 접지 끔 · 치마 끝이 바닥 위로 뜬다).
+--   날개 관절 ry = 펼침/접힘(mirror로 좌우) · 변신(50%) = 날개를 활짝 펴며 높이 떠오름 → 분노 세트(더 높이 · 날개 들림 · 홀을 앞으로).
+--   §9 물풍선 전투는 만들지 않는다 - 일반 보스 틀(기존 11스킬 + 환경 + 변신)만.
+do
+	local REST_POSE = {}
+	local function wings(f, b, rx)
+		return { WingF_R1 = { rx or 0, f, 0 }, WingF_R2 = { 0, f * 0.6, 0 }, WingB_R1 = { rx or 0, b, 0 }, WingB_R2 = { 0, b * 0.6, 0 },
+			WingF_L1 = { rx or 0, -f, 0 }, WingF_L2 = { 0, -f * 0.6, 0 }, WingB_L1 = { rx or 0, -b, 0 }, WingB_L2 = { 0, -b * 0.6, 0 } }
+	end
+	local HOLD = { Shoulder_R = { 20, 0, -12 }, Elbow_R = { 42, 0, 0 }, Wrist_R = { -52, 0, 0 }, Shoulder_L = { 8, 0, 16 }, Elbow_L = { 24, 0, 0 } } -- 홀을 세워 쥠
+	local ANGRY = merge(HOLD, { Waist = { -6, 0, 0 }, Neck = { 4, 0, 0 } }, wings(-16, -10, -8))
+	local SC_UP = merge(HOLD, { Shoulder_R = { 165, 0, -8 }, Elbow_R = { 10, 0, 0 }, Wrist_R = { -10, 0, 0 }, Waist = { 8, 0, 0 }, Neck = { 12, 0, 0 } }) -- 홀을 머리 위로
+	local SC_POINT = merge(HOLD, { Shoulder_R = { 92, 0, -4 }, Elbow_R = { 0, 0, 0 }, Wrist_R = { 72, 0, 0 }, Waist = { -6, 0, 0 } }) -- 보석을 대상 쪽으로
+	local LIFT = { RootJoint = { -4, 0, 0, 0, 0.5, 0 } } -- 더 떠오름(보이는 몸만)
+	local C = {}
+	-- 파편 폭발 burst(안 원 → 바깥 도넛): 홀을 치켜들고 보석에 빛을 모음 → 내리찍기 × 2(두 번째 = 바깥 도넛)
+	local SLAM = merge(HOLD, { RootJoint = { 8, 0, 0, 0, -0.15, 0 }, Waist = { -20, 0, 0 }, Shoulder_R = { 55, 0, -8 }, Elbow_R = { 18, 0, 0 }, Wrist_R = { -30, 0, 0 } }, wings(14, 10))
+	C.q_burst = {
+		pre = { { f = 0.5, ease = "inout", pose = merge(SC_UP, LIFT, wings(-12, -8)) }, { f = 1.0, ease = "in", pose = merge(SC_UP, LIFT, wings(-18, -12), { Shoulder_R = { 172, 0, -4 } }) } },
+		post = { { s = 0.08, ease = "in", pose = SLAM }, { s = 0.45, ease = "inout", pose = merge(SC_UP, LIFT) }, { s = 0.75, ease = "in", pose = SLAM }, { s = 1.6, ease = "inout", pose = REST_POSE } },
+		hitstop = 0.07, squash = 0.15, extraStrikes = { post = { 0.75 } },
+	}
+	-- 수정 낙하 drop: 왼손을 하늘로 → 대상 쪽으로 내리그음(수정이 떨어진다)
+	local SKY = merge(HOLD, { Shoulder_L = { 170, 0, 10 }, Elbow_L = { 8, 0, 0 }, Neck = { 18, 0, 0 } }, wings(-10, -6))
+	C.q_drop = { pre = { { f = 1.0, ease = "inout", pose = SKY } },
+		post = { { s = 0.08, ease = "out", pose = merge(HOLD, { Shoulder_L = { 70, 0, 6 }, Elbow_L = { 4, 0, 0 }, Waist = { -10, 0, 0 } }) }, { s = 0.9, ease = "inout", pose = REST_POSE } }, hitstop = 0.05 }
+	-- 에네르기파 energyBeam(예비 2.5초 → 540° 3.6초): 두 손으로 홀 보석에 빛을 모음(날개 접힘) → 보석을 앞으로 겨눈 채 버팀(몸 회전은 빔 그림 · 보이는 몸 = 바라보기)
+	local CHARGE = merge(HOLD, { Shoulder_R = { 60, 0, 10 }, Elbow_R = { 70, 0, 0 }, Wrist_R = { -20, 0, 0 }, Shoulder_L = { 60, 0, -14 }, Elbow_L = { 70, 0, 0 }, Waist = { 6, 0, 0 } }, wings(14, 10))
+	local BEAM = merge(SC_POINT, { Shoulder_L = { 80, 0, -20 }, Elbow_L = { 20, 0, 0 } }, wings(-18, -12))
+	C.q_beam = { pre = { { f = 0.7, ease = "inout", pose = CHARGE }, { f = 1.0, ease = "in", pose = merge(CHARGE, { Waist = { 12, 0, 0 } }) } },
+		post = { { s = 0.1, ease = "out", pose = BEAM } }, loop = { period = 0.5, poses = { BEAM, merge(BEAM, { Shoulder_R = { 94, 0, -2 }, Waist = { -8, 0, 0 } }) } }, hitstop = 0.05,
+		tremble = { from = 0.6, amp = 2, joints = { "Shoulder_R", "Shoulder_L" } } }
+	-- 수정 오르골 orgel(전멸기): 두 손을 왕관에 대고 들어 올린 채 버팀(머리 위 표시)
+	local CROWN = merge(HOLD, { Shoulder_L = { 150, 0, 30 }, Elbow_L = { 70, 0, 0 }, Shoulder_R = { 150, 0, -30 }, Elbow_R = { 70, 0, 0 }, Wrist_R = { -20, 0, 0 }, Neck = { 10, 0, 0 } }, LIFT, wings(-14, -10))
+	C.q_orgel = { pre = { { f = 1.0, ease = "inout", pose = CROWN } }, post = { { s = 0.2, ease = "out", pose = CROWN } },
+		loop = { period = 1.4, poses = { CROWN, merge(CROWN, { RootJoint = { -4, 0, 0, 0, 0.6, 0 } }, wings(-6, -4)) } } }
+	-- 강화 평타 swipe: 홀 가로 베기(보석 번쩍)
+	C.q_swipe = {
+		pre = { { f = 0.45, ease = "inout", pose = merge(HOLD, { Waist = { 0, 34, 0 }, Shoulder_R = { 75, 0, -70 }, Elbow_R = { 30, 0, 0 }, Wrist_R = { 0, 0, -70 } }) },
+			{ f = 1.0, ease = "out", pose = merge(HOLD, { Waist = { 0, 42, 0 }, Shoulder_R = { 78, 0, -78 }, Elbow_R = { 34, 0, 0 }, Wrist_R = { 0, 0, -75 } }) } },
+		post = { { s = 0.08, ease = "out", pose = merge(HOLD, { Waist = { 0, -38, 0 }, Shoulder_R = { 85, 0, 30 }, Elbow_R = { 8, 0, 0 }, Wrist_R = { 0, 0, -75 } }, wings(10, 6)) },
+			{ s = 0.26, ease = "back", pose = merge(HOLD, { Waist = { 0, -44, 0 }, Shoulder_R = { 85, 0, 38 }, Wrist_R = { 0, 0, -75 } }) }, { s = 0.95, ease = "inout", pose = REST_POSE } },
+		hitstop = 0.06, tremble = { from = 0.6, amp = 3, joints = { "Shoulder_R" } },
+	}
+	-- 수정 손 잡기 grab: 왼손을 높이 들어 경고 → 왼손을 뻗어 잡음 → 들고 → 던짐
+	local GRAB_UP = merge(HOLD, { Shoulder_L = { 140, 0, 40 }, Elbow_L = { 40, 0, 0 } })
+	C.grab_tele = { pre = { { f = 0.8, ease = "inout", pose = GRAB_UP }, { f = 1.0, ease = "inout", pose = merge(GRAB_UP, { Shoulder_L = { 150, 0, 44 } }) } }, post = { { s = 0.15, ease = "out", pose = GRAB_UP } },
+		tremble = { from = 0.75, amp = 2.5, joints = { "Shoulder_L" } } }
+	local REACH = merge(HOLD, { Shoulder_L = { 90, 0, 0 }, Elbow_L = { 4, 0, 0 }, Waist = { -10, 0, 0 } })
+	C.grab_reach = { post = { { s = 0.15, ease = "out", pose = REACH } }, loop = { period = 0.32, poses = { REACH, merge(REACH, { Shoulder_L = { 96, 0, -4 } }) } }, upper = true }
+	local HOLDUP = merge(HOLD, { Shoulder_L = { 130, 0, 10 }, Elbow_L = { 30, 0, 0 } })
+	C.grab_hold = { post = { { s = 0.25, ease = "out", pose = HOLDUP } }, loop = { period = 0.5, poses = { HOLDUP, merge(HOLDUP, { Shoulder_L = { 136, 0, 14 } }) } } }
+	C.grab_snatch = { post = { { s = 0.06, ease = "out", pose = { Shoulder_L = { 100, 0, 0 } } }, { s = 0.5, ease = "inout", pose = {} } }, hitstop = 0.05 }
+	C.q_throw = { pre = { { f = 1.0, ease = "inout", pose = merge(HOLD, { Shoulder_L = { 160, 0, 30 }, Elbow_L = { 60, 0, 0 }, Waist = { 8, -20, 0 } }) } },
+		post = { { s = 0.1, ease = "out", pose = merge(HOLD, { Shoulder_L = { 60, 0, -10 }, Elbow_L = { 6, 0, 0 }, Waist = { -10, 20, 0 } }) }, { s = 0.9, ease = "inout", pose = REST_POSE } }, hitstop = 0.06 }
+	-- 수정 가시 spikes(대상 발밑 십자): 홀 끝으로 바닥을 찍음
+	local STAB = merge(HOLD, { RootJoint = { 6, 0, 0, 0, -0.2, 0 }, Waist = { -16, 0, 0 }, Shoulder_R = { 40, 0, -6 }, Elbow_R = { 10, 0, 0 }, Wrist_R = { -70, 0, 0 } })
+	C.q_spikes = { pre = { { f = 1.0, ease = "inout", pose = merge(SC_UP, { Shoulder_R = { 130, 0, -8 } }) } },
+		post = { { s = 0.08, ease = "in", pose = STAB }, { s = 1.0, ease = "inout", pose = REST_POSE } }, hitstop = 0.06, squash = 0.1 }
+	-- 파편 날리기 shards(4발 0.15초 간격): 왼손을 앞으로 내밀며 연속 뿌림
+	local FLICK = merge(HOLD, { Shoulder_L = { 85, 0, -10 }, Elbow_L = { 6, 0, 0 }, Waist = { -4, 14, 0 } })
+	C.q_shards = { pre = { { f = 1.0, ease = "inout", pose = merge(HOLD, { Shoulder_L = { 60, 0, 40 }, Elbow_L = { 90, 0, 0 }, Waist = { 4, -20, 0 } }) } },
+		post = { { s = 0.06, ease = "out", pose = FLICK }, { s = 0.2, ease = "out", pose = merge(FLICK, { Waist = { -4, 4, 0 } }) }, { s = 0.36, ease = "out", pose = merge(FLICK, { Waist = { -4, -6, 0 } }) },
+			{ s = 0.5, ease = "out", pose = merge(FLICK, { Waist = { -4, -14, 0 } }) }, { s = 1.1, ease = "inout", pose = REST_POSE } }, hitstop = 0.04, extraStrikes = { post = { 0.2, 0.36, 0.5 } } }
+	-- 분신 돌격 mirrorDash(예비 2.2초 · 분신 3이 달려갔다 돌아옴): 날개를 활짝 → 앞으로 숙여 날개 쳐 내보냄
+	C.q_mdash = { pre = { { f = 0.6, ease = "inout", pose = merge(HOLD, LIFT, wings(-22, -16)) }, { f = 1.0, ease = "in", pose = merge(HOLD, LIFT, wings(-28, -20), { Waist = { 8, 0, 0 } }) } },
+		post = { { s = 0.08, ease = "out", pose = merge(HOLD, wings(20, 14), { Waist = { -16, 0, 0 }, Shoulder_L = { 70, 0, 30 } }) }, { s = 1.2, ease = "inout", pose = REST_POSE } }, hitstop = 0.06 }
+	-- 거울 mirror: 두 손을 앞에 모아 수정 거울을 세움(날개 감쌈)
+	local GUARD = merge(HOLD, { Shoulder_L = { 100, 0, -30 }, Elbow_L = { 60, 0, 0 }, Shoulder_R = { 90, 0, 26 }, Elbow_R = { 60, 0, 0 }, Wrist_R = { -40, 0, 0 } }, wings(24, 18))
+	C.q_mirror = { pre = { { f = 1.0, ease = "inout", pose = GUARD } }, post = { { s = 0.1, ease = "out", pose = GUARD } },
+		loop = { period = 0.8, poses = { GUARD, merge(GUARD, wings(18, 12)) } }, hitstop = 0.05 }
+	-- 환경(수정 부수기 50% 뒤 · 손): 두 팔을 들어 수정을 띄움(3초) - 날개 활짝 · 높이 떠오름
+	local RAISE = merge(HOLD, { Shoulder_L = { 160, 0, 40 }, Elbow_L = { 10, 0, 0 }, Shoulder_R = { 160, 0, -40 }, Elbow_R = { 10, 0, 0 }, Wrist_R = { -10, 0, 0 }, Neck = { 16, 0, 0 } }, LIFT, wings(-24, -18))
+	C.q_env = { pre = { { f = 0.5, ease = "inout", pose = RAISE }, { f = 1.0, ease = "in", pose = merge(RAISE, { RootJoint = { -4, 0, 0, 0, 0.8, 0 } }) } },
+		post = { { s = 0.1, ease = "out", pose = RAISE }, { s = 1.4, ease = "inout", pose = REST_POSE } }, hitstop = 0.08, squash = 0.1 }
+	-- 50% 변신: 날개를 접어 웅크렸다 → 활짝 펴며 높이 떠올라 홀을 듦 → 분노 세트
+	local BLOOM = merge(SC_UP, LIFT, wings(-30, -22, -10), { Neck = { 20, 0, 0 }, Shoulder_L = { 60, 0, 60 }, Elbow_L = { 20, 0, 0 } })
+	C.q_transform = { pre = { { f = 0.4, ease = "inout", pose = merge(HOLD, wings(26, 20), { Waist = { -20, 0, 0 }, Neck = { -16, 0, 0 } }) }, { f = 0.7, ease = "inout", pose = merge(HOLD, LIFT, wings(-10, -8), { Shoulder_R = { 95, 0, -10 }, Elbow_R = { 26, 0, 0 } }) }, { f = 1.0, ease = "inout", pose = BLOOM } },
+		post = { { s = 0.0, ease = "out", pose = BLOOM }, { s = 0.6, ease = "inout", pose = merge(BLOOM, { Neck = { 22, 0, 3 } }) }, { s = 1.6, ease = "inout", pose = ANGRY } }, hitstop = 0.06, align = false }
+	C.roar = { pre = { { f = 1.0, ease = "inout", pose = merge(HOLD, { Neck = { -12, 0, 0 }, Waist = { -12, 0, 0 } }) } }, post = { { s = 0.15, ease = "out", pose = BLOOM } },
+		loop = { period = 0.18, poses = { BLOOM, merge(BLOOM, { Neck = { 22, 0, 2 } }) } } }
+	local basicR = { post = { { s = 0.07, ease = "out", pose = { Waist = { -6, -20, 0 }, Shoulder_R = { 75, 0, -10 }, Elbow_R = { 6, 0, 0 }, Wrist_R = { 60, 0, 0 } } },
+		{ s = 0.17, ease = "back", pose = { Waist = { -8, -24, 0 }, Shoulder_R = { 78, 0, -8 }, Wrist_R = { 60, 0, 0 } } }, { s = 0.6, ease = "inout", pose = REST_POSE } }, hitstop = 0.04 }
+	C.basic_R = basicR
+	C.basic_L = { post = { { s = 0.07, ease = "out", pose = mirror(basicR.post[1].pose) }, { s = 0.17, ease = "back", pose = mirror(basicR.post[2].pose) }, { s = 0.6, ease = "inout", pose = REST_POSE } }, hitstop = 0.04 }
+	local prepR = { Waist = { 4, 20, 0 }, Shoulder_R = { 50, 0, -40 }, Elbow_R = { 60, 0, 0 } }
+	local SLUMP = merge(HOLD, { RootJoint = { 6, 0, 0, 0, -0.5, 0 }, Waist = { -20, 0, 0 }, Neck = { -20, 0, 0 }, Shoulder_L = { -10, 0, 30 } }, wings(20, 16, 10))
+	local STAGGER = merge(HOLD, { Waist = { -12, 0, 12 }, Neck = { -14, 0, 14 }, RootJoint = { 0, 0, 10, 0.05, -0.1, 0 } }, wings(10, 8))
+	local planPatch = {
+		introCrouch = merge(HOLD, { RootJoint = { 0, 0, 0, 0, -0.4, 0 }, Waist = { -26, 0, 0 }, Neck = { -22, 0, 0 } }, wings(26, 20)),
+		introRoar = "roar",
+		flinch = { seconds = 0.3, pose = { Waist = { 7, 0, 4 }, Neck = { 9, 0, 0 }, RootJoint = { 0, 0, 0, 0, 0, 0.06 } } },
+		stun = { stagger = STAGGER, sit = SLUMP, staggerSeconds = 0.5, riseSeconds = 0.8, wobble = { hz = 0.9, neck = 12, waist = 5 }, eyes = { 0, 0, 0 } },
+		death = {
+			keys = { { s = 0.3, ease = "out", pose = STAGGER }, { s = 0.8, ease = "inout", pose = merge(STAGGER, { Waist = { -10, 0, -12 } }) }, { s = 1.3, ease = "in", pose = SLUMP },
+				{ s = 1.6, ease = "out", pose = merge(SLUMP, { Waist = { -30, 0, 0 }, Neck = { -30, 0, 0 } }) } },
+			hitstopAt = 1.3, fadeFrom = 2.0, fadeSeconds = 0.5, scatterFrom = 1.75, eyes = { 0, 0, 0 }, stars = true, slowSeconds = 0.8, slowRate = 0.4,
+		},
+		basicPrep = { R = prepR, L = mirror(prepR) },
+	}
+	local SK = { burst = "q_burst", drop = "q_drop", energyBeam = "q_beam", orgel = "q_orgel", swipe = "q_swipe", grab = "@grab", spikes = "q_spikes", shards = "q_shards",
+		mirrorDash = "q_mdash", mirror = "q_mirror" }
+	local MOTIONS = { idle = "gait", walk = "gait", intro = "plan:introCrouch", death = "plan:death", env = "q_env", flinch = "plan:flinch", stun = "plan:stun" }
+	local GEM = { "ScepterGem" }
+	D.crystal_queen_v2 = {
+		plan = "biped",
+		planPatch = planPatch,
+		stunStars = true,
+		forms = {
+			before = { gait = "hover", stance = HOLD, guard = HOLD, hover = { height = 0.5, bob = 0.12, period = 2.6 }, walk = { stride = 0.5, knee = 10, arm = 6, bob = 0.03, lean = 8 },
+				motions = MOTIONS, skills = SK, env = "q_env", throw = "q_throw" },
+			after = { gait = "hover", stance = ANGRY, guard = ANGRY, hover = { height = 0.9, bob = 0.16, period = 2.0 }, walk = { stride = 0.5, knee = 10, arm = 6, bob = 0.03, lean = 12 },
+				motions = MOTIONS, skills = SK, env = "q_env", throw = "q_throw" },
+		},
+		transform = { clip = "q_transform", hit = 1.0, switchAt = 1.6, seconds = 2.6 },
+		intro = { style = "rise", depth = 1.6, riseFrac = 0.44, riseEase = "out" },
+		signature = { "burst", "drop", "energyBeam", "spikes", "shards", "mirrorDash", "swipe", "orgel", "mirror" },
+		flash = {
+			burst = GEM, drop = { "Hand_L" }, energyBeam = GEM, orgel = { "Crown" }, swipe = GEM, grab = { "Hand_L" }, spikes = GEM, shards = { "Hand_L" },
+			mirrorDash = { "WingF_L2", "WingF_R2" }, mirror = { "Hand_L" },
+		},
+		impacts = {
+			q_burst = { kind = "ground", parts = GEM, size = 1.0, shake = 0.8 }, q_drop = { kind = "spark", parts = { "Hand_L" }, size = 0.9 }, q_beam = { kind = "spark", parts = GEM, size = 1.1 },
+			q_swipe = { kind = "whoosh", parts = GEM, size = 1.1 }, q_spikes = { kind = "ground", parts = GEM, size = 0.8, shake = 0.5 }, q_shards = { kind = "spark", parts = { "Hand_L" }, size = 0.7 },
+			q_mdash = { kind = "whoosh", parts = { "WingF_L2", "WingF_R2" }, size = 1.3 }, q_mirror = { kind = "spark", parts = { "Hand_L" }, size = 1.0 },
+			q_env = { kind = "roar", parts = { "Body" }, size = 1.3, shake = 0.9 }, q_throw = { kind = "whoosh", parts = { "Hand_L" }, size = 1.0 },
+			q_transform = { kind = "roar", parts = { "Head" }, size = 1.2, shake = 0.8 }, roar = { kind = "roar", parts = { "Head" }, size = 1.0, shake = 0.7 },
+			basic_R = { kind = "whoosh", parts = GEM, size = 0.55 }, basic_L = { kind = "whoosh", parts = { "Hand_L" }, size = 0.55 },
+		},
+		clips = C,
+	}
+end
+
 return D
