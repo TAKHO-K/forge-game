@@ -216,20 +216,146 @@ def islands_of(me):
 
 
 # ─────────────────────────── 3 · 4 부위 자르기 + 겹침 ───────────────────────────
-def segment(obj, parts, overlap, forced, skip=(), islands=0.0, faceParts=()):
-    """반환: { 부위 이름: [면 번호] } · forced = { 면 번호: 부위 }(따로 만든 부위 GLB) · Neon 면은 가까운(0.25 안) Neon 리그 부위(눈 · 룬)를 먼저"""
+# ─────────────────────────── BOSS-NIGHT-1 부품 GLB(cfg.addons) ───────────────────────────
+# cfg.addons = [{ glb, parts: [부위 …](그 부품 면은 이 부위들 중 가장 가까운 상자로만 · 몸 면은 이 부위로 안 감),
+#   fit: 부위 이름(그 상자 · 회전) | "union"(parts 상자들의 축 정렬 합 - 망토 · 날개 사슬), rot: [rx, ry, rz](로블록스 도 - 맞추기 전 부품 회전),
+#   fill(상자 대비 배율 · 기본 1) · scaleAxis("x" | "y" | "z" - 이 축 길이를 상자에 맞춤 · 기본 = 세 축 모두 상자 안), mirror(로블록스 X 반전 - 왼쪽 사본) ·
+#   cut: [[축(x|y|z · 원본 GLB 블렌더 축), 값(0 ~ 1 경계 비율), "<" | ">"(남길 쪽)]] · islands(가장 큰 조각 × 비율 미만 조각 삭제) · yaw }
+# cfg.partTris = { 부위: 삼각형 }(이 부위는 이 값까지 · 나머지 부위가 남은 예산을 나눔)
+def bounds_of(obj):
+    vs = [v.co for v in obj.data.vertices]
+    lo = Vector((min(v.x for v in vs), min(v.y for v in vs), min(v.z for v in vs)))
+    hi = Vector((max(v.x for v in vs), max(v.y for v in vs), max(v.z for v in vs)))
+    return lo, hi
+
+
+def cut_plane(obj, ax, val, keep):
+    """면 중심이 평면의 한쪽인 면만 남긴다(bisect + 막기는 수백 조각 Meshy 부품에서 감량을 막았다 - 폭풍 건틀릿 17,000에서 멈춤)"""
+    lo, hi = bounds_of(obj)
+    i = "xyz".index(ax)
+    plane = lo[i] + (hi[i] - lo[i]) * val
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    dead = [f for f in bm.faces if (f.calc_center_median()[i] > plane) == (keep == "<")]
+    bmesh.ops.delete(bm, geom=dead, context="FACES")
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+    bm.to_mesh(obj.data)
+    bm.free()
+
+
+def drop_small_islands(obj, ratio):
+    isl = islands_of(obj.data)
+    count = {}
+    for f in isl:
+        count[int(f)] = count.get(int(f), 0) + 1
+    big = max(count.values())
+    kill = {k for k, n in count.items() if n < big * ratio}
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    bm.faces.ensure_lookup_table()
+    bmesh.ops.delete(bm, geom=[bm.faces[fi] for fi, k in enumerate(isl) if int(k) in kill], context="FACES")
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+    bm.to_mesh(obj.data)
+    bm.free()
+    return len(kill)
+
+
+def euler_r(r):
+    return Matrix.Rotation(math.radians(r[0]), 3, "X") @ Matrix.Rotation(math.radians(r[1]), 3, "Y") @ Matrix.Rotation(math.radians(r[2]), 3, "Z")
+
+
+def place_addon(spec, gi, byName, glbDir):
+    path = spec["glb"] if os.path.isabs(spec["glb"]) else os.path.join(glbDir, spec["glb"])
+    obj = import_glb(path, spec.get("yaw", 0))
+    for ax, val, keep in spec.get("cut", []):
+        cut_plane(obj, ax, val, keep)
+    dropped = drop_small_islands(obj, spec["islands"]) if spec.get("islands") else 0
+    names = spec["parts"]
+    if spec.get("fit", "union") == "union":
+        lo, hi = Vector((1e9, 1e9, 1e9)), Vector((-1e9, -1e9, -1e9))
+        for n in names:
+            l, h = rig_bounds([byName[n]])
+            lo = Vector((min(lo.x, l.x), min(lo.y, l.y), min(lo.z, l.z)))
+            hi = Vector((max(hi.x, h.x), max(hi.y, h.y), max(hi.z, h.z)))
+        boxC, boxS, boxR = (lo + hi) / 2, hi - lo, Matrix.Identity(3)
+    else:
+        b = byName[spec["fit"]]
+        boxC, boxS, boxR = b["center"], b["size"], b["R"]
+    Rr = euler_r(spec.get("rot", [0, 0, 0]))
+    pts = [Rr @ (CT @ v.co) for v in obj.data.vertices]
+    plo = Vector((min(p.x for p in pts), min(p.y for p in pts), min(p.z for p in pts)))
+    phi = Vector((max(p.x for p in pts), max(p.y for p in pts), max(p.z for p in pts)))
+    pc, ps = (plo + phi) / 2, phi - plo
+    ax = spec.get("scaleAxis")
+    if ax:
+        i = "xyz".index(ax)
+        s = boxS[i] / max(ps[i], 1e-6)
+    else:
+        s = min(boxS[i] / max(ps[i], 1e-6) for i in range(3))
+    s *= spec.get("fill", 1.0)
+    mx = -1.0 if spec.get("mirror") else 1.0
+    for v, p in zip(obj.data.vertices, pts):
+        q = (p - pc) * s
+        q = Vector((q.x * mx, q.y, q.z))
+        v.co = C @ (boxC + boxR @ q)
+    if spec.get("mirror"):
+        obj.data.flip_normals()
+    for i, m in enumerate(list(obj.data.materials)):
+        if m:
+            m2 = m.copy()
+            m2.name = "FORCE__%d__%s" % (gi, m.name)
+            obj.data.materials[i] = m2
+    print("[KIT] 부품 %s → %s · 배율 %.3f · 조각 삭제 %d · 삼각형 %d" % (os.path.basename(path), ",".join(names), s, dropped, tris(obj)))
+    return obj
+
+
+def voxel_remesh(obj, size):
+    """복셀 리메시(재질 · UV는 사라짐 - 색은 굽기 원본에서) · 재질 1번 슬롯 유지(부품 표식 FORCE__ 재질 이름이 남아야 한다)"""
+    t0 = tris(obj)
+    mats = list(obj.data.materials)
+    bpy.ops.object.select_all(action="DESELECT")
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    obj.data.remesh_voxel_size = size
+    obj.data.remesh_voxel_adaptivity = 0.0
+    bpy.ops.object.voxel_remesh()
+    obj.data.materials.clear()
+    if mats:
+        obj.data.materials.append(mats[0])
+    if not obj.data.uv_layers:
+        obj.data.uv_layers.new(name="UVMap")
+    print("[KIT] 복셀 리메시 %s %.4f · 삼각형 %d → %d" % (obj.name, size, t0, tris(obj)))
+
+
+def forced_from_materials(me, addons):
+    forced = {}
+    for f in me.polygons:
+        m = me.materials[f.material_index] if f.material_index < len(me.materials) else None
+        if m and m.name.startswith("FORCE__"):
+            gi = int(m.name.split("__")[1])
+            forced[f.index] = addons[gi]["parts"]
+    return forced
+
+
+def segment(obj, parts, overlap, forced, skip=(), islands=0.0, faceParts=(), addonParts=()):
+    """반환: { 부위 이름: [면 번호] } · forced = { 면 번호: 부위 | [부위 …](BOSS-NIGHT-1 부품 GLB - 그중 가장 가까운 상자) } · Neon 면은 가까운(0.25 안) Neon 리그 부위(눈 · 룬)를 먼저
+    addonParts = 부품 GLB만 받는 부위(몸 면은 안 감 · 다른 묶음 부모에서 겹침 복사 안 함)"""
     me = obj.data
     byName = {p["name"]: p for p in parts}
     assign = {p["name"]: [] for p in parts}
-    neonParts = [p for p in parts if p["material"] == "Neon" and p["name"] not in skip]
-    cutParts = [p for p in parts if p["name"] not in skip]
+    addonSet = set(addonParts)
+    neonParts = [p for p in parts if p["material"] == "Neon" and p["name"] not in skip and p["name"] not in addonSet]
+    cutParts = [p for p in parts if p["name"] not in skip and p["name"] not in addonSet]
     prio = [p for p in cutParts if p["name"] in faceParts]
     centers = []
     for f in me.polygons:
         c = CT @ f.center
         centers.append(c)
         if f.index in forced:
-            assign[forced[f.index]].append(f.index)
+            fp = forced[f.index]
+            if isinstance(fp, list):
+                fp = min(fp, key=lambda n: sdf(c, byName[n]))
+            assign[fp].append(f.index)
             continue
         if neonParts and f.material_index < len(me.materials) and is_neon(me.materials[f.material_index]):
             np_, nd = None, 0.25
@@ -280,6 +406,8 @@ def segment(obj, parts, overlap, forced, skip=(), islands=0.0, faceParts=()):
     for p in parts:
         par = byName.get(p["parent"])
         if not par or overlap <= 0:  # 겹침 0 = 복사 없음(Meshy 돌판은 조각째 가서 틈이 안 보인다 · 같은 면 두 장 = z 싸움)
+            continue
+        if (p["name"] in addonSet) != (par["name"] in addonSet):  # BOSS-NIGHT-1: 몸 ↔ 부품 사이는 복사 안 함(지팡이에 손 면이 묻지 않게)
             continue
         r = overlap * min(p["size"].x, p["size"].y, p["size"].z) + 0.03
         extra = [fi for fi in assign[par["name"]] if sdf(centers[fi], p) <= r]
@@ -416,12 +544,21 @@ def decimate(o, target):
     t = tris(o)
     if t <= target or t == 0:
         return
-    m = o.modifiers.new("KitDecimate", "DECIMATE")
-    m.decimate_type = "COLLAPSE"
-    m.ratio = max(target / t, 0.01)
-    m.use_collapse_triangulate = True
-    bpy.context.view_layer.objects.active = o
-    bpy.ops.object.modifier_apply(modifier=m.name)
+    # BOSS-NIGHT-1: 복셀 리메시 메시는 한 번에 약 × 0.09까지만 줄었다 → 목표에 닿을 때까지 최대 4번
+    for _ in range(4):
+        cur = tris(o)
+        if cur <= target * 1.15:
+            break
+        m = o.modifiers.new("KitDecimate", "DECIMATE")
+        m.decimate_type = "COLLAPSE"
+        m.ratio = max(target / cur, 0.01)
+        m.use_collapse_triangulate = True
+        bpy.context.view_layer.objects.active = o
+        bpy.ops.object.modifier_apply(modifier=m.name)
+        if tris(o) >= cur * 0.98:
+            break
+    if tris(o) > target * 1.5:
+        print("[KIT] 감량 덜 됨 %s %d → %d(목표 %d · 사용자 %d)" % (o.name, t, tris(o), target, o.data.users))
 
 
 # ─────────────────────────── 8 아틀라스 ───────────────────────────
@@ -458,9 +595,9 @@ def textures_of(objs, base_only=False):
 
 
 # ─────────────────────────── GUARDIAN-V2 굽기(감량 부위 ← 원본 고해상 색) ───────────────────────────
-def bake_atlas(objs, hi, cfg, path):
+def bake_atlas(objs, hi, cfg, path, imgName="KIT_BAKE"):
     size = cfg.get("size", 1024)
-    img = bpy.data.images.new("KIT_BAKE", size, size, alpha=False)
+    img = bpy.data.images.new(imgName, size, size, alpha=False)
     mat = bpy.data.materials.new("KIT_BAKE")
     mat.use_nodes = True
     nt = mat.node_tree
@@ -497,7 +634,8 @@ def bake_atlas(objs, hi, cfg, path):
     b.use_clear = False
     for o in objs:
         bpy.ops.object.select_all(action="DESELECT")
-        hi.select_set(True)
+        h = hi(o) if callable(hi) else hi  # BOSS-NIGHT-1: 부위마다 굽기 원본(몸 / 부품 묶음 - 겹친 부품 표면 색을 집지 않게)
+        h.select_set(True)
         o.select_set(True)
         bpy.context.view_layer.objects.active = o
         bpy.ops.object.bake(type="DIFFUSE", pass_filter={"COLOR"}, use_selected_to_active=True, use_clear=False, margin=6)
@@ -694,24 +832,63 @@ def main():
         bpy.ops.object.join()
         for fi in range(n0, len(src.data.polygons)):
             forced[fi] = part
+    addons = o["cfg"].get("addons") or []
+    addonParts = [n for a in addons for n in a["parts"]]
+    if addons:  # BOSS-NIGHT-1: 몸 높이 맞춤 → 부품을 리그 상자에 맞춰 붙임 → 그 뒤에 굽기 원본 복사(아래 fit는 건너뜀)
+        byName0 = {p["name"]: p for p in parts}
+        decimate(src, o["cfg"].get("bodyPreTris", 200000))
+        fit_height(src, o["cfg"]["height"])
+        glbDir = os.path.dirname(o["glb"])
+        his = {}
+        def hiCopy(obj, key):
+            h = obj.copy()
+            h.data = obj.data.copy()
+            bpy.context.scene.collection.objects.link(h)
+            h.name = "KIT_HI_%s" % key
+            his[key] = h
+        if o["cfg"].get("bake"):
+            hiCopy(src, "body")
+        partTris0 = o["cfg"].get("partTris", {})
+        if o["cfg"].get("bodyVoxel"):  # BOSS-NIGHT-1: 원본(리메시본 없음)을 복셀로 다시 짜서(닫힌 매끈한 면) 감량 - 79만 → 1.8만 직접 감량은 조각난 톱니였다 · 색은 원본(굽기)
+            voxel_remesh(src, o["cfg"]["bodyVoxel"])
+            decimate(src, 4 * max(o["budget"] - sum(partTris0.values()), 4000))
+        for gi, spec in enumerate(addons):
+            a = place_addon(spec, gi, byName0, glbDir)
+            decimate(a, spec.get("preTris", 60000))
+            if o["cfg"].get("bake"):
+                hiCopy(a, gi)
+            if spec.get("voxel"):
+                voxel_remesh(a, spec["voxel"])
+                decimate(a, 4 * max(sum(partTris0.get(n, 500) for n in spec["parts"]), 1000))
+            bpy.ops.object.select_all(action="DESELECT")
+            src.select_set(True)
+            a.select_set(True)
+            bpy.context.view_layer.objects.active = src
+            bpy.ops.object.join()
+        src_tris = tris(src)
     hi = None
-    if o["cfg"].get("bake"):  # 굽기 원본 = 감량 전 고해상(UV 그대로) - 아래에서 같은 크기 맞춤
+    if addons and o["cfg"].get("bake"):  # 부위 이름 → 그 묶음 굽기 원본
+        groupOf = {n: gi for gi, a in enumerate(addons) for n in a["parts"]}
+        hi = lambda ob: his[groupOf.get(ob.name, "body")]
+    elif o["cfg"].get("bake"):  # 굽기 원본 = 감량 전 고해상(UV 그대로) - 아래에서 같은 크기 맞춤
         hi = src.copy()
         hi.data = src.data.copy()
         bpy.context.scene.collection.objects.link(hi)
         hi.name = "KIT_HI"
     # 아주 큰 원본은 먼저 전체를 예산 × 4로 줄인다(자르기 속도)
-    if tris(src) > o["budget"] * 4:
+    if tris(src) > o["budget"] * 4 and not addons:  # BOSS-NIGHT-1: 부품 경로는 묶음별로 이미 줄였다(합친 뒤 전체 감량은 평평한 몸 면부터 지워 몸이 무너졌다)
         decimate(src, o["budget"] * 4)
     cfg = o["cfg"]
-    if cfg.get("height"):
+    if addons:
+        forced = forced_from_materials(src.data, addons)
+    elif cfg.get("height"):
         bounds = fit_height(hi or src, cfg["height"])
         if hi:
             fit_height(src, cfg["height"], bounds)
     else:
         fit(src, parts)
     skip = set(cfg.get("skip", []))
-    assign, copies = segment(src, parts, o["overlap"], forced, skip, cfg.get("islands", 0.0), set(cfg.get("faceParts", [])))
+    assign, copies = segment(src, parts, o["overlap"], forced, skip, cfg.get("islands", 0.0), set(cfg.get("faceParts", [])), addonParts)
     if cfg.get("neonByColor"):
         neon_by_color(src, assign, cfg["neonByColor"])
     col = A.new_collection("KIT_" + name)
@@ -757,11 +934,16 @@ def main():
                 m.name = m.name[5:] + "_demoted"
                 m["Neon"] = False
     # 7 감량(부위 ≤ partCap · 합계 ≤ budget - 원본 비율로 나눔)
-    total = sum(tris(x) for x in objs + decos)
-    if total > o["budget"]:
-        k = o["budget"] / total
+    partTris = cfg.get("partTris", {})
+    for x in objs:  # BOSS-NIGHT-1: 부위별 목표(부품 · 무기)
+        if x.name in partTris:
+            decimate(x, partTris[x.name])
+    total = sum(tris(x) for x in objs + decos if x.name not in partTris)
+    room = o["budget"] - sum(partTris[x.name] for x in objs if x.name in partTris)  # 부품 몫 = 목표값(감량이 덜 된 부품 때문에 몸이 뭉개지지 않게)
+    if total > room:
+        k = room / total
         for x in objs + decos:
-            if x.name in gens or x in genDecos:  # 생성 Neon(눈 모양 · 룬)은 그대로
+            if x.name in gens or x in genDecos or x.name in partTris:  # 생성 Neon(눈 모양 · 룬) · 부위별 목표는 그대로
                 continue
             decimate(x, min(o["partCap"], max(12, int(tris(x) * k))))
     for x in objs:
@@ -774,12 +956,22 @@ def main():
     hi_baked = False
     imgs = textures_of(objs, cfg.get("texture") == "base")
     atlas_files = []
+    partAtlas = {}
     if hi:
-        fn = "%s_atlas1.png" % name
-        bake_atlas([x for x in objs if x not in rigNeon and x.name not in empty], hi, cfg["bake"], os.path.join(o["out"], fn))
-        atlas_files.append(fn)
+        bakeObjs = [x for x in objs if x not in rigNeon and x.name not in empty]
+        groups = [set(g) for g in cfg.get("atlasGroups", [])]  # BOSS-NIGHT-1: 아틀라스 2 · 3장째로 보낼 부위(나머지 = 1장째) - 1024 × 3장 예산 안에서 해상도
+        lists = [[x for x in bakeObjs if not any(x.name in g for g in groups)]] + [[x for x in bakeObjs if x.name in g] for g in groups]
+        for ai, lst in enumerate(lists):
+            if not lst:
+                continue
+            fn = "%s_atlas%d.png" % (name, ai + 1)
+            bake_atlas(lst, hi, cfg["bake"], os.path.join(o["out"], fn), "KIT_BAKE" if ai == 0 else "KIT_BAKE%d" % (ai + 1))
+            atlas_files.append(fn)
+            for x in lst:
+                partAtlas[x.name] = len(atlas_files)
         ncolors = None
-        bpy.data.objects.remove(hi, do_unlink=True)
+        for h in (list(his.values()) if callable(hi) else [hi]):
+            bpy.data.objects.remove(h, do_unlink=True)
         hi_baked = True
     elif imgs:
         assert len(imgs) <= 3, "원본 텍스처 %d장 > 3(아틀라스로 굽기 필요)" % len(imgs)
@@ -803,7 +995,7 @@ def main():
         d.data.materials.clear()
         d.data.materials.append(A.material("KIT_NEON_%s" % d.name, tuple(int(round(lin_to_srgb(x) * 255)) for x in c), neon=True))
     # 9 외곽선 껍데기(큰 부위부터 · 눈 · 입 · 아주 작은 부위 제외)
-    cand = sorted([x for x in objs if x.name not in ("Eyes", "Mouth") and x.name not in empty and tris(x) >= 24],
+    cand = sorted([x for x in objs if x.name not in ("Eyes", "Mouth") and x.name not in empty and tris(x) >= 24 and x.name not in addonParts and x.name not in cfg.get("outlineSkip", [])],
                   key=lambda x: -(byName[x.name]["size"].x * byName[x.name]["size"].y * byName[x.name]["size"].z))
     for x in objs:
         x["RigPart"] = x.name
@@ -837,12 +1029,12 @@ def main():
     meta = A.meta_of(allo, o["budget"], {
         "version": "KIT1", "rigId": rigId, "partCap": o["partCap"], "joints": {x.name: x["Joint"] for x in objs},
         "deco": {d.name: d["Deco"] for d in decos}, "decoMaterial": {d.name: "Neon" for d in decos}, "lod2": [], "outlineParts": [h.name for h in hulls],
-        "texture": {"atlases": atlas_files, "parts": [x.name for x in objs if x.name not in empty and x not in rigNeon]}, "kit": {"neonDemoted": demoted, "source": os.path.basename(glb), "sourceTris": src_tris, "overlapCopies": copies, "capped": capped, "empty": empty},
+        "texture": dict({"atlases": atlas_files, "parts": [x.name for x in objs if x.name not in empty and x not in rigNeon]}, **({"partAtlas": partAtlas} if len(atlas_files) > 1 else {})), "kit": {"neonDemoted": demoted, "source": os.path.basename(glb), "sourceTris": src_tris, "overlapCopies": copies, "capped": capped, "empty": empty},
         "space": "sizeScale 1 · 루트 원점 · 발바닥 y −1.5 · 앞 −Z", "metaName": name})
     A.write_json(os.path.join(o["out"], "%s.meta.json" % name), meta)
     if hi_baked:  # 원본(유료 · 비공개 라이선스) 텍스처를 .blend에 싸 넣지 않는다 - 구운 아틀라스만 남김
         for im in list(bpy.data.images):
-            if im.name != "KIT_BAKE":
+            if not im.name.startswith("KIT_BAKE"):
                 bpy.data.images.remove(im)
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(o["out"], "%s.blend" % name))
     print("[KIT] 내보냄 %s.fbx · .meta.json · .blend · %s" % (os.path.join(o["out"], name), ", ".join(atlas_files)))

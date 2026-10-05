@@ -1,0 +1,218 @@
+{
+ "about": "BOSS-NIGHT-1 2 폭풍 군주 KIT 설정(boss_kit.py --kit) - 몸 = Meshy storm_v1_body_meshy71(원본 - 리메시본 없음 · KIT 자체 감량) + 부품 GLB 8(addons - 리그 상자에 맞춤) · 구름 보주 = 소품 KIT 따로",
+ "height": 7.2,
+ "yaw": 180,
+ "islands": 0,
+ "skip": [],
+ "texture": "base",
+ "overlap": 0.1,
+ "bodyPreTris": 200000,
+ "bake": {
+  "size": 1024,
+  "extrusion": 0.03,
+  "distance": 0.12
+ },
+ "neonByColor": {
+  "parts": [
+   "StaffOrb",
+   "ChestCore"
+  ],
+  "minValue": 0.55,
+  "blueOverGreen": 0.0,
+  "maxChannel": 90
+ },
+ "addons": [
+  {
+   "glb": "storm_v1_cape_meshy71.glb",
+   "parts": [
+    "CapeA1",
+    "CapeA2",
+    "CapeA3",
+    "CapeA4",
+    "CapeB1",
+    "CapeB2",
+    "CapeB3",
+    "CapeB4",
+    "CapeC1",
+    "CapeC2",
+    "CapeC3",
+    "CapeC4",
+    "CapeD1",
+    "CapeD2",
+    "CapeD3",
+    "CapeD4"
+   ],
+   "fit": "union",
+   "scaleAxis": "y",
+   "yaw": 180
+  },
+  {
+   "glb": "storm_v1_staff_meshy71.glb",
+   "parts": [
+    "Staff",
+    "StaffOrb"
+   ],
+   "fit": "union",
+   "scaleAxis": "y",
+   "islands": 0.005
+  },
+  {
+   "glb": "storm_v1_wings_meshy71.glb",
+   "parts": [
+    "Wing_L1",
+    "Wing_L2",
+    "Wing_R1",
+    "Wing_R2"
+   ],
+   "fit": "union",
+   "scaleAxis": "x",
+   "yaw": 180,
+   "islands": 0.01
+  },
+  {
+   "glb": "storm_v1_crown_meshy71.glb",
+   "parts": [
+    "Crown"
+   ],
+   "fit": "Crown",
+   "yaw": 180,
+   "islands": 0.005
+  },
+  {
+   "glb": "storm_v1_chestcore_meshy71.glb",
+   "parts": [
+    "ChestCore"
+   ],
+   "fit": "ChestCore",
+   "yaw": 180,
+   "islands": 0.005
+  },
+  {
+   "glb": "storm_v1_pauldron_meshy71.glb",
+   "parts": [
+    "Pauldron2_R"
+   ],
+   "fit": "Pauldron2_R",
+   "yaw": 180,
+   "islands": 0.005
+  },
+  {
+   "glb": "storm_v1_pauldron_meshy71.glb",
+   "parts": [
+    "Pauldron2_L"
+   ],
+   "fit": "Pauldron2_L",
+   "yaw": 180,
+   "mirror": true,
+   "islands": 0.005
+  },
+  {
+   "glb": "storm_v1_gauntlet_meshy71.glb",
+   "parts": [
+    "Gauntlet_R"
+   ],
+   "fit": "Gauntlet_R",
+   "rot": [
+    66,
+    0,
+    0
+   ],
+   "scaleAxis": "y",
+   "cut": [
+    [
+     "y",
+     0.7,
+     "<"
+    ]
+   ],
+   "islands": 0.005
+  },
+  {
+   "glb": "storm_v1_gauntlet_meshy71.glb",
+   "parts": [
+    "Gauntlet_L"
+   ],
+   "fit": "Gauntlet_L",
+   "rot": [
+    66,
+    0,
+    0
+   ],
+   "scaleAxis": "y",
+   "cut": [
+    [
+     "y",
+     0.7,
+     "<"
+    ]
+   ],
+   "mirror": true,
+   "islands": 0.005
+  }
+ ],
+ "partTris": {
+  "CapeA1": 187,
+  "CapeA2": 187,
+  "CapeA3": 187,
+  "CapeA4": 187,
+  "CapeB1": 187,
+  "CapeB2": 187,
+  "CapeB3": 187,
+  "CapeB4": 187,
+  "CapeC1": 187,
+  "CapeC2": 187,
+  "CapeC3": 187,
+  "CapeC4": 187,
+  "CapeD1": 187,
+  "CapeD2": 187,
+  "CapeD3": 187,
+  "CapeD4": 187,
+  "Staff": 2400,
+  "StaffOrb": 600,
+  "Wing_L1": 875,
+  "Wing_L2": 875,
+  "Wing_R1": 875,
+  "Wing_R2": 875,
+  "Crown": 1500,
+  "ChestCore": 800,
+  "Pauldron2_L": 1200,
+  "Pauldron2_R": 1200,
+  "Gauntlet_L": 1500,
+  "Gauntlet_R": 1500
+ },
+ "bodyVoxel": 0.014,
+ "atlasGroups": [
+  [
+   "Crown",
+   "ChestCore",
+   "Pauldron2_L",
+   "Pauldron2_R",
+   "Gauntlet_L",
+   "Gauntlet_R"
+  ],
+  [
+   "CapeA1",
+   "CapeA2",
+   "CapeA3",
+   "CapeA4",
+   "CapeB1",
+   "CapeB2",
+   "CapeB3",
+   "CapeB4",
+   "CapeC1",
+   "CapeC2",
+   "CapeC3",
+   "CapeC4",
+   "CapeD1",
+   "CapeD2",
+   "CapeD3",
+   "CapeD4",
+   "Staff",
+   "StaffOrb",
+   "Wing_L1",
+   "Wing_L2",
+   "Wing_R1",
+   "Wing_R2"
+  ]
+ ]
+}

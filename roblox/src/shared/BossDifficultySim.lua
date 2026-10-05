@@ -163,6 +163,7 @@ function BossDifficultySim.run(bossId, options)
 	local deferred = 0
 	local basicTimer = 0
 	local shieldUntil = -1 -- 수정 부수기(보호막) - 이때까지 딜 0
+	local tgDone = false -- BOSS-NIGHT-1 변신 무적 한 번
 
 	local ctx = { graceUntil = config.entryGraceSeconds }
 	-- GUARDIAN-V3 반응 스킬 상태: 대상이 멀리(30 stud 밖) 있는 구간 · 빗나감 기록
@@ -319,6 +320,18 @@ function BossDifficultySim.run(bossId, options)
 				far, farSince = true, t
 				farUntil = t + mean * (0.5 + rng())
 			end
+		end
+		-- BOSS-NIGHT-1 폭풍 변신 무적(v3.transformGuard): 처음 hpBelow 아래 = 진행 중 스킬 끊김 · seconds 동안 딜 0 · 패턴 없음(보호막과 같은 처리)
+		local tg = data.v3 and data.v3.transformGuard
+		if tg and not tgDone and hp / maxHp <= (tg.hpBelow or 0.5) then
+			tgDone = true
+			currentEnd = math.min(currentEnd, t) -- 끝 처리(스케줄러 onSkillEnd)는 아래 평소 경로가 한다
+			for i = #pending, 1, -1 do
+				if not pending[i].gateJudge then
+					table.remove(pending, i)
+				end
+			end
+			shieldUntil = math.max(shieldUntil, t + tg.seconds)
 		end
 		if not current and t >= shieldUntil then -- 수정 부수기 동안 보스는 패턴을 쓰지 않는다(사용자)
 			ctx.now = t

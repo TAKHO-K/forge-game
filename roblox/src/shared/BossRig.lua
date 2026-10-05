@@ -137,6 +137,45 @@ function BossRig.solve(rig, rootCFrame, S, pose)
 	return out
 end
 
+-- BOSS-NIGHT-1: 필요한 부위(접지 발)까지의 사슬만 FK(클라 발 접지 - 관절 48개 폭풍에서 전체 FK가 프레임 비용의 대부분이었다). 결과 = solve와 같은 값(그 부위들만).
+local chainCache = setmetatable({}, { __mode = "k" })
+function BossRig.solveParts(rig, rootCFrame, S, pose, parts)
+	local byRig = chainCache[rig]
+	if not byRig then
+		byRig = {}
+		chainCache[rig] = byRig
+	end
+	local key = table.concat(parts, ",")
+	local list = byRig[key]
+	if not list then
+		local jointOf, need = {}, {}
+		for _, j in ipairs(rig.joints) do
+			jointOf[j.part] = j
+		end
+		for _, p in ipairs(parts) do
+			local j = jointOf[p]
+			while j and not need[j.part] do
+				need[j.part] = true
+				j = jointOf[j.parent]
+			end
+		end
+		list = {}
+		for _, j in ipairs(rig.joints) do
+			if need[j.part] then
+				table.insert(list, j)
+			end
+		end
+		byRig[key] = list
+	end
+	local out = { HumanoidRootPart = rootCFrame }
+	local lift = BossRig.rootLift(rig, S)
+	for _, j in ipairs(list) do
+		local c0, c1 = BossRig.jointFrames(j, S, lift)
+		out[j.part] = out[j.parent] * c0 * ((pose and pose[j.name]) or CFrame.identity) * c1:Inverse()
+	end
+	return out
+end
+
 function BossRig.attachPoint(rig, rootCFrame, S, pose, attachName)
 	local a = rig.attach[attachName]
 	if not a then

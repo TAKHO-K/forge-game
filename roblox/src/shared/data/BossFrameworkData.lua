@@ -5,7 +5,7 @@ local D = {}
 --   live = 실전(라이브 포함) - **설계 담당이 수호자 시험을 검수한 뒤에만 채운다**(지금 비어 있음 = 6보스 모두 옛 몸).
 --   studioTrial = Studio에서 workspace Attribute BossFrameworkTrial = true일 때만(시험 · 촬영 · 하네스) - 라이브 서버에서는 무시.
 D.live = {}
-D.studioTrial = { section_guardian = "v2", frost_giant = "v2" } -- BOSS-NIGHT-1: 매머드 새 몸(시험 스위치로만)
+D.studioTrial = { section_guardian = "v2", frost_giant = "v2", storm_lord = "v2" } -- BOSS-NIGHT-1: 매머드 · 폭풍 새 몸(시험 스위치로만)
 D.trialAttribute = "BossFrameworkTrial"
 
 -- GUARDIAN-V2 몸 가장자리 기준 근접 반경(바이블 §5 - 공통 장치 · 보스별 · 기본 끔 = 표에 없음): 새 몸(리그 v2 · edgeHalfWidth)이 뜰 때만
@@ -19,6 +19,9 @@ D.bodyEdge = {
 	-- BOSS-NIGHT-1 1 매머드: 보스 중심 원 · 부채(빙결 강타 r18 · 원 안 짓밟기 · 강화 평타 · 발 구르기 r30 · 얼음 거울) = 몸 가장자리 기준 · 밸런스 = BossSim(mammoth_v1/s_bosssim.txt)
 	--   피해 × 0.60(600판 · 처음 전멸 원거리 약 41% · 근접 약 48% ≤ 50 · 아는 보스 약 14 ~ 21% = 바이블 30 ~ 50 하한 아래 - 수호자와 같은 구조 · 보고서 결정 필요)
 	frost_giant = { skills = { slam = true, innerSmash = true, swipe = true, stomp = true, mirror = true }, innerSafe = true, chaseStop = true, damageScale = 0.60, hpScale = 1.0 },
+	-- BOSS-NIGHT-1 2 폭풍 군주: 강화 평타 · 원 안 낙뢰 · 번개 결계 = 몸 가장자리 기준 · 밸런스 = BossSim(storm_v1/s_bosssim.txt)
+	--   피해 × 0.95(600판 · 처음 전멸 원거리 약 33% · 근접 약 45% ≤ 50 · × 1.0이면 근접 52%) - 아는 보스 12 ~ 18%(30 ~ 50 아래 - 다른 보스와 같은 구조)
+	storm_lord = { skills = { swipe = true, innerSmash = true, mirror = true }, innerSafe = true, chaseStop = true, damageScale = 0.95, hpScale = 1.0 },
 }
 
 -- GUARDIAN-V3(사용자 시험 피드백 · 바이블 §11): 새 몸이 뜰 때만(BossFramework.applyV3 - 몸 가장자리 장치 뒤 · 인스턴스 사본 · BossData 원본 · 라이브 무변경).
@@ -133,13 +136,23 @@ D.v3 = {
 		-- BossDifficultySim 가정: 뒤쪽에 머무는 구간 비율(근접 · 원거리) · 평균 구간 길이 · 반응 스킬 명중(처음 · 두 번째부터)
 		sim = { behindShare = { melee = 0.18, ranged = 0.04 }, behindSegmentSeconds = 3, hit = { backKick = { first = 0.6, later = 0.35 } } },
 	},
+	-- BOSS-NIGHT-1 2 폭풍 군주(바이블 §2-5 · §10 · STORM-PARTS): 근접 규칙(강화 평타 · 원 안 낙뢰 바닥 표시 없음 · 예비 +0.12 · 지팡이/주먹 노랑 발광) +
+	--   50% 변신 무적 2.8초(진행 중 스킬 끊김 · 패턴 정지 · 받는 피해 × 0 - 그동안 클라: 망토 → 날개 · 1폼 부품 숨김 · 2폼 부품 날아와 붙음 · 후광). 스킬표 · 피해 무변경(2폼 = 주먹 동작).
+	storm_lord = {
+		hideFloor = { swipe = true, innerSmash = true, basic = true, innerRing = true },
+		windup = { seconds = 0.12, skills = { swipe = true, innerSmash = true }, basic = true },
+		glow = { color = Color3.fromRGB(255, 225, 90), fillPeak = 0.55, outline = 0.35, skills = { swipe = true, innerSmash = true, discharge = true, thunderRing = true, strike = true, boltSpear = true, tornado = true }, basic = true,
+			basicParts = { R = "Hand_R", L = "Hand_L" } },
+		marks = { color = LAVENDER, crackColor = Color3.fromRGB(160, 90, 255), transparency = 0.6, crackTransparency = 0.25, crackWidth = 0.35 },
+		transformGuard = { hpBelow = 0.5, seconds = 2.8 },
+	},
 }
 
 -- 교체 슬롯 → 메시 캐시 키(ArtAssetIds · ArtMeshCache). 캐시가 없으면(아트 스위치 끔) 클라가 파트로 그린다.
 --   V3.1: Meshy "어둠에 오염되는 바나나"(guardian_v1_banana_remesh10k → prop_kit 3,000삼각형 · 구운 색 512) - 옛 Blender 임시 메시 fx/guardian_banana는 그대로 남김(삭제 금지).
 --   meshSlotTextures = 그 메시에 입힐 아틀라스(ArtAssetIds image id - 없으면 색 재질)
-D.meshSlots = { GuardianBanana = "fx/guardian_banana_m", FrostIceTusk = "fx/frost_icetusk_m" }
-D.meshSlotTextures = { GuardianBanana = "fx/guardian_banana_m_atlas1", FrostIceTusk = "fx/frost_icetusk_m_atlas1" }
+D.meshSlots = { GuardianBanana = "fx/guardian_banana_m", FrostIceTusk = "fx/frost_icetusk_m", StormOrb = "fx/storm_orb_m" }
+D.meshSlotTextures = { GuardianBanana = "fx/guardian_banana_m_atlas1", FrostIceTusk = "fx/frost_icetusk_m_atlas1", StormOrb = "fx/storm_orb_m_atlas1" }
 
 -- 예산(바이블 §1-4) - 하네스 · /gg boss frame check가 검사한다
 D.budget = {

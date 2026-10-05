@@ -2290,6 +2290,29 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt, member
 	BossHandlersBR1.stepProjectiles(model, st, data, now, dt) -- BR1: 쏜 투사체는 스킬과 떨어져 난다
 	BossHandlersBR1.stepSpikes(model, st, now) -- BR1-3 아르마딜로 반격 가시(스킬이 끝나도 떨어진다)
 	BossEnvironment.step(model, st, data, now, dt) -- BR1: 환경 변화(두 번째 시계 - 기본 패턴과 겹친다)
+	-- BOSS-NIGHT-1 폭풍(v3.transformGuard): 체력이 처음 hpBelow 아래로 내려간 순간 = 50% 변신 → 진행 중 스킬을 끊고 seconds 동안 무적(받는 피해 × 0) · 패턴 정지
+	--   (클라 변신 동작 = 겉모습 격노 순간 · 스킬이 없으니 바로 재생 · 부품 교체 · 날아와 붙기). 환경(돌풍)은 50% + 3초라 무적이 먼저 끝난다.
+	local tg = data.v3 and data.v3.transformGuard
+	if tg and not st.transformDone and MonsterState.getHpRatio(model) <= (tg.hpBelow or 0.5) then
+		st.transformDone = true
+		BossPatterns.interrupt(model, data)
+		st.transformUntil = now + tg.seconds
+		local prev = MonsterState.getDamageTakenMultiplier(model) or 1
+		MonsterState.setDamageTakenMultiplier(model, 0)
+		model:SetAttribute("BossTransformGuard", true)
+		print(("[forge-game] %s 변신 무적 %.1f초(받는 피해 × 0 · 패턴 정지)"):format(data.displayName, tg.seconds))
+		task.delay(tg.seconds, function()
+			if MonsterState.getDamageTakenMultiplier(model) == 0 then
+				MonsterState.setDamageTakenMultiplier(model, prev)
+			end
+			if model.Parent then
+				model:SetAttribute("BossTransformGuard", nil)
+			end
+		end)
+	end
+	if st.transformUntil and now < st.transformUntil then
+		return true
+	end
 	if data.reactiveOrder then -- GUARDIAN-V3 ⑧: 반응 조건 targetBeyondFor의 시각(스킬이 도는 동안에도 잰다)
 		st.beyondSince = st.beyondSince or {}
 		local distance = targetRoot and Reach.horizontalDistance(targetRoot.Position, position) or 0

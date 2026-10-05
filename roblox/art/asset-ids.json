@@ -1640,6 +1640,33 @@
   "assetId": 114400850367342,
   "status": "Approved"
  },
+ "bosses/storm_lord_v2m.fbx": {
+  "sha256": "f59c22d70d4d96f05b32ce154c3a95a8a7fa37c32c66a0e4e346e576894a8712",
+  "assetType": "Model",
+  "assetId": 101915711338624,
+  "status": "Approved"
+ },
+ "bosses/storm_lord_v2m_atlas1.png": {
+  "sha256": "041adc52992ff75ac29833c631cbd361eecd0690a5670350ac81cff72fd02f89",
+  "assetType": "Decal",
+  "assetId": 110293866030526,
+  "status": "Approved",
+  "imageId": 88661053788205
+ },
+ "bosses/storm_lord_v2m_atlas2.png": {
+  "sha256": "c4aebe52b9af659846149bb196555b33eaa430c05633999bdab334d336ec27a4",
+  "assetType": "Decal",
+  "assetId": 106700755284368,
+  "status": "Approved",
+  "imageId": 96814704365755
+ },
+ "bosses/storm_lord_v2m_atlas3.png": {
+  "sha256": "94a494c127b12e592ee6f7d1c4fc38d0cab77be3ceacd37b05d453cee6f5bfec",
+  "assetType": "Decal",
+  "assetId": 112751645897472,
+  "status": "Approved",
+  "imageId": 123247087296221
+ },
  "extras/cloud_whale.fbx": {
   "sha256": "0f6b907f0a8b2d65206d5b574fc84c7665239cf262a934a6a534b787bb19714a",
   "assetType": "Model",
@@ -1769,6 +1796,19 @@
   "assetId": 95819361311277,
   "status": "Approved",
   "imageId": 105594125885210
+ },
+ "fx/storm_orb_m.fbx": {
+  "sha256": "7dda2981dceae931ccb4807f9f4260f8baa3175ce604ca0615be535473d349d6",
+  "assetType": "Model",
+  "assetId": 100651626249801,
+  "status": "Approved"
+ },
+ "fx/storm_orb_m_atlas1.png": {
+  "sha256": "808ffb8fecc2b7fdc092464d311a7a623f089da0f5afdc54e64726a42ec7565b",
+  "assetType": "Decal",
+  "assetId": 88290483069344,
+  "status": "Approved",
+  "imageId": 117151761543631
  },
  "gear/pilot/A/pilotA_armor_greatsword_legendary_stoneplains.fbx": {
   "sha256": "e9e7cb9d2f8efba69f7dd4258ed45f353e748b689c9d79a4defe31d346eb6493",

@@ -17,6 +17,7 @@ local BossRig = require(ReplicatedStorage.Shared.BossRig)
 local BossMotionData = require(ReplicatedStorage.Shared.data.BossMotionData)
 local BossFx = require(script.Parent.BossFx)
 local BossBodyFx = require(script.Parent.BossBodyFx) -- A2-M1 타격 충격 · 등장 · 발걸음 효과
+local BossFormFxView = require(script.Parent.BossFormFxView) -- BOSS-NIGHT-1
 local BossSpring = require(script.Parent.BossSpring) -- BOSS-FRAMEWORK 3 새 몸 2차 움직임
 local SoundSheet = require(script.Parent.SoundSheet)
 local BossFramework = require(ReplicatedStorage.Shared.BossFramework)
@@ -837,7 +838,14 @@ local function updateEntry(e, now, dt, camPos)
 		feet = e.contactList
 	end
 	if feet and #feet > 0 and not info.airborne and not st.deadAt and distance <= LOD.fullStuds then
-		local frames = BossRig.solve(e.rig, CFrame.identity, e.S, transforms)
+		e.feetParts = e.feetParts or {}
+		if e.feetPartsFor ~= feet then
+			e.feetPartsFor, e.feetParts = feet, {}
+			for _, f in ipairs(feet) do
+				table.insert(e.feetParts, f.part)
+			end
+		end
+		local frames = BossRig.solveParts(e.rig, CFrame.identity, e.S, transforms, e.feetParts) -- BOSS-NIGHT-1: 발 사슬만(전체 FK 대신 - 같은 값)
 		local minY = math.huge
 		for _, f in ipairs(feet) do
 			local cf = frames[f.part]
@@ -873,6 +881,9 @@ local function updateEntry(e, now, dt, camPos)
 			applyFlash(e, info)
 		end
 		applyGlare(e, info, now)
+	end
+	if e.ctx.set then
+		BossFormFxView.step(e, info.form, now) -- BOSS-NIGHT-1 폼별 부품 숨김 · 후광 · 파편 · 구름 보주(폭풍 - 세트 formParts · formFx)
 	end
 	if e.isClone or e.preview then
 		updateStars(e, info.stars and (info.fade or 0) < 1, now)

@@ -1,0 +1,47 @@
+{
+ "parts": {
+  "storm_orb_m": {
+   "tris": 1500,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    -0.008,
+    0.007,
+    -0.0
+   ],
+   "neon": false,
+   "color": null
+  }
+ },
+ "partCount": 1,
+ "totalTris": 1500,
+ "triBudget": 1500,
+ "budgetUse": 1.0,
+ "version": "PROP1",
+ "metaName": "storm_orb_m",
+ "size": [
+  0.8694,
+  1.0034,
+  0.8686
+ ],
+ "texture": {
+  "atlases": [
+   "storm_orb_m_atlas1.png"
+  ],
+  "parts": [
+   "storm_orb_m"
+  ]
+ },
+ "kit": {
+  "source": "storm_v1_orb_meshy71.glb",
+  "sourceTris": 1117824,
+  "cut": [],
+  "islandsDropped": 0,
+  "facesDropped": 0,
+  "mirror": false
+ },
+ "space": "원점 = 경계 상자 가운데 · 가장 긴 축 = 1.000 · 축 = 원본 GLB(Roblox Y 위)"
+}

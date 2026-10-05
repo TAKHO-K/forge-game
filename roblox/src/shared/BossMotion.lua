@@ -680,8 +680,13 @@ function BossMotion.evaluate(ctx, st, now)
 		info.transforming = true
 	end
 	-- BOSS-FRAMEWORK 5 번쩍(때리는 부위 흰 테): 스킬 전조 끝(판정 시각 = actAt + actHit) 직전 FrameData.flash.seconds초 · 세기 0.35 → 1(끝에서 최대)
+	-- BOSS-NIGHT-1: 세트의 폼별 번쩍 부위(forms.after.flash - 폭풍 2폼 = 지팡이 대신 주먹)가 있으면 그것 먼저
+	local function flashOf(id)
+		local ff = F and F.flash and F.flash[id]
+		return ff or (ctx.set.flash and ctx.set.flash[id])
+	end
 	if ctx.set and st.act and st.actAt and (st.actHit or 0) > 0 then
-		local list = ctx.set.flash and ctx.set.flash[st.act]
+		local list = flashOf(st.act)
 		local u = now - (st.actAt + st.actHit)
 		local W0 = FrameData.flash.seconds
 		if list and u >= -W0 and u < 0 then
@@ -692,7 +697,7 @@ function BossMotion.evaluate(ctx, st, now)
 	local G = ctx.glow
 	if G and ctx.set then
 		if st.act and st.actAt and (st.actHit or 0) > 0 and G.skills[st.act] then
-			local list = ctx.set.flash and ctx.set.flash[st.act]
+			local list = flashOf(st.act)
 			local u = (now - st.actAt) / st.actHit
 			if list and u >= 0 and u < 1 then
 				info.glow, info.glowAmount = list, u
@@ -701,7 +706,7 @@ function BossMotion.evaluate(ctx, st, now)
 			local lead = st.prepSeconds or ctx.prepSeconds or 0.25
 			local u = (now - (st.prepAt - lead)) / lead
 			if u >= 0 and u < 1 then
-				local bp = G.basicParts or { R = "Hand_R", L = "Hand_L" } -- BOSS-NIGHT-1: 보스별 평타 부위(매머드 = 상아)
+				local bp = (F and F.basicParts) or G.basicParts or { R = "Hand_R", L = "Hand_L" } -- BOSS-NIGHT-1: 보스별 평타 부위(매머드 = 상아 · 폭풍 2폼 = 주먹 - 세트 폼 값 먼저)
 				info.glow, info.glowAmount = { (st.nextN or ((st.swingN or 0) + 1)) % 2 == 0 and bp.R or bp.L }, u
 			end
 		end

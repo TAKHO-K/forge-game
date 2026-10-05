@@ -1,0 +1,1148 @@
+{
+ "parts": {
+  "Hips": {
+   "tris": 274,
+   "origin": [
+    0.0,
+    2.028,
+    0.0
+   ],
+   "center": [
+    0.001,
+    1.738,
+    -0.049
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Body": {
+   "tris": 3184,
+   "origin": [
+    0.0,
+    2.244,
+    0.0
+   ],
+   "center": [
+    0.007,
+    2.943,
+    -0.204
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Head": {
+   "tris": 1294,
+   "origin": [
+    0.0,
+    4.188,
+    0.0
+   ],
+   "center": [
+    0.002,
+    4.537,
+    0.013
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Plume": {
+   "tris": 929,
+   "origin": [
+    0.0,
+    5.052,
+    0.0
+   ],
+   "center": [
+    -0.092,
+    5.211,
+    0.245
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Thigh_L": {
+   "tris": 606,
+   "origin": [
+    -0.396,
+    1.884,
+    0.0
+   ],
+   "center": [
+    -0.423,
+    1.22,
+    -0.188
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Shin_L": {
+   "tris": 463,
+   "origin": [
+    -0.396,
+    0.66,
+    -0.036
+   ],
+   "center": [
+    -0.438,
+    -0.127,
+    -0.164
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Foot_L": {
+   "tris": 361,
+   "origin": [
+    -0.432,
+    -0.996,
+    0.0
+   ],
+   "center": [
+    -0.498,
+    -1.163,
+    -0.444
+   ],
+   "neon": false,
+   "color": null
+  },
+  "UpperArm_L": {
+   "tris": 414,
+   "origin": [
+    -1.08,
+    3.612,
+    0.0
+   ],
+   "center": [
+    -1.222,
+    2.982,
+    -0.067
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Forearm_L": {
+   "tris": 416,
+   "origin": [
+    -1.62,
+    2.82,
+    0.0
+   ],
+   "center": [
+    -1.709,
+    2.397,
+    -0.318
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Hand_L": {
+   "tris": 204,
+   "origin": [
+    -2.016,
+    2.244,
+    0.0
+   ],
+   "center": [
+    -1.955,
+    1.98,
+    -0.33
+   ],
+   "neon": false,
+   "color": null
+  },
+  "LeftPauldron": {
+   "tris": 578,
+   "origin": [
+    -1.08,
+    3.612,
+    0.0
+   ],
+   "center": [
+    -1.002,
+    3.977,
+    -0.11
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Pauldron2_L": {
+   "tris": 4605,
+   "origin": [
+    -1.08,
+    3.612,
+    0.0
+   ],
+   "center": [
+    -1.34,
+    3.987,
+    -0.006
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Gauntlet_L": {
+   "tris": 4070,
+   "origin": [
+    -1.62,
+    2.82,
+    0.0
+   ],
+   "center": [
+    -1.848,
+    2.165,
+    0.006
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Thigh_R": {
+   "tris": 599,
+   "origin": [
+    0.396,
+    1.884,
+    0.0
+   ],
+   "center": [
+    0.421,
+    1.208,
+    -0.185
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Shin_R": {
+   "tris": 460,
+   "origin": [
+    0.396,
+    0.66,
+    -0.036
+   ],
+   "center": [
+    0.44,
+    -0.176,
+    -0.171
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Foot_R": {
+   "tris": 365,
+   "origin": [
+    0.432,
+    -0.996,
+    0.0
+   ],
+   "center": [
+    0.499,
+    -1.161,
+    -0.448
+   ],
+   "neon": false,
+   "color": null
+  },
+  "UpperArm_R": {
+   "tris": 409,
+   "origin": [
+    1.08,
+    3.612,
+    0.0
+   ],
+   "center": [
+    1.217,
+    2.979,
+    -0.058
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Forearm_R": {
+   "tris": 401,
+   "origin": [
+    1.62,
+    2.82,
+    0.0
+   ],
+   "center": [
+    1.706,
+    2.391,
+    -0.319
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Hand_R": {
+   "tris": 218,
+   "origin": [
+    2.016,
+    2.244,
+    0.0
+   ],
+   "center": [
+    1.961,
+    1.975,
+    -0.328
+   ],
+   "neon": false,
+   "color": null
+  },
+  "RightPauldron": {
+   "tris": 577,
+   "origin": [
+    1.08,
+    3.612,
+    0.0
+   ],
+   "center": [
+    1.002,
+    3.986,
+    -0.108
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Pauldron2_R": {
+   "tris": 4537,
+   "origin": [
+    1.08,
+    3.612,
+    0.0
+   ],
+   "center": [
+    1.333,
+    3.979,
+    0.006
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Gauntlet_R": {
+   "tris": 4269,
+   "origin": [
+    1.62,
+    2.82,
+    0.0
+   ],
+   "center": [
+    1.848,
+    2.158,
+    0.002
+   ],
+   "neon": false,
+   "color": null
+  },
+  "RobeF": {
+   "tris": 1021,
+   "origin": [
+    0.0,
+    2.244,
+    -0.324
+   ],
+   "center": [
+    -0.001,
+    1.626,
+    -0.449
+   ],
+   "neon": false,
+   "color": null
+  },
+  "RobeB": {
+   "tris": 235,
+   "origin": [
+    0.0,
+    2.244,
+    0.324
+   ],
+   "center": [
+    -0.006,
+    1.557,
+    0.293
+   ],
+   "neon": false,
+   "color": null
+  },
+  "CapeA1": {
+   "tris": 185,
+   "origin": [
+    -1.152,
+    4.044,
+    0.612
+   ],
+   "center": [
+    -0.904,
+    3.173,
+    0.798
+   ],
+   "neon": false,
+   "color": null
+  },
+  "CapeA2": {
+   "tris": 185,
+   "origin": [
+    -1.2096,
+    2.82,
+    0.72
+   ],
+   "center": [
+    -1.086,
+    2.189,
+    0.677
+   ],
+   "neon": false,
+   "color": null
+  },
+  "CapeA3": {
+   "tris": 295,
+   "origin": [
+    -1.2672,
+    1.596,
+    0.792
+   ],
+   "center": [
+    -1.19,
+    1.042,
+    0.703
+   ],
+   "neon": false,
+   "color": null
+  },
+  "CapeA4": {
+   "tris": 226,
+   "origin": [
+    -1.3248,
+    0.444,
+    0.864
+   ],
+   "center": [
+    -1.295,
+    0.011,
+    0.79
+   ],
+   "neon": false,
+   "color": null
+  },
+  "CapeB1": {
+   "tris": 443,
+   "origin": [
+    -0.396,
+    4.044,
+    0.612
+   ],
+   "center": [
+    -0.384,
+    3.435,
+    0.831
+   ],
+   "neon": false,
+   "color": null
+  },
+  "CapeB2": {
+   "tris": 415,
+   "origin": [
+    -0.4158,
+    2.82,
+    0.72
+   ],
+   "center": [
+    -0.417,
+    2.147,
+    0.496
+   ],
+   "neon": false,
+   "color": null
+  },
+  "CapeB3": {
+   "tris": 349,
+   "origin": [
+    -0.4356,
+    1.596,
+    0.792
+   ],
+   "center": [
+    -0.497,
+    1.046,
+    0.532
+   ],
+   "neon": false,
+   "color": null
+  },
+  "CapeB4": {
+   "tris": 372,
+   "origin": [
+    -0.4554,
+    0.444,
+    0.864
+   ],
+   "center": [
+    -0.479,
+    -0.178,
+    0.627
+   ],
+   "neon": false,
+   "color": null
+  },
+  "CapeC1": {
+   "tris": 623,
+   "origin": [
+    0.396,
+    4.044,
+    0.612
+   ],
+   "center": [
+    0.395,
+    3.442,
+    0.859
+   ],
+   "neon": false,
+   "color": null
+  },
+  "CapeC2": {
+   "tris": 405,
+   "origin": [
+    0.4158,
+    2.82,
+    0.72
+   ],
+   "center": [
+    0.443,
+    2.204,
+    0.598
+   ],
+   "neon": false,
+   "color": null
+  },
+  "CapeC3": {
+   "tris": 294,
+   "origin": [
+    0.4356,
+    1.596,
+    0.792
+   ],
+   "center": [
+    0.49,
+    1.006,
+    0.492
+   ],
+   "neon": false,
+   "color": null
+  },
+  "CapeC4": {
+   "tris": 319,
+   "origin": [
+    0.4554,
+    0.444,
+    0.864
+   ],
+   "center": [
+    0.461,
+    -0.23,
+    0.653
+   ],
+   "neon": false,
+   "color": null
+  },
+  "CapeD1": {
+   "tris": 182,
+   "origin": [
+    1.152,
+    4.044,
+    0.612
+   ],
+   "center": [
+    0.906,
+    3.209,
+    0.793
+   ],
+   "neon": false,
+   "color": null
+  },
+  "CapeD2": {
+   "tris": 186,
+   "origin": [
+    1.2096,
+    2.82,
+    0.72
+   ],
+   "center": [
+    1.073,
+    2.175,
+    0.7
+   ],
+   "neon": false,
+   "color": null
+  },
+  "CapeD3": {
+   "tris": 434,
+   "origin": [
+    1.2672,
+    1.596,
+    0.792
+   ],
+   "center": [
+    1.237,
+    1.064,
+    0.706
+   ],
+   "neon": false,
+   "color": null
+  },
+  "CapeD4": {
+   "tris": 188,
+   "origin": [
+    1.3248,
+    0.444,
+    0.864
+   ],
+   "center": [
+    1.318,
+    -0.022,
+    0.764
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Staff": {
+   "tris": 2391,
+   "origin": [
+    2.196,
+    1.884,
+    -0.144
+   ],
+   "center": [
+    2.216,
+    1.386,
+    -0.212
+   ],
+   "neon": false,
+   "color": null
+  },
+  "StaffOrb": {
+   "tris": 1289,
+   "origin": [
+    2.232,
+    3.828,
+    -0.216
+   ],
+   "center": [
+    2.239,
+    4.1,
+    -0.208
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Crown": {
+   "tris": 3685,
+   "origin": [
+    0.0,
+    4.98,
+    0.0
+   ],
+   "center": [
+    -0.004,
+    5.211,
+    -0.016
+   ],
+   "neon": false,
+   "color": null
+  },
+  "ChestCore": {
+   "tris": 2184,
+   "origin": [
+    0.0,
+    3.252,
+    -0.504
+   ],
+   "center": [
+    -0.008,
+    3.251,
+    -0.572
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Wing_L1": {
+   "tris": 1897,
+   "origin": [
+    -0.36,
+    3.684,
+    0.72
+   ],
+   "center": [
+    -0.957,
+    4.105,
+    0.899
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Wing_L2": {
+   "tris": 868,
+   "origin": [
+    -1.872,
+    4.404,
+    0.864
+   ],
+   "center": [
+    -2.814,
+    4.498,
+    0.889
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Wing_R1": {
+   "tris": 1849,
+   "origin": [
+    0.36,
+    3.684,
+    0.72
+   ],
+   "center": [
+    0.968,
+    4.017,
+    0.908
+   ],
+   "neon": false,
+   "color": null
+  },
+  "Wing_R2": {
+   "tris": 871,
+   "origin": [
+    1.872,
+    4.404,
+    0.864
+   ],
+   "center": [
+    2.788,
+    4.484,
+    0.88
+   ],
+   "neon": false,
+   "color": null
+  },
+  "ChestCore_Deco1": {
+   "tris": 3565,
+   "origin": [
+    0.0,
+    3.252,
+    -0.504
+   ],
+   "center": [
+    -0.0,
+    3.251,
+    -0.573
+   ],
+   "neon": true,
+   "color": "#5ADDFF"
+  },
+  "StaffOrb_Deco1": {
+   "tris": 2045,
+   "origin": [
+    2.232,
+    3.828,
+    -0.216
+   ],
+   "center": [
+    2.235,
+    4.091,
+    -0.212
+   ],
+   "neon": true,
+   "color": "#5ADDFF"
+  },
+  "Staff_Deco1": {
+   "tris": 106,
+   "origin": [
+    2.196,
+    1.884,
+    -0.144
+   ],
+   "center": [
+    2.194,
+    3.707,
+    -0.179
+   ],
+   "neon": true,
+   "color": "#5ADDFF"
+  },
+  "Body_Outline": {
+   "tris": 2366,
+   "origin": [
+    0.0,
+    2.244,
+    0.0
+   ],
+   "center": [
+    0.011,
+    2.958,
+    -0.205
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "LeftPauldron_Outline": {
+   "tris": 428,
+   "origin": [
+    -1.08,
+    3.612,
+    0.0
+   ],
+   "center": [
+    -1.037,
+    4.011,
+    -0.113
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "RightPauldron_Outline": {
+   "tris": 429,
+   "origin": [
+    1.08,
+    3.612,
+    0.0
+   ],
+   "center": [
+    1.056,
+    4.018,
+    -0.106
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Plume_Outline": {
+   "tris": 689,
+   "origin": [
+    0.0,
+    5.052,
+    0.0
+   ],
+   "center": [
+    -0.094,
+    5.213,
+    0.245
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Hips_Outline": {
+   "tris": 202,
+   "origin": [
+    0.0,
+    2.028,
+    0.0
+   ],
+   "center": [
+    -0.006,
+    1.748,
+    -0.046
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Head_Outline": {
+   "tris": 961,
+   "origin": [
+    0.0,
+    4.188,
+    0.0
+   ],
+   "center": [
+    0.004,
+    4.517,
+    0.004
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Shin_L_Outline": {
+   "tris": 343,
+   "origin": [
+    -0.396,
+    0.66,
+    -0.036
+   ],
+   "center": [
+    -0.44,
+    -0.127,
+    -0.164
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Shin_R_Outline": {
+   "tris": 342,
+   "origin": [
+    0.396,
+    0.66,
+    -0.036
+   ],
+   "center": [
+    0.443,
+    -0.143,
+    -0.169
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Thigh_L_Outline": {
+   "tris": 450,
+   "origin": [
+    -0.396,
+    1.884,
+    0.0
+   ],
+   "center": [
+    -0.428,
+    1.216,
+    -0.18
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "Thigh_R_Outline": {
+   "tris": 444,
+   "origin": [
+    0.396,
+    1.884,
+    0.0
+   ],
+   "center": [
+    0.433,
+    1.221,
+    -0.185
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "RobeF_Outline": {
+   "tris": 759,
+   "origin": [
+    0.0,
+    2.244,
+    -0.324
+   ],
+   "center": [
+    0.0,
+    1.616,
+    -0.449
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  },
+  "RobeB_Outline": {
+   "tris": 173,
+   "origin": [
+    0.0,
+    2.244,
+    0.324
+   ],
+   "center": [
+    0.001,
+    1.565,
+    0.322
+   ],
+   "neon": false,
+   "color": "#1E1B2E"
+  }
+ },
+ "partCount": 63,
+ "totalTris": 63926,
+ "triBudget": 36000,
+ "budgetUse": 1.776,
+ "version": "KIT1",
+ "rigId": "storm_lord_v2",
+ "partCap": 5000,
+ "joints": {
+  "Hips": "RootJoint",
+  "Body": "Waist",
+  "Head": "Neck",
+  "Plume": "Plume",
+  "Thigh_L": "Hip_L",
+  "Shin_L": "Knee_L",
+  "Foot_L": "Ankle_L",
+  "UpperArm_L": "Shoulder_L",
+  "Forearm_L": "Elbow_L",
+  "Hand_L": "Wrist_L",
+  "LeftPauldron": "Pauldron_L",
+  "Pauldron2_L": "Pauldron2_L",
+  "Gauntlet_L": "Gauntlet_L",
+  "Thigh_R": "Hip_R",
+  "Shin_R": "Knee_R",
+  "Foot_R": "Ankle_R",
+  "UpperArm_R": "Shoulder_R",
+  "Forearm_R": "Elbow_R",
+  "Hand_R": "Wrist_R",
+  "RightPauldron": "Pauldron_R",
+  "Pauldron2_R": "Pauldron2_R",
+  "Gauntlet_R": "Gauntlet_R",
+  "RobeF": "RobeF",
+  "RobeB": "RobeB",
+  "CapeA1": "CapeA1",
+  "CapeA2": "CapeA2",
+  "CapeA3": "CapeA3",
+  "CapeA4": "CapeA4",
+  "CapeB1": "CapeB1",
+  "CapeB2": "CapeB2",
+  "CapeB3": "CapeB3",
+  "CapeB4": "CapeB4",
+  "CapeC1": "CapeC1",
+  "CapeC2": "CapeC2",
+  "CapeC3": "CapeC3",
+  "CapeC4": "CapeC4",
+  "CapeD1": "CapeD1",
+  "CapeD2": "CapeD2",
+  "CapeD3": "CapeD3",
+  "CapeD4": "CapeD4",
+  "Staff": "Staff",
+  "StaffOrb": "StaffOrb",
+  "Crown": "Crown",
+  "ChestCore": "ChestCore",
+  "Wing_L1": "Wing_L1",
+  "Wing_L2": "Wing_L2",
+  "Wing_R1": "Wing_R1",
+  "Wing_R2": "Wing_R2"
+ },
+ "deco": {
+  "ChestCore_Deco1": "ChestCore",
+  "StaffOrb_Deco1": "StaffOrb",
+  "Staff_Deco1": "Staff"
+ },
+ "decoMaterial": {
+  "ChestCore_Deco1": "Neon",
+  "StaffOrb_Deco1": "Neon",
+  "Staff_Deco1": "Neon"
+ },
+ "lod2": [],
+ "outlineParts": [
+  "Body_Outline",
+  "LeftPauldron_Outline",
+  "RightPauldron_Outline",
+  "Plume_Outline",
+  "Hips_Outline",
+  "Head_Outline",
+  "Shin_L_Outline",
+  "Shin_R_Outline",
+  "Thigh_L_Outline",
+  "Thigh_R_Outline",
+  "RobeF_Outline",
+  "RobeB_Outline"
+ ],
+ "texture": {
+  "atlases": [
+   "storm_lord_v2m_atlas1.png",
+   "storm_lord_v2m_atlas2.png",
+   "storm_lord_v2m_atlas3.png"
+  ],
+  "parts": [
+   "Hips",
+   "Body",
+   "Head",
+   "Plume",
+   "Thigh_L",
+   "Shin_L",
+   "Foot_L",
+   "UpperArm_L",
+   "Forearm_L",
+   "Hand_L",
+   "LeftPauldron",
+   "Pauldron2_L",
+   "Gauntlet_L",
+   "Thigh_R",
+   "Shin_R",
+   "Foot_R",
+   "UpperArm_R",
+   "Forearm_R",
+   "Hand_R",
+   "RightPauldron",
+   "Pauldron2_R",
+   "Gauntlet_R",
+   "RobeF",
+   "RobeB",
+   "CapeA1",
+   "CapeA2",
+   "CapeA3",
+   "CapeA4",
+   "CapeB1",
+   "CapeB2",
+   "CapeB3",
+   "CapeB4",
+   "CapeC1",
+   "CapeC2",
+   "CapeC3",
+   "CapeC4",
+   "CapeD1",
+   "CapeD2",
+   "CapeD3",
+   "CapeD4",
+   "Staff",
+   "StaffOrb",
+   "Crown",
+   "ChestCore",
+   "Wing_L1",
+   "Wing_L2",
+   "Wing_R1",
+   "Wing_R2"
+  ],
+  "partAtlas": {
+   "Hips": 1,
+   "Body": 1,
+   "Head": 1,
+   "Plume": 1,
+   "Thigh_L": 1,
+   "Shin_L": 1,
+   "Foot_L": 1,
+   "UpperArm_L": 1,
+   "Forearm_L": 1,
+   "Hand_L": 1,
+   "LeftPauldron": 1,
+   "Thigh_R": 1,
+   "Shin_R": 1,
+   "Foot_R": 1,
+   "UpperArm_R": 1,
+   "Forearm_R": 1,
+   "Hand_R": 1,
+   "RightPauldron": 1,
+   "RobeF": 1,
+   "RobeB": 1,
+   "Pauldron2_L": 2,
+   "Gauntlet_L": 2,
+   "Pauldron2_R": 2,
+   "Gauntlet_R": 2,
+   "Crown": 2,
+   "ChestCore": 2,
+   "CapeA1": 3,
+   "CapeA2": 3,
+   "CapeA3": 3,
+   "CapeA4": 3,
+   "CapeB1": 3,
+   "CapeB2": 3,
+   "CapeB3": 3,
+   "CapeB4": 3,
+   "CapeC1": 3,
+   "CapeC2": 3,
+   "CapeC3": 3,
+   "CapeC4": 3,
+   "CapeD1": 3,
+   "CapeD2": 3,
+   "CapeD3": 3,
+   "CapeD4": 3,
+   "Staff": 3,
+   "StaffOrb": 3,
+   "Wing_L1": 3,
+   "Wing_L2": 3,
+   "Wing_R1": 3,
+   "Wing_R2": 3
+  }
+ },
+ "kit": {
+  "neonDemoted": [],
+  "source": "storm_v1_body_meshy71.glb",
+  "sourceTris": 615228,
+  "overlapCopies": 15980,
+  "capped": 19553,
+  "empty": []
+ },
+ "space": "sizeScale 1 · 루트 원점 · 발바닥 y −1.5 · 앞 −Z",
+ "metaName": "storm_lord_v2m"
+}

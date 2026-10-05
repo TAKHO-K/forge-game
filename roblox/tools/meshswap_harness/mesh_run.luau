@@ -798,32 +798,71 @@ do
 	}
 end
 
--- ─────────────────────────── 폭풍 군주 → 폭풍 기사(초안 · 망토 4 × 2 = 변신 때 날개) ───────────────────────────
+-- ─────────────────────────── 폭풍 군주 → 폭풍 기사 · 50% 비행 변신(BOSS-NIGHT-1 2 · Meshy 몸 + 부품 9 · 바이블 §2-5 · §10 · STORM-PARTS) ───────────────────────────
+-- 상자 · 관절 = Meshy storm_v1_body(A-포즈 · 망토 없음) 정면 · 옆 실측(높이 1 = H · 발바닥 0 · fwd + = 앞). K 7.2 = 판정 사본(Body · Head) 부피 = 옛 몸 × 1.07 · scale 1.15 = 키 31 stud(§5).
+--   1폼 = 몸 + 어깨 갑옷 · 번개 칼날(Pauldron_L/R) + 구름 깃(Plume) + 망토 4갈래 × 4마디(CapeA ~ D) + 지팡이 · 지팡이 보주(고리째 - 떨어져 떠다님).
+--   2폼 = 망토 · 지팡이 · 1폼 어깨 · 아래팔 · 손 · 구름 깃 숨김 → 날개(Wing_L1 · L2 · R1 · R2) · 번개 왕관(Crown) · 가슴 코어(ChestCore) · 2폼 어깨(Pauldron2_L/R) · 건틀릿(Gauntlet_L/R - 아래팔 + 주먹)이 날아와 붙음.
+--   부품 GLB → 상자 맞춤 = rigs/storm_lord_v2.kit.json(addons) · 보이기 전환 = BossClipSetData.storm_lord_v2.formParts(클라).
 do
-	local J = BossSkeleton.biped({
-		hips = V(1.3, 0.5, 0.9), torso = V(1.7, 1.8, 1.0), head = V(0.95, 1.0, 0.95),
-		thigh = { w = 0.55, len = 0.95 }, shin = { w = 0.5, len = 0.95 }, foot = V(0.6, 0.25, 0.95),
-		upperArm = { w = 0.5, len = 1.0 }, forearm = { w = 0.48, len = 0.95 }, hand = V(0.55, 0.6, 0.55), shoulderX = 1.05, stance = 0.38,
-	})
-	add(J, { name = "Blade_L", parent = "Body", part = "LeftBlade", size = V(0.3, 1.5, 0.3), shape = "wedge", color = "accent", at = V(-0.95, 0.9, 0), pivot = V(0, -0.6, 0), rot = V(0, 0, 15) })
-	add(J, { name = "Blade_R", parent = "Body", part = "RightBlade", size = V(0.3, 1.5, 0.3), shape = "wedge", color = "accent", at = V(0.95, 0.9, 0), pivot = V(0, -0.6, 0), rot = V(0, 180, 15) })
-	add(J, { name = "Plume", parent = "Head", part = "Plume", size = V(0.15, 0.9, 0.5), shape = "wedge", color = "accent", at = V(0, 0.5, 0.1), pivot = V(0, -0.4, 0), rot = V(-20, 0, 0) })
-	chain(J, { prefix = "CapeL", parent = "Body", count = 4, length = 0.7, w0 = 0.8, w1 = 1.0, thick = 0.08, at = V(-0.42, 0.8, 0.55), rot0 = V(-6, 0, 0), rotStep = V(-3, 0, 0), color = "dark" })
-	chain(J, { prefix = "CapeR", parent = "Body", count = 4, length = 0.7, w0 = 0.8, w1 = 1.0, thick = 0.08, at = V(0.42, 0.8, 0.55), rot0 = V(-6, 0, 0), rotStep = V(-3, 0, 0), color = "dark" })
-	chain(J, { prefix = "RobeF", parent = "Hips", count = 2, length = 0.55, w0 = 0.9, w1 = 0.95, thick = 0.08, at = V(0, -0.15, -0.48), rot0 = V(-4, 0, 0), rotStep = V(-2, 0, 0), color = "body" })
-	chain(J, { prefix = "RobeB", parent = "Hips", count = 2, length = 0.55, w0 = 0.9, w1 = 0.95, thick = 0.08, at = V(0, -0.15, 0.48), rot0 = V(4, 0, 0), rotStep = V(2, 0, 0), color = "body" })
-	add(J, { name = "Staff", parent = "Hand_R", part = "Staff", size = V(0.25, 4.6, 0.25), shape = "cyl", color = "dark", at = V(0, -0.3, 0), pivot = V(0, -0.4, 0) })
-	add(J, { name = "StaffOrb", parent = "Staff", part = "StaffOrb", size = V(0.7, 0.7, 0.7), shape = "ball", color = "accent", material = "Neon", at = V(0, 2.35, 0), pivot = V(0, 0, 0) })
+	local L = placer(7.2)
+	local P, Z, place, seg, chainPts = L.P, L.Z, L.place, L.seg, L.chainPts
+	place({ name = "RootJoint", parent = "HumanoidRootPart", part = "Hips", center = P(0, 0.47, 0), size = Z(0.22, 0.1, 0.12), joint = P(0, 0.49, 0), color = "dark" })
+	place({ name = "Waist", parent = "Hips", part = "Body", center = P(0, 0.62, 0), size = Z(0.24, 0.3, 0.13), joint = P(0, 0.52, 0), query = true })
+	place({ name = "Neck", parent = "Body", part = "Head", center = P(0, 0.85, 0.005), size = Z(0.13, 0.14, 0.13), joint = P(0, 0.79, 0), color = "head", query = true })
+	place({ name = "Plume", parent = "Head", part = "Plume", center = P(0, 0.95, 0), size = Z(0.18, 0.11, 0.14), joint = P(0, 0.91, 0), color = "accent" })
+	for _, s in ipairs({ { "L", -1 }, { "R", 1 } }) do
+		local side, x = s[1], s[2]
+		seg("Hip_" .. side, "Hips", "Thigh_" .. side, { x * 0.055, 0.47, 0 }, { x * 0.055, 0.3, 0.005 }, 0.09, 0.09, 0.02)
+		seg("Knee_" .. side, "Thigh_" .. side, "Shin_" .. side, { x * 0.055, 0.3, 0.005 }, { x * 0.06, 0.07, 0 }, 0.08, 0.08, 0.02, "dark")
+		place({ name = "Ankle_" .. side, parent = "Shin_" .. side, part = "Foot_" .. side, center = P(x * 0.06, 0.035, 0.065), size = Z(0.08, 0.07, 0.17), joint = P(x * 0.06, 0.07, 0), color = "dark" })
+		seg("Shoulder_" .. side, "Body", "UpperArm_" .. side, { x * 0.15, 0.71, 0 }, { x * 0.225, 0.6, 0 }, 0.07, 0.07, 0.02)
+		seg("Elbow_" .. side, "UpperArm_" .. side, "Forearm_" .. side, { x * 0.225, 0.6, 0 }, { x * 0.28, 0.52, 0 }, 0.065, 0.065, 0.02)
+		seg("Wrist_" .. side, "Forearm_" .. side, "Hand_" .. side, { x * 0.28, 0.52, 0 }, { x * 0.305, 0.45, 0 }, 0.06, 0.05, 0.01)
+		place({ name = "Pauldron_" .. side, parent = "UpperArm_" .. side, part = side == "L" and "LeftPauldron" or "RightPauldron", center = P(x * 0.17, 0.775, 0), size = Z(0.11, 0.23, 0.12), joint = P(x * 0.15, 0.71, 0), color = "head" })
+		-- 2폼(숨김으로 시작): 어깨 · 건틀릿(아래팔 + 주먹 - 팔꿈치 관 자름)
+		place({ name = "Pauldron2_" .. side, parent = "UpperArm_" .. side, part = "Pauldron2_" .. side, center = P(x * 0.185, 0.765, 0), size = Z(0.14, 0.17, 0.14), joint = P(x * 0.15, 0.71, 0), color = "head" })
+		seg("Gauntlet_" .. side, "Forearm_" .. side, "Gauntlet_" .. side, { x * 0.225, 0.6, 0 }, { x * 0.31, 0.43, 0 }, 0.09, 0.09, 0.02, "head")
+	end
+	-- 로브(허리 갑옷 앞 · 뒤)
+	place({ name = "RobeF", parent = "Hips", part = "RobeF", center = P(0, 0.445, 0.05), size = Z(0.22, 0.15, 0.04), joint = P(0, 0.52, 0.045), color = "body" })
+	place({ name = "RobeB", parent = "Hips", part = "RobeB", center = P(0, 0.445, -0.05), size = Z(0.22, 0.15, 0.04), joint = P(0, 0.52, -0.045), color = "body" })
+	-- 망토 4갈래 × 4마디(등 어깨 뒤 → 발목 위) - 1폼
+	for i, x in ipairs({ -0.16, -0.055, 0.055, 0.16 }) do
+		local tag = ({ "A", "B", "C", "D" })[i]
+		chainPts("Cape" .. tag, "Body", { { x, 0.77, -0.085 }, { x * 1.05, 0.6, -0.1 }, { x * 1.1, 0.43, -0.11 }, { x * 1.15, 0.27, -0.12 }, { x * 1.2, 0.1, -0.13 } }, 0.105, 0.11, 0.06, 0.06, "dark")
+	end
+	-- 지팡이(오른손 · 땅 짚는 높이) + 보주(고리째)
+	place({ name = "Staff", parent = "Hand_R", part = "Staff", center = P(0.31, 0.4, 0.03), size = Z(0.06, 0.66, 0.06), joint = P(0.305, 0.47, 0.02), color = "dark" })
+	place({ name = "StaffOrb", parent = "Staff", part = "StaffOrb", center = P(0.31, 0.8, 0.03), size = Z(0.2, 0.14, 0.12), joint = P(0.31, 0.74, 0.03), color = "accent" })
+	-- 2폼: 왕관 · 가슴 코어 · 날개 2 × 2
+	place({ name = "Crown", parent = "Head", part = "Crown", center = P(0, 0.935, 0), size = Z(0.19, 0.15, 0.16), joint = P(0, 0.9, 0), color = "accent" })
+	place({ name = "ChestCore", parent = "Body", part = "ChestCore", center = P(0, 0.66, 0.08), size = Z(0.16, 0.18, 0.03), joint = P(0, 0.66, 0.07), color = "accent" })
+	for _, s in ipairs({ { "L", -1 }, { "R", 1 } }) do
+		local side, x = s[1], s[2]
+		place({ name = "Wing_" .. side .. "1", parent = "Body", part = "Wing_" .. side .. "1", center = P(x * 0.15, 0.82, -0.12), size = Z(0.22, 0.5, 0.06), joint = P(x * 0.05, 0.72, -0.1), color = "accent" })
+		place({ name = "Wing_" .. side .. "2", parent = "Wing_" .. side .. "1", part = "Wing_" .. side .. "2", center = P(x * 0.4, 0.82, -0.13), size = Z(0.28, 0.5, 0.06), joint = P(x * 0.26, 0.82, -0.12), color = "accent" })
+	end
+	local cape = {}
+	for _, tag in ipairs({ "A", "B", "C", "D" }) do
+		table.insert(cape, { "Cape" .. tag .. "1", "Cape" .. tag .. "2", "Cape" .. tag .. "3", "Cape" .. tag .. "4", kind = "cape", lag = 0.5, sway = 5 })
+	end
+	table.insert(cape, { "Wing_L1", "Wing_L2", kind = "wing", lag = 0.4, sway = 3 })
+	table.insert(cape, { "Wing_R1", "Wing_R2", kind = "wing", lag = 0.4, sway = 3 })
+	table.insert(cape, { "RobeF", kind = "cloth", lag = 0.4, sway = 2 })
+	table.insert(cape, { "RobeB", kind = "cloth", lag = 0.4, sway = 2 })
 	D.rigs.storm_lord_v2 = {
-		bossId = "storm_lord", variant = "v2", status = "draft", plan = "biped", joints = J, accent = Color3.fromRGB(255, 240, 90),
-		attach = { ShoulderR = { part = "UpperArm_R", at = V(0.1, 0.8, 0) }, ShoulderL = { part = "UpperArm_L", at = V(-0.1, 0.8, 0) }, HandR = { part = "Hand_R", at = V(0, -0.3, 0) }, HandL = { part = "Hand_L", at = V(0, -0.3, 0) }, Mouth = { part = "Head", at = V(0, -0.2, -0.5) }, Orb = { part = "StaffOrb", at = V(0, 0, 0) } },
-		chains = { { "CapeL1", "CapeL2", "CapeL3", "CapeL4", kind = "cape", lag = 0.5, sway = 5 }, { "CapeR1", "CapeR2", "CapeR3", "CapeR4", kind = "cape", lag = 0.5, sway = 5 },
-			{ "RobeF1", "RobeF2", kind = "cloth", lag = 0.45, sway = 3 }, { "RobeB1", "RobeB2", kind = "cloth", lag = 0.45, sway = 3 }, { "Plume", kind = "fur", lag = 0.4, sway = 4 } },
-		weight = 0.9,
+		bossId = "storm_lord", variant = "v2", status = "trial", plan = "biped", joints = L.J, accent = Color3.fromRGB(255, 240, 90),
+		scale = 1.15, -- 키 1 H × K 7.2 × S 3.75 × 1.15 = 31 stud(바이블 §5)
+		edgeHalfWidth = 7.2 * 0.2, -- 몸 가장자리 반폭(어깨 갑옷 바깥)
+		baseEdgeHalfWidth = 1.35, -- 옛 몸(폭풍 군주 직립) = 어깨 1.05 + 팔 0.3
+		cameraZoomScale = 1.3,
+		attach = { ShoulderR = { part = "UpperArm_R", at = V(0, 0.2, 0) }, ShoulderL = { part = "UpperArm_L", at = V(0, 0.2, 0) }, HandR = { part = "Hand_R", at = V(0, -0.2, 0) }, HandL = { part = "Hand_L", at = V(0, -0.2, 0) },
+			Mouth = { part = "Head", at = V(0, -0.2, -0.45) }, Orb = { part = "StaffOrb", at = V(0, 0, 0) }, FistR = { part = "Gauntlet_R", at = V(0, -0.5, 0) }, FistL = { part = "Gauntlet_L", at = V(0, -0.5, 0) } },
+		chains = cape, weight = 1.0,
+		meshKey = "bosses/storm_lord_v2m",
+		themeColors = { body = Color3.fromRGB(40, 50, 90), head = Color3.fromRGB(190, 200, 215), accent = Color3.fromRGB(255, 225, 90) },
 	}
 end
-
--- 전갈 여왕 = 몸 구조 유지(바이블 §2-4 - 옛 51관절 그대로 · 외곽선 껍데기만 KIT로 추가) → v2 리그 없음.
 
 return D
 

@@ -110,14 +110,14 @@ function ArtMeshKit.applyRig(model, key, rigId, S, lift)
 	texMeta = texMeta and texMeta.texture
 	if texMeta then
 		local ArtAssetIds = require(ReplicatedStorage.Shared.data.ArtAssetIds)
-		local e = ArtAssetIds[texMeta.atlas]
-		if e and e.image then
-			for name in pairs(texMeta.parts or {}) do
-				local mesh = model:FindFirstChild(name)
-				if mesh and mesh:IsA("MeshPart") then
-					mesh.TextureID = "rbxassetid://" .. tostring(e.image)
-					mesh.Color = Color3.new(1, 1, 1)
-				end
+		-- BOSS-NIGHT-1: 아틀라스 여러 장(texMeta.atlases · 부위 값 = 몇 번째) - 한 장이면 parts 값 = true
+		for name, which in pairs(texMeta.parts or {}) do
+			local key = (type(which) == "number" and texMeta.atlases and texMeta.atlases[which]) or texMeta.atlas
+			local e = ArtAssetIds[key]
+			local mesh = e and e.image and model:FindFirstChild(name)
+			if mesh and mesh:IsA("MeshPart") then
+				mesh.TextureID = "rbxassetid://" .. tostring(e.image)
+				mesh.Color = Color3.new(1, 1, 1)
 			end
 		end
 	end

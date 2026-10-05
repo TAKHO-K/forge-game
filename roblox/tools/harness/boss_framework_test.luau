@@ -244,12 +244,21 @@ for _, key in ipairs(keys) do
 	check("변신 세트 교체 " .. key, a.form == "before" and b.form == "after" and a.transforming and b.transforming, ("%.2f초 전 %s · 뒤 %s"):format(T.switchAt, tostring(a.form), tostring(b.form)))
 
 	-- 2-6 비용(오프라인 - luau CLI · 상대 비교만): 프레임당 evaluate + FK(접지용) 평균 μs - 옛 몸 같은 보스와 비교
-	local function cost(c, r, st, n)
+	local function cost(c, r, st, n, full)
 		local rr = BossMotion.prepare(r)
+		-- BOSS-NIGHT-1: 지금 클라 = 발 접지 사슬만 FK(BossRig.solveParts) · 기준(옛 몸 · 변경 전 클라) = 전체 FK(full) - 바이블 §1-4 "지금 × 1.5"
+		local feet = {}
+		for _, f in ipairs(r.feet or {}) do
+			table.insert(feet, f.part)
+		end
 		local t0 = os.clock()
 		for i = 1, n do
 			local pose = BossMotion.evaluate(c, st, i / 60)
-			BossRig.solve(r, CFrame.identity, 1, BossMotion.toTransforms(rr, 1, pose))
+			if full then
+				BossRig.solve(r, CFrame.identity, 1, BossMotion.toTransforms(rr, 1, pose))
+			else
+				BossRig.solveParts(r, CFrame.identity, 1, BossMotion.toTransforms(rr, 1, pose), feet)
+			end
 		end
 		return (os.clock() - t0) / n * 1e6
 	end
@@ -259,10 +268,10 @@ for _, key in ipairs(keys) do
 	-- BOSS-NIGHT-1: 옛 · 새를 교대로 3번 재 최솟값(먼저 잰 쪽의 쓰레기를 뒤에 잰 쪽이 치르는 잡음 - 같은 보스가 × 1.0 ~ 2.5로 흔들렸다)
 	local cOld, cNew = math.huge, math.huge
 	for _ = 1, 3 do
-		cOld = math.min(cOld, cost(oldCtx, oldRig, stWalk, 1500))
+		cOld = math.min(cOld, cost(oldCtx, oldRig, stWalk, 1500, true))
 		cNew = math.min(cNew, cost(ctx, rig, stWalk, 1500))
 	end
-	check("모션 비용(오프라인) " .. key, cNew <= cOld * 1.5, ("옛 %.1fμs → 새 %.1fμs(× %.2f · 합격 ≤ × 1.5)"):format(cOld, cNew, cNew / cOld))
+	check("모션 비용(오프라인) " .. key, cNew <= cOld * 1.5, ("옛 몸 · 변경 전 클라(전체 FK) %.1fμs → 새 몸 · 지금 클라(발 사슬 FK) %.1fμs(× %.2f · 합격 ≤ × 1.5)"):format(cOld, cNew, cNew / cOld))
 end
 
 -- ─────────────────────────── GUARDIAN-V2 4: 크기 × 1.5 · 몸 가장자리 기준 반경(인스턴스 데이터 - 스테이지 15 · 솔로) ───────────────────────────
@@ -520,6 +529,44 @@ do
 	check("매머드 회피 부등식(신규 포함 전 스킬)", #bad == 0, #bad == 0 and "실패 0" or table.concat(bad, " · "))
 	check("매머드 뒷발차기 회피(걷기 - 대시 · 점프 없이)", needKick <= bk.telegraphSeconds, ("인지 0.5 + 옆 8 stud 걷기 = %.2f초 ≤ 예비 %.2f"):format(needKick, bk.telegraphSeconds))
 	check("매머드 크기(등 높이 약 30 · 길이 약 39 stud)", math.abs(0.85 * 2.4 * k - 30) < 1.5, ("등 %.1f · 몸 길이(엉덩이 끝 ~ 머리 앞) %.1f · 상아 끝 ~ 꼬리 %.1f stud · 몸 가장자리 +%.2f · BodyRadius 증가"):format(0.85 * 2.4 * k, front + rear, 1.73 * 2.4 * k, edge))
+end
+
+-- ─────────────────────────── BOSS-NIGHT-1 2: 폭풍 군주 새 몸(변신 무적 · 폼 부품 · 2폼 주먹) ───────────────────────────
+do
+	local BossRules = MODS.BossRules
+	local walk = MODS.WorldConfig.playerWalkSpeedStuds
+	local d = BossRules.buildInstanceData(15, "storm_lord", 1)
+	local e, edge = BossFramework.applyBodyEdge(d, "storm_lord_v2", walk)
+	local g = BossFramework.applyV3(e, "storm_lord_v2")
+	local rig = BossRigSpec.rigs.storm_lord_v2
+	local set = MODS.BossClipSet.get("storm_lord_v2")
+	local parts = {}
+	for _, j in ipairs(rig.joints) do
+		parts[j.part] = true
+	end
+	local missing = {}
+	for _, list in pairs(set.formParts) do
+		for _, n in ipairs(list) do
+			if not parts[n] then
+				table.insert(missing, n)
+			end
+		end
+	end
+	for id, list in pairs(set.forms.after.flash) do
+		for _, n in ipairs(list) do
+			if not parts[n] then
+				table.insert(missing, "flash:" .. id .. ":" .. n)
+			end
+		end
+	end
+	check("폭풍 폼 부품 · 2폼 번쩍 부위 = 리그에 있음", #missing == 0, ("1폼 숨김 %d · 2폼 숨김 %d · 빠짐 %s"):format(#set.formParts.before, #set.formParts.after, #missing == 0 and "0" or table.concat(missing, ",")))
+	local tg = g.v3 and g.v3.transformGuard
+	check("폭풍 50% 변신 무적 2.8초(변신 동작 ≤ 무적 · 돌풍 50% + 3초보다 먼저 끝)", tg ~= nil and tg.seconds == 2.8 and tg.hpBelow == 0.5 and set.transform.seconds <= tg.seconds + 1e-6 and tg.seconds < d.environment.firstDelaySeconds,
+		tg and ("무적 %.1f초 · 변신 동작 %.1f초 · 돌풍 첫 지연 %.1f초"):format(tg.seconds, set.transform.seconds, d.environment.firstDelaySeconds) or "없음")
+	check("폭풍 근접 바닥 표시 끔 · 예비 +0.12 · 원거리 스킬 그대로", g.skills.swipe.noFloor == true and g.skills.innerSmash.noFloor == true and g.basicNoFloor and g.innerRingHidden
+		and math.abs(g.skills.swipe.telegraphSeconds - (d.skills.swipe.telegraphSeconds + 0.12)) < 1e-6 and g.skills.strike.telegraphSeconds == d.skills.strike.telegraphSeconds,
+		("강화 평타 %.2f → %.2f · 몸 가장자리 +%.2f"):format(d.skills.swipe.telegraphSeconds, g.skills.swipe.telegraphSeconds, edge))
+	check("폭풍 크기(키 약 31 stud)", math.abs(7.2 * 3.75 * rig.scale - 31) < 1.5, ("키 %.1f stud(K 7.2 × S 3.75 × %.2f)"):format(7.2 * 3.75 * rig.scale, rig.scale))
 end
 
 print(("[FRAME] 끝 %d/%d"):format(pass, total))
