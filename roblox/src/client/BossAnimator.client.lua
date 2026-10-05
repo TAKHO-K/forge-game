@@ -17,6 +17,11 @@ local BossRig = require(ReplicatedStorage.Shared.BossRig)
 local BossMotionData = require(ReplicatedStorage.Shared.data.BossMotionData)
 local BossFx = require(script.Parent.BossFx)
 local BossBodyFx = require(script.Parent.BossBodyFx) -- A2-M1 타격 충격 · 등장 · 발걸음 효과
+local BossSpring = require(script.Parent.BossSpring) -- BOSS-FRAMEWORK 3 새 몸 2차 움직임
+local SoundSheet = require(script.Parent.SoundSheet)
+local BossFramework = require(ReplicatedStorage.Shared.BossFramework)
+local FrameData = require(ReplicatedStorage.Shared.data.BossFrameworkData)
+local BossSoundData = require(ReplicatedStorage.Shared.data.BossSoundData)
 
 local localPlayer = Players.LocalPlayer
 local LOD = BossRigSpec.lod
@@ -33,15 +38,27 @@ local function yawOf(cf)
 	return math.atan2(-look.X, -look.Z)
 end
 
-local function contextFor(rigId)
+-- rigId = 리그 키(옛 몸 = 보스 id · 새 몸 = "<보스>_v2" - BOSS-FRAMEWORK) · bossId = BossData 키
+local function contextFor(rigId, bossId)
 	local ctx = contexts[rigId]
 	if not ctx then
-		local data = BossData.bosses[rigId]
+		local data = BossData.bosses[bossId or rigId]
 		ctx = BossMotion.context(rigId, BossRigSpec.rigs[rigId], data and data.skills, data and data.moveSpeedStuds)
 		ctx.prepSeconds = BossData.basicPrepSeconds -- A2-N3 결정 ② 평타 예비 동작 길이(서버 신호와 같은 값)
 		contexts[rigId] = ctx
 	end
 	return ctx
+end
+
+-- BOSS-FRAMEWORK 6 보스별 소리 자리(빈 문자열 = 재생 안 함) - 새 몸 보스만(옛 몸은 공통 큐 그대로)
+local function playSlot(e, soundId, part)
+	if not e.ctx.set or e.isClone or type(soundId) ~= "string" or soundId == "" then
+		return
+	end
+	SoundSheet.playRaw(soundId, { tier = BossSoundData.tier, part = part or e.root, minInterval = BossSoundData.minInterval })
+end
+local function soundsOf(e)
+	return BossSoundData.bosses[e.bossId or ""] or {}
 end
 
 local WEAPONS = { "IceClub", "Trident", "Staff", "Scepter" }
@@ -50,8 +67,8 @@ local function register(model)
 	if rigs[model] or not model:GetAttribute("BossRig") then
 		return
 	end
-	local rigId = model:GetAttribute("BossRig")
-	local rig = BossRigSpec.rigs[rigId]
+	local bossId = model:GetAttribute("BossRig")
+	local rig, rigId = BossRigSpec.rigOf(model) -- BOSS-FRAMEWORK 1: BossRigKey(새 몸)가 있으면 그 리그
 	local root = model:FindFirstChild("HumanoidRootPart")
 	if not rig or not root then
 		return
@@ -67,14 +84,22 @@ local function register(model)
 		weapon = weapon or model:FindFirstChild(name)
 	end
 	local entry = {
-		model = model, rigId = rigId, rig = rig, root = root, motors = motors, S = root.Size.X / 2,
-		ctx = contextFor(rigId), rest = BossMotion.prepare(rig),
+		model = model, rigId = rigId, bossId = bossId, rig = rig, root = root, motors = motors, S = root.Size.X / 2,
+		ctx = contextFor(rigId, bossId), rest = BossMotion.prepare(rig),
 		st = {}, visPos = root.Position, visYaw = yawOf(root.CFrame), groundY = root.Position.Y, gait = 0, speed = 0, turn = 0,
 		springs = {}, lastUpdate = 0, hpRatio = model:GetAttribute("BossHpRatio") or 1,
 		weapon = weapon or model:FindFirstChild("Hand_R"),
 	}
 	for i in ipairs(rig.chains or {}) do
 		entry.springs[i] = { x = 0, z = 0, vx = 0, vz = 0 }
+	end
+	if entry.ctx.set then
+		entry.spring = BossSpring.new(rig) -- BOSS-FRAMEWORK 3 마디별 스프링
+		-- 늦게 들어온 사람(이미 체력 절반 아래) = 변신 뒤 세트로 바로(변신 동작 없음)
+		if entry.hpRatio > 0 and entry.hpRatio < BossMotionData.enrage.phaseAt then
+			entry.st.form = "after"
+			entry.formDone = true
+		end
 	end
 	-- A2-M1 세밀 장식(lod 2): 폰(작은 화면 · 터치) 또는 먼 거리에서 숨긴다(LocalTransparencyModifier - 이 클라만)
 	entry.lod2 = {}
@@ -159,6 +184,21 @@ local function readState(e, now)
 		e.enraged = true
 		BossBodyFx.enrage(e)
 	end
+	-- BOSS-FRAMEWORK 4 변신(새 몸 · 겉모습만 - 서버 무변경): 겉모습 격노 순간 뒤 진행 중인 스킬 · 환경이 없을 때(최대 maxWait초 대기) 변신 동작 1회
+	if e.ctx.set and not e.isClone and not e.preview then
+		if hp > 0 and hp < BossMotionData.enrage.phaseAt and not e.formDone then
+			e.formQueuedAt = e.formQueuedAt or now
+			if not st.transformAt and ((not st.act and not st.env) or now - e.formQueuedAt > FrameData.transform.maxWait) then
+				st.transformAt = now
+				e.formDone = true
+				playSlot(e, soundsOf(e).transform)
+				playSlot(e, soundsOf(e).roar)
+			end
+		elseif hp >= 0.999 and e.formDone then
+			-- 전멸 리셋(서버가 체력을 다시 채우고 스폰 자리로 옮김) = 변신 전 세트로 되돌림
+			st.transformAt, st.form, e.formDone, e.formQueuedAt = nil, nil, nil, nil
+		end
+	end
 end
 
 -- 가까운 사람 쪽으로 머리가 먼저(몸 기준 각 · 도) - 잡기 중에는 없음(서버 FK와 같은 자세)
@@ -237,6 +277,39 @@ local function applyFlash(e, info)
 	elseif e.flashPart then
 		e.flashPart.Color, e.flashPart.Material = e.flashColor, e.flashMaterial
 		e.flashPart = nil
+	end
+end
+
+-- BOSS-FRAMEWORK 5 번쩍(새 몸): info.rim = 때리는 부위 이름들 · rimAmount 0 ~ 1 → 부위마다 Highlight(흰 테 + 옅은 흰 채움 · 위험색 아님) · 판정 시각에 꺼짐
+local function applyRim(e, info)
+	e.rims = e.rims or {}
+	local on = {}
+	if info.rim and (info.rimAmount or 0) > 0 then
+		local F = FrameData.flash
+		for _, name in ipairs(info.rim) do
+			local part = e.model:FindFirstChild(name)
+			if part and part:IsA("BasePart") then
+				on[name] = true
+				local h = e.rims[name]
+				if not h or not h.Parent then
+					h = Instance.new("Highlight")
+					h.Name = "RimFlash_" .. name
+					h.FillColor, h.OutlineColor = F.color, F.color
+					h.DepthMode = Enum.HighlightDepthMode.Occluded
+					h.Adornee = part
+					h.Parent = e.model
+					e.rims[name] = h
+				end
+				h.Enabled = true
+				h.OutlineTransparency = F.outline
+				h.FillTransparency = 1 - F.fillPeak * info.rimAmount
+			end
+		end
+	end
+	for name, h in pairs(e.rims) do
+		if not on[name] and h.Enabled then
+			h.Enabled = false
+		end
 	end
 end
 
@@ -325,8 +398,8 @@ local function startDeathClone(e)
 		end
 	end
 	local ce = {
-		model = clone, rigId = e.rigId, rig = e.rig, root = clone:FindFirstChild("HumanoidRootPart"), motors = motors, S = e.S, ctx = e.ctx, rest = e.rest,
-		st = { deadAt = e.st.deadAt }, visPos = e.visPos, visYaw = e.visYaw, groundY = e.groundY, gait = 0, speed = 0, turn = 0, springs = e.springs, lastUpdate = 0, hpRatio = 0,
+		model = clone, rigId = e.rigId, bossId = e.bossId, rig = e.rig, root = clone:FindFirstChild("HumanoidRootPart"), motors = motors, S = e.S, ctx = e.ctx, rest = e.rest,
+		st = { deadAt = e.st.deadAt, form = e.form }, spring = e.spring, visPos = e.visPos, visYaw = e.visYaw, groundY = e.groundY, gait = 0, speed = 0, turn = 0, springs = e.springs, lastUpdate = 0, hpRatio = 0,
 		isClone = true, baseTransparency = {},
 	}
 	for _, d in ipairs(clone:GetDescendants()) do
@@ -374,12 +447,17 @@ local function noteImpacts(e, st)
 			e.seen[k] = v
 			if k == "actAt" and st.act then
 				local skill = e.ctx.skills and e.ctx.skills[st.act]
-				local clip = BossMotion.clip(e.rigId, e.rig, BossMotion.clipNameForSkill(e.rigId, e.rig, st.act, skill) or "")
+				local clipName = BossMotion.clipNameForSkill(e.rigId, e.rig, st.act, skill, e.form)
+				local clip = BossMotion.clip(e.rigId, e.rig, clipName or "")
 				local hit = st.actHit or 0
+				local slot = soundsOf(e).skills and soundsOf(e).skills[st.act] -- BOSS-FRAMEWORK 6 소리 자리(전조 시작 · 접촉)
+				if slot then
+					playSlot(e, slot.windup)
+				end
 				if clip then
 					local contact = v + BossMotion.contactTime(clip, hit)
 					push(v + BossMotion.clipKeys(clip, hit).preEnd - 0.03, contact + (clip.hitstop or 0) * w + 0.25)
-					table.insert(e.fxQueue, { at = contact, clip = BossMotion.clipNameForSkill(e.rigId, e.rig, st.act, skill) })
+					table.insert(e.fxQueue, { at = contact, clip = clipName, sound = slot and slot.hit })
 				end
 			elseif k == "swingAt" then
 				push(v - 0.03, v + 0.07 + 0.04 * w + 0.25)
@@ -396,6 +474,14 @@ local function noteImpacts(e, st)
 				push(v - 0.03, v + (k == "pickAt" and 0.35 or 0.14))
 			end
 		end
+	end
+	-- BOSS-FRAMEWORK 4 변신 접촉(가슴 치기 · 수정 폭발) = 의도된 빠른 구간 · 몸 효과
+	local TF = e.ctx.set and e.ctx.set.transform
+	if TF and st.transformAt and st.transformAt ~= e.seen.transformAt then
+		e.seen.transformAt = st.transformAt
+		push(st.transformAt + TF.hit - 0.03, st.transformAt + TF.hit + 1.15)
+		table.insert(e.fxQueue, { at = st.transformAt + TF.hit, clip = TF.clip })
+		table.insert(e.fxQueue, { at = st.transformAt + TF.hit + 0.72, transformBurst = true })
 	end
 	if st.throwPlan and st.throwPlan ~= e.seen.throwPlan then
 		e.seen.throwPlan = st.throwPlan
@@ -538,10 +624,11 @@ local function updateEntry(e, now, dt, camPos)
 	local speedNow = moved.Magnitude / math.max(dt, 1e-3)
 	e.speed += (speedNow - e.speed) * (1 - math.exp(-dt * 8))
 	e.turn += (((e.visYaw - prevYaw + math.pi) % (2 * math.pi) - math.pi) / math.max(dt, 1e-3) - e.turn) * (1 - math.exp(-dt * 6))
-	local stride = (e.ctx.walk.stride or 0.7) * e.S * BossMotion.strideScale(e.ctx, e.speed) -- A2-M1: 달릴수록 보폭이 는다(BossMotion과 같은 배율 - 발 미끄러짐 없음)
+	local stride = (BossMotion.walkFor(e.ctx, e.form).stride or 0.7) * e.S * BossMotion.strideScale(e.ctx, e.speed) -- A2-M1: 달릴수록 보폭이 는다(BossMotion과 같은 배율 - 발 미끄러짐 없음) · BOSS-FRAMEWORK: 세트 보폭
 	local prevGait = e.gait
 	e.gait = (e.gait + moved.Magnitude / (2 * stride)) % 1
 	-- A2-M1 발 디딤(걸음 위상 0.25 = 왼발 · 0.75 = 오른발이 땅에 닿는 순간) → 먼지 · 무거운 보스는 작은 흔들림
+	local fourLeg = e.ctx.set and e.form ~= nil and (e.ctx.set.forms[e.form].gait == "knuckle" or e.ctx.set.forms[e.form].gait == "quad")
 	if e.speed > 1.5 and e.rig.plan == "biped" and not e.isClone then
 		local function crossed(p)
 			if prevGait <= e.gait then
@@ -556,6 +643,16 @@ local function updateEntry(e, now, dt, camPos)
 		if crossed(0.75) then
 			e.stepFeet = e.stepFeet or {}
 			table.insert(e.stepFeet, "Foot_R")
+		end
+		if fourLeg then -- BOSS-FRAMEWORK 2: 너클 · 네 발 = 앞발(주먹)도 디딘다(위상 0.5 · 0 - 0은 한 바퀴 넘어갈 때)
+			if crossed(0.5) then
+				e.stepFeet = e.stepFeet or {}
+				table.insert(e.stepFeet, "Hand_L")
+			end
+			if crossed(0) then
+				e.stepFeet = e.stepFeet or {}
+				table.insert(e.stepFeet, "Hand_R")
+			end
 		end
 	end
 
@@ -584,6 +681,7 @@ local function updateEntry(e, now, dt, camPos)
 	st.lookYaw = (e.lookW > 1e-3 and e.lookSmooth) or nil
 	st.lookW = e.lookW
 	local pose, info = BossMotion.evaluate(e.ctx, st, now)
+	e.form = info.form -- BOSS-FRAMEWORK: 지금 세트(보폭 · 발 디딤 · 사망 복제가 쓴다)
 	noteImpacts(e, st)
 	-- A2-M1 몸 효과: 접촉 순간 충격(가까울 때만) · 등장 · 등장 포효
 	if not e.isClone then
@@ -592,7 +690,14 @@ local function updateEntry(e, now, dt, camPos)
 			if now >= q.at then
 				table.remove(e.fxQueue, i)
 				if now - q.at < 0.3 and distance <= LOD.fullStuds then
-					BossBodyFx.impact(e, q.clip)
+					if q.transformBurst then
+						BossBodyFx.transformBurst(e) -- BOSS-FRAMEWORK 4 등 수정 폭발 조각
+					else
+						BossBodyFx.impact(e, q.clip)
+					end
+				end
+				if now - q.at < 0.3 then
+					playSlot(e, q.sound)
 				end
 			end
 		end
@@ -603,6 +708,7 @@ local function updateEntry(e, now, dt, camPos)
 			if info.intro.roarAt and now >= info.intro.roarAt and e.introRoared ~= st.introAt then
 				e.introRoared = st.introAt
 				BossBodyFx.impact(e, e.ctx.plan.introRoar or "roar")
+				playSlot(e, soundsOf(e).roar)
 			end
 		elseif e.introActive then
 			e.introActive = false
@@ -611,6 +717,7 @@ local function updateEntry(e, now, dt, camPos)
 		if e.stepFeet then
 			for _, foot in ipairs(e.stepFeet) do
 				BossBodyFx.footstep(e, foot)
+				playSlot(e, soundsOf(e).step, e.model:FindFirstChild(foot))
 			end
 			e.stepFeet = nil
 		end
@@ -623,12 +730,16 @@ local function updateEntry(e, now, dt, camPos)
 		e.lastVel = moved / math.max(dt, 1e-3)
 		local yawCf = CFrame.Angles(0, e.visYaw, 0)
 		local accelLocal = yawCf:VectorToObjectSpace(accelWorld) * 0.05
-		stepSprings(e, dt, accelLocal)
-		for i, chain in ipairs(e.rig.chains or {}) do
-			local s = e.springs[i]
-			for j, joint in ipairs(chain) do
-				local v = pose[joint] or { 0, 0, 0, 0, 0, 0 }
-				pose[joint] = { (v[1] or 0) + s.x * (j == 1 and 1 or 0.35), v[2] or 0, (v[3] or 0) + s.z * (j == 1 and 1 or 0.35), v[4] or 0, v[5] or 0, v[6] or 0 }
+		if e.spring then
+			BossSpring.apply(e.spring, pose, dt, accelLocal, e.turn) -- BOSS-FRAMEWORK 3 새 몸 = 마디별 스프링(폰 · lite 절반 갱신)
+		else
+			stepSprings(e, dt, accelLocal)
+			for i, chain in ipairs(e.rig.chains or {}) do
+				local s = e.springs[i]
+				for j, joint in ipairs(chain) do
+					local v = pose[joint] or { 0, 0, 0, 0, 0, 0 }
+					pose[joint] = { (v[1] or 0) + s.x * (j == 1 and 1 or 0.35), v[2] or 0, (v[3] or 0) + s.z * (j == 1 and 1 or 0.35), v[4] or 0, v[5] or 0, v[6] or 0 }
+				end
 			end
 		end
 	end
@@ -650,10 +761,23 @@ local function updateEntry(e, now, dt, camPos)
 	local transforms = BossMotion.toTransforms(e.rest, e.S, pose)
 	-- BR1-4c c-10 발 접지: 가장 낮은 발바닥을 기준 높이(발 −1.5)에 맞춘다(뜬 발 · 바닥 관통 없음) - 뛰어오른 동작 · 사망은 뺀다 · 부드럽게 · 한도 ±0.6 단위
 	local fix = 0
-	if e.rig.feet and #e.rig.feet > 0 and not info.airborne and not st.deadAt and distance <= LOD.fullStuds then
+	local feet = e.rig.feet
+	if info.contacts and e.rig.contactAt then -- BOSS-FRAMEWORK 2: 세트 접지 부위(너클 = 발 + 주먹)
+		if e.contactsFor ~= info.contacts then
+			e.contactsFor, e.contactList = info.contacts, {}
+			for _, name in ipairs(info.contacts) do
+				local at = e.rig.contactAt[name]
+				if at then
+					table.insert(e.contactList, { part = name, at = at })
+				end
+			end
+		end
+		feet = e.contactList
+	end
+	if feet and #feet > 0 and not info.airborne and not st.deadAt and distance <= LOD.fullStuds then
 		local frames = BossRig.solve(e.rig, CFrame.identity, e.S, transforms)
 		local minY = math.huge
-		for _, f in ipairs(e.rig.feet) do
+		for _, f in ipairs(feet) do
 			local cf = frames[f.part]
 			if cf then
 				minY = math.min(minY, (cf * CFrame.new(f.at * e.S)).Position.Y)
@@ -680,7 +804,11 @@ local function updateEntry(e, now, dt, camPos)
 		end
 	end
 	if not e.isClone then
-		applyFlash(e, info)
+		if e.ctx.set then
+			applyRim(e, info) -- BOSS-FRAMEWORK 5 때리는 부위 흰 테(옛 무기 번쩍 대신)
+		else
+			applyFlash(e, info)
+		end
 		applyGlare(e, info, now)
 	end
 	if e.isClone or e.preview then
@@ -788,20 +916,45 @@ local function stopPreview()
 	end
 end
 
+-- BOSS-FRAMEWORK: 동작 이름 앞 "after:" = 변신 뒤 세트로(새 몸 전시) · "transform" = 변신 동작
+local function splitForm(action)
+	local base = action:match("^after:(.+)$")
+	return base or action, base and "after" or nil
+end
+
 local function cycleOf(e, action)
-	local data = BossData.bosses[e.rigId]
+	local form
+	action, form = splitForm(action)
+	local data = BossData.bosses[e.bossId or e.rigId]
 	local skill = data and data.skills[action]
-	local fixed = { idle = 4, walk = 6, run = 4, basic = 3, flinch = 2.4, stun = 4.8, death = 4.4, grab = 10.1, throw = 3.2, intro = 4.2, introShort = 2.2 }
+	local TF = e.ctx.set and e.ctx.set.transform
+	local fixed = { idle = 4, walk = 6, run = 4, basic = 3, flinch = 2.4, stun = 4.8, death = 4.4, grab = 10.1, throw = 3.2, intro = 4.2, introShort = 2.2, transform = TF and TF.seconds + 1.2 or 3 }
 	if fixed[action] then
 		return fixed[action]
 	elseif skill then
-		local clip = BossMotion.clip(e.rigId, e.rig, BossMotion.clipNameForSkill(e.rigId, e.rig, action, skill) or "")
+		local clip = BossMotion.clip(e.rigId, e.rig, BossMotion.clipNameForSkill(e.rigId, e.rig, action, skill, form) or "")
 		return (skill.telegraphSeconds or 1.5) + ((clip and clip.loop) and 3 or 1.8)
 	end
 	return 3
 end
 
-local function allActions(rigId)
+local function allActions(rigId, e)
+	if e and e.ctx.set then -- BOSS-FRAMEWORK 새 몸: 변신 전 · 변신 · 변신 뒤
+		local list = { "intro", "idle", "walk", "run" }
+		for _, id in ipairs(e.ctx.set.signature or {}) do
+			table.insert(list, id)
+		end
+		for _, a in ipairs({ "transform", "after:idle", "after:walk", "after:run" }) do
+			table.insert(list, a)
+		end
+		for _, id in ipairs(e.ctx.set.signature or {}) do
+			table.insert(list, "after:" .. id)
+		end
+		for _, a in ipairs({ "swipe", "grab", "stun", "flinch", "death" }) do
+			table.insert(list, a)
+		end
+		return list
+	end
 	local boss = BossMotionData.bosses[rigId]
 	local list = { "intro", "idle", "walk", "run", "basic", "swipe" }
 	for _, id in ipairs(boss and boss.signature or {}) do
@@ -842,7 +995,13 @@ local function previewStep(e, now, dt)
 	end
 	localPlayer:SetAttribute("BossAnimAction", action) -- A2-M1 측정기가 동작별로 나눠 센다
 	local st = {}
-	local data = BossData.bosses[e.rigId]
+	local form
+	action, form = splitForm(action)
+	if e.ctx.set then
+		st.form = form or (action ~= "transform" and "before" or nil)
+		st.inCombat = true
+	end
+	local data = BossData.bosses[e.bossId or e.rigId]
 	local move = data.moveSpeedStuds or 8
 	local speed = 0
 	if action == "walk" then
@@ -858,6 +1017,8 @@ local function previewStep(e, now, dt)
 		st.stunAt, st.stunUntil = P.cycleAt + 0.2, P.cycleAt + 4.2
 	elseif action == "death" then
 		st.deadAt = P.cycleAt + 0.3
+	elseif action == "transform" then
+		st.transformAt = P.cycleAt + 0.3
 	elseif action == "intro" or action == "introShort" then -- A2-M1 등장(첫 조우 3초 · 짧은 판 1.2초 - 서버 BossData.mechanics.intro와 같은 길이)
 		local I = BossData.mechanics.intro
 		st.introAt, st.introSeconds, st.introFull = P.cycleAt + 0.3, action == "intro" and I.firstSeconds or I.shortSeconds, action == "intro"
@@ -908,7 +1069,8 @@ local function startPreview(payload)
 	if type(payload) ~= "table" then
 		return
 	end
-	local rig = BossRigSpec.rigs[payload.bossId]
+	local rigKey = BossFramework.rigKeyFor(payload.bossId) or payload.bossId -- BOSS-FRAMEWORK: Studio 시험 스위치면 새 몸
+	local rig = BossRigSpec.rigs[rigKey]
 	local data = BossData.bosses[payload.bossId]
 	local char = localPlayer.Character
 	local myRoot = char and char:FindFirstChild("HumanoidRootPart")
@@ -930,6 +1092,14 @@ local function startPreview(payload)
 	root.CFrame = CFrame.lookAt(center, Vector3.new(myRoot.Position.X, center.Y, myRoot.Position.Z))
 	model.PrimaryPart = root
 	model:SetAttribute("BossRig", payload.bossId)
+	if rigKey ~= payload.bossId then
+		model:SetAttribute("BossRigKey", rigKey)
+		-- 새 몸 전시 = KIT 메시가 캐시에 있으면 실전처럼 끼운다(옛 몸 전시는 그대로 상자)
+		local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit)
+		if rig.meshKey and ArtMeshKit.get(rig.meshKey) then
+			ArtMeshKit.applyRig(model, rig.meshKey, rigKey, S, BossRig.rootLift(rig, S))
+		end
+	end
 	model.Parent = Workspace
 	register(model)
 	local e = rigs[model]
@@ -937,7 +1107,7 @@ local function startPreview(payload)
 		model:Destroy()
 		return
 	end
-	local list = payload.action == "all" and allActions(payload.bossId) or { payload.action }
+	local list = payload.action == "all" and allActions(payload.bossId, e) or { payload.action }
 	e.preview = { list = list, index = 1, rep = payload.rep, count = 0, cycleAt = serverNow(), center = center, radius = 10 + 2 * S, angle = 0, dummies = {}, baseTransparency = {} }
 	e.previewStep = previewStep
 	for _, d in ipairs(model:GetDescendants()) do

@@ -2126,6 +2126,33 @@ local function handleCommand(player, args)
 				result.firstGimmickAt and ("%.1f"):format(result.firstGimmickAt) or "-", result.minGapSeconds,
 				tostring(result.worstAdjacentPair), result.worstAdjacentShare * 100))
 		end
+	elseif sub == "boss" and args[2] == "frame" then
+		-- BOSS-FRAMEWORK: "/gg boss frame on|off" = Studio 시험 스위치(workspace BossFrameworkTrial - 다음 보스 스폰부터 새 몸) · "/gg boss frame" = 리그 v2 검사 + 빠짐 검사 출력
+		local FrameData = require(ReplicatedStorage.Shared.data.BossFrameworkData)
+		if args[3] == "on" or args[3] == "off" then
+			workspace:SetAttribute(FrameData.trialAttribute, args[3] == "on" or nil)
+			reply(player, ("새 몸 시험 스위치 %s(다음 보스 스폰부터 · 대상 %s)"):format(args[3], (function()
+				local t = {}
+				for id, v in pairs(FrameData.studioTrial) do
+					table.insert(t, id .. "_" .. v)
+				end
+				return table.concat(t, " · ")
+			end)()))
+		else
+			local BossFramework = require(ReplicatedStorage.Shared.BossFramework)
+			local BossClipSet = require(ReplicatedStorage.Shared.BossClipSet)
+			local BossMotion = require(ReplicatedStorage.Shared.BossMotion)
+			for id, v in pairs(FrameData.studioTrial) do
+				local key = id .. "_" .. v
+				local ok, lines = BossFramework.checkRig(key)
+				print(("[BossFrame] 리그 %s %s · %s"):format(key, ok and "O" or "X", table.concat(lines, " · ")))
+				local cok, rows = BossClipSet.coverage(key, BossData.bosses[id].skills, require(ReplicatedStorage.Shared.data.BossSoundData), BossMotion.contactTime)
+				for _, r in ipairs(rows) do
+					print(("[BossFrame]   %s %s %s %s"):format(r.ok and "O" or "X", r.form, r.key, r.what))
+				end
+				reply(player, ("boss frame %s: 리그 %s · 빠짐 검사 %s(%d줄) · 시험 스위치 %s"):format(key, ok and "O" or "X", cok and "O" or "X", #rows, tostring(workspace:GetAttribute(FrameData.trialAttribute) == true)))
+			end
+		end
 	elseif sub == "boss" and args[2] == "check" and args[3] then
 		-- 29-2(PRD 20.75 B·D): 스킬표를 고친 뒤 바로 돌려 보는 검사 - 회피 부등식(배율 1·최대)과 인접 피해 합.
 		local bossId = args[3]

@@ -153,7 +153,8 @@ end
 
 -- 동작 접촉 순간(BossAnimator가 시각에 맞춰 부른다)
 function BossBodyFx.impact(e, clipName)
-	local spec = BossMotionData.impacts[clipName or ""]
+	local setFx = e.ctx and e.ctx.set and e.ctx.set.impacts -- BOSS-FRAMEWORK: 새 몸 전용 동작의 효과(세트 impacts) → 없으면 공통 표
+	local spec = (setFx and setFx[clipName or ""]) or BossMotionData.impacts[clipName or ""]
 	if not spec then
 		return
 	end
@@ -180,6 +181,30 @@ function BossBodyFx.impact(e, clipName)
 	end
 	if spec.heavy and n > 0 then
 		heavyGround(e, sum / n)
+	end
+end
+
+-- BOSS-FRAMEWORK 4 변신 순간 등 수정 폭발: 수정 부위(Crystal*)마다 결정 조각이 위 · 바깥으로 튐(보스 강조색 · Glass - Neon 흰 날림 규칙 피함) + 작은 흔들림
+function BossBodyFx.transformBurst(e)
+	local c = colorsOf(e)
+	local center = e.visPos or e.root.Position
+	local any = nil
+	for _, d in ipairs(e.model:GetChildren()) do
+		if d:IsA("BasePart") and d.Name:match("^Crystal%d") then
+			any = d.Position
+			local out = Vector3.new(d.Position.X - center.X, 0, d.Position.Z - center.Z)
+			out = out.Magnitude > 1e-3 and out.Unit or Vector3.new(0, 0, 1)
+			for _ = 1, 4 do
+				local spread = Vector3.new(rnd(-0.5, 0.5), 0, rnd(-0.5, 0.5))
+				BossFx.spawn({ shape = "block", position = d.Position, velocity = (out + spread) * rnd(10, 16) + Vector3.new(0, rnd(10, 18), 0), gravity = 50,
+					size0 = Vector3.new(0.18, 0.5, 0.18) * e.S, size1 = Vector3.new(0.08, 0.2, 0.08) * e.S, color = c.accent, transparency0 = 0.05, transparency1 = 1,
+					life = rnd(0.7, 1.0), material = Enum.Material.Glass, spin = rnd(-12, 12), rotation = CFrame.Angles(rnd(0, 3), rnd(0, 3), rnd(0, 3)) })
+			end
+		end
+	end
+	if any then
+		BossFx.ring(Vector3.new(any.X, floorY(e) + 0.2, any.Z), 0.5 * e.S, 2.4 * e.S, c.accent, 0.35, 0.45)
+		BossFx.shake(any, 0.6)
 	end
 end
 

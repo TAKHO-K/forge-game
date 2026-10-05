@@ -24,6 +24,7 @@ local HeightGuard = require(script.Parent.HeightGuard)
 local BossRigSpec = require(ReplicatedStorage.Shared.data.BossRigSpec)
 local BossRig = require(ReplicatedStorage.Shared.BossRig)
 local BossMotion = require(ReplicatedStorage.Shared.BossMotion)
+local BossMotionData = require(ReplicatedStorage.Shared.data.BossMotionData) -- BOSS-FRAMEWORK 변신 기준(enrage.phaseAt)
 local PlayerStun = require(script.Parent.PlayerStun) -- BR1-3 기절 면역(연속 기절 방지 - 얼림도 같은 규칙)
 
 local BossAirGrab = {}
@@ -163,7 +164,8 @@ local function rigHoldPoint(c, index)
 	local slot = slots[math.min(index, #slots)]
 	local m = c.model
 	local st = { act = m:GetAttribute("BossAct"), actAt = m:GetAttribute("BossActAt"), actHit = m:GetAttribute("BossActHit"), speed = 0,
-		pickAt = m:GetAttribute("BossPickAt"), inCombat = true, noOverlap = true } -- BR1-4c: 클라와 같은 보스전 기본 자세 · A2-M1: 잡기 중 겹침 지연 끔(클라도 잡기 중 끔 - 같은 부착점)
+		pickAt = m:GetAttribute("BossPickAt"), inCombat = true, noOverlap = true,
+		form = rig.variant and (((m:GetAttribute("BossHpRatio") or 1) < BossMotionData.enrage.phaseAt) and "after" or "before") or nil } -- BOSS-FRAMEWORK: 새 몸 = 체력 절반 아래면 변신 뒤 세트(클라 겉모습과 같은 기준) -- BR1-4c: 클라와 같은 보스전 기본 자세 · A2-M1: 잡기 중 겹침 지연 끔(클라도 잡기 중 끔 - 같은 부착점)
 	local plan = m:GetAttribute("BossThrowPlan") -- 4b 리뷰 1: 지난 회차의 던지기 예정은 버린다(클라 readState와 같은 거르기)
 	st.throwPlan = (plan and st.actAt and plan > st.actAt) and plan or nil
 	local S = root.Size.X / 2
