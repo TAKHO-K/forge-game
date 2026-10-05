@@ -91,11 +91,12 @@ end
 -- A2-M1 보스별 카메라 거리: 보스전에 들어서면(BossEncounterId) 지금 거리가 그 보스의 cameraZoomStuds보다 가까울 때만 한 번 그 거리로 물린다(큰 보스가 화면을 넘치지 않게) → 곧 원래 범위로 푼다(휠 자유).
 local CollectionService = game:GetService("CollectionService")
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
+local BossFramework = require(ReplicatedStorage.Shared.BossFramework)
 local function bossZoomFor(encounterId)
 	for _, m in ipairs(CollectionService:GetTagged("Monster")) do
 		if m:GetAttribute("BossEncounterId") == encounterId then
 			local boss = BossData.bosses[m:GetAttribute("BossRig") or ""]
-			return boss and boss.cameraZoomStuds, m:GetAttribute("BossRig"), m
+			return boss and boss.cameraZoomStuds and boss.cameraZoomStuds * BossFramework.cameraZoomScaleOf(m), m:GetAttribute("BossRig"), m -- GUARDIAN-V2: 새 몸 × cameraZoomScale
 		end
 	end
 	return nil

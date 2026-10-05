@@ -260,4 +260,90 @@ for _, key in ipairs(keys) do
 	check("모션 비용(오프라인) " .. key, cNew <= cOld * 1.5, ("옛 %.1fμs → 새 %.1fμs(× %.2f · 합격 ≤ × 1.5)"):format(cOld, cNew, cNew / cOld))
 end
 
+-- ─────────────────────────── GUARDIAN-V2 4: 크기 × 1.5 · 몸 가장자리 기준 반경(인스턴스 데이터 - 스테이지 15 · 솔로) ───────────────────────────
+do
+	local BossRules = MODS.BossRules
+	local walk = MODS.WorldConfig.playerWalkSpeedStuds
+	local ids = sortedKeys(BossData.bosses)
+	local same = 0
+	for _, id in ipairs(ids) do
+		local d = BossRules.buildInstanceData(15, id, 1)
+		local out, edge = BossFramework.applyBodyEdge(d, id .. "_v2", walk)
+		if id ~= "section_guardian" then
+			if out == d and edge == 0 then
+				same += 1
+			end
+		end
+	end
+	check("몸 가장자리 장치 - 다른 5보스 값 변화 0", same == #ids - 1, ("%d / %d(표에 없음 = 사본도 안 만듦)"):format(same, #ids - 1))
+	local d = BossRules.buildInstanceData(15, "section_guardian", 1)
+	local g, edge, fitted = BossFramework.applyBodyEdge(d, "section_guardian_v2", walk)
+	local rig = BossRigSpec.rigs.section_guardian_v2
+	local rows = {}
+	local function cmp(label, a, b)
+		table.insert(rows, ("%s %.1f → %.1f"):format(label, a or 0, b or 0))
+	end
+	cmp("강공격 r", d.skills.heavy.radiusStuds, g.skills.heavy.radiusStuds)
+	cmp("원 안 내려찍기 r", d.skills.innerSmash.radiusStuds, g.skills.innerSmash.radiusStuds)
+	cmp("강화 평타 부채 r", d.skills.swipe.radiusStuds, g.skills.swipe.radiusStuds)
+	cmp("강화 평타 대상 거리", d.skills.swipe.conditions[1].studs, g.skills.swipe.conditions[1].studs)
+	cmp("반사 결계 r", d.skills.mirror.barrierRadiusStuds, g.skills.mirror.barrierRadiusStuds)
+	cmp("근접 원형 구역 r", d.innerSafeRadiusStuds, g.innerSafeRadiusStuds)
+	cmp("추격 정지", d.chaseStopDistanceStuds, g.chaseStopDistanceStuds)
+	local nfit = 0
+	for _ in pairs(fitted) do
+		nfit += 1
+	end
+	local okEdge = math.abs(edge - BossFramework.edgeGrowth(rig, d.sizeScale)) < 1e-6 and edge > 0
+	check("몸 가장자리 수호자 +" .. ("%.2f"):format(edge) .. " stud", okEdge and nfit == 0 and d.skills.heavy.radiusStuds == MODS.BossRules.buildInstanceData(15, "section_guardian", 1).skills.heavy.radiusStuds,
+		table.concat(rows, " · ") .. (" · 전조 맞춤 다시 %d개(서 있는 거리도 같이 늘어 0이어야)"):format(nfit))
+	-- 크기 × 1.5: 보이는 몸 · 판정 사본 · 피격 반경
+	local S = d.sizeScale
+	local old = BossRigSpec.rigs.section_guardian
+	local function bodyOf(r)
+		for _, j in ipairs(r.joints) do
+			if j.part == "Body" then
+				return j.size
+			end
+		end
+	end
+	local oldBody, newBody = bodyOf(old), bodyOf(rig)
+	local volOld = MODS.BossSkeleton.queryVolume(old) * S ^ 3
+	local volNew = MODS.BossSkeleton.queryVolume(rig) * (S * rig.scale) ^ 3
+	check("크기 × " .. rig.scale, rig.scale == 1.5 and math.abs(volNew / volOld / 1.5 ^ 3 - 1) <= Frame.budget.queryVolumeTolerance + 1e-6,
+		("판정 사본 부피 %.0f → %.0f stud³(× %.2f = 1.5³ × %.2f) · 몸통 판정 %.1f×%.1f×%.1f → %.1f×%.1f×%.1f · 가장자리 반폭 %.1f → %.1f stud · 카메라 34 → %.1f"):format(
+			volOld, volNew, volNew / volOld, volNew / volOld / 1.5 ^ 3, oldBody.X * S, oldBody.Y * S, oldBody.Z * S, newBody.X * S * rig.scale, newBody.Y * S * rig.scale, newBody.Z * S * rig.scale,
+			rig.baseEdgeHalfWidth * S, rig.edgeHalfWidth * S * rig.scale, BossData.bosses.section_guardian.cameraZoomStuds * rig.cameraZoomScale))
+	-- 때리는 부위 = 전조 안(보스 중심 원 · 부채): 접촉 순간 번쩍 부위 수평 거리 ≤ 반경(+ 가장자리) · 땅 치기는 높이 바닥 ±0.25 단위
+	local ctx2 = BossMotion.context("section_guardian_v2", rig, g.skills, g.moveSpeedStuds)
+	local rest2 = BossMotion.prepare(rig)
+	local sizes = {}
+	for _, j in ipairs(rig.joints) do
+		sizes[j.part] = j.size
+	end
+	local reach = {}
+	local reachOk = true
+	for _, sid in ipairs({ "heavy", "innerSmash", "swipe" }) do
+		local sk = g.skills[sid]
+		for _, form in ipairs({ "before", "after" }) do
+			local name = BossMotion.clipNameForSkill("section_guardian_v2", rig, sid, sk, form)
+			local clip = BossMotion.clip("section_guardian_v2", rig, name)
+			local tc = BossMotion.contactTime(clip, sk.telegraphSeconds)
+			local pose = BossMotion.evaluate(ctx2, { form = form, inCombat = true, speed = 0, gait = 0, act = sid, actAt = 0, actHit = sk.telegraphSeconds }, tc + 0.001)
+			local frames = BossRig.solve(rig, CFrame.identity, 1, BossMotion.toTransforms(rest2, 1, pose))
+			local far, lowY = 0, math.huge
+			for _, part in ipairs(ctx2.set.flash[sid]) do
+				local p = (frames[part] * CFrame.new(0, -sizes[part].Y / 2, 0)).Position
+				far = math.max(far, math.sqrt(p.X ^ 2 + p.Z ^ 2) * S * rig.scale)
+				lowY = math.min(lowY, p.Y)
+			end
+			local ground = sk.primitive ~= "sector"
+			local good = far <= sk.radiusStuds + 0.05 and (not ground or math.abs(lowY + 1.5) <= 0.25)
+			reachOk = reachOk and good
+			table.insert(reach, ("%s/%s %.1f ≤ %.1f%s"):format(sid, form, far, sk.radiusStuds, ground and (" · 높이 %.2f"):format(lowY) or ""))
+		end
+	end
+	check("때리는 부위 = 전조 안", reachOk, table.concat(reach, " · "))
+end
+
 print(("[FRAME] 끝 %d/%d"):format(pass, total))

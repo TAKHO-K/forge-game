@@ -241,6 +241,7 @@ event.OnClientEvent:Connect(function(data)
 	-- A2-N4 P0-4: 연출 끝 거리(= CameraRig가 연출 끝에 붙잡는 거리)
 	local zoomCfg = MovementConfig.camera
 	local endDist = ((BossData.bosses[data.bossId or ""] or {}).cameraZoomStuds or 26) * (Workspace:GetAttribute("ArtStyleV1") and ((zoomCfg.bossZoomFactorOf and zoomCfg.bossZoomFactorOf[data.bossId or ""]) or zoomCfg.bossZoomFactor) or 1)
+		* require(ReplicatedStorage.Shared.BossFramework).cameraZoomScaleOf(data.model) -- GUARDIAN-V2: 새 몸 카메라 × cameraZoomScale
 	-- A2-N4 P0-4: 연출 시작부터 줌을 끝 거리로 묶는다 - 기본 카메라의 줌 스프링은 Custom으로 돌아온 뒤 옛 값에서 출발해(20 → 32.3) 줌아웃처럼 보였다. 연출 동안 미리 끝 거리로 가 있게(CameraRig가 연출 끝 + 1초에 푼다)
 	local zoomWas = { player.CameraMinZoomDistance, player.CameraMaxZoomDistance }
 	if Workspace:GetAttribute("ArtStyleV1") and endDist then

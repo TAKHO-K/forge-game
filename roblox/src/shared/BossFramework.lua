@@ -33,6 +33,74 @@ function BossFramework.edgeGrowth(rig, S)
 	return math.max(0, rig.edgeHalfWidth * S * (rig.scale or 1) - rig.baseEdgeHalfWidth * S)
 end
 
+-- GUARDIAN-V2 몸 가장자리 기준 장치: 인스턴스 데이터 사본에 반경 + 늘어난 몸 반지름(Data.bodyEdge[보스] - 없으면 그대로 돌려준다 · 원본 무변경).
+--   rigKey = 이번에 뜨는 새 몸(rigKeyFor) · walk = 플레이어 걷기 속도(전조 맞춤 다시 - 서 있는 거리도 같이 늘어 보통 0초) · 반환 data, edge(stud), fitted({ [id] = 늘린 초 })
+function BossFramework.applyBodyEdge(data, rigKey, walk)
+	local cfg = data and Data.bodyEdge[data.id]
+	local rig = rigKey and BossRigSpec.rigs[rigKey]
+	local edge = (cfg and rig) and BossFramework.edgeGrowth(rig, data.sizeScale or 1) or 0
+	if edge <= 0 then
+		return data, 0, {}
+	end
+	local out = table.clone(data)
+	out.bodyEdgeStuds = edge
+	if cfg.innerSafe and out.innerSafeRadiusStuds then
+		out.innerSafeRadiusStuds += edge
+	end
+	if cfg.chaseStop and out.chaseStopDistanceStuds then
+		out.chaseStopDistanceStuds += edge
+	end
+	local skills, fitted = table.clone(out.skills or {}), {}
+	for id in pairs(cfg.skills or {}) do
+		local s = skills[id]
+		if s then
+			s = table.clone(s)
+			for _, k in ipairs({ "radiusStuds", "innerRadiusStuds", "barrierRadiusStuds" }) do
+				if type(s[k]) == "number" and s[k] > 0 then
+					s[k] += edge
+				end
+			end
+			if s.volleyShots then
+				local list = {}
+				for i, v in ipairs(s.volleyShots) do
+					list[i] = table.clone(v)
+					if v.radiusStuds then
+						list[i].radiusStuds = v.radiusStuds + edge
+					end
+				end
+				s.volleyShots = list
+			end
+			if s.conditions then
+				local list = {}
+				for i, c in ipairs(s.conditions) do
+					list[i] = table.clone(c)
+					if c.type == "targetWithin" and c.studs then
+						list[i].studs = c.studs + edge
+					end
+				end
+				s.conditions = list
+			end
+			if walk then
+				local BossSkillMath = require(ReplicatedStorage.Shared.BossSkillMath)
+				local _, added = BossSkillMath.fitTelegraphs(s, 8 + edge, walk) -- 서 있는 거리(추격 정지 8)도 같이 늘었다
+				if added > 0 then
+					fitted[id] = added
+				end
+			end
+			skills[id] = s
+		end
+	end
+	out.skills = skills
+	return out, edge, fitted
+end
+
+-- 카메라 줌 배율(새 몸 rig.cameraZoomScale - 모델 BossRigKey)
+function BossFramework.cameraZoomScaleOf(model)
+	local key = model and model:GetAttribute("BossRigKey")
+	local rig = key and BossRigSpec.rigs[key]
+	return rig and rig.cameraZoomScale or 1
+end
+
 -- 리그 검사: 반환 ok, lines(사람이 읽는 줄), stats
 function BossFramework.checkRig(key)
 	local rig = BossRigSpec.rigs[key]

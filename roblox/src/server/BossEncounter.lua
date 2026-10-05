@@ -31,6 +31,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
+local BossFramework = require(ReplicatedStorage.Shared.BossFramework) -- GUARDIAN-V2 몸 가장자리 기준 반경
 local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local MonsterState = require(script.Parent.MonsterState)
 local HeightGuard = require(script.Parent.HeightGuard) -- G2a 리뷰: 순간이동 뒤 높이 기준 새로(50 넘게 움직이면 자동이지만 명시)
@@ -386,6 +387,19 @@ end
 BossEncounter.startIntro = startIntro
 
 local function spawnEncounter(data, stage, members, party, size, owner, isTutorial)
+	-- GUARDIAN-V2: 새 몸이 뜨면 근접 반경 = 몸 가장자리 기준(BossFrameworkData.bodyEdge - 보스별 · 기본 끔)
+	local edgeKey = BossFramework.rigKeyFor(data.id)
+	if edgeKey then
+		local edge, fitted
+		data, edge, fitted = BossFramework.applyBodyEdge(data, edgeKey, WorldConfig.playerWalkSpeedStuds)
+		if edge > 0 then
+			local f = {}
+			for id, s in pairs(fitted) do
+				table.insert(f, ("%s +%.2f초"):format(id, s))
+			end
+			print(("[forge-game] %s 몸 가장자리 +%.2f stud(반경 · 근접 원 · 추격 정지)%s"):format(data.displayName or data.id, edge, #f > 0 and (" · 전조 맞춤 " .. table.concat(f, ", ")) or ""))
+		end
+	end
 	local slot = allocateSlot()
 	local zoneKey = zoneKeyForSlot(slot)
 	BossArenaMap.dress(zoneKey, data) -- P3a C: 기반(처음이면 짓는다) + 이 보스의 테마 · 장식 · 구조물 - 텔레포트 전에(바닥이 먼저 있어야 한다)

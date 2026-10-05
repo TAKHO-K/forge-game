@@ -8,6 +8,13 @@ D.live = {}
 D.studioTrial = { section_guardian = "v2" }
 D.trialAttribute = "BossFrameworkTrial"
 
+-- GUARDIAN-V2 몸 가장자리 기준 근접 반경(바이블 §5 - 공통 장치 · 보스별 · 기본 끔 = 표에 없음): 새 몸(리그 v2 · edgeHalfWidth)이 뜰 때만
+--   반경 = 기존 값 + 늘어난 몸 반지름(BossFramework.edgeGrowth - 서버 spawnEncounter가 인스턴스 사본에 얹는다 · BossData 원본 무변경).
+--   skills = { [스킬 id] = true }(보스 중심 원 · 부채 반경 · 안쪽 반경 · 대상 거리 조건 · 반사 결계 반경) · innerSafe = 근접 원형 구역 · chaseStop = 추격 정지 거리.
+D.bodyEdge = {
+	section_guardian = { skills = { heavy = true, innerSmash = true, swipe = true, mirror = true }, innerSafe = true, chaseStop = true },
+}
+
 -- 예산(바이블 §1-4) - 하네스 · /gg boss frame check가 검사한다
 D.budget = {
 	joints = 60, meshParts = 90, outlines = 12, neon = 10, tris = 30000, partTris = 5000, outlineTris = 8000, atlases = 3, atlasSize = 1024,
