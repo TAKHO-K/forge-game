@@ -86,6 +86,9 @@ local function resolveMotion(set, form, name)
 	end
 	local planKey = name:match("^plan:(.+)$")
 	if planKey then
+		if set.planPatch and set.planPatch[planKey] ~= nil then -- GUARDIAN-V2: 세트가 덮어쓴 plan 값 = 전용
+			return true, "전용 plan " .. planKey
+		end
 		return set.planData[planKey] ~= nil, "빌림(plan " .. planKey .. ")"
 	end
 	if name == "@grab" then

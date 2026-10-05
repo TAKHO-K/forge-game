@@ -410,7 +410,7 @@ end
 function BossBodyFx.death(e, info)
 	local c = colorsOf(e)
 	-- X X 눈: 별이 돌기 시작할 때 눈 막대를 숨기고 머리 앞에 X 두 개(이 클라 파트 - 복제와 함께 사라진다)
-	if info.stars and not e.xEyes then
+	if info.stars and not e.xEyes and not e.model:FindFirstChild("Eyes_Dazed") then -- GUARDIAN-V2: 표정 눈이 있는 몸 = 헤롱 눈(소용돌이)이 X 눈을 대신
 		e.xEyes = true
 		local head = e.model:FindFirstChild("Head")
 		local eyes = e.model:FindFirstChild("Eyes")

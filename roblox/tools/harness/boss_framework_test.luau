@@ -195,9 +195,30 @@ for _, key in ipairs(keys) do
 				local contact = clip and BossMotion.contactTime(clip, hit) or hit
 				local preEnd = clip and BossMotion.clipKeys(clip, hit).preEnd or hit
 				local hs = clip and (clip.hitstop or 0) * (rig.weight or 1) or 0
+				local excl = { { 0.3 + preEnd - 0.03, 0.3 + contact + hs + 0.25 } } -- 의도된 타격 창 = boss_motion_test와 같음(휘두르기 시작 ~ 접촉 + 정지 + 0.25)
+				-- GUARDIAN-V2: 동작 데이터의 extraStrikes(가슴 치기 · 둘째 볼리 · 연타) = 같은 잣대의 창(앞 키 ~ 그 키 + 정지 + 0.25)
+				if clip and clip.extraStrikes then
+					local K = BossMotion.clipKeys(clip, hit)
+					local times = {}
+					for _, f in ipairs(clip.extraStrikes.pre or {}) do
+						table.insert(times, f * K.preEnd)
+					end
+					for _, s in ipairs(clip.extraStrikes.post or {}) do
+						table.insert(times, hit + s - K.strike + hs)
+					end
+					for _, tk in ipairs(times) do
+						local prev = 0
+						for _, k in ipairs(K.keys) do
+							if k.t < tk - 1e-6 then
+								prev = math.max(prev, k.t)
+							end
+						end
+						table.insert(excl, { 0.3 + prev - 0.03, 0.3 + tk + hs + 0.25 })
+					end
+				end
 				local ev, worst, part, t = run(function(tt)
 					return { form = formName, inCombat = true, speed = 0, gait = 0, act = sid, actAt = 0.3, actHit = hit, actEndAt = (tt > 0.3 + hit + 2.2) and (0.3 + hit + 2.2) or nil }
-				end, hit + 3.2, { { 0.3 + preEnd - 0.03, 0.3 + contact + hs + 0.25 } }) -- 의도된 타격 창 = boss_motion_test와 같음(휘두르기 시작 ~ 접촉 + 정지 + 0.25)
+				end, hit + 3.2, excl)
 				report(("%s:%s(%s)"):format(formName, sid, tostring(name)), ev, worst, part, t, (" contact-hit=%.3f"):format(contact - hit))
 			end
 		end

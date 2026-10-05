@@ -246,7 +246,7 @@ local GLARE = Color3.fromRGB(255, 40, 30)
 local SNORT = Color3.fromRGB(235, 228, 214)
 local function applyGlare(e, info, now)
 	local eyes = e.model:FindFirstChild("Eyes")
-	if not eyes then
+	if not eyes or (e.ctx.set and e.ctx.set.face) then -- GUARDIAN-V2: 표정 있는 새 몸 = 화남 눈 모양이 노려봄을 대신(눈 색 그대로 · 빨강 금지)
 		return
 	end
 	e.eyeColor = e.eyeColor or eyes.Color
@@ -755,6 +755,22 @@ local function updateEntry(e, now, dt, camPos)
 	end
 	if math.abs(e.eyeCur[1]) + math.abs(e.eyeCur[2]) + math.abs(e.eyeCur[3]) > 0.05 then
 		pose.Eyes = { e.eyeCur[1], e.eyeCur[2], e.eyeCur[3], 0, 0, 0 }
+	end
+
+	-- GUARDIAN-V2 표정: 눈 Neon 모양 3개 중 하나만 보인다(바뀔 때만 · LocalTransparencyModifier - 사망 사라짐 연출의 Transparency와 따로). 그 모양 메시가 없으면(상자 몸) 평소 눈 그대로.
+	local FaceSpec = e.ctx.set and e.ctx.set.face
+	if FaceSpec and info.face ~= e.face then
+		local want = FaceSpec.eyes[info.face or "normal"]
+		if not (want and e.model:FindFirstChild(want)) then
+			want = FaceSpec.eyes.normal
+		end
+		for _, partName in pairs(FaceSpec.eyes) do
+			local p = e.model:FindFirstChild(partName)
+			if p and p:IsA("BasePart") then
+				p.LocalTransparencyModifier = partName == want and 0 or 1
+			end
+		end
+		e.face = info.face
 	end
 
 	-- 쓰기: RootJoint = 보간 오프셋 · 자세

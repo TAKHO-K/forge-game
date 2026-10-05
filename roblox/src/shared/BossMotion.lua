@@ -785,6 +785,38 @@ function BossMotion.evaluate(ctx, st, now)
 		end
 		info.dead = true
 	end
+	-- GUARDIAN-V2 표정(세트 face - 입 없는 몸): 눈 Neon 모양(클라가 보이기를 바꾼다) + 눈썹 바위(세기 = 시각 비율 - 상태가 바뀌어도 튐 없음).
+	--   헤롱 = 기절 · 처치 · 화남 = 스킬 · 환경 · 변신 · 등장 · 던지기 · 평소 = 그 밖.
+	local Fc = ctx.set and ctx.set.face
+	if Fc then
+		local function window(from, to, rampIn, rampOut)
+			if not from or now < from then
+				return 0
+			end
+			local k = ease("sine", (now - from) / rampIn)
+			if to then
+				k *= 1 - ease("sine", (now - to) / rampOut)
+			end
+			return k
+		end
+		local TFc = ctx.set.transform
+		local angry = math.max(
+			(st.act and (not ctx.skills or ctx.skills[st.act])) and window(st.actAt, st.actEndAt, 0.25, 0.3) or 0, -- 스킬만(전시 리그는 대기 · 걷기도 act 이름을 넣는다)
+			st.env and window(st.envAt, st.envEndAt, 0.25, 0.3) or 0,
+			(st.transformAt and TFc) and window(st.transformAt, st.transformAt + TFc.seconds, 0.25, 0.4) or 0,
+			(st.introAt and st.introSeconds) and window(st.introAt, st.introAt + st.introSeconds, 0.25, 0.4) or 0,
+			st.throwAt and window(st.throwAt - 0.3, st.throwAt + 0.7, 0.2, 0.3) or 0)
+		local dazed = math.max((st.stunAt and st.stunUntil) and window(st.stunAt, st.stunUntil, 0.3, 0.3) or 0, st.deadAt and window(st.deadAt, nil, 0.3) or 0)
+		info.face = dazed > 0.5 and "dazed" or (angry > 0.5 and "angry" or "normal")
+		local B = Fc.brow or {}
+		local brow = (B.angry or 0) * angry * (1 - dazed) + ((B.dazed or 0) + 4 * math.sin(TAU * 0.9 * now)) * dazed
+		if brow ~= 0 then
+			addTo(pose, "Brow", 1, brow)
+		end
+		if dazed > 0.5 and st.stunAt and ctx.set.stunStars then
+			info.stars = true -- 헤롱(엉덩방아) 머리 위 별
+		end
+	end
 	return pose, info
 end
 
@@ -871,6 +903,17 @@ function BossMotion.context(rigId, rig, skills, moveSpeed)
 	if set then
 		ctx.set = set
 		ctx.plan = D[set.plan or "biped"] or D.biped
+		if set.planPatch then -- GUARDIAN-V2: 세트가 plan 값(등장 웅크림 · 피격 · 기절 · 처치 · 평타 예비)을 덮고, plan 동작 표는 세트 동작이 먼저(평타 · 낚아챔도 전용)
+			local base = ctx.plan
+			local P = table.clone(base)
+			for k, v in pairs(set.planPatch) do
+				P[k] = v
+			end
+			P.clips = setmetatable({}, { __index = function(_, name)
+				return set.clips[name] or base.clips[name]
+			end })
+			ctx.plan = P
+		end
 		ctx.boss = { intro = set.intro, signature = set.signature }
 		ctx.walks = {}
 		for name, F in pairs(set.forms) do
