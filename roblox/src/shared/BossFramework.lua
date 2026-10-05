@@ -50,7 +50,33 @@ function BossFramework.applyBodyEdge(data, rigKey, walk)
 	if cfg.chaseStop and out.chaseStopDistanceStuds then
 		out.chaseStopDistanceStuds += edge
 	end
+	-- 새 몸 밸런스(BossSim 재실행으로 정한 값 - 새 몸이 뜰 때만 · BossData 원본 무변경): 체력 × hpScale · 공격력(스킬 · 평타 피해) × damageScale
+	if cfg.hpScale and out.hp then
+		out.hp *= cfg.hpScale
+		out.bodyEdgeHpScale = cfg.hpScale
+	end
+	local dmg = cfg.damageScale
+	if dmg and out.basicAttackDamageMultiplier then -- 피해 배율(감소식 뒤에 곱하는 값 - 공격력에 곱하면 비선형) = 평타 · 스킬 multiplier 전부
+		out.basicAttackDamageMultiplier *= dmg
+		out.bodyEdgeDamageScale = dmg
+	end
 	local skills, fitted = table.clone(out.skills or {}), {}
+	if dmg then
+		local function scaled(t)
+			local c = table.clone(t)
+			for k, v in pairs(c) do
+				if k == "multiplier" and type(v) == "number" then
+					c[k] = v * dmg
+				elseif type(v) == "table" and k ~= "conditions" then
+					c[k] = scaled(v)
+				end
+			end
+			return c
+		end
+		for id, s in pairs(skills) do
+			skills[id] = scaled(s)
+		end
+	end
 	for id in pairs(cfg.skills or {}) do
 		local s = skills[id]
 		if s then

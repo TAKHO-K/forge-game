@@ -12,7 +12,8 @@ D.trialAttribute = "BossFrameworkTrial"
 --   반경 = 기존 값 + 늘어난 몸 반지름(BossFramework.edgeGrowth - 서버 spawnEncounter가 인스턴스 사본에 얹는다 · BossData 원본 무변경).
 --   skills = { [스킬 id] = true }(보스 중심 원 · 부채 반경 · 안쪽 반경 · 대상 거리 조건 · 반사 결계 반경) · innerSafe = 근접 원형 구역 · chaseStop = 추격 정지 거리.
 D.bodyEdge = {
-	section_guardian = { skills = { heavy = true, innerSmash = true, swipe = true, mirror = true }, innerSafe = true, chaseStop = true },
+	-- damageScale 0.80 = GUARDIAN-V2 5 BossSim(아는 보스 원거리 · 근거리 · 스테이지 100 · 500 · 600판): 전멸 55 ~ 59% → 42 ~ 50% · 받는 피해 94 ~ 97% → 84 ~ 88% · 처치 69초 그대로(체력 무변경)
+	section_guardian = { skills = { heavy = true, innerSmash = true, swipe = true, mirror = true }, innerSafe = true, chaseStop = true, damageScale = 0.80 },
 }
 
 -- 예산(바이블 §1-4) - 하네스 · /gg boss frame check가 검사한다

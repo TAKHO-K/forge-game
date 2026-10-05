@@ -27,9 +27,9 @@ local function newRng(seed)
 end
 
 -- 판정 목록: { at(스킬 시작부터 초), share(맞으면 최대체력 비율 · 현재 체력 비율이면 current = true), class(확률 키), slack, perMember }
-local function judgmentsOf(skill, surviveHits)
+local function judgmentsOf(skill, surviveHits, standoff)
 	local list = {}
-	local dodge = BossSkillMath.dodgeChecks(skill, 8, WorldConfig.playerWalkSpeedStuds)
+	local dodge = BossSkillMath.dodgeChecks(skill, standoff or 8, WorldConfig.playerWalkSpeedStuds) -- GUARDIAN-V2: 서 있는 거리 = 추격 정지 거리(6보스 모두 8 - 몸 가장자리 장치가 켜진 새 몸만 늘어난다)
 	local minSlack = math.huge
 	for _, check in ipairs(dodge) do
 		minSlack = math.min(minSlack, check.availableSeconds - check.requiredSeconds)
@@ -103,7 +103,7 @@ local function judgmentsOf(skill, surviveHits)
 	return list
 end
 
--- options = { partySize(1), seed, role("ranged"/"melee"), familiar(false), stage(100) }
+-- options = { partySize(1), seed, role("ranged"/"melee"), familiar(false), stage(100), bodyEdgeRig(GUARDIAN-V2 - 새 몸 리그 키: 실전 스폰과 같은 몸 가장자리 반경 · 밸런스 사본) }
 function BossDifficultySim.run(bossId, options)
 	options = options or {}
 	local sim = BossData.mechanics.sim
@@ -115,6 +115,9 @@ function BossDifficultySim.run(bossId, options)
 	local role = options.role or "ranged"
 	local surviveHits = BalanceAnchorConfig.surviveTargetHits
 	local data = BossRules.buildInstanceData(stage, bossId, n) -- 곡선 · 파티 전역 쿨이 얹힌 인스턴스 표
+	if options.bodyEdgeRig then
+		data = require(ReplicatedStorage.Shared.BossFramework).applyBodyEdge(data, options.bodyEdgeRig, WorldConfig.playerWalkSpeedStuds)
+	end
 	local boss = BossData.bosses[bossId]
 	local skills, order, config = data.skills, data.skillOrder, data.scheduler
 	local gateMultiplier = BossRules.gateDamageTakenMultiplier()
@@ -130,7 +133,8 @@ function BossDifficultySim.run(bossId, options)
 	local exposure = role == "melee" and (innerCircle and exposureCfg.innerCircleMelee or exposureCfg.melee) or exposureCfg.ranged
 
 	local hpScale = boss.hpMultiplier / (sim.referenceKillSeconds / BalanceAnchorConfig.killTargetSeconds) -- 보스별 HP 배율(수정 여왕 0.7 - 보호막 보정)
-	local maxHp = sim.referenceKillSeconds * hpScale * BossRules.partySizeHpMultiplier(n)
+	local dmgScale = data.bodyEdgeDamageScale or 1 -- GUARDIAN-V2: 새 몸 밸런스 - 평타(모형은 BossData 평타 배율을 읽는다 · 스킬 배율은 data.skills 사본에 이미 곱해짐)
+	local maxHp = sim.referenceKillSeconds * hpScale * BossRules.partySizeHpMultiplier(n) * (data.bodyEdgeHpScale or 1) -- GUARDIAN-V2: 새 몸 밸런스(BossFrameworkData.bodyEdge.hpScale)
 	local hp = maxHp
 	local members = {}
 	for i = 1, n do
@@ -291,7 +295,7 @@ function BossDifficultySim.run(bossId, options)
 				for _, m in ipairs(members) do
 					m.evadeUntil = math.max(m.evadeUntil, t + evade)
 				end
-				for _, j in ipairs(judgmentsOf(skill, surviveHits)) do
+				for _, j in ipairs(judgmentsOf(skill, surviveHits, data.chaseStopDistanceStuds)) do
 					j.at += t
 					j.skill = skill
 					j.id = pick
@@ -479,7 +483,7 @@ function BossDifficultySim.run(bossId, options)
 			basicTimer += tick
 			if basicTimer >= boss.basicAttack.cooldownSeconds then
 				basicTimer = 0
-				local share = boss.basicAttack.damageMultiplier / surviveHits
+				local share = boss.basicAttack.damageMultiplier / surviveHits * dmgScale
 				if innerCircle then
 					local lanes = BossData.mechanics.lanes
 					for _, m in ipairs(members) do

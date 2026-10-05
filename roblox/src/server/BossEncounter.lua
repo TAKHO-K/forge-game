@@ -397,7 +397,8 @@ local function spawnEncounter(data, stage, members, party, size, owner, isTutori
 			for id, s in pairs(fitted) do
 				table.insert(f, ("%s +%.2f초"):format(id, s))
 			end
-			print(("[forge-game] %s 몸 가장자리 +%.2f stud(반경 · 근접 원 · 추격 정지)%s"):format(data.displayName or data.id, edge, #f > 0 and (" · 전조 맞춤 " .. table.concat(f, ", ")) or ""))
+			print(("[forge-game] %s 몸 가장자리 +%.2f stud(반경 · 근접 원 · 추격 정지) · 피해 × %.2f · 체력 × %.2f%s"):format(data.displayName or data.id, edge, data.bodyEdgeDamageScale or 1, data.bodyEdgeHpScale or 1,
+				#f > 0 and (" · 전조 맞춤 " .. table.concat(f, ", ")) or ""))
 		end
 	end
 	local slot = allocateSlot()
