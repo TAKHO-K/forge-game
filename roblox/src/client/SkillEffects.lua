@@ -50,6 +50,32 @@ function SkillEffects.dashAfterimage(startPos, endPos, color, totalDurationSecon
 	end
 end
 
+-- FINAL-1 3 대시 출발 먼지: 발밑에서 진행 반대쪽으로 작은 덩어리 cfg.dustCount개가 퍼지며 옅어진다(cfg = DashConfig.feel)
+function SkillEffects.dashDust(feetPos, delta, cfg)
+	local flat = Vector3.new(delta.X, 0, delta.Z)
+	local back = flat.Magnitude > 1e-3 and -flat.Unit or Vector3.zero
+	for i = 1, cfg.dustCount do
+		local part = Instance.new("Part")
+		part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch, part.CastShadow = true, false, false, false, false
+		part.Material = Enum.Material.SmoothPlastic
+		part.Color = cfg.dustColor
+		part.Shape = Enum.PartType.Ball
+		local s = 0.5 + math.random() * 0.4
+		part.Size = Vector3.one * s
+		local side = Vector3.new(-back.Z, 0, back.X) * ((i - (cfg.dustCount + 1) / 2) * 0.45)
+		part.CFrame = CFrame.new(feetPos + side + Vector3.new(0, 0.3, 0))
+		part.Transparency = 0.25
+		part.Parent = Workspace
+		local goal = feetPos + side * 1.8 + back * (1.5 + math.random() * 1.5) + Vector3.new(0, 0.6 + math.random() * 0.6, 0)
+		TweenService:Create(part, TweenInfo.new(cfg.dustSeconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			CFrame = CFrame.new(goal), Size = Vector3.one * s * 2.2, Transparency = 1,
+		}):Play()
+		task.delay(cfg.dustSeconds, function()
+			part:Destroy()
+		end)
+	end
+end
+
 -- 대회전 등 원형 스킬의 확산 링(20-2a [4]) - "시전자 중심에서 퍼져나가는 원형 링". 얇은
 -- Cylinder를 반경 0에서 목표 반경까지 키우며 옅어지게 한다.
 local RING_THICKNESS_STUDS = 0.3

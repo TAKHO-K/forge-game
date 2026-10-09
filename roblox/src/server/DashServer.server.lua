@@ -18,6 +18,8 @@ local DashEndpoint = require(script.Parent.DashEndpoint)
 local AirState = require(script.Parent.AirState)
 local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
 local MoveRules = require(ReplicatedStorage.Shared.MoveRules)
+local DashModes = require(ReplicatedStorage.Shared.DashModes) -- FINAL-1 3: 긴 · 짧은 · 기울기 대시
+local DashWindow = require(script.Parent.DashWindow)
 
 local dashRequest = Instance.new("RemoteEvent")
 dashRequest.Name = "DashRequest"
@@ -32,7 +34,8 @@ dashResult.Parent = ReplicatedStorage
 
 local dashStates = {} -- [Player] = MoveRules.newDashState() - MV1 태초 신발 2단 대시(연속 충전 · 쿨다운은 두 번째 뒤)
 
-local function handleDash(player)
+-- FINAL-1 3: mode = "long" | "short" | "analog"(모르는 값 = long) · tilt = 0 ~ 1(analog) · dir = 클라가 고른 카메라 기준 평면 방향(8방향 · 짧은 대시 키 방향 - 없으면 옛 규칙)
+local function handleDash(player, mode, tilt, dir)
 	if not PlayerProfile.getClassId(player) then
 		return -- 직업 미선택·로드 전 - 헛동작(AttackServer와 같은 원칙)
 	end
@@ -60,6 +63,9 @@ local function handleDash(player)
 
 	local move = humanoid.MoveDirection
 	local flat = Vector3.new(move.X, 0, move.Z)
+	if typeof(dir) == "Vector3" and dir == dir and Vector3.new(dir.X, 0, dir.Z).Magnitude > 0.5 then -- NaN · 0 거름(방향은 어느 쪽이든 합법 - 거리 · 쿨다운은 서버가 정한다)
+		flat = Vector3.new(dir.X, 0, dir.Z)
+	end
 	if flat.Magnitude < 1e-3 then
 		flat = Vector3.new(rootPart.CFrame.LookVector.X, 0, rootPart.CFrame.LookVector.Z)
 	end
@@ -88,7 +94,9 @@ local function handleDash(player)
 
 	-- MV1 거리 = 기본 × 장비 걷기 배율(1 ~ speedScaleMax) × 공중이면 환생 4 공중 대시 강화
 	local tier = MoveRules.tierOf(player)
-	local range = JumpMath.dashRangeStuds(JumpMath.moveSpeedMultiplier(PlayerProfile.getSpeedPercentBonus(player)), session and tier.airDashRangeMultiplier or 1)
+	mode = (mode == "short" or mode == "analog") and mode or "long"
+	local baseStuds, durationSeconds = DashModes.base(mode, type(tilt) == "number" and tilt or 1)
+	local range = JumpMath.dashRangeStuds(JumpMath.moveSpeedMultiplier(PlayerProfile.getSpeedPercentBonus(player)), session and tier.airDashRangeMultiplier or 1, baseStuds)
 	local startPos = rootPart.Position
 	if session and session.peakY then
 		-- BR1-4b 파트 0-4: 공중 대시는 낙하 속도를 0으로 끊는다(클라 DashInput) = 낙법 → 서버 낙하 궤적 최고점도 대시 자리부터 다시 잰다(서버가 본 자리 - 지연만큼 높게 = 보수적).
@@ -99,7 +107,7 @@ local function handleDash(player)
 	require(script.Parent.HeightGuard).grantDash(player, range) -- S1: 서버가 준 대시 거리 = 합법 수평 이동
 
 	-- PRD 5.4 "대시 중 피격 데미지 50% 감소" - 대검 회전베기와 같은 통로(PlayerState).
-	PlayerState.setIncomingDamageMultiplierUntil(player, DashConfig.incomingDamageMultiplier, DashConfig.durationSeconds, "dash")
+	DashWindow.begin(player, durationSeconds) -- FINAL-1 3: 대시 회피 창 한 곳(피해 감소 · 통과 판정)
 
 	dashResult:FireClient(player, {
 		ok = true,
@@ -110,7 +118,8 @@ local function handleDash(player)
 		rangeStuds = range,
 		startPosition = startPos,
 		endPosition = endPos,
-		durationSeconds = DashConfig.durationSeconds,
+		durationSeconds = durationSeconds,
+		mode = mode,
 	})
 	return "ok", range, endPos, startPos, second
 end
@@ -118,11 +127,11 @@ dashRequest.OnServerEvent:Connect(handleDash)
 if game:GetService("RunService"):IsStudio() then -- 검증 훅(MV1(나)): 실제 요청과 같은 판정 · 결과(클라에도 DashResult가 간다)
 	local hook = Instance.new("BindableFunction")
 	hook.Name = "DashHook"
-	hook.OnInvoke = function(player, resetCooldown)
+	hook.OnInvoke = function(player, resetCooldown, mode, tilt, dir)
 		if resetCooldown then
 			dashStates[player] = nil -- 검증: 쿨다운 없이 다음 대시를 잰다
 		end
-		return handleDash(player)
+		return handleDash(player, mode, tilt, dir)
 	end
 	hook.Parent = game:GetService("ServerStorage")
 end

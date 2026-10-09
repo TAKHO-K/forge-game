@@ -165,11 +165,73 @@ local function onJumpRequest()
 	airMoveFx:FireServer("flip")
 end
 UserInputService.JumpRequest:Connect(onJumpRequest)
+
+-- FINAL-1 3 MOVE-2 백플립(S 두 번 · 폰 스틱 뒤로 두 번 - DashInput이 BackflipRequest를 쏜다): 점프 1회와 같다(지상 = 1단 점프 · 공중 = 공중 점프 충전 1 · 같은 잠금 · 최대 점프 수 그대로).
+--   카메라 뒤쪽으로 backSpeed를 boostSeconds 동안 주고(서버 이동 검사 = 걷기 버킷 안) · 몸은 카메라 앞을 보게 돌려 뒤로 한 바퀴(AirMotion "backflip" - 남에게는 중계)
+local BF = DashConfig.backflip
+local RunService = game:GetService("RunService")
+local function backflip()
+	if not character or not root or not humanoid or LedgeGrab.isHanging() or GlideController.isGliding() then
+		return false
+	end
+	local now = os.clock()
+	if locked or humanoid.PlatformStand or root.Anchored or humanoid.Health <= 0 or now < (character:GetAttribute("AirDashUntil") or 0) then
+		return false
+	end
+	if airborne then
+		local left = character:GetAttribute("AirJumpsLeft") or 0
+		if left <= 0 or now - airStartedAt < cfg.minAirSeconds then
+			return false
+		end
+		local v = root.AssemblyLinearVelocity
+		root.AssemblyLinearVelocity = Vector3.new(v.X, math.max(v.Y, JumpMath.upSpeed(JumpMath.airJumpRise(JumpMath.jumpHeight(0)))), v.Z)
+		character:SetAttribute("AirJumpsLeft", left - 1)
+	else
+		local state = humanoid:GetState()
+		if not GROUNDED[state] or state == Enum.HumanoidStateType.Seated or state == Enum.HumanoidStateType.Climbing then
+			return false
+		end
+		humanoid:ChangeState(Enum.HumanoidStateType.Jumping) -- 지상 1단 점프(엔진이 1단 속도를 넣는다)
+	end
+	local cam = workspace.CurrentCamera
+	local look = cam and cam.CFrame.LookVector or root.CFrame.LookVector
+	local fwd = Vector3.new(look.X, 0, look.Z)
+	fwd = fwd.Magnitude > 1e-3 and fwd.Unit or Vector3.new(0, 0, -1)
+	humanoid.AutoRotate = false
+	root.CFrame = CFrame.lookAt(root.Position, root.Position + fwd) -- 카메라 앞을 보고 뒤로 넘는다
+	local untilAt = now + BF.boostSeconds
+	local conn
+	conn = RunService.Heartbeat:Connect(function()
+		if os.clock() >= untilAt or not root.Parent or humanoid.Health <= 0 or locked then
+			conn:Disconnect()
+			return
+		end
+		local v = root.AssemblyLinearVelocity
+		root.AssemblyLinearVelocity = Vector3.new(-fwd.X * BF.backSpeed, v.Y, -fwd.Z * BF.backSpeed)
+	end)
+	local h = humanoid
+	task.delay(BF.flipSeconds, function()
+		if h.Parent then
+			h.AutoRotate = true
+		end
+	end)
+	AirMotion.play(character, "backflip", BF.flipSeconds)
+	WeaponVisual.playOverlay(nil, "airJump")
+	airMoveFx:FireServer("backflip")
+	return true
+end
+local backflipRequest = Instance.new("BindableEvent")
+backflipRequest.Name = "BackflipRequest"
+backflipRequest.Event:Connect(backflip)
+backflipRequest.Parent = player:WaitForChild("PlayerGui")
 -- 검증 훅(Studio - 이 창은 MCP 스페이스 입력이 안 먹는다): 클라 execute_luau → PlayerGui.MV1JumpHook:Invoke() = 점프 요청 한 번(공중 점프 · 활강 끄기 · 올라서기)
 if game:GetService("RunService"):IsStudio() then
 	local hook = Instance.new("BindableFunction")
 	hook.Name = "MV1JumpHook"
-	hook.OnInvoke = function()
+	hook.OnInvoke = function(kind)
+		if kind == "backflip" then -- FINAL-1 3: Invoke("backflip") = 백플립 요청 한 번
+			return backflip(), character and character:GetAttribute("AirJumpsLeft")
+		end
 		lastRequestAt = -math.huge
 		onJumpRequest()
 		return character and character:GetAttribute("AirJumpsLeft")
@@ -190,8 +252,8 @@ airMoveFx.OnClientEvent:Connect(function(who, kind)
 	elseif kind == "getup" then
 		WeaponVisual.playGetup(who) -- W1 넘어짐 → 일어나기
 	elseif other then
-		AirMotion.play(other, kind, kind == "flip" and MovementConfig.airMotion.flipSeconds or DashConfig.durationSeconds)
-		if kind == "flip" then
+		AirMotion.play(other, kind, kind == "flip" and MovementConfig.airMotion.flipSeconds or (kind == "backflip" and DashConfig.backflip.flipSeconds) or DashConfig.durationSeconds)
+		if kind == "flip" or kind == "backflip" then
 			WeaponVisual.playOverlay(who, "airJump")
 		end
 	end

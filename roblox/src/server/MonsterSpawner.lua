@@ -222,6 +222,21 @@ local function buildModel(data, position, variant)
 		elseif meshPending(meshKey) then
 			lateSwap(model, meshKey, rigId, sizeScale, BossRig.rootLift(rig, sizeScale)) -- FINAL-1 0: 캐시 준비 전 = 블록으로 뜨고 준비 즉시 갈아입기
 		end
+		-- FINAL-1 3 보스 밀어내기(클라 BossPushOut · 서버 이동 허가): 몸 가장자리 반폭(stud) = 새 몸 edgeHalfWidth × 옛 배율 × 새 몸 배율 · 없으면 옛 Body 반폭 × 배율
+		if data.isBoss then
+			local half = rig.edgeHalfWidth and rig.edgeHalfWidth * liveScale * (rigKey and rig.scale or 1) or nil
+			if not half then
+				for _, j in ipairs(rig.joints or {}) do
+					if j.part == "Body" then
+						half = j.size.X / 2 * sizeScale
+						break
+					end
+				end
+			end
+			if half then
+				model:SetAttribute("BossPushRadius", half)
+			end
+		end
 		-- A2-M1 덩치: 몸이 커진 만큼만 플레이어 공격 도달을 넓힌다(Reach.bodyRadius - 조준 · 평타 · 스킬 · 화살) = 몸통 반폭 × (지금 배율 − 옛 배율). 배율이 같으면 0 = 옛 판정.
 		if rigKey and rig.edgeHalfWidth then -- GUARDIAN-V2: 옛 몸 피격 반경 + 몸 가장자리가 늘어난 만큼(BossFramework.edgeGrowth - 보스 공격 반경과 같은 값)
 			local old = BossRig.specFor(data.isBoss and data.id or data.rigId)

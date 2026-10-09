@@ -13,6 +13,7 @@ local BossCurveData = require(ReplicatedStorage.Shared.data.BossCurveData)
 local Reach = require(ReplicatedStorage.Shared.Reach)
 local BossTrap = require(script.Parent.BossTrap)
 local PlayerState = require(script.Parent.PlayerState)
+local DashWindow = require(script.Parent.DashWindow) -- FINAL-1 3: 대시 통과 판정 한 곳
 local MonsterState = require(script.Parent.MonsterState)
 local PlayerDamage = require(script.Parent.PlayerDamage)
 local HeightGuard = require(script.Parent.HeightGuard)
@@ -563,7 +564,7 @@ function BossHandlersBR1.stepProjectiles(model, st, data, now, dt)
 		elseif not done and not holding then -- 모으는 중(반사 윈드업)에는 아무도 안 맞는다
 			for _, v in ipairs(targets) do
 				-- BOSS-NIGHT-2 3: skill.passThrough = 무적 · 대시 중에는 통과(맞지 않고 소모 · 고정 추적도 안 걸림 - 피할 수 없는 피해 금지)
-				local passing = p.skill.passThrough and (PlayerState.isInvulnerable(v.player) or PlayerState.hasIncomingSource(v.player, p.skill.passThrough))
+				local passing = p.skill.passThrough and (PlayerState.isInvulnerable(v.player) or (p.skill.passThrough == DashWindow.sourceKey and DashWindow.isActive(v.player)) or PlayerState.hasIncomingSource(v.player, p.skill.passThrough))
 				-- 대시 · 무적 중에 닿은 발 = 그 자리에서 소멸(피해 없음) + 묶음 고정 추적 풀림(Studio 시험: 통과만 하면 그 발이 계속 쫓아와 대시가 끝난 뒤 맞았다 = 대시가 쓸모없음)
 				if passing and not p.hitBy[v.player] and not BossTrap.isTrapped(v.player) and (v.root.Position - p.position).Magnitude <= p.radius + half + 0.5 then
 					if p.volley then

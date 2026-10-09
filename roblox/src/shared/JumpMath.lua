@@ -156,9 +156,9 @@ function JumpMath.heightGuardAllowance(airJumps)
 end
 
 -- MV1 대시 거리: 기본 × clamp(장비 걷기 배율, 1, DashConfig.speedScaleMax) × 공중 대시 배율(환생 4 - MovementUnlockData.airDashRangeMultiplier · 지상은 1).
-function JumpMath.dashRangeStuds(moveMultiplier, airMultiplier)
+function JumpMath.dashRangeStuds(moveMultiplier, airMultiplier, baseStuds) -- FINAL-1 3: baseStuds = 대시 모드 기본 거리(DashModes.base - 없으면 긴 대시)
 	local DashConfig = require(ReplicatedStorage.Shared.data.DashConfig)
-	return DashConfig.rangeStuds * math.clamp(moveMultiplier or 1, 1, DashConfig.speedScaleMax) * (airMultiplier or 1)
+	return (baseStuds or DashConfig.rangeStuds) * math.clamp(moveMultiplier or 1, 1, DashConfig.speedScaleMax) * (airMultiplier or 1)
 end
 
 -- MV1 한 체공 최대 수평 간격(끝에서 끝 · movement-metrics §2 식): 걷기 × (체공 − 대시 시간 합) + 대시 거리 합. opts = { walk, airJumps, dashes, dashStuds, rise, steps }.

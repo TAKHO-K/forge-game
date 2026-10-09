@@ -6,6 +6,9 @@
 -- MV1: 키(폰 버튼)를 누른 시간으로 가른다(MoveRules.classifyPress) - 지상 = 누르는 즉시 대시 · 공중 = 떼면 대시 / DashConfig.input.glideHoldSeconds 넘게 누르고 있으면 활강(해금 전 · 게이지 없음이면 그때 대시).
 --   활강 중 누르면 활강만 끈다. 폰 대시 버튼은 SkillSlots의 SkillSlotPress(누름 · 뗌)로 같은 판정을 탄다.
 --   공중 대시 = 한 체공 MoveRules.airDashesAllowed회(태초 신발 2) · 2단 대시 = MoveRules.tryDash(로컬 예측 - 판정은 서버).
+-- FINAL-1 3 MOVE-2(사용자 결정 A안): 방향키(없으면 바라보는 쪽) + LeftShift = 긴 대시 · W/A/D 두 번 연속 = 짧은 대시(그 키 방향) · S 두 번 연속 = 백플립(점프 1회 - DoubleJumpInput) ·
+--   폰 대시 버튼 · 게임패드 ButtonB = 스틱 기울기만큼(짧은 ~ 긴 연속 · 안 기울이면 긴 대시) · 폰 · 게임패드 백플립 = 스틱을 뒤로 두 번 빠르게 튕기기. 채팅 입력 중은 무시.
+--   방향 = 카메라 기준 평면(8방향) - 서버는 거리 · 쿨다운만 정한다(DashModes · DashServer).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -23,6 +26,8 @@ local AirMotion = require(script.Parent.AirMotion)
 local GlideController = require(script.Parent.GlideController)
 local MoveRules = require(ReplicatedStorage.Shared.MoveRules)
 local WeaponVisual = require(script.Parent.WeaponVisual) -- W1 대시 무기 자세 · 일어나기 입력 버퍼
+local DashModes = require(ReplicatedStorage.Shared.DashModes)
+local CameraShake = require(script.Parent.CameraShake)
 
 local dashRequest = ReplicatedStorage:WaitForChild("DashRequest")
 local dashResult = ReplicatedStorage:WaitForChild("DashResult")
@@ -41,6 +46,43 @@ local function primordialShoes()
 	local parts = player:GetAttribute("PrimordialParts")
 	return type(parts) == "string" and parts:find("shoes", 1, true) ~= nil
 end
+
+-- FINAL-1 3: 카메라 기준 평면 방향(키 → 월드)
+local KEY_DIR = { [Enum.KeyCode.W] = Vector2.new(0, 1), [Enum.KeyCode.S] = Vector2.new(0, -1), [Enum.KeyCode.A] = Vector2.new(-1, 0), [Enum.KeyCode.D] = Vector2.new(1, 0) }
+local function cameraFlat()
+	local cam = workspace.CurrentCamera
+	local look = cam and cam.CFrame.LookVector or Vector3.new(0, 0, -1)
+	local fwd = Vector3.new(look.X, 0, look.Z)
+	fwd = fwd.Magnitude > 1e-3 and fwd.Unit or Vector3.new(0, 0, -1)
+	return fwd, Vector3.new(-fwd.Z, 0, fwd.X) -- 앞 · 오른쪽
+end
+local function worldDir(v2)
+	if v2.Magnitude < 1e-3 then
+		return nil
+	end
+	local fwd, right = cameraFlat()
+	return (fwd * v2.Y + right * v2.X).Unit
+end
+local function heldKeyDir() -- 지금 누른 W/A/S/D 합(8방향) · 없으면 nil
+	local sum = Vector2.zero
+	for key, v in pairs(KEY_DIR) do
+		if UserInputService:IsKeyDown(key) then
+			sum += v
+		end
+	end
+	return worldDir(sum)
+end
+local function analogTilt() -- 폰 스틱 · 게임패드 기울기(0 ~ 1) · 방향
+	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	local m = humanoid and humanoid.MoveDirection or Vector3.zero
+	local flat = Vector3.new(m.X, 0, m.Z)
+	return math.min(flat.Magnitude, 1), flat.Magnitude > 1e-3 and flat.Unit or nil
+end
+local function chatFocused()
+	return UserInputService:GetFocusedTextBox() ~= nil
+end
+
+local pendingMode, pendingTilt, pendingDir = "long", 1, nil -- 이번 누름의 대시 모드(누를 때 정한다 · 공중은 뗄 때 낸다)
 
 local function requestDash()
 	-- 18-1 [3] 모달 차단 - 창이 열려 있으면 대시가 안 나간다(지시).
@@ -81,7 +123,7 @@ local function requestDash()
 	if second or charges < 2 or localDash.secondUntil < os.clock() then
 		localCastSignal:Fire("dash", DashConfig.cooldownSeconds * cooldownScale)
 	end
-	dashRequest:FireServer()
+	dashRequest:FireServer(pendingMode, pendingTilt, pendingDir)
 end
 
 -- ── MV1 누름 · 뗌 판정 ──
@@ -93,10 +135,23 @@ local function isAirborne()
 	return st == Enum.HumanoidStateType.Jumping or st == Enum.HumanoidStateType.Freefall
 end
 
-local function onPress()
+-- FINAL-1 3: 누름 종류 → 이번 대시 모드(key = 방향키 + 대시 키 = 긴 대시 · analog = 폰 버튼 · 게임패드 = 기울기만큼)
+local function setPending(kind)
+	if kind == "analog" then
+		local tilt, dir = analogTilt()
+		if tilt >= DashConfig.analog.deadzone then
+			pendingMode, pendingTilt, pendingDir = "analog", tilt, dir
+			return
+		end
+	end
+	pendingMode, pendingTilt, pendingDir = "long", 1, heldKeyDir()
+end
+
+local function onPress(kind)
 	if UIManager.isInputBlocked() then
 		return
 	end
+	setPending(kind)
 	if GlideController.isGliding() then
 		GlideController.stop("dash") -- 활강 중 누름 = 끄기만
 		press = { consumed = true }
@@ -136,13 +191,20 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
+local onTap -- FINAL-1 3: 아래(두 번 연속 누름)에서 정의 · 검증 훅이 먼저 참조
+
 -- 검증 훅(Studio): 클라 execute_luau가 키 입력 없이 같은 누름 경로를 탄다 - Invoke("press") · Invoke("release")
 if RunService:IsStudio() then
 	local hook = Instance.new("BindableFunction")
 	hook.Name = "MV1DashHook"
-	hook.OnInvoke = function(kind)
-		if kind == "press" then
-			onPress()
+	hook.OnInvoke = function(kind, extra)
+		if kind == "tap" then -- FINAL-1 3: Invoke("tap", "W") = 그 키 한 번 누름(두 번 부르면 연속 누름)
+			onTap(Enum.KeyCode[tostring(extra)])
+			return pendingMode
+		elseif kind == "analog" then -- Invoke("analog") = 폰 대시 버튼 누름(기울기 = 지금 MoveDirection)
+			onPress("analog")
+		elseif kind == "press" then
+			onPress("key")
 		elseif kind == "release" then
 			onRelease()
 		end
@@ -151,16 +213,59 @@ if RunService:IsStudio() then
 	hook.Parent = player:WaitForChild("PlayerGui")
 end
 
+-- FINAL-1 3: 두 번 연속 누름(W/A/D = 짧은 대시 · S = 백플립) · 폰 · 게임패드 스틱 뒤로 두 번 = 백플립
+local tapState = DashModes.newTapState()
+local function requestBackflip()
+	local ev = playerGui:FindFirstChild("BackflipRequest") -- DoubleJumpInput이 만든다(점프 규칙 · 충전 · 잠금은 그쪽)
+	if ev and not UIManager.isInputBlocked() then
+		ev:Fire()
+	end
+end
+function onTap(key)
+	if chatFocused() or UIManager.isInputBlocked() or GlideController.isGliding() then
+		return
+	end
+	if not DashModes.tap(tapState, key, os.clock()) then
+		return
+	end
+	if key == Enum.KeyCode.S then
+		requestBackflip()
+	else
+		pendingMode, pendingTilt, pendingDir = "short", 1, worldDir(KEY_DIR[key])
+		requestDash()
+	end
+end
+
+local flickState, wasBack = DashModes.newTapState(), false
+RunService.Heartbeat:Connect(function()
+	local last = UserInputService:GetLastInputType()
+	if not (last == Enum.UserInputType.Touch or last.Name:sub(1, 7) == "Gamepad") then
+		wasBack = false
+		return
+	end
+	local tilt, dir = analogTilt()
+	local fwd = cameraFlat()
+	local back = dir ~= nil and tilt >= DashConfig.backflip.flickMagnitude and dir:Dot(fwd) <= DashConfig.backflip.flickBackDot
+	if back and not wasBack and DashModes.tap(flickState, "back", os.clock()) then
+		requestBackflip()
+	end
+	wasBack = back
+end)
+
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
-	if gameProcessedEvent then
+	if gameProcessedEvent or chatFocused() then
 		return
 	end
 	if input.KeyCode == Enum.KeyCode.LeftShift then
-		onPress()
+		onPress("key")
+	elseif input.KeyCode == Enum.KeyCode.ButtonB then
+		onPress("analog")
+	elseif input.KeyCode == Enum.KeyCode.W or input.KeyCode == Enum.KeyCode.A or input.KeyCode == Enum.KeyCode.D or input.KeyCode == Enum.KeyCode.S then
+		onTap(input.KeyCode)
 	end
 end)
 UserInputService.InputEnded:Connect(function(input)
-	if input.KeyCode == Enum.KeyCode.LeftShift then
+	if input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.ButtonB then
 		onRelease()
 	end
 end)
@@ -168,7 +273,7 @@ end)
 slotPress.Event:Connect(function(slotId, down)
 	if slotId == "dash" then
 		if down then
-			onPress()
+			onPress("analog")
 		else
 			onRelease()
 		end
@@ -205,7 +310,9 @@ dashResult.OnClientEvent:Connect(function(data)
 		-- 물리는 이 클라가 소유하므로 여기서 바꿔도 서버와 어긋나지 않는다. 지면 대시엔 영향이
 		-- 없다(이미 속도 0 근처).
 		local currentRotation = rootPart.CFrame - rootPart.CFrame.Position
-		local tween = TweenService:Create(rootPart, TweenInfo.new(data.durationSeconds, Enum.EasingStyle.Linear), {
+		-- FINAL-1 3: 미끄러지듯 멈춤(DashConfig.feel.easingStyle Out - 거리 · 도착점 · 시간 그대로) · 출발 먼지 · FOV 살짝
+		local feel = DashConfig.feel
+		local tween = TweenService:Create(rootPart, TweenInfo.new(data.durationSeconds, Enum.EasingStyle[feel.easingStyle] or Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {
 			CFrame = currentRotation + data.endPosition,
 		})
 		tween.Completed:Connect(function()
@@ -214,6 +321,8 @@ dashResult.OnClientEvent:Connect(function(data)
 			end
 		end)
 		tween:Play()
+		SkillEffects.dashDust(data.startPosition - Vector3.new(0, MovementConfig.rootAboveFeetStuds, 0), data.endPosition - data.startPosition, feel)
+		CameraShake.fovKick(feel.fovKickDegrees, feel.fovKickSeconds)
 		-- M1-0: 트윈 동안은 공중 점프를 받지 않는다(끝나며 속도 0으로 되돌려 충전만 날아간다) · 앞으로 기울이는 모션(남에게는 서버 중계)
 		character:SetAttribute("AirDashUntil", os.clock() + data.durationSeconds)
 		AirMotion.play(character, "lean", data.durationSeconds)

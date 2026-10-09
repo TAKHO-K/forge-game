@@ -8,7 +8,8 @@ return {
 	-- 캐릭터 폭 약 4stud × 4칸 = 16stud(옛 값 - 21-2). 웹 160px을 pxPerStud로 기계 환산한 게 아니라 "캐릭터 4칸"이라는 명세를 stud로 다시 읽은 값이었다.
 	-- MV1(사용자 지시 - 기본 대시 거리 +30 ~ 50%): 16 → 22(+37.5%). 옛 원칙 "회피기가 대검 관통돌진(18)보다 멀리 가면 안 된다"는 깨진다(결정 요청 - MV1 보고서).
 	-- 못 넘는 틈 · 둥지 · 점프맵 기준 = docs/design/movement-metrics.md v3(JumpMath.unjumpableGapStuds가 이 값을 읽는다).
-	rangeStuds = 22,
+	-- FINAL-1 3 MOVE-2(사용자 지시 - 긴 대시 32 · 짧은 대시 14 제안 · 노브): 22 → 32 = 긴 대시(방향키 + 대시 키 · 입력 없으면 바라보는 쪽). 이 값을 읽는 곳(못 넘는 틈 · 서버 이동 검사 상한)도 긴 대시 기준.
+	rangeStuds = 32,
 	-- MV1: 이동 속도 비례 - 대시 거리 = rangeStuds × clamp(장비 걷기 배율(JumpMath.moveSpeedMultiplier - 신발 + 신속 합), 1, speedScaleMax).
 	--   하한 1 = 감속(회전베기 등 PlayerState 배율)은 대시를 줄이지 않는다(회피기). 상한 ×1.4 = 이속 상한 ×1.5(24 stud/s)에서도 30.8stud.
 	speedScaleMax = 1.4,
@@ -21,4 +22,18 @@ return {
 	durationSeconds = 0.3, -- PRD 5.4 그대로. MV1: 22stud/0.3초 ≈ 73stud/s(이속 상한 30.8stud ≈ 103stud/s).
 	cooldownSeconds = 8, -- PRD 5.4 그대로.
 	incomingDamageMultiplier = 0.5, -- PRD 5.4 "대시 중 피격 데미지 50% 감소".
+	-- ───── FINAL-1 3 MOVE-2 노브(겉모습 · 조작감 - 거리 · 쿨다운 이외 능력치 무변경) ─────
+	-- modes: long = 위 rangeStuds · durationSeconds 그대로 / short = W · A · D 두 번 연속 / analog = 폰 스틱 · 게임패드 기울기(deadzone ~ 1 → short ~ long 연속).
+	--   거리 = 기본 × 장비 걷기 배율(1 ~ speedScaleMax) × 공중이면 환생 4 공중 대시 강화(옛 규칙 그대로). 쿨다운 · 피해 감소 · 공중 횟수는 모드와 무관하게 같다.
+	modes = {
+		short = { rangeStuds = 14, durationSeconds = 0.18 },
+	},
+	analog = { deadzone = 0.15 },
+	-- 두 번 연속 누름 창(초) · 채팅 입력 중(TextBox 포커스)은 무시. S 두 번 = 백플립(짧은 대시 대신 · 점프 1회 - 대시 쿨다운을 안 쓴다)
+	doubleTap = { windowSeconds = 0.25 },
+	-- 백플립: 점프 1회(지상 = 1단 점프 · 공중 = 공중 점프 충전 1) + 뒤로 backSpeed stud/s를 boostSeconds 동안(서버 이동 검사 = 걷기 버킷 안) · 모션 flipSeconds
+	--   폰 · 게임패드: 스틱을 뒤로(카메라 기준 dot ≤ flickBackDot · 기울기 ≥ flickMagnitude) 두 번 빠르게 튕기기
+	backflip = { backSpeed = 18, boostSeconds = 0.3, flipSeconds = 0.45, flickBackDot = -0.7, flickMagnitude = 0.8 },
+	-- 손맛: 출발 먼지 · FOV 살짝(+fovKick도 · CameraShake.fovKick - 화면 흔들림 설정을 따른다) · 미끄러지듯 멈춤(트윈 easing - 거리 · 도착점은 그대로)
+	feel = { fovKickDegrees = 5, fovKickSeconds = 0.3, easingStyle = "Quad", dustCount = 6, dustSeconds = 0.35, dustColor = Color3.fromRGB(205, 190, 160) },
 }

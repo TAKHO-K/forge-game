@@ -1,7 +1,7 @@
 -- 공중 점프 · 대시 모션(M1-0 - 그리기만, 판정 없음). 캐릭터 루트 관절(루트 파트에 붙은 관절)의 루트 쪽 프레임 앞에 회전을 곱한다 - Animator는 Transform만 덮어써서 이 프레임은 남는다.
 --   관절 종류: Motor6D(옛 리그) = C0 · AnimationConstraint(아바타 관절 업그레이드 - Studio Play 실측, Motor6D가 없다) = Attachment0.CFrame. 둘 다 "루트 파트 공간에서 본 관절 자리"라 같은 식이다.
 -- 회전축 = 루트의 오른쪽 축(R15 · R6 공통) · 앞으로 도는 방향. 입력 즉시 시작한다(준비 동작 없음). 자기 캐릭터는 입력한 클라가, 남의 캐릭터는 서버 중계(AirMoveFx)를 받은 클라가 부른다.
---   flip = 앞으로 한 바퀴(seconds 동안 · 끝으로 갈수록 느려짐) / lean = 앞으로 leanDeg까지 기울었다가 돌아옴(대시 시간 동안).
+--   flip = 앞으로 한 바퀴(seconds 동안 · 끝으로 갈수록 느려짐) · backflip = 뒤로 한 바퀴(FINAL-1 3) / lean = 앞으로 leanDeg까지 기울었다가 돌아옴(대시 시간 동안).
 --   MV1 spin = 제자리 한 바퀴(deg - 공중 회전 베기) · hold(character, key, deg) = 풀 때까지 그 각으로 기울인 자세(활강 = 앞으로 눕기 · 낙하 쓰러짐 = 뒤로 눕기) · release(character, key)로 푼다. 유지 자세가 있으면 flip · lean보다 우선한다.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -86,6 +86,8 @@ RunService.RenderStepped:Connect(function(dt)
 			local rot
 			if st.kind == "flip" then
 				rot = CFrame.Angles(-2 * math.pi * (1 - (1 - p) ^ 2), 0, 0)
+			elseif st.kind == "backflip" then
+				rot = CFrame.Angles(2 * math.pi * (1 - (1 - p) ^ 2), 0, 0) -- FINAL-1 3 백플립 = 뒤로 한 바퀴
 			elseif st.kind == "spin" then
 				rot = CFrame.Angles(0, -math.rad(st.deg or 360) * (1 - (1 - p) ^ 2), 0) -- MV1 공중 회전 베기(몸이 제자리에서 한 바퀴)
 			else

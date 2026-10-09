@@ -123,6 +123,10 @@ return {
 	--   물속 대시 = 불가(dashInWater false - 결정: 물살 거슬러 대시로 강을 무의미하게 만들지 않게 · 대시 도착점 계산이 물 위 · 물속을 구분하지 못한다). 판정 = 루트 복셀이 물(점유율 ≥ inWaterOccupancy).
 	--   물살(강): 클라가 하류로 흐름 속도만큼 끌고 간다(TerrainShape 흐름) · 서버는 물살 안 수평 속도 ≤ 걷기 상한 + 물살 + capMarginStuds를 잰다(넘으면 경고 · 횟수 - 속도 검사 없는 지금 규칙 안에서 기록만).
 	--   flowCheckSeconds = 클라가 흐름 식을 다시 계산하는 간격 · teleportIgnoreSpeed = 이보다 빠른 한 폴링 이동은 순간이동(Travel이 따로 처리 - 속도 상한 검사에서 뺀다).
+	-- FINAL-1 3 보스 밀어내기(겉모습 · 조작감 - 판정 무변경): 보스 몸(모델 BossPushRadius + playerRadius) 안에 들어간 내 캐릭터를 바깥으로 민다(속도 = 깊이 × gain · 상한 speedStuds/s - 클라 · 캐릭터 물리 소유).
+	--   깊이 minDepth 미만은 그대로(경계 떨림 방지) · 세로 = 루트가 보스 루트 ± verticalStuds 안일 때만 · 바깥이 벽이면 옆(±90°)으로 · 둘 다 막히면 밀지 않는다(벽 사이 끼임 · 떨림 방지).
+	--   서버 = scanSeconds마다 겹친 사람에게 이동 허가(HeightGuard.grantBurst = speedStuds × scanSeconds × grantMargin) - 밀림을 순간이동 검사가 되돌리지 않게.
+	bossPush = { playerRadius = 1.2, speedStuds = 24, gain = 20, minDepth = 0.1, verticalStuds = 12, scanSeconds = 0.25, grantMargin = 1.5 },
 	water = { dashInWater = false, rechargeInWater = false, inWaterOccupancy = 0.4, capMarginStuds = 8, capStrikes = 3, flowCheckSeconds = 0.2, teleportIgnoreSpeed = 200 },
 
 	-- 카메라(M1-0 - 사용자 결정): 기본 = 로블록스 기본 카메라(회전 · 줌 · 각도 자유)에 줌 범위만 건다(캐릭터가 작아 보이지 않게 기본 거리를 가깝게). 설정의 "탑다운 시점"을 켠 사람만

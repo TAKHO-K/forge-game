@@ -53,10 +53,12 @@ function V.runPure()
 
 	r.section("대시 거리", function()
 		local d16, d20, d24 = JumpMath.dashRangeStuds(1), JumpMath.dashRangeStuds(20 / 16), JumpMath.dashRangeStuds(24 / 16)
-		r.check(("대시 거리 이속 16 = %.1f · 20 = %.1f · 24 = %.1f(기대 22 · 27.5 · 30.8 - 상한 ×%.1f) · 감속(×0.5) = %.1f(하한 기본)"):format(d16, d20, d24, DashConfig.speedScaleMax, JumpMath.dashRangeStuds(0.5)),
-			near(d16, 22) and near(d20, 27.5) and near(d24, 30.8, 1e-6) and near(JumpMath.dashRangeStuds(0.5), 22))
-		r.check(("기본 +%.1f%%(지시 30 ~ 50%%) · 환생 4 공중 대시 = %.1f"):format((DashConfig.rangeStuds / 16 - 1) * 100, JumpMath.dashRangeStuds(1, MovementUnlockData.tiers[4].airDashRangeMultiplier)),
-			DashConfig.rangeStuds / 16 >= 1.3 and DashConfig.rangeStuds / 16 <= 1.5)
+		local R = DashConfig.rangeStuds -- FINAL-1 3: 긴 대시 기본(옛 22 고정 기대 → 노브 기준)
+		r.check(("대시 거리 이속 16 = %.1f · 20 = %.1f · 24 = %.1f(기대 %.1f · %.1f · %.1f - 상한 ×%.1f) · 감속(×0.5) = %.1f(하한 기본)"):format(d16, d20, d24, R, R * 1.25, R * DashConfig.speedScaleMax, DashConfig.speedScaleMax, JumpMath.dashRangeStuds(0.5)),
+			near(d16, R) and near(d20, R * 1.25) and near(d24, R * DashConfig.speedScaleMax, 1e-6) and near(JumpMath.dashRangeStuds(0.5), R))
+		-- FINAL-1 3: 옛 지시(16 대비 +30 ~ 50%)는 MOVE-2 지시(긴 32 · 짧은 14 노브)로 바뀜 → 긴 > 짧은 · 짧은 대시 = 그 기본으로 계산되는지
+		r.check(("긴 대시 %.1f · 짧은 대시 %.1f(기울기 0 = 짧은 · 1 = 긴) · 환생 4 공중 긴 대시 = %.1f"):format(R, DashConfig.modes.short.rangeStuds, JumpMath.dashRangeStuds(1, MovementUnlockData.tiers[4].airDashRangeMultiplier)),
+			R > DashConfig.modes.short.rangeStuds and near(JumpMath.dashRangeStuds(1, 1, DashConfig.modes.short.rangeStuds), DashConfig.modes.short.rangeStuds))
 	end)
 
 	r.section("짧게 · 길게 경계", function()

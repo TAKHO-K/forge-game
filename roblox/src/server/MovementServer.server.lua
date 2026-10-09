@@ -23,7 +23,7 @@ local PlayerMotionData = require(ReplicatedStorage.Shared.data.PlayerMotionData)
 AirState.start()
 FallServer.start()
 
-local KINDS = { flip = true, lean = true, dash = true, dash2 = true, skillQ = true, skillE = true, skillR = true, skillT = true } -- W1: dash = 대시 무기 자세(표시만) · W3b dash2 = 2단 대시 · skillQ/E/R/T = 스킬 모션(그리기만 - 판정 무관 · A2-M1 R · T 추가)
+local KINDS = { flip = true, backflip = true, lean = true, dash = true, dash2 = true, skillQ = true, skillE = true, skillR = true, skillT = true } -- W1: dash = 대시 무기 자세(표시만) · W3b dash2 = 2단 대시 · skillQ/E/R/T = 스킬 모션(그리기만 - 판정 무관 · A2-M1 R · T 추가)
 
 local airMoveFx = Instance.new("RemoteEvent")
 airMoveFx.Name = "AirMoveFx"
@@ -263,3 +263,40 @@ Players.PlayerRemoving:Connect(function(player)
 	lastGetupAt[player] = nil
 	lastGetupStatus[player] = nil
 end)
+
+-- ── FINAL-1 3 보스 밀어내기 허가 ──
+-- 클라(BossPushOut)가 보스 몸(BossPushRadius) 안의 자기 캐릭터를 바깥으로 민다 → 서버 수평 이동 검사가 그 밀림을 순간이동으로 되돌리지 않게
+-- scanSeconds마다 보스 몸 안(+ 여유 1)에 있는 사람에게 밀림 몫(speedStuds × scanSeconds × grantMargin)만 허가한다(서버가 본 자리 기준 - 클라가 허가 없이 늘릴 수 없다).
+do
+	local BP = MovementConfig.bossPush
+	local acc = 0
+	RunService.Heartbeat:Connect(function(dt)
+		acc += dt
+		if acc < BP.scanSeconds then
+			return
+		end
+		acc = 0
+		local bosses = {}
+		for _, m in ipairs(Workspace:GetChildren()) do
+			if m:IsA("Model") and m:GetAttribute("BossPushRadius") and m.PrimaryPart then
+				table.insert(bosses, m)
+			end
+		end
+		if #bosses == 0 then
+			return
+		end
+		for _, player in ipairs(Players:GetPlayers()) do
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			if root then
+				for _, boss in ipairs(bosses) do
+					local c = boss.PrimaryPart.Position
+					local d = Vector3.new(root.Position.X - c.X, 0, root.Position.Z - c.Z).Magnitude
+					if math.abs(root.Position.Y - c.Y) <= BP.verticalStuds and d < boss:GetAttribute("BossPushRadius") + BP.playerRadius + 1 then
+						HeightGuard.grantBurst(player, BP.speedStuds * BP.scanSeconds * BP.grantMargin)
+						break
+					end
+				end
+			end
+		end
+	end)
+end
