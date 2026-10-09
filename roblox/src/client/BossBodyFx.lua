@@ -7,6 +7,7 @@ local Workspace = game:GetService("Workspace")
 
 local BossMotionData = require(ReplicatedStorage.Shared.data.BossMotionData)
 local BossFx = require(script.Parent.BossFx)
+local BossGroundMarks = require(script.Parent.BossGroundMarks) -- BOSS-NIGHT-2 3: 땅 치기 균열
 local SoundSheet = require(script.Parent.SoundSheet)
 
 local BossBodyFx = {}
@@ -194,6 +195,10 @@ function BossBodyFx.impact(e, clipName)
 	end
 	if spec.heavy and n > 0 then
 		heavyGround(e, sum / n)
+	end
+	if spec.crack and n > 0 then -- BOSS-NIGHT-2 3: 땅 치기 자리 균열 그림 판(겉모습만 · 풀 · 상한 - BossGroundMarks)
+		local at = sum / n
+		BossGroundMarks.crackBurst(Vector3.new(at.X, floorY(e), at.Z), spec.crack * e.S / 3, e.bossId or (string.gsub(e.rigId or "", "_v2$", "")))
 	end
 end
 

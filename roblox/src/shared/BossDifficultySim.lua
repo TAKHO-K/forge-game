@@ -178,6 +178,8 @@ function BossDifficultySim.run(bossId, options)
 			return behind and behindSince ~= nil and t - behindSince >= condition.seconds
 		elseif kind == "targetBeyondFor" then
 			return far and farSince ~= nil and t - farSince >= condition.seconds
+		elseif kind == "memberBeyond" then -- BOSS-NIGHT-2 3 수정 여왕 마법 미사일: 원거리 구간(far)에 있으면 바로(솔로 모형 = 대상 한 명)
+			return far
 		elseif kind == "missesWithin" then
 			local n = 0
 			for _, at in ipairs(missLog) do
@@ -608,7 +610,7 @@ function BossDifficultySim.run(bossId, options)
 			end
 		end
 		-- 평타(스킬 사이): 근접 원형 구역 보스는 원 밖 전원을 쓴다 · 아니면 한 명(수정 부수기 동안은 없다)
-		if not current and t >= shieldUntil then
+		if not current and t >= shieldUntil and not data.basicDisabled then -- BOSS-NIGHT-2 3: 근접 평타 없는 보스(수정 여왕 = 마법 미사일)
 			basicTimer += tick
 			if basicTimer >= boss.basicAttack.cooldownSeconds then
 				basicTimer = 0

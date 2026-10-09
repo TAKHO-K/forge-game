@@ -38,6 +38,7 @@ local BossRegrowView = require(script.Parent.BossRegrowView) -- P3d D: 지형 �
 local BossMotionView = require(script.Parent.BossMotionView) -- P3d A1 · A2 · A4: 보스 찍기 · 돌진 모션(인형) · 풍압 · 속도감
 local BossCraterView = require(script.Parent.BossCraterView) -- A2-N4 §2-5 지진파 구덩이 흔적
 local BossQuakeView = require(script.Parent.BossQuakeView) -- GUARDIAN-V3 연보라 균열 표시 · 지진파 돌판 · 수정 조각
+local BossOriginDebug = require(script.Parent.BossOriginDebug) -- BOSS-NIGHT-2 3 발생 지점 점 · 범위 선(개발용)
 local BossGroundMarks = require(script.Parent.BossGroundMarks) -- BOSS-NIGHT-2 2b 지진파 뒤 바닥 균열 · 검기 그을음(겉모습만)
 local function isPhoneLook() -- A2-N4: 폰(터치 · 짧은 변 < 500)은 먼지를 줄인다(BossArenaDressing과 같은 잣대)
 	local cam = workspace.CurrentCamera
@@ -719,6 +720,7 @@ local function resetAll()
 end
 
 patternEvent.OnClientEvent:Connect(function(kind, data)
+	BossOriginDebug.note(kind, data) -- BOSS-NIGHT-2 3: 발생 지점 디버그(기본 꺼짐)
 	if kind == "bubble" then
 		showBubble(data.pattern, data.seconds, data.scale)
 	elseif kind == "gimmickTelegraph" then

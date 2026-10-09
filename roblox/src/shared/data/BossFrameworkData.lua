@@ -50,6 +50,7 @@ D.v3 = {
 		chargeHalfWidth = "body", -- 돌진 경로 반폭(판정 · 그림) = 새 몸 가장자리 반폭(edgeHalfWidth × S × scale)
 		move = { speedScale = 1.3, sprintBeyondStuds = 25, sprintMultiplier = 1.5 },
 		ringStyle = "quakeSlabs",
+		hopHeight = { shockwave = 0 }, -- BOSS-NIGHT-2 3: 진동파 = 몸 들기 끔(옛 4 stud) · 제자리 두 주먹 내려치기(클립 forms.*.hop = k_hop) · 판정 · 파동 시각 그대로
 		reactiveOrder = { "leap", "banana" },
 		skills = {
 			-- 바나나 던지기: 대상이 30 stud 밖에 1.5초 머물면(쿨 3초) · 예비 0.45초(팔 뒤로 + 바나나 발광) → 110 stud/s 직선 · 리드 조준 50% · 최대 체력 7% · 광폭(≤ 50%) = 3갈래 부채
@@ -193,12 +194,36 @@ D.v3 = {
 		glow = { color = Color3.fromRGB(60, 200, 255), fillPeak = 0.55, outline = 0.35, skills = { swipe = true, sweep = true, tailSweep = true, tide = true, tridentThrow = true, spout = true }, basic = true,
 			basicParts = { R = "TridentHead", L = "Hand_L" } },
 		marks = { color = LAVENDER, crackColor = Color3.fromRGB(160, 90, 255), transparency = 0.6, crackTransparency = 0.25, crackWidth = 0.35 },
+		hopHeight = { tide = 0 }, -- BOSS-NIGHT-2 3: 해일 = 몸 들기 끔(옛 4 stud - 뱀 몸이 이유 없이 떠올랐다) · 꼬리로 서서 삼지창 내려꽂기(클립 forms.*.hop = n_hop) · 판정 · 파동 시각 그대로
 	},
 	-- BOSS-NIGHT-1 4 수정 나비 여왕: 근접(강화 평타 · 평타 · 근접 원) = 바닥 표시 없음 + 예비 +0.12 · 홀 보석 · 왼손 청록 발광(파편 폭발 = 큰 범위 · 바닥 표시 유지)
 	crystal_queen = {
-		hideFloor = { swipe = true, basic = true, innerRing = true },
-		windup = { seconds = 0.12, skills = { swipe = true }, basic = true },
-		glow = { color = Color3.fromRGB(150, 240, 255), fillPeak = 0.55, outline = 0.35, skills = { swipe = true, burst = true, spikes = true, energyBeam = true, shards = true, drop = true }, basic = true,
+		hideFloor = { innerRing = true }, -- BOSS-NIGHT-2 3: 근접 = 바닥 예고 다시 보임(느리고 피할 만하게 · 평타는 없음)
+		-- BOSS-NIGHT-2 3(사용자: 근접은 좀 느리고 피할 만하게 · 근접하면 수정 여왕이 오히려 편하도록): 예비 0.12 → 0.4초 · 폭발도(판정 시각이 같이 늦어짐 = 피하기 쉬워지는 쪽)
+		windup = { seconds = 0.4, skills = { swipe = true, burst = true }, basic = true },
+		-- BOSS-NIGHT-2 3(사용자: 기본 공격 = 5연발 마법 미사일 · 원거리 유저를 잘 잡는 보스 · 붙으면 오히려 편함) - 근접 평타는 끔(basicDisabled)
+		--   대상 1명: 12 stud 밖 우선(그중 가장 먼) → 같은 사람 연속 금지(다른 대상이 있으면) → 없으면 가장 가까운(targetRule missileTarget)
+		--   예비 0.6초 = 대상 머리 위 수정 조준 표식(클라) · 발사 간격 0.15초 · 속도 50(날아오는 게 보임) · 1.2초 유도 120°/초(옆으로 대시 · 점프하면 첫 발은 빗나갈 수 있음)
+		--   첫 발이 대상에 맞으면 같은 묶음 나머지 고정 추적(900°/초 · 유도 시간 무제한) · 무적 · 대시 중(passThrough "dash" - 0.3초)에는 모든 발이 통과(고정도 안 걸림)
+		--   경직 = 마지막 발에만 0.25초(PlayerStun - 끝나면 면역 2초 = 이어지지 않음) · 피해 = BossSim으로 맞춤(보고서)
+		basicDisabled = true,
+		reactiveOrder = { "magicMissiles" },
+		skills = {
+			magicMissiles = {
+				primitive = "projectile", motion = "staff", projectileStyle = "crystalMissile", reactive = true,
+				conditions = {},
+				cooldownSeconds = 2.2, priority = 0,
+				telegraphSeconds = 0.6, count = 5, spreadDeg = 0, launchIntervalSeconds = 0.15,
+				speedStuds = 50, turnRateDeg = 120, homingSeconds = 1.2, radiusStuds = 1.5, lifetimeSeconds = 3.5, heightMode = "air", launchHeightStuds = 14,
+				targetRule = "missileTarget", preferBeyondStuds = 12, reflectable = false,
+				lockOnFirstHit = { turnRateDeg = 900 }, passThrough = "dash",
+				lastOnHit = { { type = "stun", seconds = 0.25 } },
+				aimMarkSeconds = 0.6,
+				damage = { kind = "attack", multiplier = 0.12 }, damageLabel = "마법 미사일",
+			},
+		},
+		sim = { rangedFarShare = 0.6, meleeFarShare = 0.08, farSegmentSeconds = 3, hit = { magicMissiles = { first = 0.6, later = 0.6, damageScale = 5, keepFar = true } } }, -- 첫 발 명중 60% → 고정 추적으로 5발 전부(damageScale = 발 수)
+		glow = { color = Color3.fromRGB(150, 240, 255), fillPeak = 0.55, outline = 0.35, skills = { swipe = true, burst = true, spikes = true, energyBeam = true, shards = true, drop = true, magicMissiles = true }, basic = true,
 			basicParts = { R = "ScepterGem", L = "Hand_L" } },
 		marks = { color = LAVENDER, crackColor = Color3.fromRGB(160, 90, 255), transparency = 0.6, crackTransparency = 0.25, crackWidth = 0.35 },
 	},
@@ -215,6 +240,8 @@ D.v3 = {
 
 -- BOSS-NIGHT-2 텍스처 색조 노브(메시 키 → value · variants): 0 = 원본 아틀라스 · n = 미리 구운 변형 "<아틀라스>_<variants[n]>"(tools/blender/atlas_tint.py - MeshPart TextureID는 Color로 안 물든다)
 --   전갈 sand = 색상 +6° · 채도 × 0.82 · 명도 × 1.08(3D가 컨셉보다 주황 · 진함 - 설계 메모) · Studio 비교 = workspace Attribute BossAtlasTint(숫자)가 value를 덮는다
+-- BOSS-NIGHT-2 3(사용자: 수정 여왕 치마가 이상함 → 원래 외형 · 자산 삭제 금지 = 끄기 스위치): [메시 키] = { [부위] = true } - 그 부위 메시와 외곽선을 숨긴다(메시 · 에셋은 그대로 보관 · 판정 사본 아님)
+D.hiddenMeshParts = { ["bosses/crystal_queen_v2m"] = { Skirt = true } }
 D.atlasTint = {
 	["bosses/scorpion_queen_v2m"] = { value = 0, variants = { "sand" } },
 }

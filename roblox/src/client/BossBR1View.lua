@@ -192,6 +192,8 @@ local STYLE = {
 	reflected = { shape = "block", size = function(r) return Vector3.new(r * 0.8, r * 0.8, r * 3) end, material = Enum.Material.Neon, transparency = 0 },
 	-- BOSS-NIGHT-2 폭풍 1폼 검기: 판정 상자는 안 보임 - 지면에 선 초승달 Neon 호(p.crescent)
 	crescent = { shape = "block", size = function(r) return Vector3.new(r * 2, 0.6, 1) end, transparency = 1 },
+	-- BOSS-NIGHT-2 3 수정 여왕 마법 미사일(5연발 유도): 가는 수정 침 · 보라 Neon(가장 낮은 채널 ≤ 90 · 빨강 아님) · 예비 구체도 같은 색
+	crystalMissile = { shape = "block", size = function(r) return Vector3.new(r * 0.5, r * 0.5, r * 2.4) end, color = Color3.fromRGB(170, 90, 255), material = Enum.Material.Neon, transparency = 0.05 },
 }
 local CRESCENT = { color = Color3.fromRGB(255, 225, 80), edge = Color3.fromRGB(90, 200, 255), segs = 9, spanDeg = 75, height = 1.8, thickness = 0.35 } -- Neon 색 = 가장 낮은 채널 ≤ 90
 
@@ -228,6 +230,40 @@ function BossBR1View.projTelegraph(data)
 		task.delay(data.seconds, function()
 			destroy(part)
 		end)
+	end
+	-- BOSS-NIGHT-2 3 수정 여왕 마법 미사일: 대상 머리 위 수정 조준 표식(화면 픽셀 고정 크기 = 폰에서도 보임 · 보라 · 빨강 아님) - 예비 시간 동안 줄어들며 깜박임
+	if data.style == "crystalMissile" then
+		for _, userId in pairs(data.targetUserIds or {}) do
+			local target = playerByUserId(userId)
+			local head = target and target.Character and (target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart"))
+			if head then
+				local gui = Instance.new("BillboardGui")
+				gui.Name = "CrystalAimMark"
+				gui.Size = UDim2.fromOffset(72, 72)
+				gui.StudsOffset = Vector3.new(0, 4, 0)
+				gui.AlwaysOnTop = true
+				gui.LightInfluence = 0
+				local diamond = Instance.new("Frame")
+				diamond.AnchorPoint = Vector2.new(0.5, 0.5)
+				diamond.Position = UDim2.fromScale(0.5, 0.5)
+				diamond.Size = UDim2.fromScale(0.62, 0.62)
+				diamond.Rotation = 45
+				diamond.BackgroundColor3 = STYLE.crystalMissile.color
+				diamond.BackgroundTransparency = 0.25
+				local stroke = Instance.new("UIStroke")
+				stroke.Color = Color3.fromRGB(235, 225, 255)
+				stroke.Thickness = 3
+				stroke.Parent = diamond
+				diamond.Parent = gui
+				gui.Adornee = head
+				gui.Parent = head
+				TweenService:Create(diamond, TweenInfo.new(data.seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Size = UDim2.fromScale(0.36, 0.36), BackgroundTransparency = 0 }):Play()
+				task.delay(data.seconds + 0.15, function()
+					gui:Destroy()
+				end)
+			end
+		end
+		return
 	end
 	-- 공중 대상 = 머리 위 조준 고리(하늘 쪽 표시 - 내려오면 피한다) · 지면 = 굴러갈 띠(대상 쪽).
 	for _, userId in pairs(data.targetUserIds or {}) do

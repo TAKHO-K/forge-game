@@ -129,6 +129,15 @@ function ArtMeshKit.applyRig(model, key, rigId, S, lift)
 			end
 		end
 	end
+	-- BOSS-NIGHT-2 3 숨길 부위(BossFrameworkData.hiddenMeshParts[메시 키] - 수정 여왕 치마 끄기): 메시는 남기고 안 보이게 · 외곽선은 아래에서 안 붙임
+	local hidden = require(ReplicatedStorage.Shared.data.BossFrameworkData).hiddenMeshParts[key] or {}
+	for name in pairs(hidden) do
+		local mesh = model:FindFirstChild(name)
+		if mesh and mesh:IsA("BasePart") then
+			mesh.Transparency = 1
+			mesh.CastShadow = false
+		end
+	end
 	if not refCF then
 		return count, lines
 	end
@@ -141,7 +150,7 @@ function ArtMeshKit.applyRig(model, key, rigId, S, lift)
 		if p:IsA("BasePart") and not rigNames[p.Name] then
 			local isOutline = p.Name:sub(-#Data.outlineSuffix) == Data.outlineSuffix
 			local hostName = isOutline and p.Name:sub(1, -#Data.outlineSuffix - 1) or (meta and meta.deco and meta.deco[p.Name])
-			local host = hostName and model:FindFirstChild(hostName)
+			local host = hostName and not hidden[hostName] and model:FindFirstChild(hostName)
 			if host and host:IsA("BasePart") then
 				local rel = refCF:ToObjectSpace(p.CFrame)
 				local m = p:Clone()

@@ -77,9 +77,18 @@ return {
 			holdSeconds = 1.2, fadeSeconds = 1.8, max = 90, maxTravel = 130 }, -- maxTravel = 검기 최대 비행(수명 2.6 × 45 = 117 + 여유) - 끝 신호를 못 받은 초승달(보스 리셋 등)이 자국을 계속 남기지 않게
 		crack = { stepStuds = 5, perStep = 3, length = { 3, 6 }, segments = 2, jitter = 0.6, width = 0.7, lift = 0.07, color = Color3.fromRGB(28, 28, 36), transparency = 0.2,
 			glow = Color3.fromRGB(90, 160, 255), glowTransparency = 0.72, glowEvery = 2, debris = 1, debrisSize = { 0.35, 0.7 }, debrisColor = Color3.fromRGB(52, 50, 58),
-			holdSeconds = 6, fadeSeconds = 2, max = 260, bosses = { storm_lord = true } },
+			holdSeconds = 6, fadeSeconds = 2, max = 260, bosses = { storm_lord = true },
+			-- BOSS-NIGHT-2 3(설계 검수: 260파트는 폰에 무거움 → 같은 모습을 적은 파트로): 균열 그림 판(Decal - art/fx/ground_crack_v1.png = 갈라짐 5줄 · 가지 · 파편 · 옅은 빛)
+			--   반경 stepStuds마다 perStep장(크기 size stud · 방향 무작위) · 3파동 ≈ 72장 · 상한 max · 단발 충격(impacts[동작].crack = 반경)은 burst장 · 색조 = Decal.Color3(회색 그림에 곱함 - 어둡게 · 빨강 · 진한 주황 금지)
+			--   그림 = ArtAssetIds["fx/ground_crack_v1"].image(없으면 옛 선 파트로)
+			decal = { asset = "fx/ground_crack_v1", stepStuds = 5, perStep = 2, size = { 6, 9 }, lift = 0.06, transparency = 0.05, max = 80, burst = 3,
+				tints = { storm_lord = Color3.fromRGB(170, 180, 225), section_guardian = Color3.fromRGB(180, 165, 210), abyssal_lord = Color3.fromRGB(140, 190, 195),
+					frost_giant = Color3.fromRGB(170, 205, 230), scorpion_queen = Color3.fromRGB(205, 185, 150) },
+				bosses = { storm_lord = true, section_guardian = true, abyssal_lord = true, frost_giant = true, scorpion_queen = true } } },
 		glowHz = 15, -- 번개빛 깜박임 갱신(초당 - 매 프레임 아님 · 폰)
 	},
+	-- BOSS-NIGHT-2 3 발생 지점 디버그(client/BossOriginDebug - 개발용 · 기본 꺼짐 · Studio에서 workspace Attribute BossOriginDebug = true로 켬): 서버 사건 자리에 점 + 판정 범위 선
+	originDebug = { enabled = false, attribute = "BossOriginDebug", seconds = 2.5, dot = 1.4, line = 0.25, color = Color3.fromRGB(120, 255, 90) },
 	-- 바나나 투사체(교체 슬롯 GuardianBanana - BossFrameworkData.meshSlots): 길이 lengthStuds · 회전 spinHz · 꼬리 트레일 · 풀 최대 poolMax(파티 4 × 3갈래)
 	-- V3.1: 길이 = 보스 손(Hand_R 메시 가장 긴 변) × handScale(손을 못 찾으면 lengthStuds) · 비행 = 텀블(끝이 넘어가는 회전) spinHz 바퀴/초 ·
 	--   hold = 예비 동안 손에 든 바나나 보라 발광 0 → 1(Highlight 채움 · PointLight) · light = 비행 중 작은 보라 빛 1개 · shards = 맞거나 땅에 닿을 때 보라 조각 파티클

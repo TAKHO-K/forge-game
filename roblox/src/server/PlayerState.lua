@@ -187,6 +187,13 @@ function PlayerState.clearInvulnerable(player, sourceKey)
 	end
 end
 
+-- BOSS-NIGHT-2 3: 이 출처 배율이 지금 살아 있는가(수정 여왕 마법 미사일 = 대시 중에는 통과 - 피할 수 없는 피해 금지)
+function PlayerState.hasIncomingSource(player, sourceKey)
+	local entry = players[player]
+	local rec = entry and entry.incomingMultipliers and entry.incomingMultipliers[sourceKey]
+	return rec ~= nil and rec.untilAt > os.clock()
+end
+
 function PlayerState.isInvulnerable(player)
 	local entry = players[player]
 	local now = os.clock()

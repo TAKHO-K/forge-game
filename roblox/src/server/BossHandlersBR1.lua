@@ -5,6 +5,7 @@
 --   vortex     소용돌이(끌림 telegraphSeconds 동안 · 클라가 자기 캐릭터를 당긴다 - 걷기보다 느리게) → 중심 폭발 원
 -- 판정은 전부 여기(서버), 그림은 클라(BossBR1View) - 보이는 장판 = 실제 판정. kit = BossPatterns가 넘기는 공용 함수 표(victims · send · …).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local BossSkillMath = require(ReplicatedStorage.Shared.BossSkillMath)
@@ -55,7 +56,8 @@ local function beginSectorVolley(c, centerDeg)
 	local st, skill = c.st, c.skill
 	local volley = BossSkillMath.volleysOf(skill)[st.sectorVolley]
 	st.sectorCenterDeg = centerDeg
-	st.sectorOrigin = kit.xz(c.position)
+	local so = kit.originOf(c) -- BOSS-NIGHT-2 3: 땅 가르기 · 발 구르기 = 내려친 부위 아래에서(표에 없는 휘두르기는 몸 중심)
+	st.sectorOrigin = so and kit.xz(so) or kit.xz(c.position)
 	st.phase = "sectorTelegraph"
 	st.phaseEndsAt = c.now + volley.telegraphSeconds
 	local radius = volley.radiusStuds or kit.zoneOf(c.model).radius or 140
@@ -151,6 +153,45 @@ local function pickProjectileTargets(c)
 	if rule == "airborne" or (rule == "airbornePreferred" and #airborne > 0) then
 		return airborne
 	end
+	if rule == "missileTarget" then -- BOSS-NIGHT-2 3 수정 여왕 마법 미사일: preferBeyondStuds 밖 우선(그중 가장 먼) · 같은 사람 연속 금지(다른 대상이 있으면) · 없으면 가장 가까운
+		local last = c.st.lastMissileTarget
+		local function pick(list, farthest)
+			local best, bestD = nil, nil
+			for _, v in ipairs(list) do
+				local d = Reach.horizontalDistance(v.root.Position, c.position)
+				if not bestD or (farthest and d > bestD) or (not farthest and d < bestD) then
+					best, bestD = v, d
+				end
+			end
+			return best
+		end
+		local far, farOthers, others = {}, {}, {}
+		for _, v in ipairs(all) do
+			local beyond = Reach.horizontalDistance(v.root.Position, c.position) > (c.skill.preferBeyondStuds or 12)
+			if beyond then
+				table.insert(far, v)
+				if v.player ~= last then
+					table.insert(farOthers, v)
+				end
+			end
+			if v.player ~= last then
+				table.insert(others, v)
+			end
+		end
+		local chosen = pick(farOthers, true) or (#others == 0 and pick(far, true)) or pick(others, false) or pick(all, false)
+		c.st.lastMissileTarget = chosen and chosen.player or nil
+		return chosen and { chosen } or {}
+	end
+	if rule == "farthestBeyond" then -- BOSS-NIGHT-2 3 수정 여왕 마법 미사일: beyondStuds 밖 멤버 중 가장 먼 한 명
+		local best, bestD = nil, c.skill.beyondStuds or 18
+		for _, v in ipairs(all) do
+			local d = Reach.horizontalDistance(v.root.Position, c.position)
+			if d > bestD then
+				best, bestD = v, d
+			end
+		end
+		return best and { best } or {}
+	end
 	if rule == "beyond" then -- BOSS-NIGHT-2 폭풍 전류 구슬: 보스에게서 beyondStuds 밖 멤버 전원(가까운 순 · 최대 maxTargets)
 		local far = {}
 		for _, v in ipairs(all) do
@@ -198,8 +239,9 @@ local function launchProjectile(c, index, target)
 	if not target or aliveProjectileCount(st) >= BossCurveData.arenaProjectileCap then
 		return false -- BR1-2 아레나당 동시 투사체 상한(성능)
 	end
-	local origin = kit.xz(c.position)
-	local y = skill.heightMode == "ground" and (st.floorY + skill.radiusStuds * 0.6) or (st.floorY + (skill.launchHeightStuds or 9))
+	local po = st.projOrigin
+	local origin = po and kit.xz(po) or kit.xz(c.position)
+	local y = skill.heightMode == "ground" and (st.floorY + skill.radiusStuds * 0.6) or (po and po.Y or (st.floorY + (skill.launchHeightStuds or 9)))
 	local position = Vector3.new(origin.X, y, origin.Z)
 	local aim = predictedAim(skill, position, target.root, skill.heightMode)
 	if skill.heightMode == "ground" then
@@ -222,6 +264,8 @@ local function launchProjectile(c, index, target)
 		-- BR1-2 반사 대비(K 성기사 패링 · 반사 대결): 소유자 · 반사 가능 · 반사 횟수
 		owner = { kind = "boss", model = c.model }, reflectable = skill.reflectable ~= false, reflections = 0,
 		throw = st.projThrow, -- GUARDIAN-V3: 한 번 던진 묶음(부채 3갈래 포함) - 묶음 전부가 대상을 못 맞히면 빗나감(onMiss)
+		volley = skill.lockOnFirstHit and st.projVolley or nil, -- BOSS-NIGHT-2 3: 같은 묶음 - 한 발이 대상에 맞으면 나머지 고정 추적
+		index = index, -- BOSS-NIGHT-2 3: 몇 번째 발(skill.lastOnHit = 마지막 발에만)
 	}
 	if st.projThrow then
 		st.projThrow.left += 1
@@ -246,14 +290,17 @@ BossHandlersBR1.projectile = {
 		st.projTargets = pickProjectileTargets(c)
 		st.projLaunched = 0
 		st.projThrow = skill.onMiss and { left = 0, hit = false, skill = skill, data = c.data } or nil
+		st.projOrigin = kit.originOf(c) -- BOSS-NIGHT-2 3: 쏘는 부위(손 · 지팡이 · 홀 끝 · 입 · 꼬리 끝)에서 - 표에 없으면 보스 중심
+		st.projVolley = skill.lockOnFirstHit and { locked = false } or nil
 		local userIds = {}
 		for _, v in ipairs(st.projTargets) do
 			table.insert(userIds, typeof(v.player) == "Instance" and v.player.UserId or 0)
 		end
+		local po = st.projOrigin -- BOSS-NIGHT-2 3: 예고 구체도 실제 발사점 위(예고 = 판정 = 이펙트)
 		kit.send(st, "projTelegraph", {
-			center = Vector3.new(c.position.X, st.floorY, c.position.Z), seconds = skill.telegraphSeconds, count = skill.count or 1,
+			center = Vector3.new((po or c.position).X, st.floorY, (po or c.position).Z), seconds = skill.telegraphSeconds, count = skill.count or 1,
 			style = skill.projectileStyle, heightMode = skill.heightMode or "air", targetUserIds = userIds, bossId = c.data.id, motion = skill.motion,
-			launchHeight = skill.launchHeightStuds or 9,
+			launchHeight = po and math.max(po.Y - st.floorY, 0.5) or skill.launchHeightStuds or 9,
 		})
 	end,
 	step = function(c)
@@ -427,7 +474,12 @@ function BossHandlersBR1.stepProjectiles(model, st, data, now, dt)
 			-- BR1-4c c-3: 따라가는 시간은 homingSeconds까지(날기 시작부터 - 반사로 모으던 시간 제외) · 목표 자리는 retargetSeconds마다 대상의 지금 자리로 갱신
 			local homing = BossData.mechanics.homing
 			local flying = now - (p.holdUntil or p.bornAt or now)
-			if target and p.turnRad > 0 and flying <= (p.skill.homingSeconds or homing.homingSeconds) then -- BOSS-NIGHT-2: 스킬별 유도 시간(전류 구슬 2.5초)
+			local locked = p.volley and p.volley.locked -- BOSS-NIGHT-2 3: 묶음 첫 명중 뒤 = 빠른 회전 · 유도 시간 무제한 · 매 틱 지금 자리
+			local turnRad = locked and math.rad(p.skill.lockOnFirstHit.turnRateDeg) or p.turnRad -- 고정이 풀리면(대시로 한 발 소멸) 원래 회전으로
+			if locked then
+				p.retargetAt = 0
+			end
+			if target and turnRad > 0 and (locked or flying <= (p.skill.homingSeconds or homing.homingSeconds)) then -- BOSS-NIGHT-2: 스킬별 유도 시간(전류 구슬 2.5초)
 				if not p.aimAt or now >= (p.retargetAt or 0) then
 					p.aimAt = target.root.Position
 					p.retargetAt = now + homing.retargetSeconds
@@ -439,7 +491,7 @@ function BossHandlersBR1.stepProjectiles(model, st, data, now, dt)
 				if desired.Magnitude > 1e-3 then
 					desired = desired.Unit
 					local angle = math.acos(math.clamp(p.dir:Dot(desired), -1, 1))
-					local maxTurn = p.turnRad * dt
+					local maxTurn = turnRad * dt
 					if angle <= maxTurn or angle < 1e-4 then
 						p.dir = desired
 					else
@@ -510,7 +562,20 @@ function BossHandlersBR1.stepProjectiles(model, st, data, now, dt)
 			end
 		elseif not done and not holding then -- 모으는 중(반사 윈드업)에는 아무도 안 맞는다
 			for _, v in ipairs(targets) do
-				if not p.hitBy[v.player] and not BossTrap.isTrapped(v.player) then
+				-- BOSS-NIGHT-2 3: skill.passThrough = 무적 · 대시 중에는 통과(맞지 않고 소모 · 고정 추적도 안 걸림 - 피할 수 없는 피해 금지)
+				local passing = p.skill.passThrough and (PlayerState.isInvulnerable(v.player) or PlayerState.hasIncomingSource(v.player, p.skill.passThrough))
+				-- 대시 · 무적 중에 닿은 발 = 그 자리에서 소멸(피해 없음) + 묶음 고정 추적 풀림(Studio 시험: 통과만 하면 그 발이 계속 쫓아와 대시가 끝난 뒤 맞았다 = 대시가 쓸모없음)
+				if passing and not p.hitBy[v.player] and not BossTrap.isTrapped(v.player) and (v.root.Position - p.position).Magnitude <= p.radius + half + 0.5 then
+					if p.volley then
+						p.volley.locked = false
+					end
+					done = true
+					if RunService:IsStudio() then
+						print(("[BossMissile] 무적으로 무시됨(대시 · 무적 중 - 소멸 · 고정 추적 풀림): %s · %d번째 발"):format(tostring(v.player), p.index or 0)) -- Studio 검증용
+					end
+					break
+				end
+				if not passing and not p.hitBy[v.player] and not BossTrap.isTrapped(v.player) then
 					local hit
 					if p.heightMode == "ground" then
 						-- 지면을 굴러 온다: 수평 반경 안 + 발이 지면 + groundHitHeightStuds 아래(점프로 넘는다).
@@ -521,6 +586,9 @@ function BossHandlersBR1.stepProjectiles(model, st, data, now, dt)
 					end
 					if hit then
 						p.hitBy[v.player] = true
+						if p.volley and v.player == p.target then
+							p.volley.locked = true -- BOSS-NIGHT-2 3: 첫 명중 → 같은 묶음 나머지 고정 추적
+						end
 						local c = { model = model, st = st, data = data, skill = p.skill, now = now, position = p.position }
 						kit.judgeBegin()
 						if p.skill.damage.kind == "maxHpRaw" then -- BR1-2 반사된 투사체: 한 방에 죽을 수 있는 큰 피해(감소 · 1 ~ 30 보호 적용)
@@ -536,6 +604,9 @@ function BossHandlersBR1.stepProjectiles(model, st, data, now, dt)
 						kit.judgeEnd(c, { kind = "projectile", center = p.position, radius = p.radius })
 						if p.skill.onHit then
 							kit.runHitEffects(c, p.skill.onHit, v, p.position - Vector3.new(0, 0, 0), 1)
+						end
+						if p.skill.lastOnHit and p.index == (p.skill.count or 1) then -- BOSS-NIGHT-2 3: 마지막 발에만(약한 경직 - PlayerStun 면역 창이 이어짐을 막는다)
+							kit.runHitEffects(c, p.skill.lastOnHit, v, p.position, 1)
 						end
 						if p.skill.trapOnHits then
 							BossHandlersBR1.noteTrapHit(c, v, p.skill.trapOnHits)
@@ -1002,7 +1073,8 @@ BossHandlersBR1.boomerang = {
 	start = function(c)
 		local st, skill = c.st, c.skill
 		local zone = kit.zoneOf(c.model)
-		local origin = kit.xz(c.position)
+		local bo = kit.originOf(c) -- BOSS-NIGHT-2 3: 삼지창 던지기 = 삼지창 끝에서(분신 돌격 = 몸 - 표에 없음)
+		local origin = bo and kit.xz(bo) or kit.xz(c.position)
 		local spread = skill.centered and skill.stepDeg * ((skill.directions or 1) - 1) / 2 or 0
 		local bases = { angleToTarget(c) - spread }
 		if skill.perMember and not c.targetRoot then

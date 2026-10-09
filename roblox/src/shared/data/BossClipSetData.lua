@@ -96,6 +96,16 @@ do
 		hitstop = 0.06, squash = 0.25,
 		airborne = { from = 0.2, to = 1.0 },
 	}
+	-- BOSS-NIGHT-2 3 진동파 찍기(사용자 · 설계 검수: 파동 간격 1.5초라 착지 직후 또 점프 = "연속 점프처럼 보임" → v3.hopHeight 0 + 제자리 두 주먹 내려치기) · forms.*.hop
+	--   두 주먹을 머리 위로 모아 몸을 젖힘(예비 = 파동 사이 시간) → 두 주먹으로 땅을 내려침(짧은 멈춤) → 회복. 판정 · 파동 시각 그대로(서버 hop 시각 = 내려치는 순간).
+	C.k_hop = {
+		pre = {
+			{ f = 0.35, ease = "out", pose = FISTS_UP },
+			{ f = 1.0, ease = "in", pose = merge(FISTS_UP, { Waist = { 24, 0, 0 }, Shoulder_L = { 165, 0, 16 }, Shoulder_R = { 165, 0, -16 } }) },
+		},
+		post = { { s = 0.06, ease = "in", pose = SLAM_LOW }, { s = 0.3, ease = "out", pose = merge(SLAM_LOW, { Waist = { -42, 0, 0 } }) }, { s = 0.9, ease = "inout", pose = REST_POSE } },
+		hitstop = 0.1, squash = 0.25, endFade = 0.5,
+	}
 	C.quake_finish = { -- 마무리 강타(피해 없음): 크게 일어서 두 주먹 → 거칠게 내려찍고 부르르
 		pre = { { f = 1.0, ease = "out", pose = merge(REAR, { Waist = { 22, 0, 0 }, Shoulder_L = { 158, 0, 18 }, Shoulder_R = { 158, 0, -18 } }) } },
 		post = {
@@ -424,12 +434,12 @@ do
 			before = {
 				gait = "knuckle", stance = KNUCKLE, guard = KNUCKLE, contacts = { "Foot_L", "Foot_R", "Hand_L", "Hand_R" },
 				walk = { stride = 0.8, knee = 26, arm = 0, bob = 0.04, lean = 4, twist = 3, turnLean = 5, runAt = 1.6, armSwing = 1.0, armLift = 20, legLift = 24 },
-				motions = MOTIONS, skills = SKILLS, env = "k_env", throw = "k_throw",
+				motions = MOTIONS, skills = SKILLS, env = "k_env", throw = "k_throw", hop = "k_hop",
 			},
 			after = {
 				gait = "biped", guard = UPRIGHT, stance = CRYSTAL_BROKEN,
 				walk = { stride = 0.6, knee = 30, arm = 12, bob = 0.05, lean = 5, twist = 4, turnLean = 6, runAt = 1.6 },
-				motions = MOTIONS, skills = SKILLS_AFTER, env = "k_env", throw = "k_throw",
+				motions = MOTIONS, skills = SKILLS_AFTER, env = "k_env", throw = "k_throw", hop = "k_hop",
 			},
 		},
 		transform = { clip = "k_transform", hit = 1.0, switchAt = 1.3, seconds = 2.7 },
@@ -445,6 +455,7 @@ do
 			k_heavy = { kind = "ground", parts = { "Hand_L", "Hand_R" }, size = 0.26, shake = 1.0, heavy = true },
 			k_shock = { kind = "ground", parts = { "Hand_L", "Hand_R" }, size = 0.26, shake = 1.0, heavy = true },
 			hopSlam = { kind = "ground", parts = { "Hand_L", "Hand_R" }, size = 1.0, shake = 1.0 },
+			k_hop = { kind = "ground", parts = { "Hand_L", "Hand_R" }, size = 1.0, shake = 1.0, heavy = true },
 			quake_finish = { kind = "ground", parts = { "Hand_L", "Hand_R" }, size = 1.3, shake = 1.2 },
 			k_meteor = { kind = "whoosh", parts = { "Hand_R" }, size = 1.1 },
 			k_charge = { kind = "roar", parts = { "Head" }, size = 0.8, shake = 0.5 },
@@ -811,13 +822,13 @@ do
 			tuskShot = TUSKS, trunkWhip = { "Trunk4", "Trunk5", "Trunk6" }, gore = { "Tusk_L", "Tusk_R", "Head" }, backKick = { "Foot_L", "Foot_R" },
 		},
 		impacts = {
-			m_slam = { kind = "ground", parts = FRONT_FEET, size = 0.3, shake = 1.1, heavy = true },
+			m_slam = { kind = "ground", parts = FRONT_FEET, size = 0.3, shake = 1.1, heavy = true, crack = 9 },
 			m_icefall = { kind = "spark", parts = { "BackIce" }, size = 1.1 },
 			m_spike = { kind = "ground", parts = TUSKS, size = 0.8, shake = 0.6, floorDust = true },
 			m_swipe = { kind = "whoosh", parts = { "Tusk_R" }, size = 1.2 },
 			m_mirror = { kind = "spark", parts = { "Fur2" }, size = 1.0 },
 			m_inner = { kind = "ground", parts = FRONT_FEET, size = 0.28, shake = 1.0, heavy = true },
-			m_stomp = { kind = "ground", parts = { "Hand_R" }, size = 0.4, shake = 1.2, heavy = true },
+			m_stomp = { kind = "ground", parts = { "Hand_R" }, size = 0.4, shake = 1.2, heavy = true, crack = 9 },
 			m_snowball = { kind = "whoosh", parts = { "Trunk6" }, size = 1.0, floorDust = true },
 			m_tusk = { kind = "spark", parts = TUSKS, size = 1.0 },
 			m_trunk = { kind = "whoosh", parts = { "Trunk6" }, size = 1.2 },
@@ -1264,6 +1275,19 @@ do
 			{ s = 2.3, ease = "inout", pose = merge(TRI_UP, RISE) }, { s = 3.0, ease = "in", pose = SLAM }, { s = 3.8, ease = "inout", pose = REST_POSE } },
 		hitstop = 0.07, squash = 0.2, extraStrikes = { post = { 1.5, 3.0 } },
 	}
+	-- BOSS-NIGHT-2 3 해일 찍기(설계 검수: 공통 사람형 점프 클립 + 서버 4 stud 들기 = 뱀 몸이 이유 없이 떠오름 → v3.hopHeight 0 + 전용) · forms.*.hop
+	--   꼬리로 몸을 세우며 삼지창을 두 손으로 머리 위로 → 내려꽂기(짧은 멈춤) → 회복. 판정 · 파동 시각 그대로.
+	-- 손목 = FK 격자(삼지창 쥔 방향 때문에 TRI_UP · SLAM 그대로면 들 때 창끝이 아래 · 꽂을 때 위였다): 들기 창끝 위 34.6 stud · 꽂기 창끝 지면 1.2 stud
+	local TRI_UP2 = merge(TRI_UP, RISE, { Shoulder_L = { 160, 0, 14 }, Elbow_L = { 20, 0, 0 }, Wrist_R = { -130, 0, 45 } })
+	local SLAM2 = merge(SLAM, { Shoulder_L = { 62, 0, 10 }, Elbow_L = { 26, 0, 0 }, Waist = { -30, 0, 0 }, Wrist_R = { 80, 0, 0 } })
+	C.n_hop = {
+		pre = {
+			{ f = 0.35, ease = "out", pose = TRI_UP2 },
+			{ f = 1.0, ease = "in", pose = merge(TRI_UP2, { Shoulder_R = { 175, 0, -6 }, Shoulder_L = { 172, 0, 10 }, Waist = { 12, 0, 0 } }) },
+		},
+		post = { { s = 0.06, ease = "in", pose = SLAM2 }, { s = 0.3, ease = "out", pose = merge(SLAM2, { Waist = { -32, 0, 0 } }) }, { s = 0.9, ease = "inout", pose = REST_POSE } },
+		hitstop = 0.1, squash = 0.2, endFade = 0.5,
+	}
 	-- 물기둥 spout(5번 차례로): 삼지창으로 대상을 겨눔(겨눌 때마다 찌름)
 	C.n_spout = {
 		pre = { { f = 1.0, ease = "inout", pose = TRI_POINT } },
@@ -1355,8 +1379,8 @@ do
 		planPatch = planPatch,
 		stunStars = true,
 		forms = {
-			before = { gait = "serpent", stance = HOLD, guard = HOLD, contacts = { "Tail5", "Tail6", "Tail7" }, walk = { stride = 0.6, wave = 12, waves = 1, phaseStep = 0.6, runAt = 1.6 }, motions = MOTIONS, skills = SK, env = "n_env", throw = "n_throw" },
-			after = { gait = "serpent", stance = ANGRY, guard = ANGRY, contacts = { "Tail5", "Tail6", "Tail7" }, walk = { stride = 0.65, wave = 14, waves = 1.0, phaseStep = 0.6, runAt = 1.6 }, motions = MOTIONS, skills = SK, env = "n_env", throw = "n_throw" },
+			before = { gait = "serpent", stance = HOLD, guard = HOLD, contacts = { "Tail5", "Tail6", "Tail7" }, walk = { stride = 0.6, wave = 12, waves = 1, phaseStep = 0.6, runAt = 1.6 }, motions = MOTIONS, skills = SK, env = "n_env", throw = "n_throw", hop = "n_hop" },
+			after = { gait = "serpent", stance = ANGRY, guard = ANGRY, contacts = { "Tail5", "Tail6", "Tail7" }, walk = { stride = 0.65, wave = 14, waves = 1.0, phaseStep = 0.6, runAt = 1.6 }, motions = MOTIONS, skills = SK, env = "n_env", throw = "n_throw", hop = "n_hop" },
 		},
 		transform = { clip = "n_transform", hit = 1.0, switchAt = 1.6, seconds = 2.6 },
 		intro = { style = "emerge", depth = 3.0, riseFrac = 0.46, riseEase = "sine" },
@@ -1366,7 +1390,7 @@ do
 			vortex = TAIL_TIP, bubbles = { "Head" }, mirror = { "Hand_L" }, tridentThrow = { "TridentHead" },
 		},
 		impacts = {
-			n_sweep = { kind = "whoosh", parts = TAIL_TIP, size = 1.3, floorDust = true }, n_tide = { kind = "ground", parts = { "TridentHead" }, size = 1.0, shake = 0.8 },
+			n_sweep = { kind = "whoosh", parts = TAIL_TIP, size = 1.3, floorDust = true }, n_tide = { kind = "ground", parts = { "TridentHead" }, size = 1.0, shake = 0.8 }, n_hop = { kind = "ground", parts = { "TridentHead" }, size = 1.0, shake = 0.9, heavy = true },
 			n_spout = { kind = "spark", parts = { "TridentHead" }, size = 0.9 }, n_swipe = { kind = "whoosh", parts = { "TridentHead" }, size = 1.1 },
 			n_tailsweep = { kind = "whoosh", parts = TAIL_TIP, size = 1.3, floorDust = true }, n_vortex = { kind = "whoosh", parts = TAIL_TIP, size = 1.2 },
 			n_bubbles = { kind = "spark", parts = { "Head" }, size = 0.8 }, n_mirror = { kind = "spark", parts = { "Hand_L" }, size = 1.0 }, n_trident = { kind = "whoosh", parts = { "Hand_R" }, size = 1.1 },
@@ -1443,6 +1467,13 @@ do
 	C.q_shards = { pre = { { f = 1.0, ease = "inout", pose = merge(HOLD, { Shoulder_L = { 60, 0, 40 }, Elbow_L = { 90, 0, 0 }, Waist = { 4, -20, 0 } }) } },
 		post = { { s = 0.06, ease = "out", pose = FLICK }, { s = 0.2, ease = "out", pose = merge(FLICK, { Waist = { -4, 4, 0 } }) }, { s = 0.36, ease = "out", pose = merge(FLICK, { Waist = { -4, -6, 0 } }) },
 			{ s = 0.5, ease = "out", pose = merge(FLICK, { Waist = { -4, -14, 0 } }) }, { s = 1.1, ease = "inout", pose = REST_POSE } }, hitstop = 0.04, extraStrikes = { post = { 0.2, 0.36, 0.5 } } }
+	-- BOSS-NIGHT-2 3 마법 미사일 magicMissiles(사용자: 기본 평타 = 5연발 · 예비 0.35초 홀 발광 · 0.1초 간격): 홀을 대상 쪽으로 겨눠 다섯 번 튕김(발사마다 손목 · 어깨)
+	local AIM = merge(HOLD, { Shoulder_R = { 92, 0, -6 }, Elbow_R = { 12, 0, 0 }, Wrist_R = { -20, 0, 0 }, Waist = { 0, 12, 0 }, Neck = { 0, 8, 0 } })
+	local AIM_FLICK = merge(AIM, { Shoulder_R = { 102, 0, -6 }, Wrist_R = { -38, 0, 0 } })
+	C.q_missile = { pre = { { f = 1.0, ease = "inout", pose = merge(AIM, { Shoulder_R = { 82, 0, -6 }, Wrist_R = { -5, 0, 0 } }) } },
+		post = { { s = 0.04, ease = "out", pose = AIM_FLICK }, { s = 0.09, ease = "out", pose = AIM }, { s = 0.14, ease = "out", pose = AIM_FLICK }, { s = 0.19, ease = "out", pose = AIM },
+			{ s = 0.24, ease = "out", pose = AIM_FLICK }, { s = 0.29, ease = "out", pose = AIM }, { s = 0.34, ease = "out", pose = AIM_FLICK }, { s = 0.39, ease = "out", pose = AIM },
+			{ s = 0.44, ease = "out", pose = AIM_FLICK }, { s = 0.9, ease = "inout", pose = REST_POSE } }, hitstop = 0.02, extraStrikes = { post = { 0.14, 0.24, 0.34, 0.44 } } } -- 다섯 발 = 의도된 빠른 연타
 	-- 분신 돌격 mirrorDash(예비 2.2초 · 분신 3이 달려갔다 돌아옴): 날개를 활짝 → 앞으로 숙여 날개 쳐 내보냄
 	C.q_mdash = { pre = { { f = 0.6, ease = "inout", pose = merge(HOLD, LIFT, wings(-22, -16)) }, { f = 1.0, ease = "in", pose = merge(HOLD, LIFT, wings(-28, -20), { Waist = { 8, 0, 0 } }) } },
 		post = { { s = 0.08, ease = "out", pose = merge(HOLD, wings(20, 14), { Waist = { -16, 0, 0 }, Shoulder_L = { 70, 0, 30 } }) }, { s = 1.2, ease = "inout", pose = REST_POSE } }, hitstop = 0.06 }
@@ -1480,7 +1511,7 @@ do
 		basicPrep = { R = prepR, L = mirror(prepR) },
 	}
 	local SK = { burst = "q_burst", drop = "q_drop", energyBeam = "q_beam", orgel = "q_orgel", swipe = "q_swipe", grab = "@grab", spikes = "q_spikes", shards = "q_shards",
-		mirrorDash = "q_mdash", mirror = "q_mirror" }
+		mirrorDash = "q_mdash", mirror = "q_mirror", magicMissiles = "q_missile" }
 	local MOTIONS = { idle = "gait", walk = "gait", intro = "plan:introCrouch", death = "plan:death", env = "q_env", flinch = "plan:flinch", stun = "plan:stun" }
 	local GEM = { "ScepterGem" }
 	D.crystal_queen_v2 = {
@@ -1497,12 +1528,12 @@ do
 		intro = { style = "rise", depth = 1.6, riseFrac = 0.44, riseEase = "out" },
 		signature = { "burst", "drop", "energyBeam", "spikes", "shards", "mirrorDash", "swipe", "orgel", "mirror" },
 		flash = {
-			burst = GEM, drop = { "Hand_L" }, energyBeam = GEM, orgel = { "Crown" }, swipe = GEM, grab = { "Hand_L" }, spikes = GEM, shards = { "Hand_L" },
+			magicMissiles = GEM, burst = GEM, drop = { "Hand_L" }, energyBeam = GEM, orgel = { "Crown" }, swipe = GEM, grab = { "Hand_L" }, spikes = GEM, shards = { "Hand_L" },
 			mirrorDash = { "WingF_L2", "WingF_R2" }, mirror = { "Hand_L" },
 		},
 		impacts = {
 			q_burst = { kind = "ground", parts = GEM, size = 1.0, shake = 0.8 }, q_drop = { kind = "spark", parts = { "Hand_L" }, size = 0.9 }, q_beam = { kind = "spark", parts = GEM, size = 1.1 },
-			q_swipe = { kind = "whoosh", parts = GEM, size = 1.1 }, q_spikes = { kind = "ground", parts = GEM, size = 0.8, shake = 0.5 }, q_shards = { kind = "spark", parts = { "Hand_L" }, size = 0.7 },
+			q_swipe = { kind = "whoosh", parts = GEM, size = 1.1 }, q_spikes = { kind = "ground", parts = GEM, size = 0.8, shake = 0.5 }, q_shards = { kind = "spark", parts = { "Hand_L" }, size = 0.7 }, q_missile = { kind = "spark", parts = GEM, size = 0.5 },
 			q_mdash = { kind = "whoosh", parts = { "WingF_L2", "WingF_R2" }, size = 1.3 }, q_mirror = { kind = "spark", parts = { "Hand_L" }, size = 1.0 },
 			q_env = { kind = "roar", parts = { "Body" }, size = 1.3, shake = 0.9 }, q_throw = { kind = "whoosh", parts = { "Hand_L" }, size = 1.0 },
 			q_transform = { kind = "roar", parts = { "Head" }, size = 1.2, shake = 0.8 }, roar = { kind = "roar", parts = { "Head" }, size = 1.0, shake = 0.7 },
@@ -1730,7 +1761,7 @@ do
 			claw = CLAWS, clawSweep = CLAWS, swipe = { "Hand_R" }, sting = TIPS, stingJab = { "Tail2_8" }, stab = TIPS, ambush = TIPS, sandSearch = { "Tail2_8" }, armadillo = { "Body" }, grab = CLAWS,
 		},
 		impacts = {
-			s_claw = { kind = "ground", parts = CLAWS, size = 1.0, shake = 0.7 }, s_sweep = { kind = "whoosh", parts = CLAWS, size = 1.2, floorDust = true }, s_swipe = { kind = "whoosh", parts = { "Hand_R" }, size = 1.1 },
+			s_claw = { kind = "ground", parts = CLAWS, size = 1.0, shake = 0.7, crack = 9 }, s_sweep = { kind = "whoosh", parts = CLAWS, size = 1.2, floorDust = true }, s_swipe = { kind = "whoosh", parts = { "Hand_R" }, size = 1.1 },
 			s_sting = { kind = "spark", parts = TIPS, size = 0.9 }, s_jab = { kind = "spark", parts = { "Tail2_8" }, size = 0.9 }, s_dig = { kind = "ground", parts = { "Body" }, size = 1.0, shake = 0.4 },
 			s_curl = { kind = "spark", parts = { "Body" }, size = 1.0 }, s_throw = { kind = "whoosh", parts = TIPS, size = 1.0 }, s_env = { kind = "ground", parts = CLAWS, size = 1.3, shake = 1.0 },
 			s_transform = { kind = "roar", parts = { "Head" }, size = 1.2, shake = 0.8 }, s_hiss = { kind = "roar", parts = { "Head" }, size = 1.0, shake = 0.6 }, roar = { kind = "roar", parts = { "Head" }, size = 1.0, shake = 0.6 },
@@ -1738,6 +1769,65 @@ do
 		},
 		clips = C,
 	}
+end
+
+-- ═══════════════════════════ BOSS-NIGHT-2 3 근접 높이 규칙(바이블 §13): 근접 타격 부위의 가장 낮은 점 = 지면 ~ 8 stud
+-- 접촉 키(post 1 · 2)에 더하는 값(각도 · 루트 내림 - 겉모습만 · 판정 · 시각 무변경). 수치 = 오프라인 FK 격자 탐색(발 지면 −0.7 위 · 다른 부위가 원래보다 0.3 넘게 박히지 않음 · 보정 최소).
+--   높이 = 접촉 순간 ~ +0.12초(접촉 · 유지 키)의 타격 부위 최저점(예비 → 접촉 보간 중 잠깐 스치는 점은 세지 않음 - 그걸 세면 무기가 접촉 때 위로 서 있어도 통과했다).
+--   bend(a) = 다리 굽힘(엉덩이 +a · 무릎 −2a · 발목 +a - 루트를 내릴 때 발이 땅에 박히지 않게). 자세 표는 복사해서 쓴다(다른 키 · 동작과 같은 표를 건드리지 않음).
+do
+	local function bend(a)
+		return { Hip_L = { a }, Hip_R = { a }, Knee_L = { -2 * a }, Knee_R = { -2 * a }, Ankle_L = { a }, Ankle_R = { a } }
+	end
+	local function addPose(pose, delta)
+		local out = table.clone(pose)
+		for joint, d in pairs(delta) do
+			local cur = out[joint] and table.clone(out[joint]) or { 0, 0, 0, 0, 0, 0 }
+			for i = 1, #d do
+				cur[i] = (cur[i] or 0) + d[i]
+			end
+			out[joint] = cur
+		end
+		return out
+	end
+	local function tailTip(rx) -- 나가 꼬리 6 ~ 12마디 위아래(rx)
+		local p = {}
+		for i = 6, 12 do
+			p["Tail" .. i] = { rx }
+		end
+		return p
+	end
+	local MELEE_LOW = {
+		section_guardian_v2 = { k_swipe = { Shoulder_R = { -40 } }, basic_R = { Shoulder_R = { -60 } }, basic_L = { Shoulder_L = { -60 } } }, -- 강화 평타 12.9 → 6.0 · 평타 12.7 ~ 15.1 → 6.3 ~ 6.7
+		frost_giant_v2 = { m_swipe = { Neck = { -20 } }, basic_R = { Neck = { -20 } }, basic_L = { Neck = { -20 } } }, -- 상아: 고개 숙여 · 9.8 → 5.4 · 평타 10.0 → 6.2
+		storm_lord_v2 = {
+			s_inner = merge({ RootJoint = { -10, 0, 0, 0, -0.8, 0 } }, bend(20)), -- 원 안 낙뢰: 10.7 → 6.7
+			basic_R = merge({ RootJoint = { -30, 0, 0, 0, -0.8, 0 }, Waist = { -30 }, Shoulder_R = { -60 } }, bend(40)), -- 1폼 오른손 평타(지팡이 보주): 24.2 → 8.5(격자 최저 - 규칙 경계)
+			basic_L = merge({ RootJoint = { -50, 0, 0, 0, -0.8, 0 }, Waist = { -30 } }, bend(20)), -- 1폼 왼손 평타(빈손): 18.1 → 6.6
+			f_basic_L = merge({ RootJoint = { -40, 0, 0, 0, -0.8, 0 } }, bend(20)), -- 2폼 잽: 11.6 → 6.6
+			f_basic_R = merge({ RootJoint = { -50, 0, 0, 0, -0.6, 0 }, Waist = { -30 } }, bend(20)), -- 11.6 → 6.1(앞다리가 달라 왼쪽과 값이 다름)
+		},
+		abyssal_lord_v2 = {
+			n_swipe = { RootJoint = { -15 }, Waist = { -30 }, Shoulder_R = { -80 }, Wrist_R = { -60, 0, 110 } }, -- 삼지창: 팔 내려 손목을 눕혀 창끝 앞-아래로 · 19.5 → 7.0
+			basic_L = { RootJoint = { -30, 0, 0, 0, -0.3, 0 }, Waist = { -30 }, Shoulder_L = { -30 } }, -- 왼손 평타: 16.0 → 7.0
+			n_sweep = tailTip(30), n_tailsweep = tailTip(-30), -- 꼬리 휩쓸기 · 꼬리 반원: 접촉 때 꼬리 끝이 들려 있었다(19.0 · 16.8) → 끝 7마디를 눌러 지면 쪽으로 6.8 · 2.5
+		},
+		crystal_queen_v2 = {
+			q_burst = { Waist = { -35 }, Shoulder_R = { -40 }, Wrist_R = { 0, 0, -75 } }, -- 폭발: 허리 숙여 홀을 아래로 · 18.8 → 5.7
+			q_swipe = { RootJoint = { -20, 0, 0, 0, -0.2, 0 }, Waist = { -80 }, Shoulder_R = { -60 }, Wrist_R = { 60, 0, -40 } }, -- 강화 평타: 깊이 숙여 쓸기 · 22.3 ~ 23.8 → 7.2
+			basic_R = { RootJoint = { -10 }, Waist = { -35 }, Shoulder_R = { -40 }, Wrist_R = { 60, 0, 60 } }, -- 오른손 평타(홀): 15.8 → 6.2
+			basic_L = { RootJoint = { -20, 0, 0, 0, -0.2, 0 }, Waist = { -35 }, Shoulder_L = { -40 }, Wrist_L = { -60, 0, 30 } }, -- 왼손 평타(빈손): 21.8 → 10.3 = 떠 있는 몸 + 종 치마가 땅에 박히지 않는 한도의 최저(바이블 §13 예외)
+		},
+	}
+	for rigKey, list in pairs(MELEE_LOW) do
+		for name, delta in pairs(list) do
+			local clip = D[rigKey].clips[name]
+			for i = 1, 2 do
+				clip.post[i] = table.clone(clip.post[i])
+				clip.post[i].pose = addPose(clip.post[i].pose, delta)
+			end
+		end
+	end
 end
 
 return D

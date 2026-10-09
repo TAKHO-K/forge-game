@@ -251,6 +251,7 @@ function BossFramework.applyV3(data, rigKey)
 		out.sprintMultiplier = cfg.move.sprintMultiplier
 	end
 	out.basicNoFloor = hideFloor.basic == true
+	out.basicDisabled = cfg.basicDisabled == true or nil -- BOSS-NIGHT-2 3: 근접 평타 없음(수정 여왕 = 마법 미사일이 기본 공격)
 	out.innerRingHidden = hideFloor.innerRing == true
 	out.basicWindupExtraSeconds = windup.basic and windup.seconds or nil
 	out.firstAssist = cfg.firstAssist

@@ -1,0 +1,103 @@
+{
+ "_about": "BOSS-NIGHT-2 3 Studio 실측 보정(stud · 스테이지 15 크기 · 대상 쪽 기준 앞 fwd / 오른쪽 right): 보이는 접촉 부위(가장 낮은 프레임 · 투사체 = 발사 순간) - 서버 지점의 중앙값. 클라 전용 층(시선 돌리기 · 겹침 · 손목 튕김)을 오프라인 FK가 재현 못 하는 몫. forms = 적용 폼. n = 표본 수.",
+ "section_guardian_v2/heavy": {
+  "fwd": 0.34,
+  "right": 0.06,
+  "n": 2
+ },
+ "section_guardian_v2/shockwave": {
+  "fwd": 0.44,
+  "right": 0.04,
+  "n": 3
+ },
+ "section_guardian_v2/cross": {
+  "fwd": 1.1,
+  "right": 0.0,
+  "n": 1,
+  "note": "1볼리만(2볼리는 빔이 돌아 좌우가 흔들림)"
+ },
+ "section_guardian_v2/banana": {
+  "fwd": -1.45,
+  "right": 2.49,
+  "n": 2
+ },
+ "section_guardian_v2/orbs": {
+  "fwd": 0.38,
+  "right": 0.65,
+  "n": 1
+ },
+ "frost_giant_v2/stomp": {
+  "fwd": 2.08,
+  "right": -4.27,
+  "n": 1
+ },
+ "frost_giant_v2/snowball": {
+  "fwd": -0.59,
+  "right": -4.28,
+  "n": 1
+ },
+ "frost_giant_v2/tuskShot": {
+  "fwd": -2.9,
+  "right": 0.0,
+  "n": 2,
+  "note": "좌우 상아 번갈아(±2.7) - 앞뒤만"
+ },
+ "storm_lord_v2/thunderRing": {
+  "fwd": 0.14,
+  "right": -0.05,
+  "n": 3,
+  "forms": [
+   "before"
+  ]
+ },
+ "storm_lord_v2/discharge": {
+  "fwd": -1.08,
+  "right": -0.93,
+  "n": 5,
+  "forms": [
+   "before"
+  ]
+ },
+ "storm_lord_v2/swordWave": {
+  "fwd": -0.3,
+  "right": 0.26,
+  "n": 2,
+  "forms": [
+   "before"
+  ]
+ },
+ "storm_lord_v2/tornado": {
+  "fwd": 1.66,
+  "right": -0.03,
+  "n": 1,
+  "forms": [
+   "before"
+  ]
+ },
+ "abyssal_lord_v2/tide": {
+  "fwd": 3.83,
+  "right": -4.9,
+  "n": 3
+ },
+ "abyssal_lord_v2/bubbles": {
+  "fwd": -0.9,
+  "right": -0.15,
+  "n": 2
+ },
+ "crystal_queen_v2/magicMissiles": {
+  "fwd": 0.67,
+  "right": -0.4,
+  "n": 35
+ },
+ "crystal_queen_v2/shards": {
+  "fwd": 0.87,
+  "right": 0.76,
+  "n": 2
+ },
+ "scorpion_queen_v2/claw": {
+  "fwd": -0.78,
+  "right": 0.0,
+  "n": 6
+ },
+ "_excluded": "frost_giant_v2/slam · spike = 보정 뺌(매머드 머리 · 코가 대상을 따라 도는 클라 층 때문에 시전마다 3 ~ 10 stud 흔들림 - 표본 1개 보정이 오히려 나빠짐 · FK 값 유지)"
+}

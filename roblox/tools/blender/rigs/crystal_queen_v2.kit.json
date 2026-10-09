@@ -1,5 +1,5 @@
 {
- "about": "BOSS-NIGHT-1 4 수정 나비 여왕 KIT 설정 - 몸 = Meshy crystal_v1_body_meshy71(복셀 리메시 후 감량) + 날개 GLB(위 · 아래 L/R 8마디) + 홀 GLB(오른손) · §8 = 짧은 꽃잎 치마 · 블루머 · 맨 정강이를 덮는 닫힌 종 치마(generate bell · 리그 색 · 굽기 제외) · 치마 속(허벅지 · 엉덩이)은 안 보여 300씩",
+ "about": "BOSS-NIGHT-1 4 수정 나비 여왕 KIT 설정 - 몸 = Meshy crystal_v1_body_meshy71(복셀 리메시 후 감량) + 날개 GLB(위 · 아래 L/R 8마디) + 홀 GLB(오른손) · §8 = 짧은 꽃잎 치마 · 블루머 · 맨 정강이를 덮는 닫힌 종 치마(generate bell · 리그 색 · 굽기 제외) · 치마 속(허벅지 · 엉덩이)은 안 보여 300씩 · BOSS-NIGHT-2 3: 굽기 거리 0.12 → 0.3 · 돌출 0.03 → 0.06(날개 검은 삼각형 · 검은 테두리 = 광선이 원본 면을 못 찾음) + 아틀라스 가장자리 패딩(atlas_pad.py) · 날개 = weld 0.0008 + 복셀 0.012(폭풍 날개와 같은 처리 - 하얀 조각 · 검은 삼각형) · 날개 900/750 · 치마 끄기(hiddenMeshParts)로 드러나는 허벅지 300 → 900 · 홀 = weld 0.0008 + 복셀 0.008(보석 조각남)",
  "height": 7.0,
  "yaw": 180,
  "islands": 0,
@@ -12,8 +12,8 @@
  "bodyVoxel": 0.012,
  "bake": {
   "size": 1024,
-  "extrusion": 0.03,
-  "distance": 0.12
+  "extrusion": 0.06,
+  "distance": 0.3
  },
  "generate": [
   {
@@ -82,7 +82,9 @@
    "fit": "union",
    "scaleAxis": "x",
    "yaw": 180,
-   "islands": 0.01
+   "islands": 0.01,
+   "weld": 0.0008,
+   "voxel": 0.012
   },
   {
    "glb": "crystal_v1_scepter_meshy71.glb",
@@ -92,23 +94,25 @@
    ],
    "fit": "union",
    "scaleAxis": "y",
-   "islands": 0.01
+   "islands": 0.01,
+   "weld": 0.0008,
+   "voxel": 0.008
   }
  ],
  "partTris": {
-  "WingF_L1": 450,
-  "WingF_L2": 450,
-  "WingF_R1": 450,
-  "WingF_R2": 450,
-  "WingB_L1": 350,
-  "WingB_L2": 350,
-  "WingB_R1": 350,
-  "WingB_R2": 350,
+  "WingF_L1": 900,
+  "WingF_L2": 900,
+  "WingF_R1": 900,
+  "WingF_R2": 900,
+  "WingB_L1": 750,
+  "WingB_L2": 750,
+  "WingB_R1": 750,
+  "WingB_R2": 750,
   "Scepter": 1200,
   "ScepterGem": 1000,
-  "Thigh_L": 300,
-  "Thigh_R": 300,
-  "Hips": 300
+  "Thigh_L": 900,
+  "Thigh_R": 900,
+  "Hips": 700
  },
  "atlasGroups": [
   [

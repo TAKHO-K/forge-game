@@ -408,6 +408,9 @@ local function takeSwingN(model)
 	return n
 end
 local function tryBossBasic(model, data, monsterPosition, targetPlayer, targetRoot)
+	if data.basicDisabled then
+		return -- BOSS-NIGHT-2 3: 근접 평타 없음(수정 여왕 새 몸 = 5연발 마법 미사일이 기본 공격 - BossFrameworkData.v3.skills.magicMissiles)
+	end
 	local now = os.clock()
 	local last = MonsterState.getLastAttackTick(model)
 	local farRange = data.attackFarRangeStuds or data.attackRangeStuds

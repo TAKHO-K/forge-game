@@ -26,6 +26,7 @@ local PlayerState = require(script.Parent.PlayerState)
 local TerrainConfig = require(ReplicatedStorage.Shared.data.TerrainConfig)
 local Reach = require(ReplicatedStorage.Shared.Reach)
 local MonsterState = require(script.Parent.MonsterState)
+local BossOrigin = require(ReplicatedStorage.Shared.BossOrigin) -- BOSS-NIGHT-2 3 발생 지점
 local PlayerDamage = require(script.Parent.PlayerDamage)
 local GroundProbe = require(script.Parent.GroundProbe)
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
@@ -89,6 +90,18 @@ end
 
 local function clampToZone(position, zone, margin)
 	return ArenaShape.clamp(zone, position, margin)
+end
+
+-- BOSS-NIGHT-2 3 발생 지점(shared/BossOrigin · data/BossOriginData = 접촉 프레임 오프라인 FK): 표에 있는 스킬이면 때리는 · 쏘는 부위 자리(아레나 밖이면 경계 안으로),
+--   없으면 nil(몸 중심 그대로 - 예외). 방향 = 보스 → 대상 · 크기 = sizeScale × rig.scale · 폼 = 체력 50%. 예고 · 판정 · 사건 자리 모두 이 값 하나를 쓴다.
+local function originOf(c, skillId)
+	local p = BossOrigin.point(c.model:GetAttribute("BossRigKey"), c.data.sizeScale, MonsterState.getHpRatio(c.model), skillId or c.st.current,
+		c.position, c.targetRoot and c.targetRoot.Position, c.st.floorY or c.position.Y)
+	if not p then
+		return nil
+	end
+	local inside = clampToZone(Vector3.new(p.X, 0, p.Z), zoneOf(c.model), 1)
+	return Vector3.new(inside.X, p.Y, inside.Z)
 end
 
 -- 대상 원(circleTarget)의 자리를 벽 안쪽으로 누르는 여백. 원형 아레나 = BossArenaMapData.geometry.circleTargetMarginStuds(0 - P3a C2 측정: 여백 2면 벽 1stud의
@@ -386,6 +399,14 @@ local function conditionMet(model, st, data, condition)
 		local now = os.clock()
 		for _, v in ipairs(victims(st)) do
 			if not BossTrap.isTrapped(v.player) and BossHandlersBR1.airSecondsOf(st, v.player, now) >= condition.seconds then
+				return true
+			end
+		end
+		return false
+	elseif kind == "memberBeyond" then
+		-- BOSS-NIGHT-2 3 수정 여왕 마법 미사일: 멤버 중 누구라도 studs 밖(대상이 누구든 - 원거리 유저를 잡는다)
+		for _, v in ipairs(victims(st)) do
+			if not BossTrap.isTrapped(v.player) and st.position and Reach.horizontalDistance(v.root.Position, st.position) > condition.studs then
 				return true
 			end
 		end
@@ -854,8 +875,12 @@ local function beginPulse(c)
 	st.phase = "heavyTelegraph"
 	st.phaseEndsAt = c.now + skill.telegraphSeconds
 	setBodyColor(c.model, c.data.telegraphColor)
+	if st.pulseIndex == 1 then
+		st.pulseCenter = originOf(c) -- BOSS-NIGHT-2 3: 내려찍는 부위 아래(없으면 보스 중심)
+	end
+	local pc = st.pulseCenter or c.position
 	send(st, "heavyTelegraph", {
-		center = Vector3.new(c.position.X, st.floorY, c.position.Z),
+		center = Vector3.new(pc.X, st.floorY, pc.Z),
 		radius = pulse.radiusStuds,
 		innerRadius = (pulse.innerRadiusStuds or 0) > 0 and pulse.innerRadiusStuds or nil,
 		seconds = skill.telegraphSeconds,
@@ -879,22 +904,23 @@ HANDLERS.circleBoss = {
 		local pulses = BossSkillMath.pulsesOf(skill)
 		local pulse = pulses[st.pulseIndex]
 		local inner = pulse.innerRadiusStuds or 0
+		local pc = st.pulseCenter or c.position -- BOSS-NIGHT-2 3: 예고와 같은 자리
 		judgeBegin()
 		for _, v in ipairs(victims(st)) do
-			if Reach.horizontalDistance(v.root.Position, c.position) <= pulse.radiusStuds and Reach.sameLayer(v.groundFeet, footOf(c.position)) -- 22-4 수평 + 높이차 상한(P3a D3: 발 기준)
-				and Reach.horizontalDistance(v.root.Position, c.position) >= inner then
+			if Reach.horizontalDistance(v.root.Position, pc) <= pulse.radiusStuds and Reach.sameLayer(v.groundFeet, footOf(c.position)) -- 22-4 수평 + 높이차 상한(P3a D3: 발 기준)
+				and Reach.horizontalDistance(v.root.Position, pc) >= inner then
 				applySkillDamage(c.model, c.data, skill, v.player)
 			end
 		end
-		judgeEnd(c, { kind = "circle", centers = { Vector3.new(c.position.X, st.floorY, c.position.Z) }, radius = pulse.radiusStuds, inner = inner })
+		judgeEnd(c, { kind = "circle", centers = { Vector3.new(pc.X, st.floorY, pc.Z) }, radius = pulse.radiusStuds, inner = inner })
 		-- 25-4: 판정 순간 흰 섬광 - "임팩트 = 흰색".
 		send(st, "heavyImpact", {
-			center = Vector3.new(c.position.X, st.floorY, c.position.Z),
+			center = Vector3.new(pc.X, st.floorY, pc.Z),
 			radius = pulse.radiusStuds,
 			innerRadius = inner > 0 and inner or nil,
 			noFloor = skill.noFloor,
 		})
-		runEffects(c, skill.onImpact, { center = c.position, radius = pulse.radiusStuds })
+		runEffects(c, skill.onImpact, { center = pc, radius = pulse.radiusStuds })
 		if st.pulseIndex < #pulses then
 			st.pulseIndex += 1
 			beginPulse(c)
@@ -916,7 +942,7 @@ local function startHop(c, seconds)
 	st.hopSeconds = seconds
 	st.phaseEndsAt = c.now + seconds
 	send(st, "shockTelegraph", {
-		center = Vector3.new(st.hopBase.X, st.floorY, st.hopBase.Z),
+		center = Vector3.new((st.waveCenter or st.hopBase).X, st.floorY, (st.waveCenter or st.hopBase).Z), -- BOSS-NIGHT-2 3: 찍을 자리 예고
 		seconds = seconds,
 		hopHeight = skill.hopHeightStuds,
 		style = skill.ringStyle, -- GUARDIAN-V3: 지진파 그림(균열 링 · 돌판 · 수정 조각 - 클라 BossQuakeView)
@@ -1032,9 +1058,10 @@ local function slam(c)
 	local wave = st.ringWaves[st.wavesSpawned + 1]
 	for layer = 1, wave.layers do
 		local delay = (layer - 1) * wave.layerGapSeconds
-		table.insert(st.waves, { center = xz(st.hopBase), startedAt = c.now + delay, speed = wave.speedStuds, waveIndex = st.wavesSpawned + 1, layer = layer, air = wave.air })
+		local wc = st.waveCenter or xz(st.hopBase)
+		table.insert(st.waves, { center = wc, startedAt = c.now + delay, speed = wave.speedStuds, waveIndex = st.wavesSpawned + 1, layer = layer, air = wave.air })
 		send(st, "shockwave", {
-			center = Vector3.new(st.hopBase.X, st.floorY, st.hopBase.Z),
+			center = Vector3.new(wc.X, st.floorY, wc.Z),
 			serverStart = serverNow() + delay,
 			speed = wave.speedStuds,
 			thickness = skill.waveThicknessStuds,
@@ -1056,6 +1083,8 @@ HANDLERS.ring = {
 	start = function(c)
 		local st = c.st
 		st.hopBase = xz(c.position) + Vector3.new(0, MonsterState.getSpawnPosition(c.model).Y, 0)
+		local wc = originOf(c) -- BOSS-NIGHT-2 3: 파동 = 찍는 부위 아래 바닥에서(몸이 서는 자리 hopBase와 따로)
+		st.waveCenter = wc and xz(wc) or xz(st.hopBase)
 		st.wavesSpawned = 0
 		st.waves = {}
 		local skill = c.skill
@@ -1685,7 +1714,8 @@ end
 local function startVolley(c, angleDeg)
 	local st, skill = c.st, c.skill
 	local zone = zoneOf(c.model)
-	local origin = xz(c.model.PrimaryPart.Position)
+	local lo = originOf(c) -- BOSS-NIGHT-2 3: 균열선 = 내려친 부위 아래에서
+	local origin = lo and xz(lo) or xz(c.model.PrimaryPart.Position)
 	local volley = BossSkillMath.volleysOf(skill)[st.crossVolley] -- BR1: 볼리마다 전조 · 반폭 · 배율(마지막이 강함)
 	st.crossVolleyShot = volley
 	local beams, lengths = {}, {}
@@ -2141,7 +2171,7 @@ HANDLERS.gimmick = {
 -- ─────────────────────────── BR1 조각 등록 ───────────────────────────
 local kit = {
 	victims = victims, send = send, sendTo = sendTo, applySkillDamage = applySkillDamage, zoneOf = zoneOf,
-	clampToZone = clampToZone, clipToZone = clipToZone, isAirborne = isAirborne, xz = xz, footOf = footOf,
+	clampToZone = clampToZone, clipToZone = clipToZone, isAirborne = isAirborne, xz = xz, footOf = footOf, originOf = originOf,
 	endSkill = endSkill, runHitEffects = runHitEffects, judgeBegin = judgeBegin, judgeEnd = judgeEnd,
 	debugEvent = debugEvent, serverNow = serverNow, rng = scatterRng, setBodyColor = setBodyColor, clearDaze = clearDaze,
 	kitZones = kitZones, groundAt = groundAt, sendPropsRemoved = sendPropsRemoved,

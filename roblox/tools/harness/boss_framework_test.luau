@@ -586,9 +586,15 @@ do
 	local g = BossFramework.applyV3(e, "crystal_queen_v2")
 	local rig = BossRigSpec.rigs.crystal_queen_v2
 	local set = MODS.BossClipSet.get("crystal_queen_v2")
-	check("수정 근접 바닥 표시 끔 · 예비 +0.12 · 파편 폭발(큰 범위) 바닥 표시 유지", g.skills.swipe.noFloor == true and g.basicNoFloor and g.innerRingHidden and not g.skills.burst.noFloor
-		and math.abs(g.skills.swipe.telegraphSeconds - (d.skills.swipe.telegraphSeconds + 0.12)) < 1e-6 and g.skills.energyBeam.telegraphSeconds == d.skills.energyBeam.telegraphSeconds,
-		("강화 평타 %.2f → %.2f · 몸 가장자리 +%.2f"):format(d.skills.swipe.telegraphSeconds, g.skills.swipe.telegraphSeconds, edge))
+	-- BOSS-NIGHT-2 3(사용자: 근접은 느리고 피할 만하게): 예비 +0.12 → +0.4 · 폭발도 · 마법 미사일(5발 · 첫 명중 고정 추적 · 18 stud 밖 가장 먼 한 명)
+	local mm = g.skills.magicMissiles
+	check("수정 근접 = 바닥 예고 보임 · 예비 +0.4(강화 평타 · 폭발) · 근접 평타 없음 · 마법 미사일(5발 · 대상 규칙 · 대시 통과 · 마지막 발 경직)", not g.skills.swipe.noFloor and not g.basicNoFloor and g.innerRingHidden and not g.skills.burst.noFloor
+		and math.abs(g.skills.swipe.telegraphSeconds - (d.skills.swipe.telegraphSeconds + 0.4)) < 1e-6 and math.abs(g.skills.burst.telegraphSeconds - (d.skills.burst.telegraphSeconds + 0.4)) < 1e-6
+		and g.skills.energyBeam.telegraphSeconds == d.skills.energyBeam.telegraphSeconds and g.basicDisabled == true
+		and mm and mm.count == 5 and mm.targetRule == "missileTarget" and mm.preferBeyondStuds == 12 and mm.lockOnFirstHit and mm.passThrough == "dash" and mm.lastOnHit and mm.telegraphSeconds == 0.6
+		and table.find(g.reactiveOrder or {}, "magicMissiles") ~= nil and BossMotion.clipNameForSkill("crystal_queen_v2", rig, "magicMissiles", mm, "after") == "q_missile",
+		("강화 평타 %.2f → %.2f · 폭발 %.2f → %.2f · 미사일 %s발 × %.2f · 간격 %.2f · 속도 %s · 몸 가장자리 +%.2f"):format(d.skills.swipe.telegraphSeconds, g.skills.swipe.telegraphSeconds,
+			d.skills.burst.telegraphSeconds, g.skills.burst.telegraphSeconds, tostring(mm and mm.count), mm and mm.damage.multiplier or 0, mm and mm.launchIntervalSeconds or 0, tostring(mm and mm.speedStuds), edge))
 	local S = d.sizeScale
 	local h = 7.0 * S * rig.scale
 	check("수정 크기(키 약 29 stud) · 두 폼 떠 있기", math.abs(h - 29) < 1.5 and set.forms.before.gait == "hover" and set.forms.after.gait == "hover", ("키 %.1f stud(K 7.0 × S %.2f × %.2f)"):format(h, S, rig.scale))
@@ -652,6 +658,26 @@ do
 	local tint = Frame.atlasTint["bosses/scorpion_queen_v2m"]
 	check("전갈 색조 노브(기본 0 = 원본 · 1 = sand 변형 아틀라스 등록)", tint and tint.value == 0 and tint.variants[1] == "sand" and MODS.ArtAssetIds and MODS.ArtAssetIds["bosses/scorpion_queen_v2m_atlas1_sand"] ~= nil or (tint and tint.value == 0 and not MODS.ArtAssetIds),
 		("value %s · variants %s"):format(tostring(tint and tint.value), tint and table.concat(tint.variants, ",") or "-"))
+end
+
+-- ─────────────────────────── BOSS-NIGHT-2 3 발생 지점(shared/BossOrigin · data/BossOriginData): 표에 있는 스킬 = 부위 자리 · 예외 = nil(몸 중심) · 크기 배율 비례 ───────────────────────────
+do
+	local BossOrigin = MODS.BossOrigin
+	local origin = Vector3.new(0, 0, 0)
+	local target = Vector3.new(0, 0, -50) -- 대상 = -Z(앞)
+	local rows, ok = {}, true
+	for _, e in ipairs({ { "section_guardian_v2", "heavy" }, { "section_guardian_v2", "shockwave" }, { "frost_giant_v2", "slam" }, { "storm_lord_v2", "thunderRing" }, { "abyssal_lord_v2", "tide" },
+		{ "crystal_queen_v2", "magicMissiles" }, { "scorpion_queen_v2", "claw" } }) do
+		local p1 = BossOrigin.point(e[1], 1, 1, e[2], origin, target, 0)
+		local p2 = BossOrigin.point(e[1], 2, 1, e[2], origin, target, 0)
+		local good = p1 ~= nil and p2 ~= nil and math.abs((p2 - Vector3.new(0, p2.Y, 0)).Magnitude - 2 * (p1 - Vector3.new(0, p1.Y, 0)).Magnitude) < 1e-3
+		ok = ok and good
+		table.insert(rows, ("%s/%s %.1f"):format(e[1]:gsub("_v2", ""), e[2], p1 and Vector3.new(p1.X, 0, p1.Z).Magnitude or -1))
+	end
+	local exc = BossOrigin.point("section_guardian_v2", 1, 1, "innerSmash", origin, target, 0) == nil and BossOrigin.point("crystal_queen_v2", 1, 1, "burst", origin, target, 0) == nil
+		and BossOrigin.point("abyssal_lord_v2", 1, 1, "sweep", origin, target, 0) == nil
+	local front = BossOrigin.point("section_guardian_v2", 1, 1, "heavy", origin, target, 0)
+	check("발생 지점 표(접촉 부위 · 크기 배율 비례 · 예외 = 몸 중심 · 앞 = 대상 쪽)", ok and exc and front and front.Z < 0, table.concat(rows, " · "))
 end
 
 print(("[FRAME] 끝 %d/%d"):format(pass, total))
