@@ -356,6 +356,7 @@ return {
 	["settings.dimOthersTrail"] = "Dim other players' attack trails",
 	["settings.quietOthersSfx"] = "Quieter sounds from other players",
 	["settings.screenShake"] = "Screen shake (hits · skills · bosses)",
+	["settings.doubleTapDash"] = "Double-tap W · A · D = short dash (off = no accidental dash · backflip stays)", -- FINAL-1b
 	["settings.reduceFlashes"] = "Fewer lightning · screen flashes (boss warnings dim only)",
 	["settings.classChange"] = "Change Class",
 	["settings.soundHeader"] = "Volume",

@@ -173,19 +173,21 @@ function JumpMath.maxGapStuds(opts)
 	local dashSeconds = dashes > 0 and DashConfig.durationSeconds or nil
 	local drop = opts.coyote and JumpMath.coyoteDropStuds() or 0
 	local walk = opts.walk or MovementConfig.walkSpeedStuds
-	local air = JumpMath.maxAirSeconds(MovementConfig.jumpHeightStuds, opts.airJumps or 0, dashSeconds, math.max(opts.rise or 0, 0) + drop, nil, opts.steps or (dashes > 1 and 12 or 24), dashes > 0 and dashes or nil)
+	local air = JumpMath.maxAirSeconds(opts.jumpBonus and JumpMath.jumpHeight(opts.jumpBonus) or MovementConfig.jumpHeightStuds, opts.airJumps or 0, dashSeconds, math.max(opts.rise or 0, 0) + drop, nil, opts.steps or (dashes > 1 and 12 or 24), dashes > 0 and dashes or nil)
 	if not air or air <= 0 then
 		return -1
 	end
 	return walk * (air - dashes * DashConfig.durationSeconds) + dashes * (opts.dashStuds or DashConfig.rangeStuds) + (opts.coyote and walk * MovementConfig.airJump.coyoteSeconds or 0)
 end
 
--- MV1 "못 넘는 틈"(평지 · 끝에서 끝): 한 체공 최대 간격 + 여유 gapMarginStuds를 올림(v2 = 42.6 → 46과 같은 식).
-JumpMath.gapMarginStuds = 3
+-- MV1 "못 넘는 틈"(평지 · 끝에서 끝): 한 체공 최대 간격 + 여유를 올림.
+--   FINAL-1b 결정 4: 여유 = 최대 간격 × gapMarginRatio(10%)(옛 = + gapMarginStuds 3 stud - 대시 32 · 보너스 합에서 3 stud는 비율로 너무 작았다). opts.jumpBonus = 점프력 옵션(상한 MovementConfig.jumpHeightBonusCap).
+JumpMath.gapMarginStuds = 3 -- 옛 여유(되돌림 · 비교용)
+JumpMath.gapMarginRatio = 0.10
 function JumpMath.unjumpableGapStuds(opts)
 	local o = table.clone(opts)
 	o.coyote = true -- C3 0-2: 못 넘는 틈 = 코요테 타임을 끝까지 쓴 점프까지(52 → 53 · 74 → 76 · 123 → 125)
-	return math.ceil(JumpMath.maxGapStuds(o) + JumpMath.gapMarginStuds)
+	return math.ceil(JumpMath.maxGapStuds(o) * (1 + JumpMath.gapMarginRatio))
 end
 
 -- MV1 오를 수 있는 가장 높은 단(발 기준): 1단 + 공중 점프 전부(점프력 옵션 상한 포함) + 태초 장갑 붙잡기(모서리가 손 높이 MovementConfig.ledgeGrab.maxLedgeAboveFeet 안이면 올라선다).

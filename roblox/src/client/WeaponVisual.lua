@@ -29,6 +29,7 @@ local ArtStyleV1Data = require(ReplicatedStorage.Shared.data.ArtStyleV1Data) -- 
 local ArtV1Models = require(ReplicatedStorage.Shared.ArtV1Models)
 local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit) -- A2-N3 Open Cloud 무기 메시
 local ArtImportData = require(ReplicatedStorage.Shared.data.ArtImportData)
+local WeaponV4Data = require(ReplicatedStorage.Shared.data.WeaponV4Data) -- FINAL-1b 결정 5 첫 표시
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local GradeColor = require(ReplicatedStorage.Shared.GradeColor)
 local SKIN_LOOKS = require(ReplicatedStorage.Shared.data.ArtV1CosmeticData).items -- QUEUE-ALL6 H 무기 꾸미기 · QUEUE-ALL9C 1-6: 소품 look 표로(수정 결정 · 스타터 은빛 날)
@@ -367,6 +368,42 @@ local function handScaleOf(character)
 	return math.floor(s / cfg.step + 0.5) * cfg.step
 end
 
+-- FINAL-1b 결정 5: 숨겨 두었던 무기가 처음 나타날 때 - 투명 → 보임 + 빛 반짝(WeaponV4Data.firstShow)
+local function revealFlash(weapon)
+	local F = WeaponV4Data.firstShow
+	local parts = {}
+	for _, d in ipairs(weapon.folder:GetDescendants()) do
+		if d:IsA("BasePart") then
+			d.LocalTransparencyModifier = 1
+			table.insert(parts, d)
+		end
+	end
+	if #parts == 0 then
+		return
+	end
+	local light = Instance.new("PointLight")
+	light.Name = "WeaponRevealFlash"
+	light.Color, light.Range, light.Brightness = F.color, F.range, F.brightness
+	light.Parent = parts[1]
+	local t0 = os.clock()
+	local conn
+	conn = RunService.RenderStepped:Connect(function()
+		local u = (os.clock() - t0) / F.seconds
+		if u >= 1 or not light.Parent then
+			for _, p in ipairs(parts) do
+				p.LocalTransparencyModifier = 0
+			end
+			light:Destroy()
+			conn:Disconnect()
+			return
+		end
+		for _, p in ipairs(parts) do
+			p.LocalTransparencyModifier = 1 - u
+		end
+		light.Brightness = F.brightness * (1 - u)
+	end)
+end
+
 local function rebuild(st)
 	if st.weapon then
 		if st.key == player then
@@ -389,6 +426,17 @@ local function rebuild(st)
 		local look = ArtStyleV1Data.greatsword.looks[preview] and preview or ArtStyleV1Data.greatsword.gradeLook[grade + 1] or "normal"
 		local gradeId = (ArtStyleV1Data.greatsword.looks[preview] and preview ~= "normal") and preview or ArmorData.gradeOrder[grade + 1]
 		artModel = ArtV1Models.greatsword(look, GradeColor.of(gradeId))
+	end
+	-- FINAL-1b 결정 5: v4 메시가 아직 캐시에 없고 무기 묶음 신호 전이면 옛 내장 무기(활 = 원통)를 짓지 않고 숨긴다 → 메시가 오면(캐시 ChildAdded) 다시 지으며 반짝
+	local wasWaiting = st.waitingKey ~= nil
+	st.waitingKey = nil
+	if not artModel and WeaponV4Data.enabled and WeaponV4Data.firstShow.hideUntilReady then
+		local cache = ReplicatedStorage:FindFirstChild(ArtImportData.cacheFolder)
+		local key = WeaponV4Data.key(classId, ArmorData.gradeOrder[grade + 1] or "normal")
+		if key and not (cache and (cache:GetAttribute("Ready_weapons") or cache:GetAttribute(ArtImportData.priorityReadyAttribute) or cache:GetAttribute(ArtImportData.readyAttribute))) then
+			st.waitingKey = key
+			return
+		end
 	end
 	local primordialWeapon = artModel == nil and grade >= 6
 	st.bodyScale = handScaleOf(st.character)
@@ -413,6 +461,9 @@ local function rebuild(st)
 				end
 			end
 		end
+	end
+	if wasWaiting and st.weapon then
+		revealFlash(st.weapon)
 	end
 	if st.weapon and st.key == player then
 		current = st.weapon
@@ -1849,6 +1900,18 @@ end)
 for _, p in ipairs(Players:GetPlayers()) do
 	bindPlayer(p)
 end
+task.spawn(function() -- FINAL-1b 결정 5: 숨겨 두었던 무기의 메시가 캐시에 오면 그 캐릭터만 다시 짓는다(나 · 남 공통)
+	local cache = ReplicatedStorage:WaitForChild(ArtImportData.cacheFolder, 120)
+	if cache then
+		cache.ChildAdded:Connect(function(child)
+			for _, st in pairs(rigs) do
+				if st.waitingKey == child.Name then
+					rebuild(st)
+				end
+			end
+		end)
+	end
+end)
 Players.PlayerAdded:Connect(bindPlayer)
 Players.PlayerRemoving:Connect(function(p)
 	local st = rigs[p]

@@ -192,7 +192,7 @@ end
 -- 만들어 둔다 - 그래야 그 기능이 생길 때 SAVE_VERSION을 또 올리지 않고 채워 넣을 수 있다.
 -- QUEUE-ALL1 P5(v59) 도감 v2 빈 기록
 function SaveSystem.newCodex()
-	return { armor = {}, prim = {}, trans = {}, pet = {}, mkill = {}, msparkle = {}, boss = {}, cls = {}, done = {}, claimed = {}, boardDone = {}, boardClaimed = {}, title = nil }
+	return { armor = {}, prim = {}, trans = {}, pet = {}, mkill = {}, msparkle = {}, boss = {}, cls = {}, clsT = {}, done = {}, claimed = {}, boardDone = {}, boardClaimed = {}, title = nil }
 end
 
 local function defaultProfile()
@@ -1579,6 +1579,18 @@ local function migrate(data)
 			data.hints.bossAssist = {}
 		end
 		data.version = 75
+	end
+	if data.version < 76 then
+		-- FINAL-1b 결정 6: 도감 직업 초월 칸 기록(codex.clsT[직업] = true) - 옛 세이브 = 지금 초월(계승)한 무기가 있는 직업만 채움(추가만)
+		if type(data.codex) == "table" then
+			data.codex.clsT = type(data.codex.clsT) == "table" and data.codex.clsT or {}
+			for classId, cs in pairs(type(data.classes) == "table" and data.classes or {}) do
+				if type(cs) == "table" and type(cs.weapon) == "table" and cs.weapon.grade == 7 and type(cs.weapon.transcend) == "table" then
+					data.codex.clsT[classId] = true
+				end
+			end
+		end
+		data.version = 76
 	end
 
 	data.savedAt = data.savedAt or 0

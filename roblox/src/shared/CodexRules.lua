@@ -123,6 +123,11 @@ function CodexRules.build(nestsByZone)
 			cell({ id = ("cls:%s:%d"):format(classId, g), tab = "class", kind = "class", classId = classId, weaponGrade = g, need = 1,
 				label = ("%s · 무기 %s"):format(ClassData.classes[classId].displayName, ArmorData.grades[ArmorData.gradeOrder[g + 1]].displayName) }, cl)
 		end
+		if CodexData.class.transcendCell then -- FINAL-1b 결정 6: 초월 칸(8번째)
+			local tg = CodexData.class.grades -- 7 = transcendent
+			cell({ id = ("cls:%s:t"):format(classId), tab = "class", kind = "class", classId = classId, weaponGrade = tg, transcend = true, need = 1,
+				label = ("%s · 무기 %s"):format(ClassData.classes[classId].displayName, ArmorData.grades[ArmorData.gradeOrder[tg + 1]].displayName) }, cl)
+		end
 	end
 	local total = 0
 	for _, c in ipairs(cells) do
@@ -153,6 +158,8 @@ function CodexRules.progress(rec, nestDex, c)
 		end
 	elseif c.kind == "boss" then
 		v = tonumber(rec.boss and rec.boss[c.bossId]) or 0
+	elseif c.kind == "class" and c.transcend then
+		v = (rec.clsT and rec.clsT[c.classId]) and 1 or 0 -- FINAL-1b: 초월 칸 = 그 직업 무기 초월 기록
 	elseif c.kind == "class" then
 		local best = rec.cls and tonumber(rec.cls[c.classId])
 		v = (best and best >= c.weaponGrade) and 1 or 0

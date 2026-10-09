@@ -58,11 +58,57 @@ local function loadAll()
 	end)
 	local t0 = os.clock()
 	local ok, failed, running = 0, {}, 0
+	-- FINAL-1b 결정 5: 접속한 사람이 낀 v4 무기만 먼저(큐와 따로 1개씩) - 받은 키는 아래 큐가 건너뛴다
+	local own = {} -- [키] = true(받는 중 · 받음)
+	local function loadOwn(key)
+		local e = key and ArtAssetIds[key]
+		if not e or own[key] or folder:FindFirstChild(key) or e.kind ~= "Model" or e.status ~= "Approved" then
+			return
+		end
+		own[key] = true
+		local t = os.clock()
+		local success, result = pcall(InsertService.LoadAsset, InsertService, e.id)
+		local model = success and result and result:FindFirstChildWhichIsA("Model")
+		if model and not folder:FindFirstChild(key) then
+			model.Name = key
+			ArtMeshKit.normalize(model)
+			model.Parent = folder
+			print(("[ArtAssetLoader] 낀 무기 먼저 %s · %.1f초(로더 시작 뒤 %.1f초)"):format(key, os.clock() - t, os.clock() - t0))
+		end
+		if success and result then
+			result:Destroy()
+		end
+	end
+	if Data.ownWeaponFirst and V4.enabled then
+		local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
+		local function watch(player)
+			local function go()
+				local classId = player:GetAttribute("ClassId")
+				local gradeId = ArmorData.gradeOrder[(player:GetAttribute("WeaponGrade") or 0) + 1]
+				if type(classId) == "string" and classId ~= "" and gradeId then
+					task.spawn(loadOwn, (V4.key(classId, gradeId)))
+					task.spawn(loadOwn, (V4.key(classId, gradeId, true))) -- 쌍검 왼손(없는 키 = 건너뜀)
+				end
+			end
+			player:GetAttributeChangedSignal("ClassId"):Connect(go)
+			player:GetAttributeChangedSignal("WeaponGrade"):Connect(go)
+			go()
+		end
+		local Players = game:GetService("Players")
+		Players.PlayerAdded:Connect(watch)
+		for _, player in ipairs(Players:GetPlayers()) do
+			watch(player)
+		end
+	end
 	local nextIndex = 1
 	local function worker()
 		while nextIndex <= #queue do
 			local item = queue[nextIndex]
 			nextIndex += 1
+			if own[item.key] or folder:FindFirstChild(item.key) then
+				ok += 1 -- FINAL-1b: 낀 무기 먼저 받은 키
+				continue
+			end
 			local success, result = pcall(InsertService.LoadAsset, InsertService, item.id)
 			local model = success and result and result:FindFirstChildWhichIsA("Model")
 			if model then

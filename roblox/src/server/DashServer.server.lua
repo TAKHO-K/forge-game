@@ -74,7 +74,7 @@ local function handleDash(player, mode, tilt, dir)
 	end
 	local direction = flat.Unit
 
-	-- MV1: 공중 대시 = 한 체공 MoveRules.airDashesAllowed회(서버 세션으로 센다 - 옛 규칙은 클라만 셌다). 쿨다운을 쓰지 않는다.
+	-- MV1: 공중 대시 = 한 체공 MoveRules.airDashesAllowed회(서버 세션으로 센다 - 옛 규칙은 클라만 셌다). 쿨다운은 지상과 같은 것을 쓴다(아래 MoveRules.tryDash - FINAL-1b 주석 바로잡음: 옛 "쿨다운을 쓰지 않는다"는 틀림).
 	local session = AirState.session(player)
 	if session and session.airDashes >= MoveRules.airDashesAllowed(charges >= 2) then
 		dashResult:FireClient(player, { ok = false, reason = "air_used" })
@@ -107,7 +107,7 @@ local function handleDash(player, mode, tilt, dir)
 	require(script.Parent.HeightGuard).grantDash(player, range) -- S1: 서버가 준 대시 거리 = 합법 수평 이동
 
 	-- PRD 5.4 "대시 중 피격 데미지 50% 감소" - 대검 회전베기와 같은 통로(PlayerState).
-	DashWindow.begin(player, durationSeconds) -- FINAL-1 3: 대시 회피 창 한 곳(피해 감소 · 통과 판정)
+	DashWindow.begin(player, DashModes.protectSeconds(durationSeconds)) -- FINAL-1 3: 대시 회피 창 한 곳(피해 감소 · 통과 판정) · FINAL-1b 결정 3: 창 = max(이동 시간, 0.3)
 
 	dashResult:FireClient(player, {
 		ok = true,

@@ -14,6 +14,10 @@ M.gradeIndex = { normal = 1, rare = 2, epic = 3, legendary = 4, relic = 5, ancie
 M.mirrorSuffix = "_L" -- 쌍검 왼손 조각(BladeLeft)
 M.priorityOnly = true -- 서버 메시 로더 우선 묶음(weapons/)에 v4만 넣는다(옛 무기 메시는 나머지 묶음 - 첫 순간 기본 도형 시간 단축)
 
+-- FINAL-1b 결정 5 서버 첫 순간 무기: hideUntilReady = v4 메시가 캐시에 올 때까지 옛 내장 무기(활 = 원통 도형)를 짓지 않고 숨김(무기 묶음 신호 Ready_weapons 뒤에도 없으면 옛 무기) ·
+--   메시가 오면 seconds 동안 투명 → 보임 + 빛 반짝(color · brightness · range) · 서버 ArtAssetLoader는 접속한 사람이 낀 무기만 먼저 1개씩 받는다(ArtImportData.ownWeaponFirst)
+M.firstShow = { hideUntilReady = true, seconds = 0.35, color = Color3.fromRGB(255, 240, 200), brightness = 3, range = 8 }
+
 -- 발광 = 보석 · 룬 자리(Glow 부착점)에 작은 빛만 - 무기 전체를 Neon으로 만들지 않는다. 색 = 등급 색(GradeColor) · minGrade 미만은 빛 없음
 M.glow = { minGrade = 4, brightness = 0.8, range = 3.5 }
 -- g7(태초) 마젠타 발광 노브: enabled = false면 위 등급 색 규칙을 따른다

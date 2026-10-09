@@ -258,11 +258,13 @@ do
 	place({ name = "BackIce", parent = "Fur2", part = "BackIce", center = P(0, 0.93, -0.17), size = Z(0.24, 0.16, 0.28), joint = P(0, 0.87, -0.17), color = "accent" })
 	D.rigs.frost_giant_v2 = {
 		bossId = "frost_giant", variant = "v2", status = "trial", plan = "quad", joints = L.J, accent = Color3.fromRGB(200, 240, 255),
-		scale = 3.3, -- 등 높이 0.85 H × K 2.4 × S 4.455 × 3.3 = 30 stud(바이블 §5)
+		-- FINAL-1b 결정 1(길이 45 우선): 옛 3.3 = 등 높이 30이었지만 Studio 실측 상아 끝 → 꼬리 끝 59.5(§5 목표 45의 1.3배 · 몸에 파묻힘 · 밀어내기 · 아레나 공간) →
+		--   균일 축소라 길이 45와 등 30을 동시에 못 맞춤 → 길이 우선 2.5(59.5 × 2.5 / 3.3 = 45.1 · 높이 36.1 → 27.3 · 등 0.85 H 22.7)
+		scale = 2.5,
 		edgeHalfWidth = 2.4 * 0.31, -- 몸 가장자리 반폭(옆구리 털 바깥 - 리그 단위)
 		frontHalfLength = 2.4 * 0.62, rearHalfLength = 2.4 * 0.56, -- 몸 중심(루트) → 머리 · 코 앞 끝 / 엉덩이 끝(앞 구역 · 뒤 구역 반경 - BossFramework.applyV3 radiusFrom)
 		baseEdgeHalfWidth = 1.6, -- 옛 몸(서리 거인 직립) 가장자리 반폭 = 몸 0.95 + 팔 0.65
-		cameraZoomScale = 1.3, -- 38 → 49.4(설계 메모: 50 상한)
+		cameraZoomScale = 1.3, -- 38 → 49.4(설계 메모: 50 상한) · FINAL-1b: 2.5로 줄인 뒤에도 1.3 = 비슷한 크기(높이 24 ~ 31) 네 보스와 같은 값(옛 3.3 땐 50 상한에 눌려 몸이 화면에 꽉 찼다)
 		attach = { HandR = { part = "Trunk6", at = V(0, -0.1, 0) }, HandL = { part = "Tusk_L", at = V(0, -0.35, 0) }, ShoulderR = { part = "Tusk_R", at = V(0, -0.35, 0) }, ShoulderL = { part = "BackIce", at = V(0, 0.2, 0) },
 			Mouth = { part = "Head", at = V(0, -0.25, -0.35) }, TuskTipL = { part = "Tusk_L", at = V(0, -0.4, 0) }, TuskTipR = { part = "Tusk_R", at = V(0, -0.4, 0) }, Back = { part = "BackIce", at = V(0, 0.2, 0) } },
 		chains = { { "Trunk1", "Trunk2", "Trunk3", "Trunk4", "Trunk5", "Trunk6", kind = "trunk", lag = 0.5, sway = 6 }, { "Tail1", "Tail2", "Tail3", kind = "tail", lag = 0.5, sway = 5 },

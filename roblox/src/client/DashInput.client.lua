@@ -227,6 +227,9 @@ function onTap(key)
 	if chatFocused() or UIManager.isInputBlocked() or GlideController.isGliding() then
 		return
 	end
+	if key ~= Enum.KeyCode.S and player:GetAttribute("SettingDoubleTapDash") == false then
+		return -- FINAL-1b 결정 3: 설정 "더블탭 짧은 대시" 끔(S 두 번 백플립은 그대로)
+	end
 	if not DashModes.tap(tapState, key, os.clock()) then
 		return
 	end

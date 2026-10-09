@@ -70,7 +70,7 @@
 | 현재 캡처 | `cap/pc169_02_hud_hub.jpg` · `cap/ph_02_hud_hub.jpg` |
 | 파일 | `client/hud/HudMenuV2.client.lua` · `ui/ScreenMap.lua`(zone 표) · `ui/WindowPositions`(PC 창 끌기 저장 = 설정 키 `windowPositions` 선례) |
 | 요구 | 끌어서 옮기기(편집 모드 진입 → 칸 맞춤 격자 → 화면 밖 금지) · PC/폰 따로 저장 · 다음 접속에 그대로 · 설정에서 "처음 위치로" |
-| 저장 | 저장 필드는 **추가만**(예: 설정 키 `hudLayoutPc` · `hudLayoutPhone` = 요소 id → 기준 좌표) — 키 이름 · 형식은 구현 때 확정 · 지금 저장 필드 없음 |
+| 저장 | 저장 필드는 **추가만** — 키 이름 확정(FINAL-1b): `hudLayoutPc` · `hudLayoutPhone`(요소 id → 기준 좌표 · `windowPositions` 형식) · `hudLayoutVersion` · 지금 저장 필드 없음(구현 때 추가) |
 | 옮길 요소 | 왼쪽 메뉴 · 오른쪽 메뉴 · 오늘의 목표 · 미니맵 · 파티 목록 · 체력바 + **상태 아이콘 줄(카드 7 - 같이 움직임)** · 보스 체력바(카드 6) · 스킬 줄(폰) |
 | 필요한 상태 | 보통 · 편집 모드(격자 · 테두리 · 이름) · 끌기 중 · 겹침 경고(로블록스 기본 버튼 자리 · 다른 요소) · 되돌리기 확인 |
 | 제약 | 폰 끌기 vs 조이스틱 · 카메라 끌기 충돌(편집 모드에서만 끌기) · 엄지 영역 · 노치 |

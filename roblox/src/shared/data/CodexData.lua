@@ -36,6 +36,8 @@ C.monster = {
 C.boss = { steps = { 1, 3, 5, 10, 20 }, reward = { goldKills = 20, gemDust = 5 } }
 -- 직업: 4직업 × 무기 등급 도달(0 일반 ~ 6 태초 - 환생으로 오른 등급만 · 견습 대여 제외)
 C.class = { grades = 7, stonePerGrade = 5, stoneBase = 5 }
+-- FINAL-1b 결정 6: 4직업 × 8칸 - 8번째 = 무기 초월(계승) 칸(weaponGrade 7 · 그 직업 무기를 초월한 순간 채움 = codex.clsT · 환생 등급 칸 규칙과 따로) · 보상 = 같은 식(5 + 5 × 7 = 강화석 40)
+C.class.transcendCell = true
 
 -- 점수 보상판(칸 1개 = 1점 · 보너스 줄 제외): 5점 간격 → 10 → 20 · 최상위는 한 분류(최대 108)로 못 채움
 C.board = {}

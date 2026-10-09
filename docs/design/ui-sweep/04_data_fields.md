@@ -71,6 +71,7 @@
 - 지금 필드 없음. 선례 = `windowPositions`(kind positions · `"id:x,y;…"` · ≤ 800자 · id ≤ 40자 · 좌표 ±10000 · SettingsService:49-63).
 - 설정 저장 = `profile.settings[키]` · 없는 키 = 기본값 → **새 키는 SAVE 버전 안 올림**(SaveConfig.saveVersion = 75).
 - 제안 이름(구현 때 확정): `hudLayout`(positions) · `hudLayoutPhone`(positions) · `hudLayoutVersion`(stamp).
+- **확정(FINAL-1b 10-10)**: `hudLayoutPc`(positions · PC · 태블릿) · `hudLayoutPhone`(positions · 폰) · `hudLayoutVersion`(stamp · 배치 형식 번호). 기기별 대칭 이름이라 `hudLayout` 하나가 어느 기기 값인지 헷갈리지 않는다. 형식 = `windowPositions`와 같은 `"id:x,y;…"` · 설정 키(없는 키 = 기본 자리 · SAVE 버전 안 올림). 구현은 HUD 배치 작업 때.
 
 ## 6. 상태 아이콘 줄 — 있는 상태 전부
 

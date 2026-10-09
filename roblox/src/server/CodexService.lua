@@ -381,6 +381,18 @@ function CodexService.noteClass(player, classId, grade)
 	end
 end
 
+-- FINAL-1b 결정 6: 그 직업 무기 초월(계승) 달성 = 도감 직업 줄 8번째 칸
+function CodexService.noteClassTranscend(player, classId)
+	local r = rec(player)
+	if r and type(classId) == "string" then
+		r.clsT = type(r.clsT) == "table" and r.clsT or {}
+		if not r.clsT[classId] then
+			r.clsT[classId] = true
+			schedule(player)
+		end
+	end
+end
+
 function CodexService.noteNest(player)
 	schedule(player)
 end

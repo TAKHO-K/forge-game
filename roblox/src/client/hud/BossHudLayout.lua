@@ -29,6 +29,15 @@ function BossHudLayout.shift()
 	return BossHudLayout.blockTop() + H.gimmickGap + H.gimmickHeight - H.healthBarTopFromBottom
 end
 
+-- FINAL-1b 결정 6: FUN-1 자리(지금 그리지 않음) - BREAK 게이지 · "내 기여 n%"의 { 아래 끝(화면 아래에서 px) · 높이 · 오른쪽 끝(바 오른쪽 끝 기준 px · 음수 = 안쪽) · 폭(nil = 바 폭) }
+function BossHudLayout.reserved()
+	local R = H.reserved
+	return {
+		breakGauge = { bottom = BossHudLayout.barBottom() - R.breakGap - R.breakHeight, height = R.breakHeight, right = 0, width = nil },
+		contribution = { bottom = BossHudLayout.barBottom() + BossHudLayout.barHeight() + H.nameGap, height = H.nameHeight, right = -(R.percentWidth + R.contributionGap), width = R.contributionWidth },
+	}
+end
+
 -- 기믹 안내 글씨: 아트 켬 = 보스 이름 줄 바로 위 가운데(아래 기준) · 끔 = fallback(부르는 쪽의 옛 자리 · 기준점)
 function BossHudLayout.gimmickLabel(label, fallbackPosition, fallbackAnchor)
 	if BossHudLayout.enabled() then

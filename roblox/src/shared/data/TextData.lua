@@ -361,6 +361,7 @@ local TextData = {
 		["settings.dimOthersTrail"] = "다른 유저 공격 궤적 흐리게",
 		["settings.quietOthersSfx"] = "다른 플레이어 효과음 줄이기", -- QUEUE-ALL7 C3
 		["settings.screenShake"] = "화면 흔들림(타격 · 스킬 · 보스)",
+		["settings.doubleTapDash"] = "W · A · D 두 번 = 짧은 대시(끄면 실수 대시 없음 · 백플립 그대로)", -- FINAL-1b
 		["settings.reduceFlashes"] = "번개 · 화면 섬광 줄이기(보스 경고는 밝기만)",
 		["settings.classChange"] = "직업 변경",
 		["settings.soundHeader"] = "소리 음량", -- B4

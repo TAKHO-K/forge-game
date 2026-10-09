@@ -33,6 +33,10 @@ local ok, err = pcall(function()
 	-- 거리 식(장비 걷기 배율 · 공중 배율 · 모드 기본 거리)
 	check("짧은 대시 × 이속 상한", near(JM.dashRangeStuds(2, 1, DC.modes.short.rangeStuds), DC.modes.short.rangeStuds * DC.speedScaleMax))
 	check("긴 대시 기본 인자 없음 = 옛 호출 그대로", near(JM.dashRangeStuds(1), DC.rangeStuds))
+	-- FINAL-1b 결정 3: 보호 창(받는 피해 ×0.5 · 미사일 통과) = max(이동 시간, protectSeconds) - 짧은 대시 이동 0.18 그대로 · 창 0.3
+	local _, shortMove = DM.base("short")
+	check("짧은 대시 이동 0.18 그대로 · 보호 창 0.3", near(shortMove, 0.18) and near(DM.protectSeconds(shortMove), 0.3), ("이동 %.2f · 창 %.2f"):format(shortMove, DM.protectSeconds(shortMove)))
+	check("긴 대시 보호 창 = 0.3(이동과 같음) · 기울기 중간도 0.3", near(DM.protectSeconds(select(2, DM.base("long"))), 0.3) and near(DM.protectSeconds(select(2, DM.base("analog", 0.5))), 0.3))
 	check("긴 대시 최대(이속 상한 × 공중 1.25)", near(JM.dashRangeStuds(9, 1.25), DC.rangeStuds * DC.speedScaleMax * 1.25), ("%.2f"):format(JM.dashRangeStuds(9, 1.25)))
 end)
 if not ok then print("[DASH] 하네스 에러 " .. tostring(err)) end

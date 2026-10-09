@@ -528,7 +528,8 @@ do
 	local needKick = (MODS.BossData.mechanics.dodge.perceptionSeconds + 8 / walk) -- 뒤 한가운데에서 비스듬히 8 stud(부채 가장자리 각) = 인지 + 걷기
 	check("매머드 회피 부등식(신규 포함 전 스킬)", #bad == 0, #bad == 0 and "실패 0" or table.concat(bad, " · "))
 	check("매머드 뒷발차기 회피(걷기 - 대시 · 점프 없이)", needKick <= bk.telegraphSeconds, ("인지 0.5 + 옆 8 stud 걷기 = %.2f초 ≤ 예비 %.2f"):format(needKick, bk.telegraphSeconds))
-	check("매머드 크기(등 높이 약 30 · 길이 약 39 stud)", math.abs(0.85 * 2.4 * k - 30) < 1.5, ("등 %.1f · 몸 길이(엉덩이 끝 ~ 머리 앞) %.1f · 상아 끝 ~ 꼬리 %.1f stud · 몸 가장자리 +%.2f · BodyRadius 증가"):format(0.85 * 2.4 * k, front + rear, 1.73 * 2.4 * k, edge))
+	-- FINAL-1b 결정 1: 길이 45 우선(균일 축소라 등 30과 동시 불가 - 등 약 23 · 전체 높이 약 27). 옛 검사 = 등 30 ± 1.5
+	check("매머드 크기(상아 끝 ~ 꼬리 약 45 · 등 높이 약 23)", math.abs(1.73 * 2.4 * k - 45) < 2 and math.abs(0.85 * 2.4 * k - 22.7) < 1.5, ("등 %.1f · 몸 길이(엉덩이 끝 ~ 머리 앞) %.1f · 상아 끝 ~ 꼬리 %.1f stud · 몸 가장자리 +%.2f · BodyRadius 증가"):format(0.85 * 2.4 * k, front + rear, 1.73 * 2.4 * k, edge))
 end
 
 -- ─────────────────────────── BOSS-NIGHT-1 2: 폭풍 군주 새 몸(변신 무적 · 폼 부품 · 2폼 주먹) ───────────────────────────

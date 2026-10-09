@@ -416,6 +416,12 @@ local function build()
 	phoneNote.TextWrapped = true
 	phoneNote.Position = UDim2.fromOffset(PAD, PAD + #PanelRegistry.hotkeySheet * 30 + 4)
 	phoneNote.Size = UDim2.new(1, -PAD * 2, 0, 36)
+	-- FINAL-1b 결정 3: W/A/D 두 번 = 짧은 대시 켜기/끄기(기본 켬 · 끄면 W 톡톡 실수로 대시 쿨을 쓰지 않는다 · S 두 번 백플립은 그대로)
+	refs.doubleTapToggle = Toggle.build({ parent = h, name = "DoubleTapDashToggle", text = Text.get("settings.doubleTapDash"), value = player:GetAttribute("SettingDoubleTapDash") ~= false,
+		width = width, position = UDim2.fromOffset(PAD, PAD + #PanelRegistry.hotkeySheet * 30 + 48), onChanged = function(v)
+			player:SetAttribute("SettingDoubleTapDash", v)
+			save("doubleTapDash", v)
+		end })
 
 	built = { panel = panel, refs = refs, volumeRows = volumeRows, pages = pages, tabs = tabs }
 end
@@ -427,6 +433,7 @@ local function refreshRefs()
 	built.refs.cameraToggle.setValue(player:GetAttribute("CameraTopDown") == true, true)
 	built.refs.dimToggle.setValue(AttackTrail.dimOthers(), true)
 	built.refs.flashToggle.setValue(player:GetAttribute("ReduceFlashes") == true, true)
+	built.refs.doubleTapToggle.setValue(player:GetAttribute("SettingDoubleTapDash") ~= false, true)
 	for _, row in pairs(built.volumeRows) do
 		row.render()
 	end

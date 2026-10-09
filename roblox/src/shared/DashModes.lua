@@ -18,6 +18,11 @@ function DashModes.base(mode, tilt)
 	return longR, longD
 end
 
+-- FINAL-1b 결정 3: 대시 보호 창(초) = max(이동 시간, DashConfig.protectSeconds) - 서버 DashWindow · BossSim이 같은 식을 쓴다
+function DashModes.protectSeconds(durationSeconds)
+	return math.max(durationSeconds or 0, DashConfig.protectSeconds or 0)
+end
+
 -- 두 번 연속 누름 판정기: 같은 키를 window초 안에 다시 누르면 true(판정 뒤 기록을 비운다 - 세 번째가 또 연속이 되지 않게)
 function DashModes.newTapState()
 	return { key = nil, at = -math.huge }

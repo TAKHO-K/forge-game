@@ -39,6 +39,9 @@ return {
 		widthFraction = 0.45, widthMin = 360, widthMax = 720, phoneSideReserve = 230,
 		fill = C(196, 30, 46), fillTop = C(232, 64, 72), track = C(52, 12, 18), border = C(214, 176, 62), lag = C(255, 255, 255), lagTransparency = 0.25,
 		lagHoldSeconds = 0.45, lagSeconds = 0.6,
+		-- FINAL-1b 결정 6: FUN-1에서 그릴 것의 화면 자리만(지금 그리지 않음 · 다른 요소를 옮기지 않는 빈 곳) - BossHudLayout.reserved()
+		--   breakGauge = 보스 바 바로 아래 얇은 줄(내 체력바와의 틈 gapAboveHealth 8 안 · 위 breakGap · 높이 breakHeight) · contribution = 이름 · % 줄 오른쪽 끝에서 % 칸(percentWidth) 왼쪽 "내 기여 n%"
+		reserved = { breakGap = 1, breakHeight = 5, percentWidth = 64, contributionGap = 8, contributionWidth = 104 },
 		chat = { heightScale = 0.55, widthScale = 0.8, backgroundTransparency = 0.85 }, -- 보스전 동안 로블록스 채팅 창 = 작고 투명하게(끄지 않음)
 	},
 	-- A2-N4 §4-6 GUI 트렌드 1차(client/ArtV1GuiTrend - ArtStyleV1 뒤): 대상 = ScreenMap 인스턴스 이름 · 보스바 · 장비창 창. 굵은 잉크 외곽선 · 둥근 모서리 최소 · 위 → 아래 그라데이션(아래 색을 곱한다) · 글씨 외곽선 불투명 상한.

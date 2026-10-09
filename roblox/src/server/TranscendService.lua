@@ -310,6 +310,9 @@ function TranscendService.confirm(player, token, slotChoice)
 		end
 		return { ok = false, why = "save_failed" }
 	end
+	if typeof(player) == "Instance" then
+		pcall(require(script.Parent.CodexService).noteClassTranscend, player, profile.classId) -- FINAL-1b 결정 6: 도감 직업 초월 칸(저장 성공 뒤)
+	end
 	audit(player, "transcendInherit", ("%s 등급 %d +%d → 초월 +0 · 환생 %d · 스테이지 %d · 보석 %s"):format(tostring(profile.classId), fromGrade, fromLevel, classState.transcendInherit.rebirth, classState.transcendInherit.stage, table.concat(rewards, ",")))
 	for _, id in ipairs(rewards) do
 		audit(player, "transcendGem", ("%s · 계승 보상"):format(id))
