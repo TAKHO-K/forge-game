@@ -201,7 +201,8 @@ function BossFramework.applyV3(data, rigKey)
 		local hide = hideFloor[id]
 		local longer = windup.skills[id]
 		local bodyCharge = (id == "charge" and cfg.chargeHalfWidth == "body") or (cfg.bodyCharges and cfg.bodyCharges[id])
-		if hide or longer or bodyCharge or (s.primitive == "ring" and cfg.ringStyle) then
+		local hopHeight = cfg.hopHeight and cfg.hopHeight[id] -- BOSS-NIGHT-2 2b: 지진파 때 서버가 몸을 드는 높이(겉모습 - 판정 · 파동 시각 무관)
+		if hide or longer or bodyCharge or hopHeight or (s.primitive == "ring" and cfg.ringStyle) then
 			s = table.clone(s)
 			if hide then
 				s.noFloor = true
@@ -215,6 +216,9 @@ function BossFramework.applyV3(data, rigKey)
 			end
 			if s.primitive == "ring" and cfg.ringStyle then
 				s.ringStyle = cfg.ringStyle
+			end
+			if hopHeight then
+				s.hopHeightStuds = hopHeight
 			end
 			skills[id] = s
 		end

@@ -68,6 +68,18 @@ return {
 		charge = { step = 6, jitter = 0.45, fill = 0.85 }, -- 돌진 경로 균열선(가장자리 두 줄 · 폭 = 몸 폭)
 		lightenFill = 0.35, -- 채움은 균열선보다 이만큼 흐리게(바닥이 보이게)
 	},
+	-- BOSS-NIGHT-2 2b 바닥 자국(client/BossGroundMarks - 겉모습만: 피해 · 판정 · 충돌 · 이동 방해 없음 · 파트 풀 · 종류별 상한 max(넘으면 가장 오래된 것부터 다시 씀))
+	--   색 = 어두운 회청 그을음/균열(보스 경고색 빨강 · 진한 주황 금지 - 전조와 헷갈리지 않게) + 아주 약한 번개빛(Neon · 가장 낮은 채널 ≤ 90 · 거의 투명 · 깜박임)
+	--   scorch = 폭풍 1폼 검기가 지나간 길(step stud마다 그을린 띠 · 폭 = 초승달 반경 × widthScale · emberEvery칸마다 잔불 선) · hold 뒤 fade초 동안 사라짐(합 약 3초)
+	--   crack = 지진파가 지나간 자리(파동 반경 stepStuds마다 perStep줄 들쭉날쭉 균열 + 작은 파편 - 파동 1개 ≈ 7파트 × 반경/5 · 3파동 ≈ 250) · 6초 유지 → 2초 동안 사라짐(합 8초) · bosses = 켠 보스(다른 보스는 BOSS-NIGHT-3)
+	groundMarks = {
+		scorch = { step = 3, widthScale = 1.1, lift = 0.06, color = Color3.fromRGB(34, 33, 44), transparency = 0.35, ember = Color3.fromRGB(90, 170, 255), emberTransparency = 0.8, emberWidth = 0.22, emberEvery = 2,
+			holdSeconds = 1.2, fadeSeconds = 1.8, max = 90, maxTravel = 130 }, -- maxTravel = 검기 최대 비행(수명 2.6 × 45 = 117 + 여유) - 끝 신호를 못 받은 초승달(보스 리셋 등)이 자국을 계속 남기지 않게
+		crack = { stepStuds = 5, perStep = 3, length = { 3, 6 }, segments = 2, jitter = 0.6, width = 0.7, lift = 0.07, color = Color3.fromRGB(28, 28, 36), transparency = 0.2,
+			glow = Color3.fromRGB(90, 160, 255), glowTransparency = 0.72, glowEvery = 2, debris = 1, debrisSize = { 0.35, 0.7 }, debrisColor = Color3.fromRGB(52, 50, 58),
+			holdSeconds = 6, fadeSeconds = 2, max = 260, bosses = { storm_lord = true } },
+		glowHz = 15, -- 번개빛 깜박임 갱신(초당 - 매 프레임 아님 · 폰)
+	},
 	-- 바나나 투사체(교체 슬롯 GuardianBanana - BossFrameworkData.meshSlots): 길이 lengthStuds · 회전 spinHz · 꼬리 트레일 · 풀 최대 poolMax(파티 4 × 3갈래)
 	-- V3.1: 길이 = 보스 손(Hand_R 메시 가장 긴 변) × handScale(손을 못 찾으면 lengthStuds) · 비행 = 텀블(끝이 넘어가는 회전) spinHz 바퀴/초 ·
 	--   hold = 예비 동안 손에 든 바나나 보라 발광 0 → 1(Highlight 채움 · PointLight) · light = 비행 중 작은 보라 빛 1개 · shards = 맞거나 땅에 닿을 때 보라 조각 파티클

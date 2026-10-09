@@ -872,6 +872,7 @@ do
 	-- BOSS-NIGHT-2 2-7 · 3(근접 높이 규칙 §13 · 사용자: 높이 뜬 채 내리치니 앞으로 너무 쏠림 → 실제 싸움처럼): 2폼은 주먹을 칠 때 내려앉아 쭈그리며(다리 = 지면 위 약 1.8 stud)
 	--   몸은 20°만 숙이고 사선 아래로 뻗는다 → 주먹 끝 = 지면 위 약 8 stud(FK) · 끝에서 지면까지 번개(impacts bolt) + 바닥 충격 원
 	local SQUAT = { Hip_L = { 90, 0, -6 }, Knee_L = { -140, 0, 0 }, Ankle_L = { 56, 0, 0 }, Hip_R = { 40, 0, 6 }, Knee_R = { -120, 0, 0 }, Ankle_R = { 42, 0, 0 } }
+	local KNEEL = { Hip_L = { 85, 0, -6 }, Knee_L = { -140, 0, 0 }, Ankle_L = { 65, 0, 0 }, Hip_R = { -10, 0, 6 }, Knee_R = { -100, 0, 0 }, Ankle_R = { 20, 0, 0 } } -- 앞무릎 세움 · 뒷무릎 꿇음(땅 치기 착지)
 	local FISTS_DOWN = merge(FIST_GUARD, SQUAT, { Shoulder_R = { 32, 0, -8 }, Elbow_R = { 4, 0, 0 }, Shoulder_L = { 32, 0, 8 }, Elbow_L = { 4, 0, 0 }, Waist = { -16, 0, 0 }, Neck = { 12, 0, 0 }, RootJoint = { -14, 0, 0, 0, -1.2, 0 } })
 	local PUNCH_R = merge(FIST_GUARD, { Waist = { -6, -30, 0 }, Shoulder_R = { 88, 0, -4 }, Elbow_R = { 4, 0, 0 }, Neck = { 0, 20, 0 } })
 	local PUNCH_L = merge(FIST_GUARD, { Waist = { -6, 30, 0 }, Shoulder_L = { 88, 0, 4 }, Elbow_L = { 4, 0, 0 }, Neck = { 0, -20, 0 } })
@@ -900,6 +901,34 @@ do
 			{ s = 2.5, ease = "inout", pose = STAFF_REUP }, { s = 3.2, ease = "in", pose = STAFF_SLAM }, { s = 4.1, ease = "inout", pose = REST_POSE }, -- BOSS-NIGHT-2: 다시 드는 높이 낮춤(그립 반전으로 보주 호가 커져 급정지 = 튐)
 		},
 		hitstop = 0.07, squash = 0.2, extraStrikes = { post = { 1.6, 3.2 } }, endFade = 0.8, -- 스킬이 클립 중간에 끝나면 그립 반전 지팡이가 기본 자세로 천천히
+	}
+	-- BOSS-NIGHT-2 2b 지진파 찍기(사용자: 첫 지진파 뒤 점프만 해서 어색함 - 세트에 hopSlam이 없어 공통 맨손 점프가 덮었다) · forms.*.hop
+	--   서버가 파동마다 몸을 든다(hop · hit = 착지 = 파동 시작) → 웅크림(예비) → 도약 → 착지 충격 순서로만. 판정 · 시간 그대로.
+	--   1폼(사용자: 점프보다 지팡이로 내려찍기 - v3.hopHeight 0 = 몸을 들지 않음): 지팡이를 두 손으로 쥠 → 머리 위로 크게 들어 올림(발끝 · 몸 젖힘) → 두 손으로 땅에 내리꽂음(짧은 멈춤) → 회복
+	local STAFF2_UP = merge(STAFF_UP, { Shoulder_L = { 160, 0, 18 }, Elbow_L = { 22, 0, 0 } })
+	local STAFF2_SLAM = merge(STAFF_SLAM, crouch(0.45, 14), { Shoulder_L = { 58, 0, 16 }, Elbow_L = { 26, 0, 0 }, Waist = { -24, 0, 0 } })
+	local HOP_TUCK = { Hip_L = { 30, 0, -6 }, Hip_R = { 30, 0, 6 }, Knee_L = { -55, 0, 0 }, Knee_R = { -55, 0, 0 }, Ankle_L = { 20, 0, 0 }, Ankle_R = { 20, 0, 0 } } -- 2폼 떠오를 때 다리 접기
+	C.s_hop = {
+		pre = {
+			{ f = 0.3, ease = "inout", pose = merge(STAFF_HOLD, crouch(0.2, 6), { Shoulder_L = { 40, 0, -10 }, Elbow_L = { 70, 0, 0 }, Waist = { -8, 0, 0 } }) },
+			{ f = 0.75, ease = "out", pose = merge(STAFF2_UP, { RootJoint = { 0, 0, 0, 0, 0.15, 0 } }) },
+			{ f = 1.0, ease = "in", pose = merge(STAFF2_UP, { Shoulder_R = { 178, 0, -10 }, Shoulder_L = { 175, 0, 14 }, Waist = { 16, 0, 0 }, RootJoint = { 0, 0, 0, 0, 0.2, 0 } }) },
+		},
+		post = { { s = 0.06, ease = "in", pose = STAFF2_SLAM }, { s = 0.32, ease = "out", pose = merge(STAFF2_SLAM, { Waist = { -26, 0, 0 } }) }, { s = 1.0, ease = "inout", pose = REST_POSE } },
+		hitstop = 0.1, squash = 0.2, endFade = 0.6,
+	}
+	--   2폼(떠 있음): 두 주먹을 머리 위로 모으며 떠오름 → 내려오며 착지해 두 주먹으로 땅을 찍음(앞무릎 · 뒷무릎) → 충격파 → 다시 떠오름(호버 자세로)
+	local GROUND_FISTS = merge(FIST_GUARD, KNEEL, { RootJoint = { -40, 0, 0, 0, -1.6, 0 }, Waist = { -30, 0, 0 }, Shoulder_R = { 55, 0, -6 }, Elbow_R = { 4, 0, 0 }, Shoulder_L = { 55, 0, 6 }, Elbow_L = { 4, 0, 0 }, Neck = { 35, 0, 0 } })
+	C.f_hop = {
+		pre = {
+			-- 파동 간격 1.6초 = 앞 찍기 착지 직후 다음 찍기가 시작된다(Studio 실측: 착지 자세가 0.1초 만에 튀어 오름) → 쭈그린 채 주먹을 거두며 밀고 떠오름(웅크림 예비 = 첫 찍기도 같음)
+			{ f = 0.3, ease = "out", pose = merge(GROUND_FISTS, { RootJoint = { -20, 0, 0, 0, -1.3, 0 }, Waist = { -20, 0, 0 }, Shoulder_R = { 100, 0, -10 }, Elbow_R = { 60, 0, 0 }, Shoulder_L = { 100, 0, 10 }, Elbow_L = { 60, 0, 0 } }) },
+			{ f = 0.62, ease = "out", pose = merge(FISTS_UP, HOP_TUCK) },
+			{ f = 1.0, ease = "in", pose = merge(FISTS_UP, { Waist = { -10, 0, 0 }, Shoulder_R = { 150, 0, -10 }, Shoulder_L = { 150, 0, 10 }, RootJoint = { -12, 0, 0, 0, -0.6, 0 } }) },
+		},
+		post = { { s = 0.06, ease = "in", pose = GROUND_FISTS }, { s = 0.35, ease = "out", pose = merge(GROUND_FISTS, { Waist = { -32, 0, 0 } }) }, { s = 1.2, ease = "inout", pose = REST_POSE } },
+		hitstop = 0.1, squash = 0.2, endFade = 0.6,
+		airborne = { from = 0.1, to = 1.0 },
 	}
 	-- 회오리 whirl: 망토를 펼치고 한 바퀴 돈다(지팡이 수평)
 	local WHIRL = merge(STAFF_HOLD, { Shoulder_R = { 85, 0, -70 }, Elbow_R = { 5, 0, 0 }, Wrist_R = { 0, 0, -80 }, Shoulder_L = { 80, 0, 70 }, Elbow_L = { 5, 0, 0 } }, cape(-35, 25))
@@ -1001,10 +1030,11 @@ do
 	}
 	-- BOSS-NIGHT-2 2-7 2폼 강화 평타 = 살짝 떠올라 오른 주먹을 뒤로 당겼다가 → 내려앉으며 체중을 실어 사선 아래로 "번개 주먹"(대상 지점 지면 강타 + 작은 충격 원)
 	local FIST_HIGH_R = merge(FIST_GUARD, { RootJoint = { 4, 0, 0, 0, 0.75, 0 }, Waist = { 6, 30, 0 }, Shoulder_R = { 120, 0, -35 }, Elbow_R = { 100, 0, 0 }, Shoulder_L = { 50, 0, 20 }, Elbow_L = { 110, 0, 0 }, Neck = { 6, -18, 0 } })
-	local DIVE_PUNCH_R = merge(FIST_GUARD, SQUAT, { RootJoint = { -14, 0, 0, 0, -1.2, 0 }, Waist = { -16, -28, 0 }, Shoulder_R = { 30, 0, -10 }, Elbow_R = { 4, 0, 0 }, Shoulder_L = { 45, 0, 18 }, Elbow_L = { 110, 0, 0 }, Neck = { 10, 22, 0 } })
+	-- BOSS-NIGHT-2 2b(사용자: 주먹 8.6 ~ 9.5 stud = §13 위반 → 주먹 끝이 지면에): 앞무릎 세우고 뒷무릎 꿇어 내려앉으며 몸을 깊이 숙여 땅을 친다(FK 격자 탐색 - 주먹 박스 바닥 ≈ 0.7 stud · 다리 지면 −0.5 안)
+	local DIVE_PUNCH_R = merge(FIST_GUARD, KNEEL, { RootJoint = { -55, 0, 0, 0, -1.9, 0 }, Waist = { -40, -24, 0 }, Shoulder_R = { 80, 0, -4 }, Elbow_R = { 4, 0, 0 }, Shoulder_L = { 45, 0, 18 }, Elbow_L = { 110, 0, 0 }, Neck = { 35, 22, 0 } })
 	C.f_swipe = {
 		pre = { { f = 0.45, ease = "inout", pose = merge(FIST_HIGH_R, { Shoulder_R = { 150, 0, -24 } }) }, { f = 1.0, ease = "out", pose = FIST_HIGH_R } },
-		post = { { s = 0.08, ease = "in", pose = DIVE_PUNCH_R }, { s = 0.28, ease = "back", pose = merge(DIVE_PUNCH_R, { Waist = { -34, -22, 0 } }) }, { s = 1.0, ease = "inout", pose = REST_POSE } },
+		post = { { s = 0.08, ease = "in", pose = DIVE_PUNCH_R }, { s = 0.28, ease = "back", pose = merge(DIVE_PUNCH_R, { Waist = { -38, -22, 0 } }) }, { s = 1.0, ease = "inout", pose = REST_POSE } },
 		hitstop = 0.07, squash = 0.12, tremble = { from = 0.6, amp = 3, joints = { "Shoulder_R", "Elbow_R" } },
 		endFade = 0.7, -- Studio 실측: 동작이 접촉 + 0.1초에 끝나 내리꽂은 자세가 0.15초 만에 풀렸다 → 쭈그린 타격 자세를 천천히 푼다(보이기만)
 	}
@@ -1138,12 +1168,12 @@ do
 			before = {
 				gait = "biped", stance = STAFF_HOLD, guard = STAFF_HOLD,
 				walk = { stride = 0.55, knee = 30, arm = 10, bob = 0.05, lean = 5, twist = 5, turnLean = 6, runAt = 1.6 },
-				motions = MOTIONS1, skills = SK1, env = "f_env", throw = "s_throw",
+				motions = MOTIONS1, skills = SK1, env = "f_env", throw = "s_throw", hop = "s_hop",
 			},
 			after = {
 				gait = "hover", stance = FIST_GUARD, guard = FIGHT, hover = { height = 0.55, bob = 0.1, period = 1.4 },
 				walk = { stride = 0.55, knee = 20, arm = 6, bob = 0.03, lean = 10 },
-				motions = MOTIONS1, skills = SK2, env = "f_env", throw = "s_throw",
+				motions = MOTIONS1, skills = SK2, env = "f_env", throw = "s_throw", hop = "f_hop",
 				-- 2폼 때리는 부위 = 건틀릿 주먹(지팡이 숨김)
 				flash = { discharge = FISTS, whirl = { "Wing_L2", "Wing_R2" }, strike = { "Gauntlet_R" }, rods = { "Gauntlet_R" }, swipe = { "Gauntlet_R" }, grab = { "Gauntlet_L" },
 					tornado = FISTS, thunderRing = FISTS, boltSpear = FISTS, mirror = { "Wing_L1", "Wing_R1" }, innerSmash = FISTS },
@@ -1194,6 +1224,7 @@ do
 			s_transform = { kind = "roar", parts = { "Body" }, size = 1.3, shake = 0.9 }, roar = { kind = "roar", parts = { "Head" }, size = 1.0, shake = 0.7 },
 			basic_R = { kind = "whoosh", parts = { "Hand_R" }, size = 0.55 }, basic_L = { kind = "whoosh", parts = { "Hand_L" }, size = 0.55 },
 			s_wave = { kind = "whoosh", parts = { "StaffOrb" }, size = 1.2, floorDust = true }, f_orbs = { kind = "spark", parts = FISTS, size = 1.0 },
+			s_hop = { kind = "ground", parts = { "Staff" }, size = 1.0, shake = 1.0, heavy = true }, f_hop = { kind = "ground", parts = FISTS, size = 1.0, shake = 1.0, heavy = true, bolt = true },
 		},
 		clips = C,
 	}

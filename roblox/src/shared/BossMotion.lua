@@ -662,8 +662,9 @@ function BossMotion.evaluate(ctx, st, now)
 		else
 			actLayer(BossMotion.clipNameForSkill(ctx.rigId, ctx.rig, st.act, skill, formName), st.actAt, st.actHit, st.actEndAt)
 			-- BR1-4c: 지진파 뛰어오름마다 웅크림 → 공중 → 내려찍기(서버 BossHopAt · 뛰는 시간 = 착지 = 파동)
-			if st.hopAt and st.hopSeconds and st.hopAt >= st.actAt and P.clips.hopSlam and now - st.hopAt < st.hopSeconds + 0.8 then
-				actLayer("hopSlam", st.hopAt, st.hopSeconds, st.actEndAt)
+			local hopName = (F and F.hop) or "hopSlam" -- BOSS-NIGHT-2 2b: 폼별 지진파 찍기(폭풍 = 두 손 지팡이 / 내려와 두 주먹) · 없으면 공통
+			if st.hopAt and st.hopSeconds and st.hopAt >= st.actAt and P.clips[hopName] and now - st.hopAt < st.hopSeconds + 0.8 then
+				actLayer(hopName, st.hopAt, st.hopSeconds, st.actEndAt)
 			end
 			-- BR1-4c c-9: 스킬 뒤 단계(마무리 강타 → 숨 고르기)
 			local phaseClip = st.actPhase and P.phaseClips and P.phaseClips[st.actPhase]

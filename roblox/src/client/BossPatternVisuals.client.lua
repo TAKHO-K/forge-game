@@ -38,6 +38,7 @@ local BossRegrowView = require(script.Parent.BossRegrowView) -- P3d D: 지형 �
 local BossMotionView = require(script.Parent.BossMotionView) -- P3d A1 · A2 · A4: 보스 찍기 · 돌진 모션(인형) · 풍압 · 속도감
 local BossCraterView = require(script.Parent.BossCraterView) -- A2-N4 §2-5 지진파 구덩이 흔적
 local BossQuakeView = require(script.Parent.BossQuakeView) -- GUARDIAN-V3 연보라 균열 표시 · 지진파 돌판 · 수정 조각
+local BossGroundMarks = require(script.Parent.BossGroundMarks) -- BOSS-NIGHT-2 2b 지진파 뒤 바닥 균열 · 검기 그을음(겉모습만)
 local function isPhoneLook() -- A2-N4: 폰(터치 · 짧은 변 < 500)은 먼지를 줄인다(BossArenaDressing과 같은 잣대)
 	local cam = workspace.CurrentCamera
 	local vp = cam and cam.ViewportSize or Vector2.new(1920, 1080)
@@ -802,6 +803,7 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 		end
 		BossRhythmView.waveCue(data)
 		if (data.layer or 1) == 1 then
+			BossGroundMarks.trackWave(data) -- BOSS-NIGHT-2 2b: 파동이 지나간 자리 균열(켠 보스만 · 6 ~ 8초 뒤 사라짐)
 			BossMotionView.slamImpact(data) -- P3d A2: 내려찍는 순간 풍압 · 흔들림
 			if not data.air and not data.style then
 				BossCraterView.add(data.center, data.floorColor) -- A2-N4 §2-5: 찍은 자리 얕은 구덩이 흔적(겉모습만)
@@ -1014,6 +1016,7 @@ patternEvent.OnClientEvent:Connect(function(kind, data)
 	elseif kind == "reset" then
 		resetAll()
 		BossQuakeView.reset() -- GUARDIAN-V3
+		BossGroundMarks.reset() -- BOSS-NIGHT-2 2b
 		BossRhythmView.clear()
 		BossMotionView.reset()
 		BossRegrowView.clear() -- 리뷰 2: 끼임 표시도(서버가 풀었다는 알림을 못 받았어도 리셋이면 지운다)

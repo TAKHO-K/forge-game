@@ -15,6 +15,7 @@ local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local BossFx = require(script.Parent.BossFx)
 local TelegraphStyle = require(script.Parent.TelegraphStyle) -- A2-N2 2-4 전조 공통 테두리(ArtStyleV1 스위치 뒤)
 local BossBananaView = require(script.Parent.BossBananaView) -- GUARDIAN-V3 바나나(풀 · 교체 슬롯)
+local BossGroundMarks = require(script.Parent.BossGroundMarks) -- BOSS-NIGHT-2 2b 검기가 지나간 그을린 길(겉모습만)
 local BossMeshShotView = require(script.Parent.BossMeshShotView) -- BOSS-NIGHT-1 메시 투사체(매머드 얼음 상아 - 풀 · 교체 슬롯)
 
 local BossBR1View = {}
@@ -738,6 +739,16 @@ RunService.RenderStepped:Connect(function(dt)
 		end
 		local cr = p.crescent
 		if cr then -- BOSS-NIGHT-2 검기: 진행 방향으로 볼록한 호(가운데가 앞) · 지면에 서서 날아감 · 가끔 번개 조각
+			-- BOSS-NIGHT-2 2b Studio 실측: 전멸 리셋 때 끝 신호(projEnd)를 못 받은 초승달이 계속 날며 자국을 남겼다 → 최대 비행 거리 넘으면 숨기고 자국 끔
+			if p.traveled > BossFxData.groundMarks.scorch.maxTravel then
+				if not cr.expired then
+					cr.expired = true
+					for _, seg in ipairs(cr.segs) do
+						seg.Transparency = 1
+					end
+				end
+				continue
+			end
 			local flat = Vector3.new(p.dir.X, 0, p.dir.Z)
 			flat = flat.Magnitude > 1e-3 and flat.Unit or Vector3.new(0, 0, -1)
 			local right = flat:Cross(Vector3.yAxis)
@@ -755,6 +766,15 @@ RunService.RenderStepped:Connect(function(dt)
 				local a = math.rad(CRESCENT.spanDeg) * (math.random() * 2 - 1)
 				local at = base + flat * (cr.R * math.cos(a) - cr.R * 0.7) + right * (cr.R * math.sin(a))
 				BossFx.streak(at, -flat + Vector3.new(0, 0.4, 0), 2.5, 0.2, CRESCENT.color, 0.2, 8)
+			end
+			-- BOSS-NIGHT-2 2b: 지나간 길에 그을린 띠(step stud마다 · 약 3초 뒤 사라짐 - BossGroundMarks 풀 · 상한)
+			local step = BossFxData.groundMarks.scorch.step
+			local floorAt = Vector3.new(p.position.X, cr.floorY, p.position.Z)
+			cr.lastMark = cr.lastMark or floorAt
+			local gap = floorAt - cr.lastMark
+			if gap.Magnitude >= step then
+				BossGroundMarks.scorch((floorAt + cr.lastMark) / 2, flat, cr.R * 2 * BossFxData.groundMarks.scorch.widthScale * 0.5, gap.Magnitude)
+				cr.lastMark = floorAt
 			end
 		end
 		local t = p.tornado

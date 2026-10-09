@@ -505,7 +505,8 @@ local function noteImpacts(e, st)
 				table.insert(e.fxQueue, { at = v + 0.07, clip = (st.swingN or 0) % 2 == 0 and "basic_R" or "basic_L" })
 			elseif k == "hopAt" then
 				push(v + (st.hopSeconds or 0) - 0.35, v + (st.hopSeconds or 0) + 0.35)
-				table.insert(e.fxQueue, { at = v + (st.hopSeconds or 0), clip = "hopSlam" })
+				local hf = e.ctx.set and e.ctx.set.forms and e.ctx.set.forms[e.form]
+				table.insert(e.fxQueue, { at = v + (st.hopSeconds or 0), clip = (hf and hf.hop) or "hopSlam" }) -- BOSS-NIGHT-2 2b: 폼별 찍기 충격 부위
 			elseif k == "deadAt" then
 				local Dd = e.ctx.plan.death
 				local slowEnd = Dd.slowSeconds and (Dd.slowSeconds + (Dd.hitstopAt - Dd.slowSeconds * Dd.slowRate)) or Dd.hitstopAt

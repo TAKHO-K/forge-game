@@ -150,6 +150,8 @@ D.v3 = {
 		glow = { color = Color3.fromRGB(255, 225, 90), fillPeak = 0.55, outline = 0.35, skills = { swipe = true, innerSmash = true, discharge = true, thunderRing = true, strike = true, boltSpear = true, tornado = true, swordWave = true, stormOrbs = true }, basic = true,
 			basicParts = { R = "Hand_R", L = "Hand_L" } },
 		marks = { color = LAVENDER, crackColor = Color3.fromRGB(160, 90, 255), transparency = 0.6, crackTransparency = 0.25, crackWidth = 0.35 },
+		-- BOSS-NIGHT-2 2b(사용자: 지진파 = 점프보다 지팡이로 내려찍기): 천둥 고리 · 방전 고리 파동마다 몸을 들지 않음(옛 4 stud) - 1폼 = 그 자리에서 두 손 지팡이 내려찍기 · 2폼 = 떠 있다 내려와 두 주먹(클립 forms.*.hop) · 판정 · 파동 시각 그대로
+		hopHeight = { thunderRing = 0, discharge = 0 }, -- 방전 고리(1파동)도 같은 들기였다
 		-- BOSS-NIGHT-2 2-2(사용자: 아이언맨식 변신): 무적 2.8 → 3.5초. 돌풍 환경(50% + 3초)은 데이터 그대로라 무적 끝 0.5초 전에 시작한다(보스 쪽 무적이라 플레이어 손해 없음).
 		--   클라 조립 연출(BossClipSetData storm_lord_v2.transform.assemble)은 3.0초 안에 끝난다(돌풍 시작 전에 번개 폭발 · 떠오름)
 		transformGuard = { hpBelow = 0.5, seconds = 3.5 },
