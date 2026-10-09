@@ -110,9 +110,17 @@ function ArtMeshKit.applyRig(model, key, rigId, S, lift)
 	texMeta = texMeta and texMeta.texture
 	if texMeta then
 		local ArtAssetIds = require(ReplicatedStorage.Shared.data.ArtAssetIds)
+		-- BOSS-NIGHT-2 색조 노브(BossFrameworkData.atlasTint[메시 키] - 0 = 원본 · n = 미리 구운 변형 아틀라스 "<아틀라스>_<variants[n]>"(tools/blender/atlas_tint.py))
+		--   Studio에서만 workspace Attribute BossAtlasTint(숫자)가 값을 덮는다(촬영 비교 - 라이브 무시)
+		local tint = require(ReplicatedStorage.Shared.data.BossFrameworkData).atlasTint[key]
+		local tintValue = tint and ((game:GetService("RunService"):IsStudio() and workspace:GetAttribute("BossAtlasTint")) or tint.value)
+		local suffix = tint and tintValue and tintValue > 0 and tint.variants[tintValue]
 		-- BOSS-NIGHT-1: 아틀라스 여러 장(texMeta.atlases · 부위 값 = 몇 번째) - 한 장이면 parts 값 = true
 		for name, which in pairs(texMeta.parts or {}) do
 			local key = (type(which) == "number" and texMeta.atlases and texMeta.atlases[which]) or texMeta.atlas
+			if suffix and ArtAssetIds[key .. "_" .. suffix] then
+				key = key .. "_" .. suffix
+			end
 			local e = ArtAssetIds[key]
 			local mesh = e and e.image and model:FindFirstChild(name)
 			if mesh and mesh:IsA("MeshPart") then

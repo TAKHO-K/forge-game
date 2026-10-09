@@ -1,0 +1,58 @@
+{
+ "about": "BOSS-NIGHT-2 1 전갈 여왕 KIT 설정 - 몸 = Meshy scorpion_v1_body_remesh30k(리메시본 기본 · meshy71 비교) · 리그 = BossRigV2Data scorpion_queen_v2(K 4.4 = 높이 1 H) · 4번째 다리 쌍 = 3번째 다리 복제(clones · 원본 면 안 받음 = skip) · 외곽선 = 몸 · 머리 · 집게 8 · 머리 외곽선 앞쪽 절반 지움 + 굽기 거리 0.03(눈에 이마 무늬가 묻지 않게 - 사용자: 눈이 무서움) · 머리 · 왕관 = 아틀라스 2장째(눈 해상도)",
+ "height": 4.4,
+ "yaw": 180,
+ "islands": 0,
+ "skip": [
+  "Mouth",
+  "Thigh4_L",
+  "Thigh4_R",
+  "Shin4_L",
+  "Shin4_R"
+ ],
+ "texture": "base",
+ "overlap": 0.08,
+ "bake": {
+  "size": 1024,
+  "extrusion": 0.012,
+  "distance": 0.03
+ },
+ "clones": [
+  {
+   "from": "Thigh3_L",
+   "to": "Thigh4_L"
+  },
+  {
+   "from": "Thigh3_R",
+   "to": "Thigh4_R"
+  },
+  {
+   "from": "Shin3_L",
+   "to": "Shin4_L"
+  },
+  {
+   "from": "Shin3_R",
+   "to": "Shin4_R"
+  }
+ ],
+ "outlineParts": [
+  "Body",
+  "Head",
+  "Hand_L",
+  "Hand_R",
+  "Forearm_L",
+  "Forearm_R",
+  "UpperArm_L",
+  "UpperArm_R"
+ ],
+ "outlineTrimFront": [
+  "Head"
+ ],
+ "atlasGroups": [
+  [
+   "Head",
+   "Crown",
+   "Mouth"
+  ]
+ ]
+}

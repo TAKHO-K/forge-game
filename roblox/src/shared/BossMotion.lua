@@ -346,22 +346,29 @@ local function baseBiped(ctx, st, now, pose, Wv)
 	return W
 end
 
-local function baseScorpion(ctx, st, now, pose)
+-- BOSS-NIGHT-2: F(동작 세트 - 전갈 v2 hexapod)가 있으면 세트 stance를 먼저 깔고 호흡 · 걸음을 더하기 층으로(옛 몸 = F 없음 → 옛 식 그대로)
+local function baseScorpion(ctx, st, now, pose, F, Wv)
 	local P = ctx.plan
 	local I = P.idle
 	local b = math.sin(TAU * now / I.breath.period)
-	blend(pose, {
+	local idle = {
 		RootJoint = { 0, 0, 0, 0, I.breath.lift * b, 0 },
 		Pincer_R = { 0, 0, 12 + I.breath.claw * b }, Pincer_L = { 0, 0, -12 - I.breath.claw * b },
 		Shoulder_R = { 3 * b, 0, 0 }, Shoulder_L = { 3 * b, 0, 0 },
-	}, 1)
-	local W = ctx.walk
+	}
+	if F then
+		blend(pose, F.stance or {}, 1)
+		add(pose, { RootJoint = idle.RootJoint, Pincer_R = { 0, 0, I.breath.claw * b }, Pincer_L = { 0, 0, -I.breath.claw * b } }, 1)
+	else
+		blend(pose, idle, 1)
+	end
+	local W = Wv or ctx.walk
 	local walkW = ease("sine", (st.speed or 0) / 2.5) -- A2-M1: 속도 → 걷기 가중치를 사인으로(옛 직선은 걷기 시작 · 멈춤에서 다리 각속도가 꺾였다)
 	if walkW > 0 then
 		local legs = {}
 		local run = clamp01(((st.speed or 0) / math.max(ctx.moveSpeed or 8, 1) - 1) / math.max(W.runAt - 1, 0.1))
 		local liftK = 1 - 0.3 * run -- A2-M1: 빠르게 달릴수록 다리를 낮게(잰걸음 - 다리 튐 없음)
-		for k = 1, 3 do
+		for k = 1, ctx.rig.legPairs or 3 do -- BOSS-NIGHT-2: 전갈 v2 = 다리 4쌍(rig.legPairs · groupA = 1·3 / 2·4 교대)
 			for _, side in ipairs({ "L", "R" }) do
 				local x = side == "R" and 1 or -1
 				local key = ("%d_%s"):format(k, side)
@@ -373,7 +380,11 @@ local function baseScorpion(ctx, st, now, pose)
 			end
 		end
 		legs.RootJoint = { 0, 0, 0, 0, -W.bob * math.abs(math.sin(TAU * 2 * (st.gait or 0))), 0 }
-		blend(pose, legs, walkW)
+		if F then
+			add(pose, legs, walkW)
+		else
+			blend(pose, legs, walkW)
+		end
 	end
 	return W
 end
@@ -498,7 +509,7 @@ function BossMotion.evaluate(ctx, st, now)
 		if base then
 			W = base(ctx, st, now, pose, F, Wf)
 		elseif F.gait == "hexapod" then
-			W = baseScorpion(ctx, st, now, pose)
+			W = baseScorpion(ctx, st, now, pose, F, Wf)
 		else
 			W = baseBiped(ctx, st, now, pose, Wf)
 			if F.stance then
@@ -884,13 +895,15 @@ local function scorpionLegReach(rig)
 	if not ok or not frames.Thigh1_R or not frames.Shin1_R then
 		return nil
 	end
-	local hip
+	local hip, shinHalf = nil, 0.975
 	for _, j in ipairs(rig.joints) do
 		if j.name == "Hip1_R" then
 			hip = j.at
+		elseif j.name == "Knee1_R" then
+			shinHalf = j.size.Y / 2 -- 옛 전갈 1.95 / 2 = 0.975(그대로) · v2 = 실측 정강이
 		end
 	end
-	local tip = (frames.Shin1_R * CFrame.new(0, -0.975, 0)).Position
+	local tip = (frames.Shin1_R * CFrame.new(0, -shinHalf, 0)).Position
 	return hip and Vector3.new(tip.X - hip.X, 0, tip.Z - hip.Z).Magnitude or nil
 end
 

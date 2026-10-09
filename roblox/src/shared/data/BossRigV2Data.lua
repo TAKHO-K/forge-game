@@ -445,4 +445,98 @@ do
 	}
 end
 
+-- ─────────────────────────── 전갈 여왕(BOSS-NIGHT-2 1 · Meshy 리메시 30K 실측 · 다리 4쌍 · 집게 · 꼬리 3 × 8 · 바이블 §2-4 · 설계 메모 MAMMOTH-SCORPION-NOTES) ───────────────────────────
+-- 상자 · 관절 = Meshy scorpion_v1_body_remesh30k 정면 · 옆 · 위 실측(높이 1 = H = 가운데 꼬리 꼭대기 · 발바닥 0 · fwd + = 머리 쪽 · 꼬리 중심선 = 정점 무게중심 반복 보정).
+--   관절 이름 = 옛 전갈(BossRigSpec scorpion_queen)과 같다(Body · Head · Hip<k>_<L|R> · Knee · Shoulder · Elbow · Wrist · Pincer · Tail<t>_<i> - 잡기 부착점 · 효과가 그대로 쓴다).
+--   다리: Meshy 몸은 3쌍 → 4번째 쌍(Hip4 · Knee4)은 KIT가 3번째 다리 메시를 뒤로 복제(rigs/scorpion_queen_v2.kit.json clones · 원본 면은 안 받음 = skip).
+--   다리 · 집게 기준 자세 = 옛 리그와 같은 틀(넓적다리 rot (0, x·yaw, x·θ) = 국소 −Y가 다리 방향 · Z축 = 앞뒤 축 → 걸음 ry(비틀기) · rz(들기)가 옛 전갈과 같은 뜻).
+--   K 4.4 = 판정 사본(Body · Head) 부피 = 옛 몸 × 1.05 · scale 1.56 = 높이(꼬리 포함) 1 H × 4.4 × S 3.5 × 1.56 = 24 stud(§5).
+do
+	local K = 4.4
+	local L = placer(K)
+	local P, Z, place, seg, chainPts = L.P, L.Z, L.place, L.seg, L.chainPts
+	place({ name = "RootJoint", parent = "HumanoidRootPart", part = "Body", center = P(0, 0.33, -0.12), size = Z(0.32, 0.26, 0.6), joint = P(0, 0.33, 0), query = true })
+	place({ name = "Neck", parent = "Body", part = "Head", center = P(0, 0.33, 0.28), size = Z(0.36, 0.26, 0.2), joint = P(0, 0.33, 0.18), color = "head", query = true })
+	place({ name = "Crown", parent = "Head", part = "Crown", center = P(0, 0.495, 0.27), size = Z(0.16, 0.11, 0.15), joint = P(0, 0.45, 0.27), color = "accent" })
+	place({ name = "Jaw", parent = "Head", part = "Mouth", center = P(0, 0.21, 0.36), size = Z(0.08, 0.03, 0.04), joint = P(0, 0.22, 0.35), color = "mouth" })
+	-- 다리 막대: 관절 j(실측) · 세계 회전 (0, x·yaw, x·θ)(θ = 아래에서 바깥으로 돈 각 · yaw + = 앞으로) · 길이 len
+	local function leg(name, parent, part, j, x, yaw, theta, len, w, color)
+		local th, yw = math.rad(theta), math.rad(yaw)
+		local dir = V(x * math.sin(th) * math.cos(yw), -math.cos(th), -math.sin(th) * math.sin(yw)) -- 리그 공간(앞 = −Z)
+		local pj = P(j[1], j[2], j[3])
+		return place({ name = name, parent = parent, part = part, joint = pj, center = pj + dir * (K * len / 2), size = Z(w, len, w), rot = V(0, x * yaw, x * theta), color = color })
+	end
+	-- 다리 4쌍: 밑동(몸 옆 · 높이 0.27) → 무릎(바깥 0.16 · 0.04 위) → 발끝(바닥). 1 = 앞(집게 뒤) · 4 = 뒤(복제)
+	local LEGS = { { fwd = 0.044, bx = 0.15, yaw = 8, reach = 0.28 }, { fwd = -0.05, bx = 0.15, yaw = -15, reach = 0.27 }, { fwd = -0.155, bx = 0.128, yaw = -32, reach = 0.25 },
+		{ fwd = -0.255, bx = 0.108, yaw = -32, reach = 0.25 } }
+	for _, s in ipairs({ { "L", -1 }, { "R", 1 } }) do
+		local side, x = s[1], s[2]
+		for k, g in ipairs(LEGS) do
+			local key = ("%d_%s"):format(k, side)
+			local thighLen = math.sqrt(0.16 ^ 2 + 0.04 ^ 2)
+			local yw = math.rad(g.yaw)
+			local knee = { x * (g.bx + 0.16 * math.cos(yw)), 0.31, g.fwd + 0.16 * math.sin(yw) }
+			local out, down = g.reach - 0.16, 0.31
+			leg("Hip" .. key, "Body", "Thigh" .. key, { x * g.bx, 0.27, g.fwd }, x, g.yaw, 104, thighLen, 0.075, "head")
+			leg("Knee" .. key, "Thigh" .. key, "Shin" .. key, knee, x, g.yaw, math.deg(math.atan2(out, down)), math.sqrt(out * out + down * down) + 0.01, 0.065, "dark")
+		end
+		-- 집게 팔: 어깨(머리 옆 밑) → 팔꿈치(바깥) → 손목(앞) · 손(큰 집게 몸 + 고정 손가락) · 집게(안쪽 가시 = 움직이는 손가락 - rz + = 벌림)
+		leg("Shoulder_" .. side, "Body", "UpperArm_" .. side, { x * 0.15, 0.26, 0.14 }, x, 11, 94, 0.155, 0.1, "head")
+		place({ name = "Elbow_" .. side, parent = "UpperArm_" .. side, part = "Forearm_" .. side, joint = P(x * 0.3, 0.27, 0.17), center = P(x * 0.305, 0.265, 0.215), size = Z(0.1, 0.1, 0.1), rot = V(90, 0, 0), color = "body" })
+		place({ name = "Wrist_" .. side, parent = "Forearm_" .. side, part = "Hand_" .. side, joint = P(x * 0.31, 0.26, 0.26), center = P(x * 0.3, 0.19, 0.41), size = Z(0.36, 0.34, 0.4), rot = V(90, 0, 0), color = "head" })
+		place({ name = "Pincer_" .. side, parent = "Hand_" .. side, part = "Pincer_" .. side, joint = P(x * 0.18, 0.2, 0.42), center = P(x * 0.16, 0.2, 0.48), size = Z(0.09, 0.13, 0.1), rot = V(90, 0, 0), color = "accent" })
+	end
+	-- 꼬리 3 × 8마디(1 = 왼쪽 · 2 = 가운데(독침 금빛) · 3 = 오른쪽): 몸 뒤 → 위로 말려 앞으로 · 8마디 = 꼬리 끝 공 + 독침(큰 상자)
+	--   점 8개 = 밑동 → 꼬리 끝 공 시작(호 길이 등분 · 7마디) · 8마디 = 공 시작 → 독침 끝
+	local TAILS = {
+		{ { -0.08, 0.41, -0.44 }, { -0.116, 0.473, -0.486 }, { -0.152, 0.543, -0.521 }, { -0.186, 0.619, -0.534 }, { -0.218, 0.693, -0.515 }, { -0.247, 0.753, -0.464 }, { -0.272, 0.793, -0.392 }, { -0.281, 0.813, -0.309 } },
+		{ { 0, 0.45, -0.48 }, { 0.003, 0.565, -0.539 }, { 0.004, 0.694, -0.537 }, { 0.003, 0.801, -0.471 }, { 0.007, 0.893, -0.38 }, { 0.008, 0.94, -0.265 }, { 0.006, 0.931, -0.14 }, { 0, 0.875, -0.025 } },
+	}
+	local tips = { { -0.3, 0.7, -0.16 }, { 0, 0.73, 0.13 } }
+	TAILS[3] = {}
+	for i, p in ipairs(TAILS[1]) do
+		TAILS[3][i] = { -p[1], p[2], p[3] }
+	end
+	tips[3] = { 0.3, 0.7, -0.16 }
+	for t = 1, 3 do
+		local pts = TAILS[t]
+		chainPts(("Tail%d_"):format(t), "Body", pts, 0.11, 0.085, 0.11, 0.085, "body")
+		local last = ("Tail%d_7"):format(t)
+		seg(("Tail%d_8"):format(t), last, ("Tail%d_8"):format(t), pts[8], tips[t], 0.17, 0.17, 0.03, "accent")
+	end
+	local chains = {}
+	for t = 1, 3 do
+		local c = { kind = "tail", lag = 0.5, sway = 6, phase = t * 1.9 }
+		for i = 1, 8 do
+			c[i] = ("Tail%d_%d"):format(t, i)
+		end
+		chains[t] = c
+	end
+	local contacts = {}
+	for k = 1, 4 do
+		for _, side in ipairs({ "L", "R" }) do
+			table.insert(contacts, ("Shin%d_%s"):format(k, side))
+		end
+	end
+	D.rigs.scorpion_queen_v2 = {
+		bossId = "scorpion_queen", variant = "v2", status = "trial", plan = "scorpion", joints = L.J, accent = Color3.fromRGB(255, 190, 60),
+		scale = 1.56, -- 높이(꼬리 꼭대기) 1 H × K 4.4 × S 3.5 × 1.56 = 24 stud(바이블 §5)
+		edgeHalfWidth = K * 0.25, -- 몸 가장자리 반폭(등딱지 + 다리 · 집게 팔 밑동 바깥)
+		frontHalfLength = K * 0.6, rearHalfLength = K * 0.45, -- 몸 중심 → 집게 앞 끝 / 꼬리 밑동 뒤 끝
+		baseEdgeHalfWidth = 1.4, -- 옛 몸(전갈) = 몸 1.2 + 다리 밑동 0.2
+		cameraZoomScale = 1.3,
+		legPairs = 4,
+		-- 잡기 부착점(옛과 같은 이름 · 4b-5): 꼬리 1 = 끝 · 꼬리 2 = 가운데 · 꼬리 3 = 밑 · 넷째부터 집게
+		attach = {
+			Tail1 = { part = "Tail1_8", at = V(0, 0, 0) }, Tail2 = { part = "Tail2_5", at = V(0, 0, 0) }, Tail3 = { part = "Tail3_4", at = V(0, 0, 0) },
+			HandR = { part = "Hand_R", at = V(0, 0, 0) }, HandL = { part = "Hand_L", at = V(0, 0, 0) }, Mouth = { part = "Head", at = V(0, -0.2, -0.45) },
+			Stinger = { part = "Tail2_8", at = V(0, -0.3, 0) },
+		},
+		chains = chains, weight = 0.8,
+		contacts = contacts,
+		meshKey = "bosses/scorpion_queen_v2m",
+		themeColors = { body = Color3.fromRGB(205, 140, 60), head = Color3.fromRGB(225, 170, 85), accent = Color3.fromRGB(255, 205, 80) },
+	}
+end
+
 return D

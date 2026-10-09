@@ -955,7 +955,8 @@ def main():
     for x in objs:  # BOSS-NIGHT-1: 부위별 목표(부품 · 무기)
         if x.name in partTris:
             decimate(x, partTris[x.name])
-    total = sum(tris(x) for x in objs + decos if x.name not in partTris)
+    cloneSrc = {cl["from"] for cl in cfg.get("clones", [])}  # BOSS-NIGHT-2: 복제 원본은 감량 뒤 한 벌 더 생긴다 → 두 번 센다(합계 ≤ budget)
+    total = sum(tris(x) * (2 if x.name in cloneSrc else 1) for x in objs + decos if x.name not in partTris)
     room = o["budget"] - sum(partTris[x.name] for x in objs if x.name in partTris)  # 부품 몫 = 목표값(감량이 덜 된 부품 때문에 몸이 뭉개지지 않게)
     if total > room:
         k = room / total
@@ -1005,6 +1006,18 @@ def main():
         fn = "%s_atlas1.png" % name
         ncolors = palette_atlas([x for x in objs if x not in rigNeon], o["atlas"], os.path.join(o["out"], fn))
         atlas_files.append(fn)
+    # BOSS-NIGHT-2 복제 부위(clones = [{from, to}]): Meshy에 없는 부위(전갈 4번째 다리 쌍 - skip으로 원본 면을 안 받음)에 다른 부위 메시를 그대로(UV · 구운 아틀라스 칸 공유)
+    #   그 부위 관절 자리에 놓는다(원점 = 관절 · 회전 0이라 메시 국소 좌표가 같으면 관절 차이만큼 옮겨진다)
+    for cl in cfg.get("clones", []):
+        srcObj = next(x for x in objs if x.name == cl["from"])
+        dst = next(x for x in objs if x.name == cl["to"])
+        dst.data = srcObj.data.copy()
+        dst.data.name = cl["to"]
+        if cl["to"] in empty:
+            empty.remove(cl["to"])
+        if srcObj.name in partAtlas:
+            partAtlas[cl["to"]] = partAtlas[srcObj.name]
+        print("[KIT] 복제 %s → %s · 삼각형 %d" % (cl["from"], cl["to"], tris(dst)))
     # Neon 조각 색(메타 color = 재질 색 · Studio가 칠한다)
     for d in decos:
         mi = d.get("NeonMat", 0)
@@ -1012,7 +1025,9 @@ def main():
         d.data.materials.clear()
         d.data.materials.append(A.material("KIT_NEON_%s" % d.name, tuple(int(round(lin_to_srgb(x) * 255)) for x in c), neon=True))
     # 9 외곽선 껍데기(큰 부위부터 · 눈 · 입 · 아주 작은 부위 제외)
-    cand = sorted([x for x in objs if x.name not in ("Eyes", "Mouth") and x.name not in empty and tris(x) >= 24 and x.name not in addonParts and x.name not in cfg.get("outlineSkip", [])],
+    only = set(cfg.get("outlineParts", []))  # BOSS-NIGHT-2: 외곽선 껍데기를 이 부위에만(전갈 = 몸 · 집게 · 머리 ≤ 8) - 없으면 큰 부위부터
+    cand = sorted([x for x in objs if x.name not in ("Eyes", "Mouth") and x.name not in empty and tris(x) >= 24 and x.name not in addonParts and x.name not in cfg.get("outlineSkip", [])
+                   and (not only or x.name in only)],
                   key=lambda x: -(byName[x.name]["size"].x * byName[x.name]["size"].y * byName[x.name]["size"].z))
     for x in objs:
         x["RigPart"] = x.name
@@ -1022,6 +1037,20 @@ def main():
         d["RigPart"] = d.name
         d["TriCount"] = tris(d)
     hulls = [A.add_hull(x, thickness=o["hull"], export=True, col=col) for x in cand[: o["outlines"]]]
+    # BOSS-NIGHT-2: 얼굴 부위(전갈 머리)는 껍데기 앞쪽 절반 면을 지운다 - 오목한 눈두덩에서 껍데기가 접혀 앞으로 비치며 눈 위에 검은 사선(화난 눈썹)이 생겼다.
+    #   보이는 테두리는 뒤쪽 절반 껍데기가 그린다(뒷면 제거 렌더 = 로블록스와 같은 조건으로 확인)
+    for h in hulls:
+        part = h.name[: -len("_Outline")]
+        if part in cfg.get("outlineTrimFront", []):
+            p = byName[part]
+            c = C @ (p["center"] - p["joint"])  # 부위 상자 가운데(관절 원점 국소 · Blender +Y = 앞)
+            bm = bmesh.new()
+            bm.from_mesh(h.data)
+            dead = [f for f in bm.faces if f.calc_center_median().y > c.y]
+            bmesh.ops.delete(bm, geom=dead, context="FACES")
+            bm.to_mesh(h.data)
+            bm.free()
+            print("[KIT] 외곽선 %s 앞쪽 면 %d 지움(얼굴 - 눈 위 검은 사선)" % (h.name, len(dead)))
     ht = sum(tris(h) for h in hulls)
     if ht > o["outlineTris"]:
         k = o["outlineTris"] * 0.95 / ht  # 감량은 목표를 조금 넘긴다(접힘) - 여유 5%

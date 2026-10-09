@@ -594,4 +594,56 @@ do
 	check("수정 §8 닫힌 종 치마(허리 → 발목 위 · 판정 아님)", skirt ~= nil and not skirt.query and skirt.size.Y >= 7.0 * 0.45, skirt and ("치마 높이 %.2f(키 7.0의 %.0f%%)"):format(skirt.size.Y, skirt.size.Y / 7.0 * 100) or "없음")
 end
 
+-- ─────────────────────────── BOSS-NIGHT-2 1: 전갈 여왕 새 몸(다리 4쌍 1·3 / 2·4 교대 · 크기 24 · 근접 표시 · 색조 노브) ───────────────────────────
+do
+	local BossRules = MODS.BossRules
+	local BossMotion = MODS.BossMotion
+	local walk = MODS.WorldConfig.playerWalkSpeedStuds
+	local d = BossRules.buildInstanceData(20, "scorpion_queen", 1)
+	local e, edge = BossFramework.applyBodyEdge(d, "scorpion_queen_v2", walk)
+	local g = BossFramework.applyV3(e, "scorpion_queen_v2")
+	local rig = BossRigSpec.rigs.scorpion_queen_v2
+	local set = MODS.BossClipSet.get("scorpion_queen_v2")
+	local S = d.sizeScale
+	local h = 4.4 * S * rig.scale
+	local nLegs = 0
+	for _, j in ipairs(rig.joints) do
+		if j.name:match("^Hip%d_[LR]$") then
+			nLegs += 1
+		end
+	end
+	check("전갈 크기(높이 약 24 stud) · 다리 8개(4쌍) · hexapod", math.abs(h - 24) < 1 and nLegs == 8 and set.forms.before.gait == "hexapod", ("높이 %.1f stud(K 4.4 × S %.2f × %.2f) · 다리 %d"):format(h, S, rig.scale, nLegs))
+	check("전갈 근접 바닥 표시 끔 · 예비 +0.12 · 집게 강타 · 독침(멀리 닿음) 바닥 표시 유지", g.skills.clawSweep.noFloor == true and g.skills.swipe.noFloor == true and g.basicNoFloor and not g.skills.claw.noFloor and not g.skills.sting.noFloor
+		and math.abs(g.skills.clawSweep.telegraphSeconds - (d.skills.clawSweep.telegraphSeconds + 0.12)) < 1e-6, ("두 집게 휩쓸기 %.2f → %.2f · 몸 가장자리 +%.2f"):format(d.skills.clawSweep.telegraphSeconds, g.skills.clawSweep.telegraphSeconds, edge))
+	-- 걸음: 같은 순간 들린 발 = 왼 1 · 3 + 오른 2 · 4(또는 반대) · 들린 발은 바닥 위(발이 땅으로 파고들지 않음)
+	local ctx = BossMotion.context("scorpion_queen_v2", rig, g.skills, g.moveSpeedStuds)
+	local rest = BossMotion.prepare(rig)
+	local half = {}
+	for _, j in ipairs(rig.joints) do
+		half[j.part] = j.size.Y / 2
+	end
+	local okGroup, lowest, liftMax = true, math.huge, 0
+	for _, gait in ipairs({ 0.1, 0.6 }) do -- 들림 최고점(gaitLeg 종 모양 - 0.25 · 0.75 = 딛는 순간)
+		local pose = BossMotion.evaluate(ctx, { form = "before", inCombat = false, speed = 3, gait = gait }, 1.0)
+		local frames = BossRig.solve(rig, CFrame.identity, 1, BossMotion.toTransforms(rest, 1, pose))
+		local up = {}
+		for k = 1, 4 do
+			for _, side in ipairs({ "L", "R" }) do
+				local key = ("Shin%d_%s"):format(k, side)
+				local y = (frames[key] * CFrame.new(0, -half[key], 0)).Position.Y
+				up[k .. side] = y > -1.5 + 0.05
+				lowest = math.min(lowest, y)
+				liftMax = math.max(liftMax, y + 1.5)
+			end
+		end
+		local a = up["1L"] and up["3L"] and up["2R"] and up["4R"] and not (up["1R"] or up["3R"] or up["2L"] or up["4L"])
+		local b = up["1R"] and up["3R"] and up["2L"] and up["4L"] and not (up["1L"] or up["3L"] or up["2R"] or up["4R"])
+		okGroup = okGroup and (a or b)
+	end
+	check("전갈 걸음 1·3 / 2·4 교대 · 들린 발 바닥 위", okGroup and lowest > -1.5 - 0.15 and liftMax > 0.1, ("가장 낮은 발 %.2f · 최대 들림 %.2f 단위"):format(lowest, liftMax))
+	local tint = Frame.atlasTint["bosses/scorpion_queen_v2m"]
+	check("전갈 색조 노브(기본 0 = 원본 · 1 = sand 변형 아틀라스 등록)", tint and tint.value == 0 and tint.variants[1] == "sand" and MODS.ArtAssetIds and MODS.ArtAssetIds["bosses/scorpion_queen_v2m_atlas1_sand"] ~= nil or (tint and tint.value == 0 and not MODS.ArtAssetIds),
+		("value %s · variants %s"):format(tostring(tint and tint.value), tint and table.concat(tint.variants, ",") or "-"))
+end
+
 print(("[FRAME] 끝 %d/%d"):format(pass, total))

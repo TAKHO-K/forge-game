@@ -5,7 +5,7 @@ local D = {}
 --   live = 실전(라이브 포함) - **설계 담당이 수호자 시험을 검수한 뒤에만 채운다**(지금 비어 있음 = 6보스 모두 옛 몸).
 --   studioTrial = Studio에서 workspace Attribute BossFrameworkTrial = true일 때만(시험 · 촬영 · 하네스) - 라이브 서버에서는 무시.
 D.live = {}
-D.studioTrial = { section_guardian = "v2", frost_giant = "v2", storm_lord = "v2", abyssal_lord = "v2", crystal_queen = "v2" } -- BOSS-NIGHT-1: 매머드 · 폭풍 · 나가 · 수정 여왕 새 몸(시험 스위치로만)
+D.studioTrial = { section_guardian = "v2", frost_giant = "v2", storm_lord = "v2", abyssal_lord = "v2", crystal_queen = "v2", scorpion_queen = "v2" } -- BOSS-NIGHT-1: 매머드 · 폭풍 · 나가 · 수정 여왕 · BOSS-NIGHT-2 전갈 새 몸(시험 스위치로만)
 D.trialAttribute = "BossFrameworkTrial"
 
 -- GUARDIAN-V2 몸 가장자리 기준 근접 반경(바이블 §5 - 공통 장치 · 보스별 · 기본 끔 = 표에 없음): 새 몸(리그 v2 · edgeHalfWidth)이 뜰 때만
@@ -26,6 +26,8 @@ D.bodyEdge = {
 	--   피해 × 0.75(600판 · 처음 원거리 47% · 근접 49% · 아는 보스 33 ~ 34% - 두 목표 모두 안) · 새 몸이 옛 몸보다 넓지 않아 몸 가장자리 증가 0(밸런스 계수만)
 	abyssal_lord = { skills = { sweep = true, tailSweep = true, swipe = true, mirror = true }, chaseStop = true, damageScale = 0.75, hpScale = 1.0 },
 	crystal_queen = { skills = { burst = true, swipe = true, mirror = true }, chaseStop = true, damageScale = 1.0, hpScale = 1.0 },
+	-- BOSS-NIGHT-2 1 전갈 여왕: 두 집게 휩쓸기(부채 r18) · 강화 평타 = 몸 가장자리 기준 · 밸런스 = BossSim(scorpion_v1/s_bosssim.txt)
+	scorpion_queen = { skills = { clawSweep = true, swipe = true }, innerSafe = true, chaseStop = true, damageScale = 1.0, hpScale = 1.0 },
 }
 
 -- GUARDIAN-V3(사용자 시험 피드백 · 바이블 §11): 새 몸이 뜰 때만(BossFramework.applyV3 - 몸 가장자리 장치 뒤 · 인스턴스 사본 · BossData 원본 · 라이브 무변경).
@@ -166,6 +168,21 @@ D.v3 = {
 			basicParts = { R = "ScepterGem", L = "Hand_L" } },
 		marks = { color = LAVENDER, crackColor = Color3.fromRGB(160, 90, 255), transparency = 0.6, crackTransparency = 0.25, crackWidth = 0.35 },
 	},
+	-- BOSS-NIGHT-2 1 전갈 여왕(바이블 §2-4 · §12-2): 근접(두 집게 휩쓸기 · 강화 평타 · 평타 · 근접 원) = 바닥 표시 없음 + 예비 +0.12 · 집게 금빛 발광
+	--   집게 강타(직선 3갈래) · 독침 · 잠행 · 3연 찌르기 = 바닥 표시 유지(멀리 닿는 기술) · 스킬표 무변경
+	scorpion_queen = {
+		hideFloor = { clawSweep = true, swipe = true, basic = true, innerRing = true },
+		windup = { seconds = 0.12, skills = { clawSweep = true, swipe = true }, basic = true },
+		glow = { color = Color3.fromRGB(255, 205, 80), fillPeak = 0.55, outline = 0.35, skills = { clawSweep = true, swipe = true, claw = true, sting = true, stingJab = true }, basic = true,
+			basicParts = { R = "Hand_R", L = "Hand_L" } },
+		marks = { color = LAVENDER, crackColor = Color3.fromRGB(160, 90, 255), transparency = 0.6, crackTransparency = 0.25, crackWidth = 0.35 },
+	},
+}
+
+-- BOSS-NIGHT-2 텍스처 색조 노브(메시 키 → value · variants): 0 = 원본 아틀라스 · n = 미리 구운 변형 "<아틀라스>_<variants[n]>"(tools/blender/atlas_tint.py - MeshPart TextureID는 Color로 안 물든다)
+--   전갈 sand = 색상 +6° · 채도 × 0.82 · 명도 × 1.08(3D가 컨셉보다 주황 · 진함 - 설계 메모) · Studio 비교 = workspace Attribute BossAtlasTint(숫자)가 value를 덮는다
+D.atlasTint = {
+	["bosses/scorpion_queen_v2m"] = { value = 0, variants = { "sand" } },
 }
 
 -- 교체 슬롯 → 메시 캐시 키(ArtAssetIds · ArtMeshCache). 캐시가 없으면(아트 스위치 끔) 클라가 파트로 그린다.

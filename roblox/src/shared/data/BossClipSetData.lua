@@ -1417,4 +1417,232 @@ do
 	}
 end
 
+-- ═══════════════════════════ 전갈 여왕 v2(BOSS-NIGHT-2 1 · Meshy 몸 · 다리 4쌍 · 바이블 §2-4 + MAMMOTH-SCORPION-NOTES) ═══════════════════════════
+-- 리그 = BossRigV2Data scorpion_queen_v2(관절 이름 = 옛 전갈). 보행 = hexapod(BossMotion baseScorpion · 다리 4쌍 · groupA = 1·3 / 2·4 교대 - 왼 1 · 3 + 오른 2 · 4 ↔ 반대).
+--   관절 뜻(오른쪽 기준 · 왼쪽 = mirror): 어깨 rx + = 집게를 안쪽으로 휘두름 · ry − = 집게 끝 들기 · rz + = 팔 전체 들기 / 팔꿈치 · 손목 rx + = 집게 끝 들기 · rz + = 바깥으로 /
+--   집게(가시) rz + = 벌림 / 꼬리 마디 rx + = 뒤로 당김 · − = 앞으로 내리꽂음 / 다리 = 옛 전갈 틀(rz + x = 들기). 동작 끝 = 빈 자세({}) → 세트 기본 자세로.
+do
+	local REST_POSE = {}
+	local function legs(f)
+		local out = {}
+		for k = 1, 4 do
+			for _, side in ipairs({ "L", "R" }) do
+				local x = side == "R" and 1 or -1
+				local hip, knee = f(k, x)
+				out[("Hip%d_%s"):format(k, side)] = hip
+				out[("Knee%d_%s"):format(k, side)] = knee
+			end
+		end
+		return out
+	end
+	local function tails(f)
+		local out = {}
+		for t = 1, 3 do
+			for i = 1, 8 do
+				local v = f(t, i)
+				if v then
+					out[("Tail%d_%d"):format(t, i)] = v
+				end
+			end
+		end
+		return out
+	end
+	local function sym(p) -- 오른쪽 자세 → 좌우 둘 다
+		return merge(p, mirror(p))
+	end
+	local STANCE = merge(sym({ Shoulder_R = { 0, -4, 4 } }), tails(function(_, i)
+		return i <= 2 and { -4, 0, 0 } or nil
+	end))
+	local GUARD = merge(STANCE, sym({ Shoulder_R = { 0, -8, 8 }, Pincer_R = { 0, 0, 14 } }))
+	-- 분노(50% 뒤): 집게 더 높이 · 꼬리 곧추 · 몸 조금 듦
+	local ANGRY = merge(GUARD, sym({ Shoulder_R = { 0, -14, 14 }, Elbow_R = { 10, 0, 0 }, Pincer_R = { 0, 0, 24 } }), tails(function(_, i)
+		return i <= 2 and { -10, 0, 0 } or nil
+	end), { RootJoint = { 4, 0, 0, 0, 0.06, 0 } })
+	local CLAWS_UP = merge(GUARD, sym({ Shoulder_R = { 0, -28, 28 }, Elbow_R = { 30, 0, 0 }, Wrist_R = { 20, 0, 0 }, Pincer_R = { 0, 0, 45 } }), { RootJoint = { 10, 0, 0, 0, 0.12, 0.1 }, Neck = { 8, 0, 0 } })
+	local CLAWS_DOWN = merge(GUARD, sym({ Shoulder_R = { 6, 14, -4 }, Elbow_R = { -14, 0, 0 }, Wrist_R = { -10, 0, 0 }, Pincer_R = { 0, 0, 0 } }), { RootJoint = { -8, 0, 0, 0, -0.12, -0.1 }, Neck = { -6, 0, 0 } })
+	-- 휘두르기(오른 집게): 바깥 · 뒤로 감았다가 앞을 가로질러 안쪽으로(집게가 바닥 가까이 지나감 - 근접 높이 규칙)
+	local WIND_R = merge(GUARD, { Shoulder_R = { -40, -10, 16 }, Elbow_R = { 10, 0, 14 }, Pincer_R = { 0, 0, 45 }, RootJoint = { 0, -16, 0, 0, -0.04, 0 } })
+	local HIT_R = merge(GUARD, { Shoulder_R = { 44, 6, 4 }, Elbow_R = { -6, 0, -14 }, Pincer_R = { 0, 0, 4 }, RootJoint = { 0, 18, 0, 0, -0.08, 0 } })
+	local WIND_L, HIT_L = merge(GUARD, mirror(WIND_R)), merge(GUARD, mirror(HIT_R))
+	local function tailPose(base, step, yaw)
+		return tails(function(t, i)
+			return { i == 1 and base or step, i == 1 and (yaw or 0) * (t - 2) or 0, 0 }
+		end)
+	end
+	local C = {}
+	-- 집게 강타 claw(직선 3갈래 · 1.5초): 두 집게를 치켜들고 뒷다리로 일어섬 → 두 집게로 땅을 내리찍음
+	C.s_claw = {
+		pre = { { f = 0.5, ease = "inout", pose = CLAWS_UP }, { f = 1.0, ease = "in", pose = merge(CLAWS_UP, sym({ Shoulder_R = { 0, -34, 32 } }), { RootJoint = { 12, 0, 0, 0, 0.16, 0.12 } }) } },
+		post = { { s = 0.07, ease = "out", pose = CLAWS_DOWN }, { s = 0.25, ease = "back", pose = merge(CLAWS_DOWN, { RootJoint = { -10, 0, 0, 0, -0.14, -0.12 } }) }, { s = 1.0, ease = "inout", pose = REST_POSE } },
+		hitstop = 0.07, squash = 0.12, tremble = { from = 0.7, amp = 3, joints = { "Shoulder_R", "Shoulder_L" } },
+	}
+	-- 두 집게 휩쓸기 clawSweep(부채 150° × 2볼리 · 1.5초 간격): 오른 집게 크게 감았다 휩쓸기 → 왼 집게(60° 돌린 둘째)
+	C.s_sweep = {
+		pre = { { f = 0.5, ease = "inout", pose = merge(GUARD, { Shoulder_R = { -28, -8, 12 }, Pincer_R = { 0, 0, 40 }, RootJoint = { 0, -10, 0, 0, -0.03, 0 } }) }, { f = 1.0, ease = "in", pose = WIND_R } },
+		post = { { s = 0.08, ease = "out", pose = HIT_R }, { s = 0.3, ease = "back", pose = merge(HIT_R, { Shoulder_R = { 50, 6, 4 } }) }, { s = 0.9, ease = "inout", pose = WIND_L },
+			{ s = 1.5, ease = "in", pose = HIT_L }, { s = 1.72, ease = "back", pose = merge(HIT_L, { Shoulder_L = { 50, -6, -4 } }) }, { s = 2.5, ease = "inout", pose = REST_POSE } },
+		hitstop = 0.06, squash = 0.08, extraStrikes = { post = { 1.5 } }, tremble = { from = 0.6, amp = 3, joints = { "Shoulder_R" } },
+	}
+	-- 강화 평타 swipe(집게 찰싹): 오른 집게 손등 휘두르기(Hand_R 번쩍)
+	C.s_swipe = {
+		pre = { { f = 0.4, ease = "inout", pose = merge(GUARD, { Shoulder_R = { -30, -8, 12 }, Pincer_R = { 0, 0, 40 }, RootJoint = { 0, -12, 0, 0, -0.04, 0 } }) }, { f = 1.0, ease = "out", pose = WIND_R } },
+		post = { { s = 0.08, ease = "out", pose = HIT_R }, { s = 0.22, ease = "back", pose = merge(HIT_R, { Shoulder_R = { 52, 6, 4 }, RootJoint = { 0, 24, 0, 0, -0.08, 0 } }) }, { s = 0.8, ease = "inout", pose = REST_POSE } },
+		hitstop = 0.06, squash = 0.06, tremble = { from = 0.6, amp = 4, joints = { "Shoulder_R", "Pincer_R" } },
+	}
+	-- 독침 낙하 sting(대상 둘레 3곳 · 1.2초): 세 꼬리를 뒤로 당겼다가 앞으로 튕겨 독침을 쏨
+	C.s_sting = {
+		pre = { { f = 0.5, ease = "inout", pose = merge(GUARD, tailPose(16, 5, 6), { RootJoint = { 6, 0, 0, 0, -0.04, 0.08 } }) }, { f = 1.0, ease = "in", pose = merge(GUARD, tailPose(24, 7, 8), { RootJoint = { 8, 0, 0, 0, -0.06, 0.1 } }) } },
+		post = { { s = 0.08, ease = "out", pose = merge(GUARD, tailPose(-22, -8), { RootJoint = { -8, 0, 0, 0, -0.12, -0.1 } }) }, { s = 0.25, ease = "back", pose = merge(GUARD, tailPose(-26, -9), { RootJoint = { -10, 0, 0, 0, -0.14, -0.12 } }) },
+			{ s = 0.85, ease = "inout", pose = REST_POSE } },
+		hitstop = 0.06, squash = 0.1,
+	}
+	-- 3연 찌르기 stingJab(직선 · 0.9 · 0.9 · 1.3 - 셋째가 큼): 가운데 꼬리로 세 번 찌름(옆 꼬리는 반만)
+	local function jab(base, step)
+		return tails(function(t, i)
+			local k = t == 2 and 1 or 0.45
+			return { (i == 1 and base or step) * k, 0, 0 }
+		end)
+	end
+	local JAB_BACK, JAB = merge(GUARD, jab(18, 7), { RootJoint = { 6, 0, 0, 0, -0.03, 0.06 } }), merge(GUARD, jab(-24, -9), { RootJoint = { -8, 0, 0, 0, -0.1, -0.1 } })
+	C.s_jab = {
+		pre = { { f = 1.0, ease = "inout", pose = JAB_BACK } },
+		post = { { s = 0.08, ease = "out", pose = JAB }, { s = 0.5, ease = "inout", pose = JAB_BACK }, { s = 0.9, ease = "in", pose = JAB }, { s = 1.45, ease = "inout", pose = merge(GUARD, jab(26, 9), { RootJoint = { 8, 0, 0, 0, -0.03, 0.08 } }) },
+			{ s = 2.2, ease = "in", pose = merge(GUARD, jab(-30, -11), { RootJoint = { -12, 0, 0, 0, -0.14, -0.14 } }) }, { s = 2.45, ease = "back", pose = merge(JAB, { RootJoint = { -12, 0, 0, 0, -0.15, -0.15 } }) }, { s = 3.2, ease = "inout", pose = REST_POSE } },
+		hitstop = 0.06, squash = 0.08, extraStrikes = { post = { 0.9, 2.2 } },
+	}
+	-- 땅 파기(잠행 찌르기 · 모래 잠복 · 진짜 찾기 시작): 몸을 낮추고 다리를 벌려 모래를 판다(다리 끝 모래 속 = 의도 · 발 접지 끔)
+	local DIG = merge(GUARD, legs(function(_, x)
+		return { 0, 0, x * 18 }, { 0, 0, -x * 10 }
+	end), sym({ Shoulder_R = { -10, 22, -4 }, Elbow_R = { -10, 0, 0 } }), { RootJoint = { -6, 0, 0, 0, -0.55, 0 } })
+	C.s_dig = {
+		pre = { { f = 0.25, ease = "inout", pose = merge(DIG, { RootJoint = { -6, 0, 4, 0, -0.45, 0 } }) }, { f = 0.5, ease = "inout", pose = merge(DIG, { RootJoint = { -6, 0, -4, 0, -0.5, 0 } }) },
+			{ f = 0.75, ease = "inout", pose = merge(DIG, { RootJoint = { -6, 0, 4, 0, -0.55, 0 } }) }, { f = 1.0, ease = "inout", pose = DIG } },
+		post = { { s = 0.1, ease = "out", pose = DIG } },
+		loop = { period = 0.3, poses = { merge(DIG, { RootJoint = { -6, 0, 3, 0, -0.55, 0 } }), merge(DIG, { RootJoint = { -6, 0, -3, 0, -0.55, 0 } }) } },
+		airborne = { from = 0, to = 1000 }, buried = true,
+	}
+	-- 아르마딜로 태세(반사): 다리 오므리고 꼬리로 등을 덮고 집게로 얼굴을 가림
+	local CURL = merge(legs(function(_, x)
+		return { 0, 0, -x * 22 }, { 0, 0, x * 18 }
+	end), tails(function(_, i)
+		return { i == 1 and -22 or -12, 0, 0 }
+	end), sym({ Shoulder_R = { 30, 10, -4 }, Elbow_R = { -10, 0, -20 }, Pincer_R = { 0, 0, 0 } }), { RootJoint = { -10, 0, 0, 0, -0.4, 0 }, Neck = { -18, 0, 0 } })
+	C.s_curl = {
+		pre = { { f = 1.0, ease = "inout", pose = CURL } },
+		post = { { s = 0.1, ease = "out", pose = CURL } },
+		loop = { period = 0.8, poses = { CURL, merge(CURL, { RootJoint = { -11, 0, 1, 0, -0.42, 0 } }) } },
+		airborne = { from = 0, to = 1000 }, buried = true,
+	}
+	-- 집게 낚아채기(대공 잡기): 전조 = 집게 · 꼬리를 하늘로 / 들기 = 꼬리 셋에 한 명씩 / 던지기 = 꼬리 투석
+	local S_UP = merge(CLAWS_UP, tails(function(_, i)
+		return { i == 1 and 10 or 4, 0, 0 }
+	end))
+	C.grab_tele = { pre = { { f = 0.2, ease = "out", pose = S_UP }, { f = 1.0, ease = "inout", pose = merge(S_UP, { RootJoint = { 6, 0, 0, 0, 0.04, 0.05 } }) } }, tremble = { from = 0.75, amp = 3, joints = { "Shoulder_R", "Shoulder_L" } } }
+	local S_REACH = merge(GUARD, sym({ Shoulder_R = { 14, -16, 16 }, Elbow_R = { 20, 0, 0 }, Pincer_R = { 0, 0, 45 } }))
+	C.grab_reach = { post = { { s = 0.15, ease = "out", pose = S_REACH } }, loop = { period = 0.3, poses = { S_REACH, merge(S_REACH, sym({ Pincer_R = { 0, 0, 36 } })) } }, upper = true }
+	C.grab_snatch = {
+		post = { { s = 0.0, ease = "out", pose = merge(tails(function(_, i)
+			return { i == 1 and 18 or 6, 0, 0 }
+		end), { Pincer_R = { 0, 0, 45 } }) }, { s = 0.1, ease = "in", pose = merge(tails(function(_, i)
+			return { i == 1 and -14 or -6, 0, 0 }
+		end), { Pincer_R = { 0, 0, 0 }, Jaw = { 0, 0, 0, 0, -0.06, 0 } }) }, { s = 0.6, ease = "inout", pose = {} } },
+		hitstop = 0.07, face = true,
+	}
+	local S_HOLD = merge(GUARD, tails(function(t, i)
+		return { i == 1 and 6 or 2, i == 1 and (t - 2) * 16 or 0, 0 }
+	end), { RootJoint = { 4, 0, 0, 0, 0, 0 } })
+	C.grab_hold = { post = { { s = 0.25, ease = "out", pose = S_HOLD } }, loop = { period = 0.45, poses = { S_HOLD, merge(S_HOLD, { RootJoint = { 5, 3, 2, 0, 0, 0 } }) } } }
+	C.s_throw = {
+		pre = { { f = 1.0, ease = "inout", pose = merge(S_HOLD, tails(function(t, i)
+			return { i == 1 and 24 or 7, (t - 2) * 10, 0 }
+		end), { RootJoint = { 10, 0, 0, 0, -0.1, 0.1 } }) } },
+		post = { { s = 0.09, ease = "out", pose = merge(GUARD, tailPose(-28, -10), { RootJoint = { -12, 0, 0, 0, -0.16, -0.14 } }) },
+			{ s = 0.3, ease = "back", pose = merge(GUARD, tailPose(-32, -11), { RootJoint = { -13, 0, 0, 0, -0.18, -0.16 } }) }, { s = 1.0, ease = "inout", pose = REST_POSE } },
+		hitstop = 0.07, squash = 0.1,
+	}
+	-- 환경(50% 개미지옥): 일어서 두 집게로 모래를 연달아 내리쳐 구덩이를 만든다
+	C.s_env = {
+		pre = { { f = 0.4, ease = "inout", pose = CLAWS_UP }, { f = 1.0, ease = "in", pose = merge(CLAWS_UP, sym({ Shoulder_R = { 0, -34, 32 } }), { RootJoint = { 14, 0, 0, 0, 0.18, 0.14 } }) } },
+		post = { { s = 0.08, ease = "out", pose = CLAWS_DOWN }, { s = 0.45, ease = "inout", pose = merge(CLAWS_UP, { RootJoint = { 8, 0, 0, 0, 0.08, 0.06 } }) }, { s = 0.75, ease = "in", pose = CLAWS_DOWN },
+			{ s = 1.5, ease = "inout", pose = REST_POSE } },
+		hitstop = 0.08, squash = 0.2, extraStrikes = { post = { 0.75 } },
+	}
+	-- 쉭(등장 · 포효 자리): 집게 · 꼬리를 치켜들고 떨기
+	local HISS = merge(CLAWS_UP, tails(function(_, i)
+		return { i == 1 and 14 or 6, 0, 0 }
+	end), { Jaw = { 0, 0, 0, 0, -0.06, 0 } })
+	C.s_hiss = {
+		pre = { { f = 1.0, ease = "inout", pose = merge(GUARD, { RootJoint = { -4, 0, 0, 0, -0.08, 0 } }) } },
+		post = { { s = 0.12, ease = "out", pose = HISS }, { s = 0.3, ease = "back", pose = merge(HISS, sym({ Pincer_R = { 0, 0, 55 } })) } },
+		loop = { period = 0.14, poses = { HISS, merge(HISS, { RootJoint = { 10, 0, 1, 0, 0.12, 0.1 } }) } },
+		hitstop = 0.05, tremble = { from = 0.6, amp = 3, joints = { "Shoulder_R", "Shoulder_L" } },
+	}
+	C.roar = C.s_hiss
+	-- 50% 변신(겉모습 격노): 웅크렸다가 크게 일어서 집게 · 꼬리를 활짝(쉭) → 분노 세트
+	local FAN = merge(CLAWS_UP, tails(function(t, i)
+		return { i == 1 and 6 or 2, i == 1 and (t - 2) * 14 or 0, 0 }
+	end), { RootJoint = { 14, 0, 0, 0, 0.2, 0.14 }, Neck = { 14, 0, 0 } })
+	C.s_transform = { pre = { { f = 1.0, ease = "inout", pose = merge(CURL, { RootJoint = { -8, 0, 0, 0, -0.3, 0 } }) } },
+		post = { { s = 0.0, ease = "out", pose = FAN }, { s = 0.6, ease = "inout", pose = merge(FAN, { Neck = { 16, 0, 3 } }) }, { s = 1.6, ease = "inout", pose = ANGRY } }, hitstop = 0.06, align = false }
+	-- 평타(집게 찰싹 앞으로) · 예비(집게를 옆으로 벌려 뒤로 당김)
+	local basicR = { post = { { s = 0.06, ease = "out", pose = merge(GUARD, { Shoulder_R = { 28, 8, 4 }, Elbow_R = { -10, 0, -6 }, Pincer_R = { 0, 0, 0 }, RootJoint = { 0, 8, 0, 0, -0.06, -0.06 } }) },
+		{ s = 0.16, ease = "back", pose = merge(GUARD, { Shoulder_R = { 32, 10, 4 }, Elbow_R = { -12, 0, -6 }, Pincer_R = { 0, 0, -4 }, RootJoint = { 0, 10, 0, 0, -0.07, -0.07 } }) }, { s = 0.5, ease = "inout", pose = REST_POSE } },
+		hitstop = 0.05 }
+	C.basic_R = basicR
+	C.basic_L = { post = { { s = 0.06, ease = "out", pose = merge(GUARD, mirror(basicR.post[1].pose)) }, { s = 0.16, ease = "back", pose = merge(GUARD, mirror(basicR.post[2].pose)) }, { s = 0.5, ease = "inout", pose = REST_POSE } }, hitstop = 0.05 }
+	local prepR = merge(GUARD, { Shoulder_R = { -24, -8, 12 }, Elbow_R = { 14, 0, 10 }, Pincer_R = { 0, 0, 42 }, RootJoint = { 0, -8, 0, 0, -0.04, 0 } })
+	local STAGGER = merge(legs(function(k, x)
+		return { 0, (k - 2.5) * 8, x * 10 }, { 0, 0, -x * 6 }
+	end), { RootJoint = { 0, 0, 14, 0, -0.2, 0 }, Neck = { -10, 0, 10 } })
+	local SIT = merge(legs(function(_, x)
+		return { 0, 0, x * 32 }, { 0, 0, -x * 24 }
+	end), tails(function(_, i)
+		return { i == 1 and 36 or 10, 0, 0 }
+	end), sym({ Shoulder_R = { -10, 20, -6 } }), { RootJoint = { 0, 0, 0, 0, -0.72, 0 }, Neck = { -18, 0, 0 } })
+	local planPatch = {
+		introCrouch = merge(legs(function(_, x)
+			return { 0, 0, -x * 20 }, { 0, 0, x * 18 }
+		end), tails(function(_, i)
+			return { i == 1 and -18 or -10, 0, 0 }
+		end), sym({ Shoulder_R = { 20, 12, -4 } }), { RootJoint = { -10, 0, 0, 0, -0.35, 0 } }),
+		introRoar = "s_hiss",
+		flinch = { seconds = 0.24, pose = { RootJoint = { 6, 0, 3, 0, 0.05, 0.06 }, Neck = { 10, 0, 0 } } },
+		stun = { stagger = STAGGER, sit = SIT, staggerSeconds = 0.5, riseSeconds = 0.7, wobble = { hz = 1.1, neck = 10, waist = 0 }, eyes = { 0, 0, 0 } },
+		death = {
+			keys = { { s = 0.3, ease = "out", pose = STAGGER }, { s = 1.25, ease = "in", pose = SIT }, { s = 1.45, ease = "out", pose = merge(SIT, { RootJoint = { 0, 0, 0, 0, -0.8, 0 } }) } },
+			hitstopAt = 1.25, fadeFrom = 2.0, fadeSeconds = 0.5, scatterFrom = 1.75, eyes = { 0, 0, 0 }, stars = true, slowSeconds = 0.8, slowRate = 0.4,
+		},
+		basicPrep = { R = prepR, L = merge(GUARD, mirror(prepR)) },
+		holdPose = S_HOLD,
+	}
+	local SK = { claw = "s_claw", clawSweep = "s_sweep", swipe = "s_swipe", sting = "s_sting", stingJab = "s_jab", stab = "s_dig", ambush = "s_dig", sandSearch = "s_dig", armadillo = "s_curl", grab = "@grab" }
+	local MOTIONS = { idle = "gait", walk = "gait", intro = "plan:introCrouch", death = "plan:death", env = "s_env", flinch = "plan:flinch", stun = "plan:stun" }
+	local WALK = { stride = 0.55, swing = 22, lift = 18, bob = 0.04, runAt = 1.6, turnLean = 4, groupA = { "1_L", "3_L", "2_R", "4_R" } }
+	local CLAWS, TIPS = { "Hand_R", "Hand_L" }, { "Tail1_8", "Tail2_8", "Tail3_8" }
+	local FEET = { "Shin1_L", "Shin2_L", "Shin3_L", "Shin4_L", "Shin1_R", "Shin2_R", "Shin3_R", "Shin4_R" }
+	D.scorpion_queen_v2 = {
+		plan = "scorpion",
+		planPatch = planPatch,
+		stunStars = true,
+		forms = {
+			before = { gait = "hexapod", contacts = FEET, stance = STANCE, guard = GUARD, walk = WALK, motions = MOTIONS, skills = SK, env = "s_env", throw = "s_throw" },
+			after = { gait = "hexapod", contacts = FEET, stance = merge(STANCE, { RootJoint = { 4, 0, 0, 0, 0.06, 0 } }), guard = ANGRY, walk = merge(WALK, { stride = 0.6, lift = 20 }), motions = MOTIONS, skills = SK, env = "s_env", throw = "s_throw" },
+		},
+		transform = { clip = "s_transform", hit = 1.0, switchAt = 1.6, seconds = 2.6 },
+		intro = { style = "burrow", depth = 2.2, riseFrac = 0.36, riseEase = "back" },
+		signature = { "clawSweep", "stab", "stingJab", "claw", "sting", "ambush", "armadillo", "swipe", "sandSearch" },
+		flash = {
+			claw = CLAWS, clawSweep = CLAWS, swipe = { "Hand_R" }, sting = TIPS, stingJab = { "Tail2_8" }, stab = TIPS, ambush = TIPS, sandSearch = { "Tail2_8" }, armadillo = { "Body" }, grab = CLAWS,
+		},
+		impacts = {
+			s_claw = { kind = "ground", parts = CLAWS, size = 1.0, shake = 0.7 }, s_sweep = { kind = "whoosh", parts = CLAWS, size = 1.2, floorDust = true }, s_swipe = { kind = "whoosh", parts = { "Hand_R" }, size = 1.1 },
+			s_sting = { kind = "spark", parts = TIPS, size = 0.9 }, s_jab = { kind = "spark", parts = { "Tail2_8" }, size = 0.9 }, s_dig = { kind = "ground", parts = { "Body" }, size = 1.0, shake = 0.4 },
+			s_curl = { kind = "spark", parts = { "Body" }, size = 1.0 }, s_throw = { kind = "whoosh", parts = TIPS, size = 1.0 }, s_env = { kind = "ground", parts = CLAWS, size = 1.3, shake = 1.0 },
+			s_transform = { kind = "roar", parts = { "Head" }, size = 1.2, shake = 0.8 }, s_hiss = { kind = "roar", parts = { "Head" }, size = 1.0, shake = 0.6 }, roar = { kind = "roar", parts = { "Head" }, size = 1.0, shake = 0.6 },
+			basic_R = { kind = "whoosh", parts = { "Hand_R" }, size = 0.55 }, basic_L = { kind = "whoosh", parts = { "Hand_L" }, size = 0.55 },
+		},
+		clips = C,
+	}
+end
+
 return D

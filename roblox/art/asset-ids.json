@@ -1642,6 +1642,40 @@
   "assetId": 84986386356967,
   "status": "Approved"
  },
+ "bosses/scorpion_queen_v2m.fbx": {
+  "sha256": "bd5eaf8eb6be40ad3b0a2f630344627269b26e8c89477f2d062f1d47aee44109",
+  "assetType": "Model",
+  "assetId": 71375344890960,
+  "status": "Approved"
+ },
+ "bosses/scorpion_queen_v2m_atlas1.png": {
+  "sha256": "862f7ff4cb6e4938bd8fa05d856fcfee184d4164f1fb312fc05ecc8a54dab529",
+  "assetType": "Decal",
+  "assetId": 81113863762214,
+  "status": "Approved",
+  "imageId": 111690349015573
+ },
+ "bosses/scorpion_queen_v2m_atlas1_sand.png": {
+  "sha256": "57ceb03c52de6ed727c28cf708156c4743dabd42d88589d603dc9c55c0412695",
+  "assetType": "Decal",
+  "assetId": 85486041570939,
+  "status": "Approved",
+  "imageId": 93358894917521
+ },
+ "bosses/scorpion_queen_v2m_atlas2.png": {
+  "sha256": "da426f43db9498e29ac76b007075b50f5b5aae55dd2fd75fc9d5751972d754ff",
+  "assetType": "Decal",
+  "assetId": 114798231277642,
+  "status": "Approved",
+  "imageId": 82259329947628
+ },
+ "bosses/scorpion_queen_v2m_atlas2_sand.png": {
+  "sha256": "f0b40b205c3a021d30cdcb5124682eab8b2ef36ebe393666896550243cd8f052",
+  "assetType": "Decal",
+  "assetId": 78719062166829,
+  "status": "Approved",
+  "imageId": 127127741902365
+ },
  "bosses/section_guardian.fbx": {
   "sha256": "b0474859e1d65c18d768f6b32535c38c6f14b71406b7420baff60eda0bdb2b3f",
   "assetType": "Model",
