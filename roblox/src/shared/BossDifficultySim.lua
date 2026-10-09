@@ -16,6 +16,7 @@ local BossOrigin = require(ReplicatedStorage.Shared.BossOrigin)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local BalanceAnchorConfig = require(ReplicatedStorage.Shared.data.BalanceAnchorConfig)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
+local DashConfig = require(ReplicatedStorage.Shared.data.DashConfig) -- FINAL-1b 3단계 대시 회피
 
 local BossDifficultySim = {}
 
@@ -136,6 +137,10 @@ function BossDifficultySim.run(bossId, options)
 	local env = boss.environment
 	local familiar = options.familiar == true
 	local hitScale = familiar and cfg.familiar.hitScale or 1
+	local dashSim = options.dash and cfg.dash or nil -- FINAL-1b 3단계 대시 회피(가정 = cfg.dash · 값 = DashConfig)
+	local dashCharges = options.dashCharges or 1
+	local walk = WorldConfig.playerWalkSpeedStuds
+	local dashUses = { short = 0, long = 0, protectOnly = 0, protected = 0 }
 	local protect = PlayerCombat.getNewbieDamageMultiplier(stage) -- 스테이지 1 ~ 30 신규 보호(최고 스테이지 = 이 스테이지로 본다)
 	if data.firstAssist and options.assistFails then -- GUARDIAN-V3 첫 보스 도움(받는 피해 배율 - 모든 피해)
 		protect *= require(ReplicatedStorage.Shared.BossFramework).assistMultiplier(data.firstAssist, options.assistFails, false)
@@ -150,7 +155,7 @@ function BossDifficultySim.run(bossId, options)
 	local hp = maxHp
 	local members = {}
 	for i = 1, n do
-		members[i] = { hp = 1, taken = 0, alive = true, airUntil = -1, airSince = nil, evadeUntil = 0, trappedUntil = 0 }
+		members[i] = { hp = 1, taken = 0, alive = true, airUntil = -1, airSince = nil, evadeUntil = 0, trappedUntil = 0, dashReadyAt = -math.huge, dashSecondUntil = -math.huge }
 	end
 	local state = BossScheduler.newState(skills, order, 0, false, config)
 	local t = 0
@@ -228,7 +233,8 @@ function BossDifficultySim.run(bossId, options)
 	end
 
 	local seenCount = {}
-	local function hitChance(j)
+	local function hitChance(j, slackOverride)
+		local slack = slackOverride or j.slack
 		local base
 		if j.gimmick then
 			base = (gimmickSeen <= 1 and not familiar) and cfg.hitChance.gimmickFirst or cfg.hitChance.gimmickLater
@@ -245,9 +251,9 @@ function BossDifficultySim.run(bossId, options)
 				base *= cfg.learnedMultiplier
 			end
 		end
-		if j.slack < cfg.slack.tightSeconds then
+		if slack < cfg.slack.tightSeconds then
 			base *= cfg.slack.tightMultiplier
-		elseif j.slack > cfg.slack.looseSeconds then
+		elseif slack > cfg.slack.looseSeconds then
 			base *= cfg.slack.looseMultiplier
 		end
 		return math.clamp(base, 0, 0.95)
@@ -577,7 +583,28 @@ function BossDifficultySim.run(bossId, options)
 				else
 					for _, m in ipairs(members) do
 						if m.alive and t >= m.trappedUntil then
-							local chance = hitChance(j)
+							-- FINAL-1b 3단계: 대시(준비됐고 피하려 하면) = 번 시간만큼 회피 여유 + 맞아도 보호 창 확률만큼 × 0.5(통과 스킬 = 0)
+							local dashed = false
+							local slackOverride = nil
+							if dashSim and (t >= m.dashReadyAt or t <= m.dashSecondUntil) and rng() < (familiar and dashSim.useChance.familiar or dashSim.useChance.first) then
+								dashed = true
+								if t <= m.dashSecondUntil then
+									m.dashSecondUntil, m.dashReadyAt = -math.huge, t + DashConfig.cooldownSeconds -- 2단 대시 두 번째 = 쿨 시작
+								else
+									m.dashReadyAt = t + DashConfig.cooldownSeconds
+									m.dashSecondUntil = dashCharges >= 2 and t + DashConfig.primordialShoes.chainWindowSeconds or -math.huge
+								end
+								if not dashSim.noDistanceClasses[j.class] then
+									local shortSaved = DashConfig.modes.short.rangeStuds / walk - DashConfig.modes.short.durationSeconds
+									local longSaved = DashConfig.rangeStuds / walk - DashConfig.durationSeconds
+									local saved = (j.slack + shortSaved > cfg.slack.looseSeconds) and shortSaved or longSaved
+									slackOverride = j.slack + saved
+									dashUses[saved == shortSaved and "short" or "long"] += 1
+								else
+									dashUses.protectOnly += 1
+								end
+							end
+							local chance = hitChance(j, slackOverride)
 							if j.follow then
 								chance *= cfg.extraProjectileHit
 							end
@@ -591,7 +618,14 @@ function BossDifficultySim.run(bossId, options)
 								chance *= cfg.courseGroundHitScale -- 수정 부수기: 점프맵 위 사람은 바닥 판정을 덜 맞는다
 							end
 							if rng() < chance then
-								damage(m, j.share, nil, j.id)
+								if dashed and rng() < dashSim.protectOverlap then
+									if not (j.skill and j.skill.passThrough == "dash") then -- 미사일 통과 = 피해 0
+										damage(m, j.share * DashConfig.incomingDamageMultiplier, nil, j.id)
+									end
+									dashUses.protected += 1
+								else
+									damage(m, j.share, nil, j.id)
+								end
 							elseif j.ground and rng() < cfg.airDodgeShare then
 								local air = cfg.airSecondsMin + rng() * (cfg.airSecondsMax - cfg.airSecondsMin)
 								m.airSince, m.airUntil = t - 0.3, t - 0.3 + air
@@ -663,7 +697,7 @@ function BossDifficultySim.run(bossId, options)
 	end
 	return {
 		seconds = t, killed = hp <= 0, wiped = not anyAlive(), deadCount = dead,
-		takenAverage = takenSum / n, counts = counts, deferred = deferred, bySource = bySource,
+		takenAverage = takenSum / n, counts = counts, deferred = deferred, bySource = bySource, dashUses = dashUses,
 	}
 end
 
@@ -672,6 +706,7 @@ function BossDifficultySim.monteCarlo(bossId, options, runs)
 	runs = runs or BossData.mechanics.sim.difficulty.runs
 	local times, taken, wipes, killed, anyDead = {}, 0, 0, 0, 0
 	local counts, deferred, bySource = {}, 0, {}
+	local dashUses = { short = 0, long = 0, protectOnly = 0, protected = 0 }
 	for seed = 1, runs do
 		local opts = table.clone(options or {})
 		opts.seed = seed * 7919 + 13
@@ -688,6 +723,9 @@ function BossDifficultySim.monteCarlo(bossId, options, runs)
 		for id, c in pairs(r.counts) do
 			counts[id] = (counts[id] or 0) + c
 		end
+		for k, v in pairs(r.dashUses or {}) do
+			dashUses[k] += v / runs
+		end
 		for id, d in pairs(r.bySource) do
 			bySource[id] = (bySource[id] or 0) + d / runs / (opts.partySize or 1)
 		end
@@ -698,7 +736,7 @@ function BossDifficultySim.monteCarlo(bossId, options, runs)
 	end
 	return {
 		runs = runs, wipeRate = wipes / runs, killRate = killed / runs, takenMean = taken / runs, deathRate = anyDead / runs,
-		p10 = pct(0.1), p50 = pct(0.5), p90 = pct(0.9), counts = counts, deferredPerRun = deferred / runs, bySource = bySource,
+		p10 = pct(0.1), p50 = pct(0.5), p90 = pct(0.9), counts = counts, deferredPerRun = deferred / runs, bySource = bySource, dashUsesPerRun = dashUses,
 	}
 end
 

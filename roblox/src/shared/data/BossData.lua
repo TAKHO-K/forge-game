@@ -316,6 +316,11 @@ local MECHANICS = {
 			-- M1-2 C안(오답 공동 책임): 파티 전멸기 한 번에 멤버마다 오답(가짜 둔덕 · 틀린 종)을 한 번 낼 확률 = 그 사람 1인 실패 확률 × 이 값 - 가정
 			partyWrongPressFactor = 1.0,
 			courseGroundHitScale = 0.4,
+			-- FINAL-1b 3단계: options.dash = 대시 회피를 넣는다(값 = DashConfig - 긴 rangeStuds 32 · 짧은 modes.short 14 · 보호 창 protectSeconds 0.3(받는 피해 × incomingDamageMultiplier 0.5 · 미사일 통과) · 쿨 cooldownSeconds 8 ·
+			--   충전 = options.dashCharges(태초 신발 2 · 연결 primordialShoes.chainWindowSeconds) · 공중 대시도 같은 쿨). 아래는 가정(보고서에 싣는다):
+			--   useChance = 대시가 준비된 판정에서 대시로 피하려 할 확률(처음 · 아는) · 대시가 번 시간 = 거리 ÷ 걷기 − 이동 시간(긴 1.7초 · 짧은 0.695초 - 짧은 것으로 넉넉해지면 짧은 대시) → 회피 여유에 더함 ·
+			--   jump · airWave(바닥 파동 - 뛰어넘기)는 거리로 못 번다(보호 창만) · protectOverlap = 대시로도 못 피했을 때 맞는 순간이 보호 창 안일 확률(피해 × 0.5 · 통과 스킬 = 0)
+			dash = { useChance = { first = 0.45, familiar = 0.7 }, protectOverlap = 0.5, noDistanceClasses = { jump = true, airWave = true } },
 			partyFailShare = 0.45, -- = mechanics.party.failShareFraction(모형이 같은 값을 쓴다 - 아래 루프가 맞춘다) -- 수정 부수기 동안 점프맵 위 사람이 바닥 판정 · 평타를 맞는 몫(높이 올라가 있다)
 		},
 	},
