@@ -134,6 +134,7 @@ local ok, err = pcall(function()
 		and (res.result == "maintain" or res.result == "success") and res.guarded == true, res and ("%s · 비용 %d · 불씨 %d → %d"):format(res.result, res.cost, g0, PlayerProfile.getEnhanceGauge(pl)) or "nil")
 	PlayerProfile.addGold(pl, cOff)
 	clearCooldown()
+	EnhanceService.debugRolls[pl] = 0.5 -- BOSS-NIGHT-2 D: 굴림 고정(+26 = 유지 칸)(없으면 math.random 순서가 로드된 모듈 구성에 따라 바뀌어 +27 성공 판 = 아래 저장 왕복 "무기 없음" 24/25)
 	res = EnhanceService.handleRequest(pl, true, false) -- +26 하락 방지는 없다 → 끔 비용
 	check("서버: +26 하락 방지 요청 = 무시(끔 비용 · guarded 없음)", res and res.cost == cOff and res.guarded == nil, res and ("비용 %d"):format(res.cost) or "nil")
 
@@ -192,7 +193,7 @@ local ok, err = pcall(function()
 	if profileOut then
 		local back = SaveSystem.migrate(profileOut)
 		local ws
-		for _, cs in pairs(back.classes) do if cs.weapon and cs.weapon.level == 26 then ws = cs.weapon end end
+		for _, cs in pairs(back.classes) do if cs.weapon and cs.weapon.level == PlayerProfile.getWeapon(pl).level then ws = cs.weapon end end
 		check("강화 상태 저장 왕복(+26 · 불씨 유지)", ws ~= nil and ws.enhanceGauge == PlayerProfile.getEnhanceGauge(pl), ws and ("불씨 %s"):format(tostring(ws.enhanceGauge)) or "무기 없음")
 	end
 end)

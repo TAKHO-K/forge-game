@@ -43,6 +43,7 @@ EXTRA_FILES=first/MenuArtFit.lua,first/MenuBootData.lua run ui_v2 res_uiv2.txt S
 run ui_rules res_ui.txt "" ui_rules_test.luau # QUEUE-ALL9C 블록 1 화면 규칙(순위 상위 약 n% 등 순수 함수)
 run community_goal res_goal.txt "" community_goal_test.luau # QUEUE-ALL7 B5 합동 목표 00 · ±25% · 문턱 순서
 run boss_motion res_motion.txt "" boss_motion_test.luau motion_prelude.luau
+printf "%-22s %s\n" require_path "$(python require_path_test.py 2>&1 | grep -a -E '^\[REQ\] (X|끝)' | tail -3 | tr '\n' ' ')" # BOSS-NIGHT-2 D: require 경로 = 실제 파일(Rojo 매핑) - 하네스는 이름으로 묶어 틀린 경로도 통과시킨다
 printf "%-22s %s\n" regrow_timing "$(python regrow_timing_test.py 2>&1 | grep -a -E '끝 [0-9]+/[0-9]+' | tail -1)"
 (cd ../meshswap_harness && python mk_mesh.py test_mesh.luau >/dev/null && printf "%-22s %s\n" meshswap "$("$LUAU" mesh_run.luau 2>&1 | grep -a -E '===MESH 하네스' | tail -1)")
 printf "%-22s %s\n" id_registry "$(python ../ids/id_registry.py | tail -1)"
