@@ -14,7 +14,8 @@ local AirMotion = {}
 local cfg = MovementConfig.airMotion
 local active = {} -- [프레임을 가진 인스턴스(Motor6D 또는 Attachment)] = { base, prop, kind, startedAt, seconds }
 local holds = {} -- [관절] = { base, prop, key, angle(목표 rad), current(rad) }
-local HOLD_EASE_PER_SECOND = 8 -- 유지 자세로 들어가고 나오는 빠르기(1/초 - 지수 접근)
+local HOLD_EASE_PER_SECOND = 8
+local CARRY_SECONDS = 0.15 -- FINAL-1b: 이어받은 기울기를 푸는 시간 -- 유지 자세로 들어가고 나오는 빠르기(1/초 - 지수 접근)
 
 -- 반환: 회전을 걸 인스턴스, 그 속성 이름.
 local function rootJoint(character)
@@ -61,7 +62,12 @@ function AirMotion.play(character, kind, seconds, deg)
 		return -- 유지 자세가 우선(활강 중 공중 점프 · 대시 모션은 건너뛴다)
 	end
 	local running = active[joint]
-	active[joint] = { base = running and running.base or joint[prop], prop = prop, kind = kind, startedAt = os.clock(), seconds = seconds, deg = deg }
+	local carry = 0
+	if running then -- FINAL-1b 1-c: 돌던 중(백플립 → 이단 점프 등) = 지금 기울기를 이어받아 CARRY_SECONDS 동안 푼다(옛 = 0°로 툭 끊김)
+		local rx = (joint[prop] * running.base:Inverse()):ToEulerAnglesXYZ()
+		carry = math.atan2(math.sin(rx), math.cos(rx))
+	end
+	active[joint] = { base = running and running.base or joint[prop], prop = prop, kind = kind, startedAt = os.clock(), seconds = seconds, deg = deg, carry = carry }
 end
 
 RunService.RenderStepped:Connect(function(dt)
@@ -92,6 +98,10 @@ RunService.RenderStepped:Connect(function(dt)
 				rot = CFrame.Angles(0, -math.rad(st.deg or 360) * (1 - (1 - p) ^ 2), 0) -- MV1 공중 회전 베기(몸이 제자리에서 한 바퀴)
 			else
 				rot = CFrame.Angles(-math.rad(st.deg or cfg.leanDeg) * math.sin(math.pi * p), 0, 0)
+			end
+			if st.carry ~= 0 then
+				local c = math.clamp((now - st.startedAt) / CARRY_SECONDS, 0, 1)
+				rot = CFrame.Angles(st.carry * (1 - c * c * (3 - 2 * c)), 0, 0) * rot
 			end
 			joint[st.prop] = rot * st.base
 		end

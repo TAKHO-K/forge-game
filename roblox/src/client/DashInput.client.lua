@@ -17,6 +17,7 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 
 local DashConfig = require(ReplicatedStorage.Shared.data.DashConfig)
+local PlayerMotionData = require(ReplicatedStorage.Shared.data.PlayerMotionData) -- FINAL-1b 대시 숙임
 local TranscendentData = require(ReplicatedStorage.Shared.data.TranscendentData) -- C5-7b 광폭 대시 쿨
 local MovementConfig = require(ReplicatedStorage.Shared.data.MovementConfig)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
@@ -28,6 +29,7 @@ local MoveRules = require(ReplicatedStorage.Shared.MoveRules)
 local WeaponVisual = require(script.Parent.WeaponVisual) -- W1 대시 무기 자세 · 일어나기 입력 버퍼
 local DashModes = require(ReplicatedStorage.Shared.DashModes)
 local CameraShake = require(script.Parent.CameraShake)
+local GraphicsMode = require(script.Parent.GraphicsMode) -- FINAL-1b 대시 띠 낮은 그래픽
 
 local dashRequest = ReplicatedStorage:WaitForChild("DashRequest")
 local dashResult = ReplicatedStorage:WaitForChild("DashResult")
@@ -325,13 +327,17 @@ dashResult.OnClientEvent:Connect(function(data)
 		CameraShake.fovKick(feel.fovKickDegrees, feel.fovKickSeconds)
 		-- M1-0: 트윈 동안은 공중 점프를 받지 않는다(끝나며 속도 0으로 되돌려 충전만 날아간다) · 앞으로 기울이는 모션(남에게는 서버 중계)
 		character:SetAttribute("AirDashUntil", os.clock() + data.durationSeconds)
-		AirMotion.play(character, "lean", data.durationSeconds)
+		AirMotion.play(character, "lean", data.durationSeconds, PlayerMotionData.dashPose.enabled and PlayerMotionData.dashPose.airLeanDeg or nil) -- FINAL-1b 1-b: 닌자 자세가 숙임을 맡는다(옛 22°)
 		airMoveFx:FireServer("lean")
 	end
 	local classId = player:GetAttribute("ClassId")
 	local color = (classId and classId ~= "" and UIColors.classAccent[classId]) or UIColors.ember
 	if not (workspace:GetAttribute("ArtStyleV1") and player:GetAttribute("Cosmetic_dashTrail")) then -- A2-N2 2-3: 대시 트레일 치장을 낀 동안(아트 스위치 뒤)은 치장이 기본 잔상을 대신 그린다(client/ArtV1Cosmetics)
-		SkillEffects.dashAfterimage(data.startPosition, data.endPosition, color, data.durationSeconds)
+		if DashConfig.trail.legacyBoxes then
+			SkillEffects.dashAfterimage(data.startPosition, data.endPosition, color, data.durationSeconds)
+		else -- FINAL-1b 1-d 부드러운 띠
+			SkillEffects.dashRibbon(rootPart, color, data.durationSeconds, DashConfig.trail, GraphicsMode.isLite())
+		end
 	end
 	WeaponVisual.playDash(nil, data.durationSeconds, pendingSecond) -- W1 대시 무기 자세 · W3b 2단 대시 비틀기(남에게는 중계 "dash" · "dash2")
 	airMoveFx:FireServer(pendingSecond and "dash2" or "dash")

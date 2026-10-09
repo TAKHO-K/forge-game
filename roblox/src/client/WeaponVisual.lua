@@ -672,6 +672,57 @@ local function canAirAttack(st)
 	return typeof(key) == "Instance" and key:IsA("Player") and MoveRules.tierOf(key).airAttack == true
 end
 
+-- FINAL-1b 1-a 무기 든 이동 생기(PlayerMotionData.life): 애니메이터가 이번 프레임 쓴 엉덩이 · 루트 값을 읽어(PreSimulation = 애니메이터 다음) 걸음에 맞춘다.
+--   지난 프레임 우리 값 그대로인 관절 = 애니메이터가 안 씀 → 신호 없음. 회전은 부모 축 기준(앞에 곱함).
+local function animValue(rig, name)
+	local j = rig.joints[name]
+	if not j then
+		return nil
+	end
+	local t = j.inst.Transform
+	if rig.written[name] == t then
+		return nil
+	end
+	return t
+end
+local function lifeLayer(st, pose, m, now)
+	local L = M.life
+	local spec = L.weapons[st.classId]
+	local rig = PoseRig.get(st.character)
+	if not rig then
+		return pose
+	end
+	local dt = math.clamp(now - (st.lifeAt or now), 0, 0.1)
+	st.lifeAt = now
+	local s = 0
+	local rh, lh = animValue(rig, "RightHip"), animValue(rig, "LeftHip")
+	if rh and lh and not st.air then
+		local rx, lx = rh:ToEulerAnglesXYZ(), lh:ToEulerAnglesXYZ()
+		s = math.clamp(math.deg(rx - lx) / (2 * L.strideNormDeg), -1, 1) * m
+	end
+	local k = spec.lagSeconds > 0 and 1 - math.exp(-dt / spec.lagSeconds) or 1 -- 무게: 팔이 늦게 따라온다
+	st.lifeArm = (st.lifeArm or 0) + (s - (st.lifeArm or 0)) * k
+	local out = table.clone(pose)
+	local function pre(name, cf)
+		out[name] = cf * (out[name] or CFrame.identity)
+	end
+	local b = math.sin(now * 2 * math.pi / spec.breathPeriod) * (1 - m)
+	pre("Waist", CFrame.Angles(math.rad(spec.breathDeg * b), math.rad(-spec.yawDeg * s), 0))
+	pre("Neck", CFrame.Angles(math.rad(-spec.breathDeg * 0.5 * b), math.rad(spec.yawDeg * s * L.neckKeep), 0))
+	for name, sign in pairs(spec.arms) do
+		pre(name, CFrame.Angles(math.rad(spec.armDeg * sign * st.lifeArm), 0, 0))
+	end
+	if spec.shoulderLiftDeg and b ~= 0 then
+		pre("RightShoulder", CFrame.Angles(0, 0, math.rad(spec.shoulderLiftDeg * b)))
+		pre("LeftShoulder", CFrame.Angles(0, 0, math.rad(-spec.shoulderLiftDeg * b)))
+	end
+	local ar = m > 0 and animValue(rig, "Root")
+	if ar then -- 애니메이터 걷기의 루트 높이(발과 맞물린 출렁)를 무기 무게만큼 돌려준다
+		pre("Root", CFrame.new(0, ar.Y * spec.bobScale * m, 0))
+	end
+	return out
+end
+
 -- 한 캐릭터의 목표 포즈. 반환: pose(CFrame 표) · blendKey · blendDur · inHand(무기가 손에) · draw(활) · trailOn · ik(허용)
 local function targetPose(st, now, root)
 	local w = M.weapons[st.classId]
@@ -783,7 +834,35 @@ local function targetPose(st, now, root)
 	if character:GetAttribute("Gliding") or now < (st.glideUntil or 0) then
 		return poseOf(M.glide), "glide", M.blend.default, false, 0, false, false
 	end
-	if now < st.dashUntil and st.drawn then
+	-- FINAL-1b 1-c 백플립: 웅크림(tuck) → 끝에 다리 펴 착지 준비 · 무기는 몸 옆(IK 끔) · 회전 = AirMotion
+	if st.flipStart and w.flip then
+		local F = M.flip
+		local tau = now - st.flipStart
+		if tau < st.flipSeconds then
+			local open = math.clamp((tau / st.flipSeconds - F.openFraction) / (1 - F.openFraction), 0, 1)
+			local pose = poseOf(w.flip)
+			if open > 0 then
+				pose = mix(pose, poseOf(w.stance), EASE.inOutSine(open) * 0.6)
+			end
+			return pose, "flip", F.tuckSeconds, st.drawn, 0, false, false -- 수납 중 = 빈손으로 넘는다(무기는 등 · 허리)
+		end
+		st.flipStart = nil
+	end
+	local D = M.dashPose
+	if D.enabled and w.dashVia and st.drawn and (now - (st.dashStart or -math.huge) < D.viaSeconds or (now >= st.dashUntil and now < st.dashUntil + D.viaSeconds)) then
+		return poseOf(w.dashVia), "dashVia", D.viaSeconds, true, 0, false, false -- FINAL-1b 대검: 들어갈 때 · 나올 때 칼을 몸 바깥 옆으로 돌린다
+	end
+	if now < st.dashUntil and (st.drawn or (D.enabled and w.dashNinja)) then
+		if D.enabled and w.dashNinja then -- FINAL-1b 1-b 닌자 달리기(공중 = 다리 접기 · 보조 손 · 시위 IK 끔 · 수납 중 = 빈손으로 같은 자세)
+			local pose = poseOf(w.dashNinja)
+			if st.air then
+				pose = table.clone(pose)
+				for name, cf in pairs(poseOf(D.airLegs)) do
+					pose[name] = cf
+				end
+			end
+			return pose, st.air and "dashAir" or "dash", M.blend.min, st.drawn, 0, false, false
+		end
 		return poseOf(w.dash), "dash", M.blend.min, true, 0, false, true
 	end
 	-- 꺼내기 · 수납
@@ -809,8 +888,12 @@ local function targetPose(st, now, root)
 	local v = root.AssemblyLinearVelocity
 	local m = math.clamp(Vector3.new(v.X, 0, v.Z).Magnitude / M.moveBlendSpeed, 0, 1)
 	local pose = mix(poseOf(w.stance), poseOf(w.move), m)
-	local breathe = math.sin(now * 2 * math.pi / M.idlePeriodSeconds) * (1 - m)
-	pose.Waist = (pose.Waist or CFrame.identity) * CFrame.Angles(math.rad(1.5 * breathe), 0, 0)
+	if M.life.weapons[st.classId] then
+		pose = lifeLayer(st, pose, m, now) -- FINAL-1b 1-a 걸음 · 숨쉬기 생기
+	else
+		local breathe = math.sin(now * 2 * math.pi / M.idlePeriodSeconds) * (1 - m)
+		pose.Waist = (pose.Waist or CFrame.identity) * CFrame.Angles(math.rad(1.5 * breathe), 0, 0)
+	end
 	-- W3c-1 대검: 체공 중(공중 공격이 남았을 때) 정점으로 갈수록 칼을 머리 뒤로 끌어올린다 → 공중 내려찍기의 준비 자세(판정 · 규칙 불변 - 자세만)
 	if w.airReady and st.air and not st.slamAt and (st.debugAirReady or canAirAttack(st)) and not character:GetAttribute("AirLocked") and not character:GetAttribute("FallKnockdown") then
 		local k = math.clamp(1 - v.Y / VfxData.greatswordAir.readyRiseSpeed, 0, 1)
@@ -1001,8 +1084,12 @@ local function updatePose(st, now, camPos)
 			st.slamAt = nil
 		elseif st.air and grounded then
 			local fall = -st.lastVy
+			local afterFlip = st.flipLandUntil and now < st.flipLandUntil -- FINAL-1b 1-c: 백플립 착지 = 무릎 굽힘(착지 속도와 무관)
+			st.flipLandUntil = nil
 			if not character:GetAttribute("FallKnockdown") and not character:GetAttribute("AirLocked") and not character:GetAttribute("Gliding") then
-				if fall >= O.heavySpeed then
+				if afterFlip and fall < O.heavySpeed then
+					WeaponVisual.playOverlay(st.key, "landSoft")
+				elseif fall >= O.heavySpeed then
 					WeaponVisual.playOverlay(st.key, "landHeavy")
 				elseif fall >= O.softSpeed then
 					WeaponVisual.playOverlay(st.key, "landSoft")
@@ -1028,6 +1115,11 @@ local function updatePose(st, now, camPos)
 	end
 	local pose, key, dur, inHand, draw, trailOn, ikOk = targetPose(st, now, root)
 	if key ~= st.blendKey then
+		if key == "stance" and (st.blendKey == "dash" or st.blendKey == "dashAir" or st.blendKey == "dashVia") then
+			dur = M.dashPose.exitBlendSeconds -- FINAL-1b 1-b: 미끄러지며 멈출 때 바로 전투 자세로
+		elseif st.blendKey == "flip" then
+			dur = M.flip.exitBlendSeconds
+		end
 		st.from, st.fromW = st.applied, st.appliedW
 		st.blendKey, st.blendStart, st.blendDur = key, now, math.clamp(dur, 0.01, M.blend.max)
 		-- A2-M1 관성 섞기: 전환 순간 관절이 돌던 속도(직전 두 프레임)를 이어받아 지수로 줄이며 새 자세로 - 옛 = 정지 사진에서 출발해 속도가 한 프레임에 0으로 끊겼다
@@ -1453,12 +1545,29 @@ end
 function WeaponVisual.playDash(key, seconds, second)
 	local st = stateFor(key or player)
 	if st then
-		st.dashUntil = os.clock() + (seconds or 0.3)
+		st.dashStart = os.clock()
+		st.dashUntil = st.dashStart + (seconds or 0.3)
 		noteImpact(st, 0.03, 0.12) -- A2-M1 측정: 대시 박참(의도된 순간 가속)
 		if second then
 			WeaponVisual.playOverlay(key or player, "dash2")
 		end
 	end
+end
+
+-- FINAL-1b 1-c 백플립 자세(나 = DoubleJumpInput · 남 = 중계 "backflip"): 웅크림 → 다리 펴기 · 착지 무릎 굽힘. 무기 자세가 없는 직업 = 옛 공중 점프 덧씌움.
+function WeaponVisual.playFlip(key, seconds)
+	local st = stateFor(key or player)
+	if not st or st.deathStart then
+		return
+	end
+	local w = st.classId and M.weapons[st.classId]
+	if not (w and w.flip) then
+		WeaponVisual.playOverlay(key, "airJump")
+		return
+	end
+	local now = os.clock()
+	st.flipStart, st.flipSeconds, st.flipLandUntil = now, seconds or 0.45, now + M.flip.landWindowSeconds
+	noteImpact(st, 0.03, 0.15)
 end
 
 -- W3b 덧씌움 반응(이름 = PlayerMotionData.overlay의 표 - flinch · big · landSoft · landHeavy · takeoff · coyote · airJump · dash2 · glideIn · glideOut).
@@ -1699,6 +1808,11 @@ local function debugPose(st, now)
 	else
 		st.attack, st.getupStart = nil, nil
 		st.dashUntil = d.clip == "dash" and now + 1 or 0
+		if d.clip == "flip" then -- FINAL-1b: 백플립 자세 tau초(0 ~ 0.45)
+			st.flipStart, st.flipSeconds = now - d.tau, 0.45 + 1e-3
+		else
+			st.flipStart = nil
+		end
 	end
 	return true
 end

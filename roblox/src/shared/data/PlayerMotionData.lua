@@ -416,5 +416,56 @@ P.respawn = { kneelSeconds = 0.25, riseSeconds = 0.4, settleSeconds = 0.15 }
 P.reach.back = with(P.reach.back, with(body(0.15, 6, -12, 0), { Waist = { 4, -22, 0 }, Neck = { 0, 16, 0 } })) -- 어깨 뒤로 손을 뻗으며 몸을 비튼다
 P.reach.hip = with(P.reach.hip, with(body(0.2, 4, 0, 6), { Waist = { -10, 0, 0 }, Neck = { 6, 0, 0 } })) -- 허리로 손을 내리며 살짝 숙인다
 
+-- ═════════════════════════════ FINAL-1b 모션 다듬기(겉모습만 - 거리 · 시간 · 쿨 · 판정 · 무기 쥐기 불변) ═════════════════════════════
+-- 1-a 무기 든 이동 생기(전투 대기 · 이동 자세 위에 더한다 - client/WeaponVisual lifeLayer):
+--   걸음 신호 s = 애니메이터가 이번 프레임 쓴 엉덩이 앞뒤 각 (오른 − 왼) ÷ 2 ÷ strideNormDeg(−1 ~ 1 · + = 오른발 앞 · Studio 실측 달리기 ±43°) → 걸음과 저절로 맞는다(남의 캐릭터도).
+--   yawDeg = 어깨 반대 회전(오른발 앞 = 몸통 오른쪽으로 · 목은 neckKeep만큼 되돌려 시선 유지) · arms = 팔 흔들기(관절 = 부호 · 오른팔 − = 오른발 앞일 때 뒤로) × armDeg ·
+--   lagSeconds = 팔이 걸음을 따라오는 늦음(무게 - 대검 크게 · 단검 작게) · bobScale = 애니메이터 걷기의 루트 높이(발과 맞물린 출렁 ±0.1 - 옛 = 전투 자세 루트가 덮어써 몸이 굳었다)를 이만큼 돌려줌 ·
+--   breathDeg · breathPeriod = 대기 숨쉬기(허리 · 목 · 어깨 들썩 shoulderLiftDeg). 보조 손 IK(대검 왼손 · 활 오른손)는 그대로라 손은 손잡이를 계속 쥔다.
+P.life = {
+	strideNormDeg = 40, neckKeep = 0.7,
+	weapons = {
+		greatsword = { yawDeg = 8, armDeg = 5, arms = { RightShoulder = -1 }, lagSeconds = 0.14, bobScale = 1.35, breathDeg = 2.4, breathPeriod = 2.8, shoulderLiftDeg = 2.5 },
+		dualblade = { yawDeg = 10, armDeg = 13, arms = { RightShoulder = -1, LeftShoulder = 1 }, lagSeconds = 0.03, bobScale = 1.0, breathDeg = 1.6, breathPeriod = 2.0, shoulderLiftDeg = 1.5 },
+		bow = { yawDeg = 8, armDeg = 8, arms = { LeftShoulder = 1 }, lagSeconds = 0.07, bobScale = 1.1, breathDeg = 1.8, breathPeriod = 2.4, shoulderLiftDeg = 1.5 },
+		healer = { yawDeg = 7, armDeg = 9, arms = { RightShoulder = -0.6, LeftShoulder = 2 }, lagSeconds = 0.07, bobScale = 1.1, breathDeg = 1.8, breathPeriod = 2.4, shoulderLiftDeg = 1.5 },
+	},
+}
+
+-- 1-b 대시 = "닌자 달리기"(enabled = false면 옛 W.*.dash): 몸을 깊이 숙이고(Root 숙임 + 허리 · 합 ≈ 38° + 대시 중 AirMotion lean airLeanDeg) 두 팔을 뒤로 젖힌다 ·
+--   무기는 바로 공격할 수 있는 자세(쌍검 = 칼날이 뒤 · 대검 = 한 손으로 몸 뒤 낮게 끌기 · 활 = 왼팔 뒤 낮게 · 지팡이 = 몸 옆에서 뒤로 비스듬히) · 보조 손 · 시위 IK 끔.
+--   팔 각: 어깨 x − = 뒤로(몸통 기준 · 숙임만큼 더 젖혀야 세상 기준 뒤) · 무기 방향 θ(몸통 기준) = 어깨 + 팔꿈치 + 손목 → 세상 기준 = θ − 숙임(−180 = 뒤 수평).
+--   exitBlendSeconds = 대시 끝 → 전투 자세(미끄러지며 멈출 때 바로 공격 자세로) · airLegs = 공중 대시 다리 접기(가중치 1 - 공중은 애니메이터 다리 대신)
+P.dashPose = {
+	enabled = true, airLeanDeg = 6, exitBlendSeconds = 0.1, viaSeconds = 0.07,
+	airLegs = { RightHip = { 75, 0, 0 }, RightKnee = { -105, 0, 0 }, LeftHip = { 40, 0, 0 }, LeftKnee = { -85, 0, 0 } },
+}
+local NINJA_BODY = body(0.32, 30, 0, 20) -- 루트 20° 앞 숙임 · 큰 보폭(뒤 다리 뻗음)
+local NINJA_TORSO = { Waist = { -18, 0, 0 }, Neck = { 24, 0, 0 } } -- 허리 18 더 숙임(합 38) · 머리는 앞을 본다
+local NINJA_R_FREE = { RightShoulder = { -82, 0, 16 }, RightElbow = { 8, 0, 0 }, RightWrist = { -10, 0, 0 } } -- 빈 팔 뒤로 곧게
+local NINJA_L_FREE = { LeftShoulder = { -82, 0, -16 }, LeftElbow = { 8, 0, 0 }, LeftWrist = { -10, 0, 0 } }
+W.dualblade.dashNinja = db({ NINJA_BODY, NINJA_TORSO,
+	{ RightShoulder = { -82, 0, 18 }, RightElbow = { 8, 0, 0 }, RightWrist = { -66, 0, 0 } }, -- θ −140 → 세상 −178(칼날 뒤 수평)
+	{ LeftShoulder = { -82, 0, -18 }, LeftElbow = { 8, 0, 0 }, LeftWrist = { -66, 0, 0 } } }, {})
+W.greatsword.dashNinja = db({ NINJA_BODY, NINJA_TORSO, NINJA_L_FREE,
+	{ RightShoulder = { -62, 0, 40 }, RightElbow = { 10, 0, 0 }, RightWrist = { -72, 0, 0 } } }, {}) -- θ −124 → 세상 −162(몸 옆 뒤로 낮게 끌기 · 칼끝은 바닥 위 유지가 받친다)
+-- 대검 중간 자세(dashVia - 들어갈 때 · 나올 때 viaSeconds): Studio 실측 = 전투 자세(칼 앞 가운데) → 대시(칼 뒤)로 바로 섞으면 0.1초 동안 칼이 다리 앞을 쓸고 지나갔다(허벅지 0.2) →
+--   팔을 먼저 바깥 옆으로 벌려 칼이 몸 바깥에서 돌게 한다.
+W.greatsword.dashVia = db({ NINJA_BODY, NINJA_TORSO, NINJA_L_FREE, { RightShoulder = { 15, 0, 80 }, RightElbow = { 45, 0, 0 }, RightWrist = { -10, 0, 0 } } }, {})
+W.bow.dashNinja = db({ NINJA_BODY, NINJA_TORSO, NINJA_R_FREE,
+	{ LeftShoulder = { -72, 0, -22 }, LeftElbow = { 10, 0, 0 }, LeftWrist = { -8, 0, 0 } } }, {}) -- 활 든 왼팔 뒤 낮게
+W.healer.dashNinja = db({ NINJA_BODY, NINJA_TORSO, NINJA_L_FREE,
+	{ RightShoulder = { -70, 0, 32 }, RightElbow = { 10, 0, 0 }, RightWrist = { -72, 0, 0 } } }, {}) -- θ −132 → 세상 −170(몸 옆 · 지팡이 머리 뒤)
+
+-- 1-c 백플립 자세(seconds = DashConfig.backflip.flipSeconds 동안 · 회전은 AirMotion): 무릎을 가슴으로 웅크림(tuckSeconds에 다 접음) → 끝 openFraction부터 다리를 펴 착지 준비 ·
+--   무기는 몸 바깥 옆에 붙인다(관통 0) · 착지 = landSoft 덧씌움(무릎 굽힘 - 착지 속도와 무관하게 landWindowSeconds 안).
+P.flip = { tuckSeconds = 0.1, openFraction = 0.7, landWindowSeconds = 1.5, exitBlendSeconds = 0.12 }
+local FLIP_LEGS = { RightHip = { 112, 0, 0 }, RightKnee = { -135, 0, 0 }, LeftHip = { 106, 0, 0 }, LeftKnee = { -130, 0, 0 }, Waist = { -26, 0, 0 }, Neck = { 18, 0, 0 } }
+local FLIP_L_HUG = { LeftShoulder = { 55, 0, -28 }, LeftElbow = { 100, 0, 0 }, LeftWrist = { 0, 0, 0 } } -- 빈손 = 무릎 감싸기
+W.greatsword.flip = db({ FLIP_LEGS, FLIP_L_HUG, { RightShoulder = { 10, 0, 62 }, RightElbow = { 80, 0, 0 }, RightWrist = { 8, 0, 0 } } }, {}) -- 칼을 오른쪽 옆에 세움(θ 98)
+W.dualblade.flip = db({ FLIP_LEGS, { RightShoulder = { 25, 0, 70 }, RightElbow = { 55, 0, 0 }, RightWrist = { -55, 0, 0 } }, { LeftShoulder = { 25, 0, -70 }, LeftElbow = { 55, 0, 0 }, LeftWrist = { -55, 0, 0 } } }, {}) -- 두 팔 옆으로 균형(칼날 바깥)
+W.bow.flip = db({ FLIP_LEGS, { LeftShoulder = { 35, 0, -65 }, LeftElbow = { 45, 0, 0 }, LeftWrist = { -10, 0, 0 } }, { RightShoulder = { 55, 0, 28 }, RightElbow = { 100, 0, 0 }, RightWrist = { 0, 0, 0 } } }, {})
+W.healer.flip = db({ FLIP_LEGS, FLIP_L_HUG, { RightShoulder = { 10, 0, 62 }, RightElbow = { 75, 0, 0 }, RightWrist = { -5, 0, 0 } } }, {}) -- 지팡이 오른쪽 옆에 세움
+
 P.weapons = W
 return P

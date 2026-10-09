@@ -61,12 +61,13 @@ return {
 	},
 	-- 01 v1 흰 글리프(옛 - 업로드 안 함 · 파일 이름만): close · lock · plus · more · archive · back · play · info · star = 01_main-menu/v1/assets/icon-*.png
 	-- 직업별 그림(직업 선택 전설 일러스트 · 카드 얼굴) - 직업 id로 찾는다(신직업 = 줄 추가 · 없으면 임시 실루엣)
+	-- FINAL-1b 1-e: faceCrop = 전설 그림에서 얼굴 자르기 { x, y, 한 변 }(4직업 눈 중간 = 가로 가운데 · 세로 0.48 · 비슷한 얼굴 크기) - 있으면 face 그림(옛 자르기 - 전사가 오른쪽으로 치우침) 대신 쓴다(그림 · 키 유지)
 	classArt = {
-		greatsword = { legend = "ui/legends/class-warrior", face = "ui/legends/face-warrior", faceRect = { 173, 13, 314 } },
-		bow = { legend = "ui/legends/class-archer", face = "ui/legends/face-archer", faceRect = { 165, 5, 266 } },
+		greatsword = { legend = "ui/legends/class-warrior", face = "ui/legends/face-warrior", faceRect = { 173, 13, 314 }, faceCrop = { 324, 19, 245 } },
+		bow = { legend = "ui/legends/class-archer", face = "ui/legends/face-archer", faceRect = { 165, 5, 266 }, faceCrop = { 217, 23, 276 } },
 		-- BOSS-NIGHT-2 5: 도적 · 치유사 전설 그림(docs/art/ref/class_legend_*_v1.png 서 있는 자세 · 전사 · 궁수와 같은 자르기) · 자리표시 그림은 legend가 없을 때만(파일 · 키 유지)
-		healer = { legend = "ui/legends/class-healer", face = "ui/legends/face-healer", faceRect = { 130, 20, 320 }, placeholder = "ui/legends/class-healer-placeholder" },
-		dualblade = { legend = "ui/legends/class-rogue", face = "ui/legends/face-rogue", faceRect = { 190, 25, 315 }, placeholder = "ui/legends/class-rogue-placeholder" },
+		healer = { legend = "ui/legends/class-healer", face = "ui/legends/face-healer", faceRect = { 130, 20, 320 }, faceCrop = { 135, 65, 313 }, placeholder = "ui/legends/class-healer-placeholder" },
+		dualblade = { legend = "ui/legends/class-rogue", face = "ui/legends/face-rogue", faceRect = { 190, 25, 315 }, faceCrop = { 214, 50, 322 }, placeholder = "ui/legends/class-rogue-placeholder" },
 	},
 	-- 공격 버튼 아이콘 = 지금 직업 무기 아이콘(무기 아이콘 키 = icons/weapons/<직업>_<등급> - client/ItemIcons.keyFor)
 	attackUsesWeaponIcon = true,

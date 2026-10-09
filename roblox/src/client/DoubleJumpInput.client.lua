@@ -15,6 +15,9 @@ local UserInputService = game:GetService("UserInputService")
 
 local MovementConfig = require(ReplicatedStorage.Shared.data.MovementConfig)
 local DashConfig = require(ReplicatedStorage.Shared.data.DashConfig)
+local PlayerMotionData = require(ReplicatedStorage.Shared.data.PlayerMotionData) -- FINAL-1b 대시 숙임
+local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local SkillEffects = require(script.Parent.SkillEffects) -- FINAL-1b 남의 대시 띠
 local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
 local AirMotion = require(script.Parent.AirMotion)
 local GlideController = require(script.Parent.GlideController)
@@ -216,7 +219,7 @@ local function backflip()
 		end
 	end)
 	AirMotion.play(character, "backflip", BF.flipSeconds)
-	WeaponVisual.playOverlay(nil, "airJump")
+	WeaponVisual.playFlip(nil, BF.flipSeconds) -- FINAL-1b 1-c 웅크린 한 바퀴 · 착지 무릎(옛 = 공중 점프 덧씌움)
 	airMoveFx:FireServer("backflip")
 	return true
 end
@@ -245,7 +248,11 @@ airMoveFx.OnClientEvent:Connect(function(who, kind)
 	if kind == "dash" or kind == "dash2" then
 		WeaponVisual.playDash(who, DashConfig.durationSeconds, kind == "dash2") -- W1 대시 무기 자세 · W3b 2단
 		if other then
-			AirMotion.play(other, "lean", DashConfig.durationSeconds)
+			AirMotion.play(other, "lean", DashConfig.durationSeconds, PlayerMotionData.dashPose.enabled and PlayerMotionData.dashPose.airLeanDeg or nil) -- FINAL-1b 1-b 닌자 자세가 숙임을 맡는다
+			local cls = who:GetAttribute("ClassId")
+			if not DashConfig.trail.legacyBoxes and not (workspace:GetAttribute("ArtStyleV1") and who:GetAttribute("Cosmetic_dashTrail")) then -- FINAL-1b 1-d 남의 대시도 같은 띠(치장 낀 사람 = 치장이 그린다)
+				SkillEffects.dashRibbon(other:FindFirstChild("HumanoidRootPart"), (cls and UIColors.classAccent[cls]) or UIColors.ember, DashConfig.durationSeconds, DashConfig.trail, true)
+			end
 		end
 	elseif kind == "skillQ" or kind == "skillE" or kind == "skillR" or kind == "skillT" then
 		WeaponVisual.playSkill(who, kind:sub(6)) -- W3b 스킬 모션 · A2-M1 R · T
@@ -253,7 +260,9 @@ airMoveFx.OnClientEvent:Connect(function(who, kind)
 		WeaponVisual.playGetup(who) -- W1 넘어짐 → 일어나기
 	elseif other then
 		AirMotion.play(other, kind, kind == "flip" and MovementConfig.airMotion.flipSeconds or (kind == "backflip" and DashConfig.backflip.flipSeconds) or DashConfig.durationSeconds)
-		if kind == "flip" or kind == "backflip" then
+		if kind == "backflip" then
+			WeaponVisual.playFlip(who, DashConfig.backflip.flipSeconds) -- FINAL-1b 1-c
+		elseif kind == "flip" then
 			WeaponVisual.playOverlay(who, "airJump")
 		end
 	end

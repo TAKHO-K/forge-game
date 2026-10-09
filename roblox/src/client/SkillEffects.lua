@@ -50,6 +50,66 @@ function SkillEffects.dashAfterimage(startPos, endPos, color, totalDurationSecon
 	end
 end
 
+-- FINAL-1b 1-d 대시 띠(cfg = DashConfig.trail): 루트에 세로 부착점 두 개 + Trail(끝으로 가늘고 투명) · 대시 seconds 동안만 그리고 lifetime 뒤 정리.
+--   ghosts.enabled면 잔상(그 순간 몸 파트 반투명 사본 count개 - 기본 꺼짐). lite = 폭 · 남는 시간 × liteScale.
+function SkillEffects.dashRibbon(rootPart, color, seconds, cfg, lite)
+	if not rootPart or not rootPart.Parent then
+		return
+	end
+	local scale = lite and cfg.liteScale or 1
+	local soft = color:Lerp(Color3.new(1, 1, 1), cfg.whiten or 0)
+	local half = cfg.widthStuds * scale / 2
+	local a0 = Instance.new("Attachment")
+	a0.Name = "DashRibbonA0"
+	a0.Position = Vector3.new(0, cfg.centerY + half, 0)
+	local a1 = Instance.new("Attachment")
+	a1.Name = "DashRibbonA1"
+	a1.Position = Vector3.new(0, cfg.centerY - half, 0)
+	local trail = Instance.new("Trail")
+	trail.Name = "DashRibbon"
+	trail.Attachment0, trail.Attachment1 = a0, a1
+	trail.Color = ColorSequence.new(soft, color)
+	trail.LightEmission = cfg.emission
+	trail.Lifetime = cfg.lifetimeSeconds * scale
+	trail.MinLength = 0.05
+	trail.FaceCamera = true
+	trail.WidthScale = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0) })
+	trail.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, cfg.transparency), NumberSequenceKeypoint.new(0.6, 0.7), NumberSequenceKeypoint.new(1, 1) })
+	a0.Parent, a1.Parent, trail.Parent = rootPart, rootPart, rootPart
+	task.delay(seconds, function()
+		trail.Enabled = false
+		task.delay(trail.Lifetime + 0.05, function()
+			trail:Destroy()
+			a0:Destroy()
+			a1:Destroy()
+		end)
+	end)
+	local g = cfg.ghosts
+	if g and g.enabled and not lite then
+		local character = rootPart.Parent
+		for i = 1, g.count do
+			task.delay(seconds * (i - 1) / math.max(g.count, 1), function()
+				for _, part in ipairs(character:GetDescendants()) do
+					if part:IsA("BasePart") and part ~= rootPart and part.Transparency < 1 and part.Parent then
+						local ghost = Instance.new("Part")
+						ghost.Anchored, ghost.CanCollide, ghost.CanQuery, ghost.CanTouch, ghost.CastShadow = true, false, false, false, false
+						ghost.Material = Enum.Material.SmoothPlastic
+						ghost.Color = soft
+						ghost.Size = part.Size
+						ghost.CFrame = part.CFrame
+						ghost.Transparency = g.transparency
+						ghost.Parent = Workspace
+						TweenService:Create(ghost, TweenInfo.new(g.fadeSeconds), { Transparency = 1 }):Play()
+						task.delay(g.fadeSeconds, function()
+							ghost:Destroy()
+						end)
+					end
+				end
+			end)
+		end
+	end
+end
+
 -- FINAL-1 3 대시 출발 먼지: 발밑에서 진행 반대쪽으로 작은 덩어리 cfg.dustCount개가 퍼지며 옅어진다(cfg = DashConfig.feel)
 function SkillEffects.dashDust(feetPos, delta, cfg)
 	local flat = Vector3.new(delta.X, 0, delta.Z)

@@ -68,15 +68,19 @@ local function face(parent, rect, classId)
 	holder.ClipsDescendants = true
 	local img = image(info.face)
 	local legend = image(info.legend)
-	if img or (legend and info.faceRect) then
+	local rect = info.faceRect
+	if legend and info.faceCrop then -- FINAL-1b 1-e: 4직업 얼굴 중심 · 크기를 맞춘 자르기(face 그림보다 먼저)
+		img, rect = nil, info.faceCrop
+	end
+	if img or (legend and rect) then
 		local l = Instance.new("ImageLabel")
 		l.Name = "FaceImage"
 		l.BackgroundTransparency = 1
 		l.Size = UDim2.fromScale(1, 1)
 		l.Image = img or legend
 		if not img then
-			l.ImageRectOffset = Vector2.new(info.faceRect[1], info.faceRect[2])
-			l.ImageRectSize = Vector2.new(info.faceRect[3], info.faceRect[3])
+			l.ImageRectOffset = Vector2.new(rect[1], rect[2])
+			l.ImageRectSize = Vector2.new(rect[3], rect[3])
 		end
 		l.Parent = holder
 	else

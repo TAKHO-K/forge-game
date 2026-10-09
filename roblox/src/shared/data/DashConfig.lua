@@ -35,5 +35,10 @@ return {
 	--   폰 · 게임패드: 스틱을 뒤로(카메라 기준 dot ≤ flickBackDot · 기울기 ≥ flickMagnitude) 두 번 빠르게 튕기기
 	backflip = { backSpeed = 18, boostSeconds = 0.3, flipSeconds = 0.45, flickBackDot = -0.7, flickMagnitude = 0.8 },
 	-- 손맛: 출발 먼지 · FOV 살짝(+fovKick도 · CameraShake.fovKick - 화면 흔들림 설정을 따른다) · 미끄러지듯 멈춤(트윈 easing - 거리 · 도착점은 그대로)
+	-- FINAL-1b 1-d 대시 트레일(겉모습만): 옛 = 캐릭터 크기 Neon 네모 4개가 길 위에 남음(도적 = 보라 네모 점) → 몸 뒤 부드러운 띠(Trail - 끝으로 갈수록 가늘고 투명 · lifetimeSeconds만 남음) ·
+	--   색 = 직업 색을 whiten만큼 흰색 쪽으로(부드럽게) · 낮은 그래픽(GraphicsMode lite) = 폭 · 남는 시간 × liteScale · 치장 "대시 트레일"을 낀 동안(아트 스위치 뒤)은 치장이 대신 그린다(그대로) ·
+	--   ghosts = 잔상(반투명 몸 count개 - 노브 · 기본 꺼짐) · legacyBoxes = true면 옛 네모(되돌림)
+	trail = { lifetimeSeconds = 0.2, widthStuds = 2.2, centerY = 0.2, transparency = 0.3, emission = 0.6, whiten = 0.1, liteScale = 0.6, legacyBoxes = false,
+		ghosts = { enabled = false, count = 3, transparency = 0.6, fadeSeconds = 0.25 } },
 	feel = { fovKickDegrees = 5, fovKickSeconds = 0.3, easingStyle = "Quad", dustCount = 6, dustSeconds = 0.35, dustColor = Color3.fromRGB(205, 190, 160) },
 }
