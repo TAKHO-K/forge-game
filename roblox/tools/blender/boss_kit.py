@@ -267,8 +267,21 @@ def euler_r(r):
 def place_addon(spec, gi, byName, glbDir):
     path = spec["glb"] if os.path.isabs(spec["glb"]) else os.path.join(glbDir, spec["glb"])
     obj = import_glb(path, spec.get("yaw", 0))
-    for ax, val, keep in spec.get("cut", []):
-        cut_plane(obj, ax, val, keep)
+    if spec.get("weld"):  # BOSS-NIGHT-2: Meshy 부품은 UV 조각마다 꼭짓점이 갈라져 있다(건틀릿 590조각) → 감량하면 조각 경계가 벌어져 구멍 · 검은 틈(사용자: 건틀릿 · 날개가 깨짐)
+        bm = bmesh.new()  # 크기 × weld 거리로 용접 = 한 덩어리 → 감량해도 닫힌 면(색은 굽기 원본 - UV는 버려도 됨)
+        bm.from_mesh(obj.data)
+        bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=max(obj.dimensions) * spec["weld"])
+        bm.to_mesh(obj.data)
+        bm.free()
+    late = []  # BOSS-NIGHT-2: 복셀 부품은 자르기를 복셀 · 감량 뒤로(자른 너덜 경계를 막은 면이 복셀 안에 겹벽을 만들어 감량이 9%에서 멈췄다 - 폭풍 건틀릿)
+    if spec.get("voxel"):
+        for ax, val, keep in spec.get("cut", []):
+            lo0, hi0 = bounds_of(obj)
+            i = "xyz".index(ax)
+            late.append((i, lo0[i] + (hi0[i] - lo0[i]) * val, keep, (lo0 + hi0) / 2))
+    else:
+        for ax, val, keep in spec.get("cut", []):
+            cut_plane(obj, ax, val, keep)
     dropped = drop_small_islands(obj, spec["islands"]) if spec.get("islands") else 0
     names = spec["parts"]
     if spec.get("fit", "union") == "union":
@@ -283,8 +296,11 @@ def place_addon(spec, gi, byName, glbDir):
         boxC, boxS, boxR = b["center"], b["size"], b["R"]
     Rr = euler_r(spec.get("rot", [0, 0, 0]))
     pts = [Rr @ (CT @ v.co) for v in obj.data.vertices]
-    plo = Vector((min(p.x for p in pts), min(p.y for p in pts), min(p.z for p in pts)))
-    phi = Vector((max(p.x for p in pts), max(p.y for p in pts), max(p.z for p in pts)))
+    kept = pts
+    if late:  # 맞춤 크기 = 자르고 남을 쪽 꼭짓점만(자르기 전 위치)
+        kept = [p for v, p in zip(obj.data.vertices, pts) if all((v.co[i] < pl) == (keep == "<") for i, pl, keep, _ in late)]
+    plo = Vector((min(p.x for p in kept), min(p.y for p in kept), min(p.z for p in kept)))
+    phi = Vector((max(p.x for p in kept), max(p.y for p in kept), max(p.z for p in kept)))
     pc, ps = (plo + phi) / 2, phi - plo
     ax = spec.get("scaleAxis")
     if ax:
@@ -295,10 +311,21 @@ def place_addon(spec, gi, byName, glbDir):
     s *= spec.get("fill", 1.0)
     mx = -1.0 if spec.get("mirror") else 1.0
     st = spec.get("stretch", [1, 1, 1])  # 맞춘 뒤 축별 배율(로블록스 상자 축 - 나가 삼지창 자루 굵게)
-    for v, p in zip(obj.data.vertices, pts):
+    def xf(p):
         q = (p - pc) * s
         q = Vector((q.x * mx * st[0], q.y * st[1], q.z * st[2]))
-        v.co = C @ (boxC + boxR @ q)
+        return C @ (boxC + boxR @ q)
+    for v, p in zip(obj.data.vertices, pts):
+        v.co = xf(p)
+    cuts = []
+    for i, pl, keep, mid in late:  # 자르기 평면도 같은 변환으로(점 + 법선) → 복셀 · 감량 뒤 late_cut
+        p0 = Vector(mid)
+        p0[i] = pl
+        p1 = p0.copy()
+        p1[i] += 0.1
+        a0, a1 = xf(Rr @ (CT @ p0)), xf(Rr @ (CT @ p1))
+        cuts.append((a0, (a1 - a0).normalized(), keep))
+    obj["LateCuts"] = [[list(a0), list(n), keep] for a0, n, keep in cuts]
     if spec.get("mirror"):
         obj.data.flip_normals()
     for i, m in enumerate(list(obj.data.materials)):
@@ -310,9 +337,39 @@ def place_addon(spec, gi, byName, glbDir):
     return obj
 
 
+def late_cut(obj):
+    """place_addon이 미뤄 둔 자르기(LateCuts = [점, 법선, keep]) - 감량된 복셀 메시에 적용 · 자른 구멍(고리 하나)은 막는다"""
+    cuts = obj.get("LateCuts")
+    if not cuts:
+        return
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    for p0, n, keep in cuts:
+        p0, n = Vector(p0), Vector(n)
+        dead = [f for f in bm.faces if ((f.calc_center_median() - p0).dot(n) < 0) != (keep == "<")]
+        bmesh.ops.delete(bm, geom=dead, context="FACES")
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+    bnd = [e for e in bm.edges if e.is_boundary]
+    if bnd:
+        res = bmesh.ops.holes_fill(bm, edges=bnd, sides=0)
+        bmesh.ops.triangulate(bm, faces=res.get("faces", []))
+    bm.to_mesh(obj.data)
+    bm.free()
+    del obj["LateCuts"]
+    print("[KIT] 늦은 자르기 %s · 삼각형 %d" % (obj.name, tris(obj)))
+
+
 def voxel_remesh(obj, size):
     """복셀 리메시(재질 · UV는 사라짐 - 색은 굽기 원본에서) · 재질 1번 슬롯 유지(부품 표식 FORCE__ 재질 이름이 남아야 한다)"""
     t0 = tris(obj)
+    # BOSS-NIGHT-2: 열린 껍데기(자른 팔꿈치 관 · 얇은 판)를 먼저 막는다 - 열린 채 복셀화하면 겹벽 · 구멍(건틀릿이 속이 비친 껍데기로 보였다)
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    bnd = [e for e in bm.edges if e.is_boundary]
+    if bnd:
+        bmesh.ops.holes_fill(bm, edges=bnd, sides=0)
+        bm.to_mesh(obj.data)
+    bm.free()
     mats = list(obj.data.materials)
     bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
@@ -877,6 +934,7 @@ def main():
             if spec.get("voxel"):
                 voxel_remesh(a, spec["voxel"])
                 decimate(a, 4 * max(sum(partTris0.get(n, 500) for n in spec["parts"]), 1000))
+                late_cut(a)
             bpy.ops.object.select_all(action="DESELECT")
             src.select_set(True)
             a.select_set(True)

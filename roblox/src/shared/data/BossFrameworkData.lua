@@ -147,10 +147,42 @@ D.v3 = {
 	storm_lord = {
 		hideFloor = { swipe = true, innerSmash = true, basic = true, innerRing = true },
 		windup = { seconds = 0.12, skills = { swipe = true, innerSmash = true }, basic = true },
-		glow = { color = Color3.fromRGB(255, 225, 90), fillPeak = 0.55, outline = 0.35, skills = { swipe = true, innerSmash = true, discharge = true, thunderRing = true, strike = true, boltSpear = true, tornado = true }, basic = true,
+		glow = { color = Color3.fromRGB(255, 225, 90), fillPeak = 0.55, outline = 0.35, skills = { swipe = true, innerSmash = true, discharge = true, thunderRing = true, strike = true, boltSpear = true, tornado = true, swordWave = true, stormOrbs = true }, basic = true,
 			basicParts = { R = "Hand_R", L = "Hand_L" } },
 		marks = { color = LAVENDER, crackColor = Color3.fromRGB(160, 90, 255), transparency = 0.6, crackTransparency = 0.25, crackWidth = 0.35 },
-		transformGuard = { hpBelow = 0.5, seconds = 2.8 },
+		-- BOSS-NIGHT-2 2-2(사용자: 아이언맨식 변신): 무적 2.8 → 3.5초. 돌풍 환경(50% + 3초)은 데이터 그대로라 무적 끝 0.5초 전에 시작한다(보스 쪽 무적이라 플레이어 손해 없음).
+		--   클라 조립 연출(BossClipSetData storm_lord_v2.transform.assemble)은 3.0초 안에 끝난다(돌풍 시작 전에 번개 폭발 · 떠오름)
+		transformGuard = { hpBelow = 0.5, seconds = 3.5 },
+		-- BOSS-NIGHT-2 2-6 · 2-8 새 원거리 반응 스킬(전역 쿨 무시 · 대상이 30 stud 밖 1.5초): 1폼 = 검기(체력 > 50%) · 2폼 = 유도 전류 구슬(체력 ≤ 50%)
+		reactiveOrder = { "swordWave", "stormOrbs" },
+		skills = {
+			-- 검기: 무기 번개 발광 예비 0.5초 → 지면 높이 초승달 칼날(폭 넓음 · 점프로 넘김 가능 높이 4) · 피해 = 기본 × (1 + 0.6 × 비행 거리 ÷ 최대 거리)(최대 × 1.6)
+			--   기본 피해 · 쿨 = 가장 비슷한 기존 원거리 기술 뇌격 창(boltSpear - 직선 투사체 × 1.6 · 쿨 12초) · 최대 거리 = 속도 45 × 수명 2.6 = 117 stud
+			swordWave = {
+				primitive = "projectile", bubble = "overcharge", motion = "staff", projectileStyle = "crescent", reactive = true,
+				conditions = { { type = "targetBeyondFor", studs = 30, seconds = 1.5 }, { type = "hpAbove", value = 0.5 } },
+				cooldownSeconds = 12, priority = 0,
+				telegraphSeconds = 0.5, count = 1, spreadDeg = 0, launchIntervalSeconds = 0,
+				speedStuds = 45, turnRateDeg = 0, radiusStuds = 5, lifetimeSeconds = 2.6, heightMode = "ground", groundHitHeightStuds = 4, pierce = true,
+				targetRule = "target", leadSeconds = 0.6, leadFraction = 0.5, reflectable = false,
+				distanceDamage = { perMax = 0.6, maxStuds = 117 },
+				damage = { kind = "attack", multiplier = 1.6 }, damageLabel = "검기",
+			},
+			-- 유도 전류 구슬: 30 stud 밖 멤버 전원에게 1개씩(최대 4) · 2.5초 유도(회전 각속도 70°/초 - 급회전 불가) 뒤 직진 · 피해 중간
+			--   기본 피해 · 쿨 = 가장 비슷한 기존 유도 투사체 회오리 이동(tornado - × 1.4 · 쿨 14초) · 메시 = 구름 보주 슬롯(StormOrb · 1,500삼각형) 풀
+			stormOrbs = {
+				primitive = "projectile", bubble = "overcharge", motion = "fist", projectileStyle = "stormOrb", reactive = true,
+				conditions = { { type = "targetBeyondFor", studs = 30, seconds = 1.5 }, { type = "hpBelow", value = 0.5 } },
+				cooldownSeconds = 14, priority = 0,
+				telegraphSeconds = 0.7, count = 1, spreadDeg = 0, launchIntervalSeconds = 0,
+				speedStuds = 26, turnRateDeg = 70, homingSeconds = 2.5, radiusStuds = 2.5, lifetimeSeconds = 6, heightMode = "air", launchHeightStuds = 6,
+				targetRule = "beyond", beyondStuds = 30, maxTargets = 4, reflectable = true,
+				damage = { kind = "attack", multiplier = 1.4 }, damageLabel = "전류 구슬",
+			},
+		},
+		-- BossDifficultySim 가정: 원거리가 30 stud 밖에 있는 비율 · 명중(처음 · 두 번째부터) · 검기 평균 거리 배율(약 50 stud = × 1.26)
+		sim = { rangedFarShare = 0.25, meleeFarShare = 0.08, farSegmentSeconds = 3,
+			hit = { swordWave = { first = 0.5, later = 0.3, damageScale = 1.26, keepFar = true }, stormOrbs = { first = 0.55, later = 0.35, keepFar = true } } },
 	},
 	-- BOSS-NIGHT-1 3 나가(바이블 §2-3): 근접 규칙(강화 평타 · 평타 바닥 표시 없음 · 예비 +0.12 · 삼지창 · 꼬리 청록 발광) - 꼬리 휩쓸기 · 꼬리 반원(큰 범위 · 점프)은 바닥 표시 유지 · 스킬표 무변경
 	abyssal_lord = {

@@ -861,10 +861,18 @@ do
 	local FIST_GUARD = { Shoulder_R = { 40, 0, -10 }, Elbow_R = { 95, 0, 0 }, Shoulder_L = { 40, 0, 10 }, Elbow_L = { 95, 0, 0 }, Waist = { -6, 0, 0 }, Neck = { 4, 0, 0 },
 		Hip_L = { 14, 0, -4 }, Knee_L = { -34, 0, 0 }, Ankle_L = { 30, 0, 0 }, Hip_R = { 6, 0, 4 }, Knee_R = { -18, 0, 0 }, Ankle_R = { 26, 0, 0 },
 		Wing_L1 = { 0, -12, 6 }, Wing_R1 = { 0, 12, -6 } }
-	local STAFF_UP = merge(STAFF_HOLD, { Shoulder_R = { 165, 0, -12 }, Elbow_R = { 12, 0, 0 }, Wrist_R = { -10, 0, 0 }, Waist = { 10, 0, 0 }, Neck = { 14, 0, 0 } }, cape(-12))
-	local STAFF_SLAM = merge(crouch(0.25, 8), { Shoulder_R = { 55, 0, -18 }, Elbow_R = { 20, 0, 0 }, Wrist_R = { -55, 0, 0 }, Waist = { -18, 0, 0 }, Neck = { -6, 0, 0 } }, cape(10))
+	-- BOSS-NIGHT-2 2-1(사용자: 첫 대면 때 무기를 거꾸로 듦): 팔을 머리 위로 들면 손목 기준 지팡이가 뒤집혀 보주가 아래(FK 세로 −0.98) → 지팡이 관절을 쥔 자리 기준 180° 돌림(그립 반전 - 보주가 위 · 드는 동안 지팡이가 반 바퀴 돈다)
+	local GRIP_FLIP = { Staff = { 180, 0, 0 } }
+	-- BOSS-NIGHT-2(사용자: 실제 싸움처럼): 2폼 전투 준비 = 낮게 떠서 권투 자세(오른 주먹 앞 · 왼 주먹 턱 앞 · 몸 살짝 틀기 · 앞무릎 들기) - forms.after.guard · 떠 있기는 낮고 빠르게 통통
+	local FIGHT = merge(FIST_GUARD, { RootJoint = { 2, 0, 0, 0, -0.25, 0 }, Waist = { -4, 18, 0 }, Neck = { 4, -14, 0 }, Shoulder_R = { 58, 0, -12 }, Elbow_R = { 72, 0, 0 },
+		Shoulder_L = { 36, 0, 16 }, Elbow_L = { 118, 0, 0 }, Hip_L = { 34, 0, -4 }, Knee_L = { -58, 0, 0 }, Ankle_L = { 26, 0, 0 }, Hip_R = { -14, 0, 4 }, Knee_R = { -34, 0, 0 }, Ankle_R = { 20, 0, 0 } })
+	local STAFF_UP = merge(STAFF_HOLD, { Shoulder_R = { 165, 0, -12 }, Elbow_R = { 12, 0, 0 }, Wrist_R = { -10, 0, 0 }, Waist = { 10, 0, 0 }, Neck = { 14, 0, 0 } }, cape(-12), GRIP_FLIP)
+	local STAFF_SLAM = merge(crouch(0.25, 8), { Shoulder_R = { 55, 0, -18 }, Elbow_R = { 20, 0, 0 }, Wrist_R = { -55, 0, 0 }, Waist = { -18, 0, 0 }, Neck = { -6, 0, 0 } }, cape(10), GRIP_FLIP) -- 그립 반전 유지(드는 자세 ↔ 찍기 사이에 지팡이가 반 바퀴 돌지 않게 - 보주 쪽으로 땅을 찍음)
 	local FISTS_UP = merge(FIST_GUARD, { Shoulder_R = { 165, 0, -15 }, Elbow_R = { 20, 0, 0 }, Shoulder_L = { 165, 0, 15 }, Elbow_L = { 20, 0, 0 }, Waist = { 12, 0, 0 }, Neck = { 14, 0, 0 }, Wing_L1 = { 0, -25, 14 }, Wing_R1 = { 0, 25, -14 } })
-	local FISTS_DOWN = merge(FIST_GUARD, { Shoulder_R = { 30, 0, -8 }, Elbow_R = { 10, 0, 0 }, Shoulder_L = { 30, 0, 8 }, Elbow_L = { 10, 0, 0 }, Waist = { -26, 0, 0 }, Neck = { -12, 0, 0 }, RootJoint = { 10, 0, 0, 0, -0.35, 0 } })
+	-- BOSS-NIGHT-2 2-7 · 3(근접 높이 규칙 §13 · 사용자: 높이 뜬 채 내리치니 앞으로 너무 쏠림 → 실제 싸움처럼): 2폼은 주먹을 칠 때 내려앉아 쭈그리며(다리 = 지면 위 약 1.8 stud)
+	--   몸은 20°만 숙이고 사선 아래로 뻗는다 → 주먹 끝 = 지면 위 약 8 stud(FK) · 끝에서 지면까지 번개(impacts bolt) + 바닥 충격 원
+	local SQUAT = { Hip_L = { 90, 0, -6 }, Knee_L = { -140, 0, 0 }, Ankle_L = { 56, 0, 0 }, Hip_R = { 40, 0, 6 }, Knee_R = { -120, 0, 0 }, Ankle_R = { 42, 0, 0 } }
+	local FISTS_DOWN = merge(FIST_GUARD, SQUAT, { Shoulder_R = { 32, 0, -8 }, Elbow_R = { 4, 0, 0 }, Shoulder_L = { 32, 0, 8 }, Elbow_L = { 4, 0, 0 }, Waist = { -16, 0, 0 }, Neck = { 12, 0, 0 }, RootJoint = { -14, 0, 0, 0, -1.2, 0 } })
 	local PUNCH_R = merge(FIST_GUARD, { Waist = { -6, -30, 0 }, Shoulder_R = { 88, 0, -4 }, Elbow_R = { 4, 0, 0 }, Neck = { 0, 20, 0 } })
 	local PUNCH_L = merge(FIST_GUARD, { Waist = { -6, 30, 0 }, Shoulder_L = { 88, 0, 4 }, Elbow_L = { 4, 0, 0 }, Neck = { 0, -20, 0 } })
 	local WIND_R = merge(FIST_GUARD, { Waist = { 0, 34, 0 }, Shoulder_R = { 40, 0, -50 }, Elbow_R = { 110, 0, 0 }, Neck = { 0, -16, 0 } })
@@ -873,18 +881,25 @@ do
 	local C = {}
 	-- ── 1폼(지팡이) ──
 	-- 방전 고리 discharge · 천둥 고리 thunderRing: 지팡이를 높이 → 땅 찍기(천둥 = 3번)
+	-- BOSS-NIGHT-2 2-4(사용자: 방전 때 앞치마는 가만 · 상체만 으쓱): 골반(RootJoint)도 같이 젖혔다 숙이고 로브 앞/뒤가 허리 동작을 따라 늦게 흔들림
+	local function robe(f, b)
+		return { RobeF = { f, 0, 0 }, RobeB = { b, 0, 0 } }
+	end
 	C.s_discharge = {
-		pre = { { f = 0.45, ease = "inout", pose = STAFF_UP }, { f = 1.0, ease = "in", pose = merge(STAFF_UP, { Shoulder_R = { 172, 0, -8 }, RootJoint = { -4, 0, 0, 0, 0.05, 0 } }) } },
-		post = { { s = 0.08, ease = "in", pose = STAFF_SLAM }, { s = 0.4, ease = "out", pose = merge(STAFF_SLAM, { Waist = { -22, 0, 0 } }) }, { s = 1.2, ease = "inout", pose = REST_POSE } },
+		pre = { { f = 0.45, ease = "inout", pose = merge(STAFF_UP, robe(-10, 8), { RootJoint = { -6, 0, 0, 0, 0.08, 0.05 } }) },
+			{ f = 1.0, ease = "in", pose = merge(STAFF_UP, robe(-14, 12), { Shoulder_R = { 172, 0, -8 }, RootJoint = { -9, 0, 0, 0, 0.12, 0.07 } }) } },
+		post = { { s = 0.08, ease = "in", pose = merge(STAFF_SLAM, robe(18, -6), { RootJoint = { 14, 0, 0, 0, -0.3, -0.05 } }) }, { s = 0.25, ease = "out", pose = merge(STAFF_SLAM, robe(26, -12), { Waist = { -20, 0, 0 }, RootJoint = { 16, 0, 0, 0, -0.32, -0.06 } }) },
+			{ s = 0.55, ease = "inout", pose = merge(STAFF_SLAM, robe(8, -2), { Waist = { -22, 0, 0 } }) }, { s = 1.2, ease = "inout", pose = REST_POSE } },
 		hitstop = 0.07, squash = 0.2,
 	}
+	local STAFF_REUP = merge(STAFF_UP, { Shoulder_R = { 135, 0, -14 }, Elbow_R = { 30, 0, 0 }, Waist = { 4, 0, 0 } })
 	C.s_thunder = {
 		pre = { { f = 0.5, ease = "inout", pose = STAFF_UP }, { f = 1.0, ease = "in", pose = merge(STAFF_UP, { Shoulder_R = { 172, 0, -8 } }) } },
 		post = {
-			{ s = 0.08, ease = "in", pose = STAFF_SLAM }, { s = 0.9, ease = "inout", pose = STAFF_UP }, { s = 1.6, ease = "in", pose = STAFF_SLAM },
-			{ s = 2.5, ease = "inout", pose = STAFF_UP }, { s = 3.2, ease = "in", pose = STAFF_SLAM }, { s = 4.1, ease = "inout", pose = REST_POSE },
+			{ s = 0.08, ease = "in", pose = STAFF_SLAM }, { s = 0.9, ease = "inout", pose = STAFF_REUP }, { s = 1.6, ease = "in", pose = STAFF_SLAM },
+			{ s = 2.5, ease = "inout", pose = STAFF_REUP }, { s = 3.2, ease = "in", pose = STAFF_SLAM }, { s = 4.1, ease = "inout", pose = REST_POSE }, -- BOSS-NIGHT-2: 다시 드는 높이 낮춤(그립 반전으로 보주 호가 커져 급정지 = 튐)
 		},
-		hitstop = 0.07, squash = 0.2, extraStrikes = { post = { 1.6, 3.2 } },
+		hitstop = 0.07, squash = 0.2, extraStrikes = { post = { 1.6, 3.2 } }, endFade = 0.8, -- 스킬이 클립 중간에 끝나면 그립 반전 지팡이가 기본 자세로 천천히
 	}
 	-- 회오리 whirl: 망토를 펼치고 한 바퀴 돈다(지팡이 수평)
 	local WHIRL = merge(STAFF_HOLD, { Shoulder_R = { 85, 0, -70 }, Elbow_R = { 5, 0, 0 }, Wrist_R = { 0, 0, -80 }, Shoulder_L = { 80, 0, 70 }, Elbow_L = { 5, 0, 0 } }, cape(-35, 25))
@@ -908,12 +923,19 @@ do
 		tremble = { from = 0.2, amp = 2, joints = { "Shoulder_R" } },
 	}
 	-- 강화 평타 swipe: 지팡이를 뒤로 감아 → 가로로 크게 휘두름(지팡이 번쩍)
+	-- BOSS-NIGHT-2 2-5 · 3(근접 높이 규칙 §13): 지팡이를 오른쪽 뒤 위로 감았다가 → 앞을 가로질러 왼쪽 아래로 비스듬히 쓸기(보주가 지면 ~ 플레이어 키 높이를 지나감)
+	local SWING_UP = merge(STAFF_HOLD, crouch(0.1), { Waist = { 8, 40, 0 }, Shoulder_R = { 150, 0, -50 }, Elbow_R = { 30, 0, 0 }, Wrist_R = { -20, 0, 0 }, Neck = { 0, -20, 0 } }, GRIP_FLIP)
+	local SWING_LOW = merge(STAFF_HOLD, crouch(0.3, 10), { Waist = { -35, -36, 0 }, Shoulder_R = { 40, 0, -50 }, Elbow_R = { 0, 0, 0 }, Wrist_R = { 0, 0, -30 }, Neck = { -8, 22, 0 } }, GRIP_FLIP, cape(10, 18)) -- 접촉: 보주 = 몸 앞 지면 위 약 4.6 stud(FK)
 	C.s_swipe = {
-		pre = { { f = 0.45, ease = "inout", pose = merge(STAFF_HOLD, { Waist = { 0, 36, 0 }, Shoulder_R = { 70, 0, -70 }, Elbow_R = { 30, 0, 0 }, Neck = { 0, -20, 0 } }) },
-			{ f = 1.0, ease = "out", pose = merge(STAFF_HOLD, { Waist = { 0, 44, 0 }, Shoulder_R = { 72, 0, -78 }, Elbow_R = { 34, 0, 0 }, Neck = { 0, -24, 0 } }) } },
-		post = { { s = 0.08, ease = "out", pose = merge(STAFF_HOLD, { Waist = { 0, -40, 0 }, Shoulder_R = { 85, 0, 30 }, Elbow_R = { 8, 0, 0 }, Wrist_R = { 0, 0, -70 }, Neck = { 0, 22, 0 } }, cape(0, 18)) },
-			{ s = 0.26, ease = "back", pose = merge(STAFF_HOLD, { Waist = { 0, -46, 0 }, Shoulder_R = { 85, 0, 38 }, Elbow_R = { 6, 0, 0 }, Wrist_R = { 0, 0, -70 } }) }, { s = 0.95, ease = "inout", pose = REST_POSE } },
+		pre = { { f = 0.45, ease = "inout", pose = merge(SWING_UP, { Shoulder_R = { 140, 0, -45 } }) }, { f = 1.0, ease = "out", pose = SWING_UP } },
+		post = { { s = 0.08, ease = "out", pose = SWING_LOW }, { s = 0.26, ease = "back", pose = merge(SWING_LOW, { Waist = { -36, -44, 0 }, Shoulder_R = { 36, 0, -44 } }) }, { s = 0.95, ease = "inout", pose = REST_POSE } },
 		hitstop = 0.06, tremble = { from = 0.6, amp = 3, joints = { "Shoulder_R" } },
+	}
+	-- BOSS-NIGHT-2 2-6 검기 swordWave(1폼 원거리 반응 · 예비 0.5초 = 무기 번개 발광): 짧게 감았다가 같은 낮은 사선 쓸기로 초승달 칼날을 바닥으로 날림
+	C.s_wave = {
+		pre = { { f = 1.0, ease = "inout", pose = SWING_UP } },
+		post = { { s = 0.07, ease = "out", pose = SWING_LOW }, { s = 0.25, ease = "back", pose = merge(SWING_LOW, { Waist = { -36, -46, 0 } }) }, { s = 0.9, ease = "inout", pose = REST_POSE } },
+		hitstop = 0.05,
 	}
 	-- 회오리 이동 tornado: 지팡이를 머리 위에서 돌려 → 앞으로 내밀어 보냄
 	C.s_tornado = {
@@ -977,10 +999,28 @@ do
 		loop = { period = 0.4, poses = { FIST_POINT, merge(FIST_POINT, { Shoulder_R = { 104, 0, -4 }, Waist = { 4, 4, 0 } }) } },
 		tremble = { from = 0.2, amp = 2, joints = { "Shoulder_R" } },
 	}
-	C.f_swipe = { -- 오른 훅(주먹 번쩍)
-		pre = { { f = 0.45, ease = "inout", pose = WIND_R }, { f = 1.0, ease = "out", pose = merge(WIND_R, { Waist = { 0, 42, 0 } }) } },
-		post = { { s = 0.08, ease = "out", pose = merge(PUNCH_R, { Waist = { -6, -40, 0 } }) }, { s = 0.26, ease = "back", pose = merge(PUNCH_R, { Waist = { -6, -46, 0 } }) }, { s = 0.95, ease = "inout", pose = REST_POSE } },
-		hitstop = 0.06, tremble = { from = 0.6, amp = 3, joints = { "Shoulder_R", "Elbow_R" } },
+	-- BOSS-NIGHT-2 2-7 2폼 강화 평타 = 살짝 떠올라 오른 주먹을 뒤로 당겼다가 → 내려앉으며 체중을 실어 사선 아래로 "번개 주먹"(대상 지점 지면 강타 + 작은 충격 원)
+	local FIST_HIGH_R = merge(FIST_GUARD, { RootJoint = { 4, 0, 0, 0, 0.75, 0 }, Waist = { 6, 30, 0 }, Shoulder_R = { 120, 0, -35 }, Elbow_R = { 100, 0, 0 }, Shoulder_L = { 50, 0, 20 }, Elbow_L = { 110, 0, 0 }, Neck = { 6, -18, 0 } })
+	local DIVE_PUNCH_R = merge(FIST_GUARD, SQUAT, { RootJoint = { -14, 0, 0, 0, -1.2, 0 }, Waist = { -16, -28, 0 }, Shoulder_R = { 30, 0, -10 }, Elbow_R = { 4, 0, 0 }, Shoulder_L = { 45, 0, 18 }, Elbow_L = { 110, 0, 0 }, Neck = { 10, 22, 0 } })
+	C.f_swipe = {
+		pre = { { f = 0.45, ease = "inout", pose = merge(FIST_HIGH_R, { Shoulder_R = { 150, 0, -24 } }) }, { f = 1.0, ease = "out", pose = FIST_HIGH_R } },
+		post = { { s = 0.08, ease = "in", pose = DIVE_PUNCH_R }, { s = 0.28, ease = "back", pose = merge(DIVE_PUNCH_R, { Waist = { -34, -22, 0 } }) }, { s = 1.0, ease = "inout", pose = REST_POSE } },
+		hitstop = 0.07, squash = 0.12, tremble = { from = 0.6, amp = 3, joints = { "Shoulder_R", "Elbow_R" } },
+		endFade = 0.7, -- Studio 실측: 동작이 접촉 + 0.1초에 끝나 내리꽂은 자세가 0.15초 만에 풀렸다 → 쭈그린 타격 자세를 천천히 푼다(보이기만)
+	}
+	-- 2폼 평타 = 좌/우 교대 작은 내리꽂기(forms.after.basicClips)
+	local jabR = { post = { { s = 0.07, ease = "in", pose = merge(FIGHT, { RootJoint = { -8, 0, 0, 0, -0.35, 0 }, Waist = { -10, -22, 0 }, Shoulder_R = { 48, 0, -8 }, Elbow_R = { 6, 0, 0 } }) },
+		{ s = 0.17, ease = "back", pose = merge(FIGHT, { RootJoint = { -9, 0, 0, 0, -0.38, 0 }, Waist = { -11, -24, 0 }, Shoulder_R = { 44, 0, -8 }, Elbow_R = { 8, 0, 0 } }) }, { s = 0.6, ease = "inout", pose = REST_POSE } }, hitstop = 0.05 }
+	C.f_basic_R = jabR
+	C.f_basic_L = { post = { { s = 0.07, ease = "in", pose = mirror(jabR.post[1].pose) }, { s = 0.17, ease = "back", pose = mirror(jabR.post[2].pose) }, { s = 0.6, ease = "inout", pose = REST_POSE } }, hitstop = 0.05 }
+	local fprepR = merge(FIST_GUARD, { Waist = { 8, 18, 0 }, Shoulder_R = { 130, 0, -20 }, Elbow_R = { 80, 0, 0 } })
+	-- BOSS-NIGHT-2 2-8 유도 전류 구슬 stormOrbs(2폼 원거리 반응): 두 팔을 넓게 벌려 주먹에 전류를 모았다가 → 앞으로 내밀어 구슬을 날림
+	local ORB_CALL = merge(FIST_GUARD, { Shoulder_R = { 70, 0, -75 }, Elbow_R = { 30, 0, 0 }, Shoulder_L = { 70, 0, 75 }, Elbow_L = { 30, 0, 0 }, Waist = { 10, 0, 0 }, Neck = { 12, 0, 0 }, Wing_L1 = { 0, -25, 14 }, Wing_R1 = { 0, 25, -14 } })
+	local ORB_PUSH = merge(FIST_GUARD, { Shoulder_R = { 95, 0, -12 }, Elbow_R = { 0, 0, 0 }, Shoulder_L = { 95, 0, 12 }, Elbow_L = { 0, 0, 0 }, Waist = { -10, 0, 0 } })
+	C.f_orbs = {
+		pre = { { f = 1.0, ease = "inout", pose = ORB_CALL } },
+		post = { { s = 0.08, ease = "out", pose = ORB_PUSH }, { s = 0.3, ease = "back", pose = merge(ORB_PUSH, { Waist = { -12, 0, 0 } }) }, { s = 1.0, ease = "inout", pose = REST_POSE } },
+		hitstop = 0.05,
 	}
 	C.f_tornado = {
 		pre = { { f = 0.35, ease = "inout", pose = WIND_R }, { f = 0.7, ease = "inout", pose = WIND_L }, { f = 1.0, ease = "inout", pose = WIND_R } },
@@ -1034,15 +1074,21 @@ do
 		loop = { period = 0.18, poses = { ROAR, merge(ROAR, { Neck = { 26, 0, 2 } }) } } }
 	-- 50% 변신: 지팡이 수평 → 망토가 펼쳐지며 떠오름 → (switchAt) 2폼 부품이 바깥에서 날아와 붙음 → 주먹 자세
 	local LEVEL = merge(STAFF_HOLD, { Shoulder_R = { 90, 0, -40 }, Elbow_R = { 20, 0, 0 }, Wrist_R = { 0, 0, -75 }, Shoulder_L = { 80, 0, 50 }, Elbow_L = { 30, 0, 0 }, Neck = { 16, 0, 0 } }, cape(-60, 40))
-	local FLY = { Crown = { 0, 0, 0, 0, 2.2, 0 }, ChestCore = { 0, 0, 0, 0, 0.2, -1.6 }, Pauldron2_L = { 0, 0, 0, -1.4, 0.8, 0 }, Pauldron2_R = { 0, 0, 0, 1.4, 0.8, 0 },
-		Gauntlet_L = { 0, 0, 0, -1.4, -0.4, -0.6 }, Gauntlet_R = { 0, 0, 0, 1.4, -0.4, -0.6 }, Wing_L1 = { 0, 0, 0, -1.6, 0.4, 1.2 }, Wing_R1 = { 0, 0, 0, 1.6, 0.4, 1.2 } }
+	-- BOSS-NIGHT-2 2-2(사용자: 아이언맨처럼 · 붙기 전 감속 + 철컥 · 그동안 팔을 크게 벌려 맞이): 0.3초 웅크림 → 세트 교체(switchAt 0.3) → 팔을 크게 벌리고 가슴을 펴 버팀
+	--   (부품 = 클라 BossFormFxView가 보스 뒤 70 stud · 위 25 stud에서 번개 꼬리를 달고 날려 transform.assemble 시각에 붙임 - 빠르게 오다 끝에서 감속) → 날개 펼침 → 번개 폭발 + 떠오름
+	local WELCOME = merge(FIST_GUARD, { Shoulder_R = { 30, 0, 72 }, Elbow_R = { 18, 0, 0 }, Shoulder_L = { 30, 0, -72 }, Elbow_L = { 18, 0, 0 }, Waist = { 10, 0, 0 }, Neck = { 16, 0, 0 },
+		RootJoint = { 6, 0, 0, 0, 0.35, 0 }, Wing_L1 = { 0, 70, 0 }, Wing_R1 = { 0, -70, 0 }, Wing_L2 = { 0, 50, 0 }, Wing_R2 = { 0, -50, 0 } }) -- 날개는 접힌 채(망토처럼) - 마지막에 펼침
+	local WINGS_OPEN = merge(WELCOME, { RootJoint = { -4, 0, 0, 0, 1.0, 0 }, Neck = { 18, 0, 0 }, Wing_L1 = { 0, -30, 20 }, Wing_R1 = { 0, 30, -20 }, Wing_L2 = { 0, -12, 10 }, Wing_R2 = { 0, 12, -10 } })
 	C.s_transform = {
-		pre = { { f = 0.4, ease = "inout", pose = merge(crouch(0.2), LEVEL) }, { f = 1.0, ease = "out", pose = merge(LEVEL, { RootJoint = { -6, 0, 0, 0, 0.5, 0 } }) } },
+		pre = { { f = 1.0, ease = "inout", pose = merge(crouch(0.3, 10), STAFF_HOLD, { Waist = { -20, 0, 0 }, Neck = { -12, 0, 0 } }) } },
 		post = {
-			{ s = 0.25, ease = "out", pose = merge(LEVEL, { RootJoint = { -6, 0, 0, 0, 0.7, 0 } }, cape(-70, 50)) },
-			{ s = 0.32, ease = "out", pose = merge(FIST_GUARD, { RootJoint = { -4, 0, 0, 0, 0.7, 0 } }, FLY) }, -- 세트 교체(switchAt 1.3) 직후: 2폼 부품이 바깥에
-			{ s = 1.1, ease = "out", pose = merge(FISTS_UP, { RootJoint = { -4, 0, 0, 0, 0.75, 0 } }) }, -- 날아와 붙음(관절 이동 0)
-			{ s = 1.7, ease = "inout", pose = REST_POSE },
+			{ s = 0.25, ease = "out", pose = WELCOME },
+			{ s = 0.95, ease = "inout", pose = merge(WELCOME, { Waist = { 12, 0, 0 }, RootJoint = { 6, 0, 0, 0, 0.42, 0 } }) },
+			{ s = 1.65, ease = "inout", pose = merge(WELCOME, { Waist = { 14, 0, 0 }, Neck = { 20, 0, 0 }, RootJoint = { 7, 0, 0, 0, 0.48, 0 } }) },
+			{ s = 2.1, ease = "inout", pose = merge(WELCOME, { Neck = { 22, 0, 0 } }) },
+			{ s = 2.35, ease = "inout", pose = merge(WELCOME, { Wing_L1 = { 0, 20, 8 }, Wing_R1 = { 0, -20, -8 }, Wing_L2 = { 0, 20, 4 }, Wing_R2 = { 0, -20, -4 }, RootJoint = { 2, 0, 0, 0, 0.7, 0 } }) },
+			{ s = 2.6, ease = "inout", pose = WINGS_OPEN }, -- 망토 → 날개 펼침(두 단계) + 번개 폭발 + 떠오름(assemble.burst)
+			{ s = 3.1, ease = "inout", pose = REST_POSE },
 		},
 		hitstop = 0.06, align = false,
 	}
@@ -1072,9 +1118,9 @@ do
 	}
 
 	local SK1 = { discharge = "s_discharge", whirl = "s_whirl", strike = "s_strike", rods = "s_rods", swipe = "s_swipe", grab = "@grab", tornado = "s_tornado", thunderRing = "s_thunder",
-		boltSpear = "s_bolt", mirror = "s_mirror", innerSmash = "s_inner" }
+		boltSpear = "s_bolt", mirror = "s_mirror", innerSmash = "s_inner", swordWave = "s_wave", stormOrbs = "f_orbs" }
 	local SK2 = { discharge = "f_discharge", whirl = "f_whirl", strike = "f_strike", rods = "f_rods", swipe = "f_swipe", grab = "@grab", tornado = "f_tornado", thunderRing = "f_thunder",
-		boltSpear = "f_bolt", mirror = "f_mirror", innerSmash = "f_inner" }
+		boltSpear = "f_bolt", mirror = "f_mirror", innerSmash = "f_inner", swordWave = "s_wave", stormOrbs = "f_orbs" }
 	local MOTIONS1 = { idle = "gait", walk = "gait", intro = "plan:introCrouch", death = "plan:death", env = "f_env", flinch = "plan:flinch", stun = "plan:stun" }
 	local FORM1_PARTS = { "Crown", "ChestCore", "Pauldron2_L", "Pauldron2_R", "Gauntlet_L", "Gauntlet_R", "Wing_L1", "Wing_L2", "Wing_R1", "Wing_R2" } -- 1폼에서 숨김
 	local FORM2_PARTS = { "Plume", "LeftPauldron", "RightPauldron", "Forearm_L", "Forearm_R", "Hand_L", "Hand_R", "Staff", "StaffOrb" } -- 2폼에서 숨김
@@ -1095,23 +1141,40 @@ do
 				motions = MOTIONS1, skills = SK1, env = "f_env", throw = "s_throw",
 			},
 			after = {
-				gait = "hover", stance = FIST_GUARD, guard = FIST_GUARD, hover = { height = 0.7, bob = 0.08, period = 2.2 },
+				gait = "hover", stance = FIST_GUARD, guard = FIGHT, hover = { height = 0.55, bob = 0.1, period = 1.4 },
 				walk = { stride = 0.55, knee = 20, arm = 6, bob = 0.03, lean = 10 },
 				motions = MOTIONS1, skills = SK2, env = "f_env", throw = "s_throw",
 				-- 2폼 때리는 부위 = 건틀릿 주먹(지팡이 숨김)
 				flash = { discharge = FISTS, whirl = { "Wing_L2", "Wing_R2" }, strike = { "Gauntlet_R" }, rods = { "Gauntlet_R" }, swipe = { "Gauntlet_R" }, grab = { "Gauntlet_L" },
 					tornado = FISTS, thunderRing = FISTS, boltSpear = FISTS, mirror = { "Wing_L1", "Wing_R1" }, innerSmash = FISTS },
 				basicParts = { R = "Gauntlet_R", L = "Gauntlet_L" },
+				basicClips = { R = "f_basic_R", L = "f_basic_L" }, basicPrep = { R = fprepR, L = mirror(fprepR) }, -- BOSS-NIGHT-2 2-7: 좌/우 교대 내리꽂는 주먹
 			},
 		},
 		formParts = { before = FORM1_PARTS, after = FORM2_PARTS },
+		-- BOSS-NIGHT-2 2: 후광 at z 6.5 → −6.5(보이는 머리 부위의 +Z = 얼굴 쪽이라 고리가 얼굴 앞에 노란 막대로 보였다 - Studio 변신 촬영)
 		-- 2폼 후광(머리 뒤 고리 2개 반대 회전) · 허리 파편 · 구름 보주 3개(두 폼 - 공전) - 단위 stud(BossFormFxView)
 		formFx = {
-			halo = { form = "after", part = "Head", at = { 0, 2.0, 6.5 }, radius = { 5.5, 7.0 }, count = 10, thickness = 0.45, colors = { Color3.fromRGB(255, 225, 90), Color3.fromRGB(90, 210, 255) }, speeds = { 1.4, -1.0 } },
+			halo = { form = "after", part = "Head", at = { 0, 2.0, -6.5 }, radius = { 5.5, 7.0 }, count = 10, thickness = 0.45, colors = { Color3.fromRGB(255, 225, 90), Color3.fromRGB(90, 210, 255) }, speeds = { 1.4, -1.0 } },
 			shards = { form = "after", part = "Hips", radius = 6.5, count = 6, size = Vector3.new(0.7, 1.8, 0.7), color = Color3.fromRGB(90, 210, 255), speed = 0.9 },
 			orbs = { slot = "StormOrb", count = 3, radius = 19, height = { before = 12, after = 16 }, size = 3.6, speed = 0.45, bob = 1.0 },
 		},
-		transform = { clip = "s_transform", hit = 1.0, switchAt = 1.3, seconds = 2.8 },
+		-- BOSS-NIGHT-2 2-2: hit = 웅크림 끝(0.3) · switchAt = 그 순간 2폼 세트(부품은 날아오는 동안 BossFormFxView가 숨김 → assemble 시각에 붙음 - 1폼 부품은 짝이 붙을 때 사라짐)
+		--   assemble(초 = 변신 시작부터): 건틀릿 L → R → 어깨 L/R → 가슴 코어 → 왕관 → 날개(망토 4갈래 → 날개) · 비행 flySeconds(빠르게 → 끝에서 감속 easeOut) · 붙을 때 흰 번쩍 0.1 + 철컥 + 작은 흔들림
+		transform = { clip = "s_transform", hit = 0.3, switchAt = 0.3, seconds = 3.4,
+			assemble = {
+				fromStuds = 70, upStuds = 25, flySeconds = 0.55, flashSeconds = 0.1, sound = "protect_ticket", shake = 0.25, trailColor = Color3.fromRGB(255, 230, 90),
+				dropAt = 0.3, drop = { "Staff", "StaffOrb" }, -- 지팡이 = 웅크림 끝에 번개로 흩어짐
+				steps = {
+					{ at = 0.95, parts = { "Gauntlet_L" }, hide = { "Forearm_L", "Hand_L" } },
+					{ at = 1.3, parts = { "Gauntlet_R" }, hide = { "Forearm_R", "Hand_R" } },
+					{ at = 1.65, parts = { "Pauldron2_L", "Pauldron2_R" }, hide = { "LeftPauldron", "RightPauldron" } },
+					{ at = 2.0, parts = { "ChestCore" } },
+					{ at = 2.35, parts = { "Crown" }, hide = { "Plume" } },
+					{ at = 2.65, wings = true, hide = "cape" }, -- 날개는 몸에서 펼침(날아오지 않음) · 망토 4갈래 사라짐
+				},
+				burst = 2.85, -- 번개 폭발(떠오름 = 클립)
+			} },
 		intro = { style = "rise", depth = 1.6, riseFrac = 0.44, riseEase = "out" },
 		signature = { "discharge", "strike", "whirl", "thunderRing", "boltSpear", "tornado", "swipe", "innerSmash", "rods", "mirror" },
 		flash = {
@@ -1123,13 +1186,14 @@ do
 			s_whirl = { kind = "whoosh", parts = { "Staff" }, size = 1.2 }, s_strike = { kind = "spark", parts = { "StaffOrb" }, size = 1.0 }, s_rods = { kind = "spark", parts = { "StaffOrb" }, size = 0.8 },
 			s_swipe = { kind = "whoosh", parts = { "Staff" }, size = 1.1 }, s_tornado = { kind = "whoosh", parts = { "StaffOrb" }, size = 1.0 }, s_bolt = { kind = "spark", parts = { "Hand_L" }, size = 0.9 },
 			s_mirror = { kind = "spark", parts = { "Body" }, size = 1.0 }, s_inner = { kind = "ground", parts = { "Staff" }, size = 0.28, shake = 1.0, heavy = true },
-			f_discharge = { kind = "ground", parts = FISTS, size = 1.0, shake = 0.8 }, f_thunder = { kind = "ground", parts = FISTS, size = 1.0, shake = 0.8 },
+			f_discharge = { kind = "ground", parts = FISTS, size = 1.0, shake = 0.8, bolt = true }, f_thunder = { kind = "ground", parts = FISTS, size = 1.0, shake = 0.8, bolt = true },
 			f_whirl = { kind = "whoosh", parts = { "Wing_L2", "Wing_R2" }, size = 1.3 }, f_strike = { kind = "spark", parts = { "Gauntlet_R" }, size = 1.0 }, f_rods = { kind = "spark", parts = { "Gauntlet_R" }, size = 0.8 },
-			f_swipe = { kind = "whoosh", parts = { "Gauntlet_R" }, size = 1.1 }, f_tornado = { kind = "whoosh", parts = FISTS, size = 1.0 }, f_bolt = { kind = "spark", parts = FISTS, size = 0.9 },
-			f_mirror = { kind = "spark", parts = { "Wing_L1", "Wing_R1" }, size = 1.0 }, f_inner = { kind = "ground", parts = FISTS, size = 0.28, shake = 1.0, heavy = true },
+			f_swipe = { kind = "ground", parts = { "Gauntlet_R" }, size = 0.7, shake = 0.5, bolt = true }, f_tornado = { kind = "whoosh", parts = FISTS, size = 1.0 }, f_bolt = { kind = "spark", parts = FISTS, size = 0.9 },
+			f_mirror = { kind = "spark", parts = { "Wing_L1", "Wing_R1" }, size = 1.0 }, f_inner = { kind = "ground", parts = FISTS, size = 0.28, shake = 1.0, heavy = true, bolt = true },
 			f_env = { kind = "roar", parts = { "Body" }, size = 1.3, shake = 0.9 }, s_throw = { kind = "whoosh", parts = { "Hand_L" }, size = 1.0 },
 			s_transform = { kind = "roar", parts = { "Body" }, size = 1.3, shake = 0.9 }, roar = { kind = "roar", parts = { "Head" }, size = 1.0, shake = 0.7 },
 			basic_R = { kind = "whoosh", parts = { "Hand_R" }, size = 0.55 }, basic_L = { kind = "whoosh", parts = { "Hand_L" }, size = 0.55 },
+			s_wave = { kind = "whoosh", parts = { "StaffOrb" }, size = 1.2, floorDust = true }, f_orbs = { kind = "spark", parts = FISTS, size = 1.0 },
 		},
 		clips = C,
 	}

@@ -438,9 +438,11 @@ function BossDifficultySim.run(bossId, options)
 						-- BOSS-NIGHT-1 일반 반응 스킬(뒷발차기): 명중 = hit[id](처음 · 두 번째부터) · 피해 = 공격력 배율 ÷ 생존 타수 · 맞든 아니든 구간 끝(밀려남 · 비킴)
 						local h = v3sim.hit[j.reactive]
 						if rng() < (first and h.first or h.later) * hitScale then
-							damage(m, j.skill.damage.multiplier / surviveHits, nil, j.skill.damageLabel)
+							damage(m, j.skill.damage.multiplier * (h.damageScale or 1) / surviveHits, nil, j.skill.damageLabel) -- BOSS-NIGHT-2: damageScale = 검기 평균 거리 배율
 						end
-						behind, behindSince, behindUntil = false, nil, t
+						if not h.keepFar then -- BOSS-NIGHT-2: 원거리 반응 스킬(검기 · 전류 구슬)은 대상이 멀리 있는 구간을 끊지 않는다(뒷발차기 = 밀려나 구간 끝)
+							behind, behindSince, behindUntil = false, nil, t
+						end
 					end
 				elseif j.gateJudge then
 					armed = not j.solved

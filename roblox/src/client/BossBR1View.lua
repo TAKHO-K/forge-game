@@ -189,7 +189,10 @@ local STYLE = {
 	tornado = { shape = "cylinder", size = function(r) return Vector3.new(r * 3, r * 1.8, r * 1.8) end, transparency = 0.5, spin = true },
 	-- BR1-2 반사된 투사체(보스 판정 - 흰 테두리의 붉은 빛 창): 멀리서도 보이게 길고 밝다
 	reflected = { shape = "block", size = function(r) return Vector3.new(r * 0.8, r * 0.8, r * 3) end, material = Enum.Material.Neon, transparency = 0 },
+	-- BOSS-NIGHT-2 폭풍 1폼 검기: 판정 상자는 안 보임 - 지면에 선 초승달 Neon 호(p.crescent)
+	crescent = { shape = "block", size = function(r) return Vector3.new(r * 2, 0.6, 1) end, transparency = 1 },
 }
+local CRESCENT = { color = Color3.fromRGB(255, 225, 80), edge = Color3.fromRGB(90, 200, 255), segs = 9, spanDeg = 75, height = 1.8, thickness = 0.35 } -- Neon 색 = 가장 낮은 채널 ≤ 90
 
 local function playerByUserId(userId)
 	for _, p in ipairs(Players:GetPlayers()) do
@@ -207,6 +210,9 @@ function BossBR1View.projTelegraph(data)
 	end
 	if BossMeshShotView.has(data.style) then -- BOSS-NIGHT-1: 머리 위 조준 고리 없음 - 보스 상아 끝에서 얼음이 자란다(예비 동작 · 상아 발광)
 		BossMeshShotView.hold(data.center, data.seconds, data.style)
+		return
+	end
+	if data.style == "crescent" then -- BOSS-NIGHT-2 검기: 바닥 띠 · 머리 위 구체 없음 - 신호 = 예비 0.5초 무기 번개 발광(v3 glow)
 		return
 	end
 	local style = STYLE[data.style] or STYLE.orb
@@ -297,6 +303,16 @@ function BossBR1View.projSpawn(data)
 		t.nextStreak = 0
 		projectiles[data.id].tornado = t
 	end
+	if data.style == "crescent" then
+		local cr = { segs = {}, R = data.radius * 1.5, floorY = data.position.Y - data.radius * 0.6, nextSpark = 0 }
+		for k = 1, CRESCENT.segs do
+			local edge = k == 1 or k == CRESCENT.segs
+			local seg = newPart(Vector3.new(cr.R * 2 * math.sin(math.rad(CRESCENT.spanDeg) / CRESCENT.segs) * 1.15, CRESCENT.height * (edge and 0.6 or 1), CRESCENT.thickness), edge and CRESCENT.edge or CRESCENT.color, 0.05)
+			seg.Material = Enum.Material.Neon
+			cr.segs[k] = seg
+		end
+		projectiles[data.id].crescent = cr
+	end
 end
 
 function BossBR1View.projSync(data)
@@ -347,6 +363,11 @@ function BossBR1View.projEnd(data)
 			end
 			destroy(p.tornado.dust)
 			destroy(p.tornado.band)
+		end
+		if p.crescent then
+			for _, seg in ipairs(p.crescent.segs) do
+				destroy(seg)
+			end
 		end
 	end
 	for i = 1, 6 do
@@ -714,6 +735,27 @@ RunService.RenderStepped:Connect(function(dt)
 				cf = CFrame.new(p.position) * CFrame.Angles(0, os.clock() * 8, math.rad(90))
 			end
 			p.part.CFrame = cf
+		end
+		local cr = p.crescent
+		if cr then -- BOSS-NIGHT-2 검기: 진행 방향으로 볼록한 호(가운데가 앞) · 지면에 서서 날아감 · 가끔 번개 조각
+			local flat = Vector3.new(p.dir.X, 0, p.dir.Z)
+			flat = flat.Magnitude > 1e-3 and flat.Unit or Vector3.new(0, 0, -1)
+			local right = flat:Cross(Vector3.yAxis)
+			local base = Vector3.new(p.position.X, cr.floorY + CRESCENT.height * 0.5, p.position.Z)
+			local n = #cr.segs
+			for k = 1, n do
+				local a = math.rad(CRESCENT.spanDeg) * ((k - 0.5) / n * 2 - 1)
+				local at = base + flat * (cr.R * math.cos(a) - cr.R * 0.7) + right * (cr.R * math.sin(a))
+				local tangent = right * math.cos(a) - flat * math.sin(a)
+				cr.segs[k].CFrame = CFrame.fromMatrix(at, tangent, Vector3.yAxis)
+			end
+			cr.nextSpark -= dt
+			if cr.nextSpark <= 0 then
+				cr.nextSpark = 0.06
+				local a = math.rad(CRESCENT.spanDeg) * (math.random() * 2 - 1)
+				local at = base + flat * (cr.R * math.cos(a) - cr.R * 0.7) + right * (cr.R * math.sin(a))
+				BossFx.streak(at, -flat + Vector3.new(0, 0.4, 0), 2.5, 0.2, CRESCENT.color, 0.2, 8)
+			end
 		end
 		local t = p.tornado
 		if t then

@@ -165,6 +165,19 @@ function BossBodyFx.impact(e, clipName)
 		if at and f then
 			sum, n = sum + at, n + 1
 			f(e, at, spec.size or 1, not spec.heavy and spec.shake or nil) -- 무거운 땅 치기 = 흔들림은 아래 한 번(짧게)
+			if spec.bolt then -- BOSS-NIGHT-2 폭풍 2폼 번개 주먹: 주먹 끝 → 바로 아래 지면까지 지그재그 번개(주먹 궤적 끝 = 지면 · 충격 원은 ground가 그림)
+				local y = floorY(e)
+				local from, steps = at, 5
+				for k = 1, steps do
+					local u = k / steps
+					local to = Vector3.new(at.X + rnd(-0.6, 0.6) * e.S * (1 - u), at.Y + (y - at.Y) * u, at.Z + rnd(-0.6, 0.6) * e.S * (1 - u))
+					local seg = to - from
+					if seg.Magnitude > 1e-3 then
+						BossFx.streak(from, seg.Unit, seg.Magnitude, 0.18 * e.S, Color3.fromRGB(255, 220, 70), 0.18, 0) -- Neon 가장 낮은 채널 ≤ 90
+					end
+					from = to
+				end
+			end
 			if spec.floorDust then -- A2-M1 2차: 휩쓴 자리 바닥에 먼지 호(리뷰: 꼬리 궤적이 몸에 가려 안 읽힘)
 				local c = colorsOf(e)
 				local center = e.visPos or e.root.Position

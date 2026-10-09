@@ -82,6 +82,10 @@ return {
 		icetusk = { slot = "FrostIceTusk", lengthStuds = 16, spin = "roll", spinHz = 2.0, poolMax = 10, color = Color3.fromRGB(170, 225, 255), glow = Color3.fromRGB(90, 190, 255),
 			holdParts = { "Tusk_L", "Tusk_R" }, holdAt = 0.5, light = { brightness = 1.2, range = 8 },
 			shards = { count = 14, speed = { 14, 26 }, lifetime = { 0.35, 0.7 }, size = 0.9 }, trail = { lifetime = 0.22, width0 = 1.4, transparency0 = 0.25 } },
+		-- BOSS-NIGHT-2 2-8 폭풍 2폼 유도 전류 구슬(구름 보주 메시 재사용 · 풀): 전조 동안 두 주먹에서 자람 → 노란 꼬리 · 빛 · 끝 = 전류 조각
+		stormOrb = { slot = "StormOrb", lengthStuds = 4.2, spin = "tumble", spinHz = 0.8, poolMax = 8, color = Color3.fromRGB(200, 210, 235), glow = Color3.fromRGB(255, 225, 90),
+			holdParts = { "Gauntlet_L", "Gauntlet_R" }, holdAt = 0.5, light = { brightness = 1.6, range = 10 },
+			shards = { count = 12, speed = { 12, 22 }, lifetime = { 0.3, 0.6 }, size = 0.7 }, trail = { lifetime = 0.3, width0 = 1.8, transparency0 = 0.2 } },
 	},
 
 	-- 돌진 속도감(A4)

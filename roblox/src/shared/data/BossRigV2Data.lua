@@ -401,7 +401,8 @@ do
 		seg("Wrist_" .. side, "Forearm_" .. side, "Hand_" .. side, { x * 0.28, 0.52, 0 }, { x * 0.305, 0.45, 0 }, 0.06, 0.05, 0.01)
 		place({ name = "Pauldron_" .. side, parent = "UpperArm_" .. side, part = side == "L" and "LeftPauldron" or "RightPauldron", center = P(x * 0.17, 0.775, 0), size = Z(0.11, 0.23, 0.12), joint = P(x * 0.15, 0.71, 0), color = "head" })
 		-- 2폼(숨김으로 시작): 어깨 · 건틀릿(아래팔 + 주먹 - 팔꿈치 관 자름)
-		place({ name = "Pauldron2_" .. side, parent = "UpperArm_" .. side, part = "Pauldron2_" .. side, center = P(x * 0.185, 0.765, 0), size = Z(0.14, 0.17, 0.14), joint = P(x * 0.15, 0.71, 0), color = "head" })
+		-- BOSS-NIGHT-2 2(사용자: 팔을 앞으로 들면 어깨 안쪽이 정면에 보임): 2폼 어깨 = 몸(Body) 자식 - 팔을 들어도 어깨 위에 그대로(겹판 = 바깥 아래 · KIT yaw 90 · −30°)
+		place({ name = "Pauldron2_" .. side, parent = "Body", part = "Pauldron2_" .. side, center = P(x * 0.185, 0.765, 0), size = Z(0.14, 0.17, 0.14), joint = P(x * 0.15, 0.71, 0), color = "head" })
 		seg("Gauntlet_" .. side, "Forearm_" .. side, "Gauntlet_" .. side, { x * 0.225, 0.6, 0 }, { x * 0.31, 0.43, 0 }, 0.09, 0.09, 0.02, "head")
 	end
 	-- 로브(허리 갑옷 앞 · 뒤)
@@ -416,7 +417,8 @@ do
 	place({ name = "Staff", parent = "Hand_R", part = "Staff", center = P(0.31, 0.4, 0.03), size = Z(0.06, 0.66, 0.06), joint = P(0.305, 0.47, 0.02), color = "dark" })
 	place({ name = "StaffOrb", parent = "Staff", part = "StaffOrb", center = P(0.31, 0.8, 0.03), size = Z(0.2, 0.14, 0.12), joint = P(0.31, 0.74, 0.03), color = "accent" })
 	-- 2폼: 왕관 · 가슴 코어 · 날개 2 × 2
-	place({ name = "Crown", parent = "Head", part = "Crown", center = P(0, 0.935, 0), size = Z(0.19, 0.15, 0.16), joint = P(0, 0.9, 0), color = "accent" })
+	-- BOSS-NIGHT-2 2(사용자: 2폼 왕관이 떠 있고 뭉개짐): 투구 꼭대기(0.924 H)에 테가 얹히게 0.03 H 내리고 투구보다 넓게(테 안쪽이 투구에 묻히지 않게)
+	place({ name = "Crown", parent = "Head", part = "Crown", center = P(0, 0.905, 0), size = Z(0.215, 0.15, 0.2), joint = P(0, 0.87, 0), color = "accent" })
 	place({ name = "ChestCore", parent = "Body", part = "ChestCore", center = P(0, 0.66, 0.08), size = Z(0.16, 0.18, 0.03), joint = P(0, 0.66, 0.07), color = "accent" })
 	for _, s in ipairs({ { "L", -1 }, { "R", 1 } }) do
 		local side, x = s[1], s[2]

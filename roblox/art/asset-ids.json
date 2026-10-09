@@ -1715,31 +1715,31 @@
   "status": "Approved"
  },
  "bosses/storm_lord_v2m.fbx": {
-  "sha256": "f59c22d70d4d96f05b32ce154c3a95a8a7fa37c32c66a0e4e346e576894a8712",
+  "sha256": "d83d92a76cde5e815644a9d054cad41c68e2e9c67b98bc705ec345fa5c881b60",
   "assetType": "Model",
   "assetId": 101915711338624,
   "status": "Approved"
  },
  "bosses/storm_lord_v2m_atlas1.png": {
-  "sha256": "041adc52992ff75ac29833c631cbd361eecd0690a5670350ac81cff72fd02f89",
+  "sha256": "62ca85941e36163884259862fa79273685fb67ee39f161c8a5747d543afaff5f",
   "assetType": "Decal",
-  "assetId": 110293866030526,
+  "assetId": 118512642320495,
   "status": "Approved",
-  "imageId": 88661053788205
+  "imageId": 101590789484040
  },
  "bosses/storm_lord_v2m_atlas2.png": {
-  "sha256": "c4aebe52b9af659846149bb196555b33eaa430c05633999bdab334d336ec27a4",
+  "sha256": "5db6f8bac05164e96242eeb97a50d3b9994eb22951e70e497f80103ea2ab0f12",
   "assetType": "Decal",
-  "assetId": 106700755284368,
+  "assetId": 108143168631681,
   "status": "Approved",
-  "imageId": 96814704365755
+  "imageId": 103740639199695
  },
  "bosses/storm_lord_v2m_atlas3.png": {
-  "sha256": "94a494c127b12e592ee6f7d1c4fc38d0cab77be3ceacd37b05d453cee6f5bfec",
+  "sha256": "6ea228ef53ead1c9fdcd03544a99c6b9dd336c72b8b10fe48abecae469c27b78",
   "assetType": "Decal",
-  "assetId": 112751645897472,
+  "assetId": 102475066215736,
   "status": "Approved",
-  "imageId": 123247087296221
+  "imageId": 128143771437128
  },
  "extras/cloud_whale.fbx": {
   "sha256": "0f6b907f0a8b2d65206d5b574fc84c7665239cf262a934a6a534b787bb19714a",

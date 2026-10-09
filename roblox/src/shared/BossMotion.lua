@@ -557,13 +557,14 @@ function BossMotion.evaluate(ctx, st, now)
 		local u = (now - (st.prepAt - lead)) / lead
 		if u > 0 and u < 2 then
 			local w = ease("out", clamp01(u)) * (1 - clamp01((u - 1.2) / 0.4))
-			local lift = P.basicPrep[(st.nextN or ((st.swingN or 0) + 1)) % 2 == 0 and "R" or "L"] -- QUEUE-ALL1: 서버가 정한 다음 쪽(없으면 번갈아)
+			local lift = ((F and F.basicPrep) or P.basicPrep)[(st.nextN or ((st.swingN or 0) + 1)) % 2 == 0 and "R" or "L"] -- QUEUE-ALL1: 서버가 정한 다음 쪽(없으면 번갈아) · BOSS-NIGHT-2: 폼별 예비(F.basicPrep)
 			blend(pose, lift, w, isUpper)
 		end
 	end
 	-- 평타(좌우 번갈아)
 	if st.swingAt and now - st.swingAt < 1.0 then
-		local clip = P.clips[(st.swingN or 0) % 2 == 0 and "basic_R" or "basic_L"]
+		local side = (st.swingN or 0) % 2 == 0 and "R" or "L"
+		local clip = (F and F.basicClips and P.clips[F.basicClips[side]]) or P.clips["basic_" .. side] -- BOSS-NIGHT-2: 폼별 평타(폭풍 2폼 = 내리꽂는 번개 주먹)
 		local p, endT = BossMotion.sampleClip(clip, now - st.swingAt, 0, weight)
 		local w = ease("out", (now - st.swingAt) / 0.05) * (1 - ease("inout", (now - st.swingAt - (endT or 0.6)) / 0.3))
 		blend(pose, p, w, isUpper)
@@ -607,7 +608,7 @@ function BossMotion.evaluate(ctx, st, now)
 			w *= 1 - ease("inout", (tRel - endT) / 0.3)
 		end
 		if endAt then
-			w *= 1 - ease("inout", (now - endAt) / 0.3)
+			w *= 1 - ease("inout", (now - endAt) / (clip.endFade or 0.3)) -- BOSS-NIGHT-2: clip.endFade(그립 반전 지팡이 = 끝날 때 반 바퀴를 천천히)
 		end
 		w *= fade or 1
 		if w > 0 then

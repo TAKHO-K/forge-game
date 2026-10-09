@@ -116,6 +116,181 @@ local function setVisible(list, visible)
 	end
 end
 
+-- ─────────────────────────── BOSS-NIGHT-2 2-2 아이언맨식 조립(set.transform.assemble · 변신 시작부터 초) ───────────────────────────
+--   부품마다 대역(메시 복제)이 보는 사람 반대편(보스 뒤 · 화면 밖) fromStuds · 위 upStuds에서 번개 꼬리를 달고 출발 → 빠르게 오다 끝에서 감속(easeOut) → at에 진짜 부품이 나타남
+--   (흰 번쩍 flashSeconds · 철컥 sound · 작은 흔들림 shake) · hide = 그 순간 사라지는 1폼 부품(그때까지 보임) · wings = 날개는 몸에서 펼침(클립) · burst = 번개 폭발.
+local SoundSheet = require(script.Parent.SoundSheet)
+local BossFx = require(script.Parent.BossFx)
+local Players = game:GetService("Players")
+
+local function easeOut(u)
+	return 1 - (1 - u) ^ 3
+end
+
+local function capeNames()
+	local out = {}
+	for _, t in ipairs({ "A", "B", "C", "D" }) do
+		for i = 1, 4 do
+			table.insert(out, "Cape" .. t .. i)
+		end
+	end
+	return out
+end
+
+local function makeProxy(s, real, A)
+	local p = real:Clone()
+	p:ClearAllChildren()
+	p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = true, false, false, false, false
+	p.LocalTransparencyModifier = 0
+	p.Transparency = 0
+	local half = p.Size.Y * 0.45
+	local a0, a1 = Instance.new("Attachment"), Instance.new("Attachment")
+	a0.Position, a1.Position = Vector3.new(0, half, 0), Vector3.new(0, -half, 0)
+	a0.Parent, a1.Parent = p, p
+	local trail = Instance.new("Trail")
+	trail.Attachment0, trail.Attachment1 = a0, a1
+	trail.Lifetime = 0.35
+	trail.Color = ColorSequence.new(A.trailColor)
+	trail.Transparency = NumberSequence.new(0.1, 1)
+	trail.WidthScale = NumberSequence.new(1, 0.2)
+	trail.LightEmission, trail.FaceCamera = 1, true
+	trail.Parent = p
+	p.Parent = s.folder
+	return p
+end
+
+local function flash(real, seconds)
+	local h = Instance.new("Highlight")
+	h.FillColor, h.OutlineColor = Color3.new(1, 1, 1), Color3.new(1, 1, 1)
+	h.FillTransparency, h.OutlineTransparency = 0.2, 0.4
+	h.DepthMode = Enum.HighlightDepthMode.Occluded
+	h.Adornee = real
+	h.Parent = real
+	task.delay(seconds, function()
+		h:Destroy()
+	end)
+end
+
+-- 반환: 이번 프레임 조립 중이면 true(평소 숨김 유지 루프를 건너뛴다)
+local function assembleStep(e, s, set, now)
+	local T = set.transform
+	local A = T and T.assemble
+	local st = e.st
+	if not (A and st and st.transformAt) then
+		return false
+	end
+	local t = now - st.transformAt
+	local asm = s.asm
+	if not asm or asm.at ~= st.transformAt then
+		if asm then
+			for _, px in pairs(asm.proxies) do
+				px:Destroy()
+			end
+		end
+		asm = { at = st.transformAt, proxies = {}, done = {}, burst = false, dropped = false }
+		s.asm = asm
+	end
+	if t > T.seconds + 0.2 then
+		if not asm.finished then
+			asm.finished = true
+			for _, px in pairs(asm.proxies) do
+				px:Destroy()
+			end
+			asm.proxies = {}
+			s.form = nil -- 평소 폼 보이기로 다시 맞춤
+		end
+		return false
+	end
+	if t < (T.switchAt or 0) then
+		return false -- 웅크림(1폼 그대로)
+	end
+	local root = e.model.PrimaryPart
+	if not root then
+		return true
+	end
+	local center = root.Position
+	local cam = workspace.CurrentCamera
+	local me = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+	local viewer = (me and me.Position) or (cam and cam.CFrame.Position) or (center + Vector3.new(0, 0, 30))
+	local back = Vector3.new(center.X - viewer.X, 0, center.Z - viewer.Z)
+	back = back.Magnitude > 1e-3 and back.Unit or Vector3.new(0, 0, 1)
+	local side = back:Cross(Vector3.yAxis)
+	if not asm.dropped and t >= (A.dropAt or 0) then -- 지팡이가 번개로 흩어짐
+		asm.dropped = true
+		for _, name in ipairs(A.drop or {}) do
+			local p = e.model:FindFirstChild(name)
+			if p then
+				for k = 1, 6 do
+					local a = k / 6 * 2 * math.pi
+					BossFx.streak(p.Position, Vector3.new(math.cos(a), 0.6, math.sin(a)), 3, 0.25, A.trailColor, 0.3, 14)
+				end
+			end
+		end
+	end
+	for i, step in ipairs(A.steps) do
+		local hideNames = step.hide == "cape" and capeNames() or step.hide or {}
+		local attached = t >= step.at
+		-- 1폼 짝 부품: 붙는 순간까지 보임
+		for _, name in ipairs(hideNames) do
+			s.hidden[name] = s.hidden[name] or partsNamed(e.model, name)
+			setVisible(s.hidden[name], not attached)
+		end
+		local names = step.wings and { "Wing_L1", "Wing_L2", "Wing_R1", "Wing_R2" } or step.parts or {}
+		for j, name in ipairs(names) do
+			s.hidden[name] = s.hidden[name] or partsNamed(e.model, name)
+			setVisible(s.hidden[name], attached)
+			local real = e.model:FindFirstChild(name)
+			local key = i * 10 + j
+			if real and real:IsA("BasePart") and not step.wings then
+				local launch = step.at - A.flySeconds
+				if t >= launch and not attached then
+					local px = asm.proxies[key]
+					if not px then
+						px = makeProxy(s, real, A)
+						asm.proxies[key] = px
+						local sgn = (name:sub(-2) == "_L") and -1 or ((name:sub(-2) == "_R") and 1 or 0)
+						asm[key] = center + back * A.fromStuds + side * (sgn * A.fromStuds * 0.35) + Vector3.new(0, A.upStuds, 0)
+					end
+					local u = math.clamp((t - launch) / A.flySeconds, 0, 1)
+					local k = easeOut(u) -- 빠르게 출발 → 끝에서 감속
+					local pos = asm[key]:Lerp(real.Position, k) + Vector3.new(0, math.sin(math.pi * u) * 6, 0)
+					local spin = CFrame.Angles((1 - k) * 6, (1 - k) * 4, 0)
+					px.CFrame = CFrame.new(pos) * real.CFrame.Rotation * spin
+					if math.random() < 0.5 then -- 번개 꼬리 잔불꽃
+						BossFx.streak(pos, (asm[key] - pos).Magnitude > 1 and (asm[key] - pos).Unit or back, 2 + 3 * (1 - k), 0.18, A.trailColor, 0.15, 0)
+					end
+				end
+			end
+			if attached and not asm.done[key] then
+				asm.done[key] = true
+				local px = asm.proxies[key]
+				if px then
+					px:Destroy()
+					asm.proxies[key] = nil
+				end
+				if real and real:IsA("BasePart") then
+					flash(real, A.flashSeconds)
+					if j == 1 then -- 같은 순간 둘(어깨 L/R)이면 소리 · 흔들림 한 번
+						pcall(SoundSheet.play, A.sound, { part = real, minInterval = 0.05 })
+						BossFx.shake(real.Position, A.shake)
+					end
+					BossFx.ring(real.Position, 0.4, 3.2, Color3.new(1, 1, 1), 0.18, 0.35)
+				end
+			end
+		end
+	end
+	if not asm.burst and t >= A.burst then -- 번개 폭발 + 떠오름(클립)
+		asm.burst = true
+		for k = 1, 14 do
+			local a = k / 14 * 2 * math.pi
+			BossFx.streak(center + Vector3.new(0, 6, 0), Vector3.new(math.cos(a), math.random() * 0.8 - 0.2, math.sin(a)), 10 + math.random() * 6, 0.35, A.trailColor, 0.35, 30)
+		end
+		BossFx.ring(center - Vector3.new(0, 3, 0), 2, 26, A.trailColor, 0.45, 0.35)
+		BossFx.shake(center, 0.6)
+	end
+	return true
+end
+
 -- 매 프레임(BossAnimator): e = 보스 항목(model · ctx.set) · formName = "before" | "after"
 function BossFormFxView.step(e, formName, now)
 	local set = e.ctx and e.ctx.set
@@ -128,6 +303,20 @@ function BossFormFxView.step(e, formName, now)
 		states[e.model] = s
 	end
 	formName = formName or "before"
+	local assembling = assembleStep(e, s, set, now) -- BOSS-NIGHT-2 아이언맨식 조립(그동안 평소 숨김 유지를 건너뜀)
+	if assembling then
+		if s.form ~= formName then
+			s.form = formName
+			for _, name in ipairs((set.formParts or {}).before or {}) do -- 2폼 부품은 조립이 보이기를 정한다 · 1폼 부품만 여기서
+				s.hidden[name] = s.hidden[name] or partsNamed(e.model, name)
+			end
+			for _, name in ipairs((set.formParts or {})[formName] or {}) do
+				s.hidden[name] = s.hidden[name] or partsNamed(e.model, name)
+				setVisible(s.hidden[name], false)
+			end
+		end
+		return BossFormFxView.move(e, s, set, formName, now)
+	end
 	if s.form ~= formName then
 		s.form = formName
 		for fname, list in pairs(set.formParts or {}) do

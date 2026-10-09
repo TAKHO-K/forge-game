@@ -727,6 +727,24 @@ local function updateEntry(e, now, dt, camPos)
 	e.lookW = (e.lookW or 0) + ((lookT and 1 or 0) - (e.lookW or 0)) * (1 - math.exp(-dt * 7))
 	st.lookYaw = (e.lookW > 1e-3 and e.lookSmooth) or nil
 	st.lookW = e.lookW
+	-- BOSS-NIGHT-2 촬영(Studio 전용): LocalPlayer Attribute BossLiveFreeze = 지금 동작(스킬 · 변신) 시작 뒤 이 초의 자세로 멈춤(실전 메시 보스 - 전시 리그 BossAnimFreeze와 같은 뜻)
+	local liveFreeze = RunService:IsStudio() and localPlayer:GetAttribute("BossLiveFreeze")
+	if type(liveFreeze) == "number" then
+		-- BossLiveFreezeAct(문자열) = 그 스킬의 첫 발동만 붙잡고 뒤이은 다른 스킬은 무시(캡처 지연 3~4초 동안 다음 스킬이 덮지 않게)
+		local only = localPlayer:GetAttribute("BossLiveFreezeAct")
+		local keep = type(only) == "string" and e.freezeAct ~= nil
+		if st.act and not keep and (type(only) ~= "string" or st.act == only) then -- 스킬이 끝나도 마지막 스킬 자세를 붙잡는다(촬영 타이밍)
+			e.freezeAct = { st.act, st.actAt, st.actHit }
+		end
+		if (keep or not st.act) and e.freezeAct and not st.transformAt then
+			st.act, st.actAt, st.actHit, st.actEndAt = e.freezeAct[1], e.freezeAct[2], e.freezeAct[3], nil
+		end
+		if st.actAt or st.transformAt then
+			now = math.min(now, math.max(st.actAt or -math.huge, st.transformAt or -math.huge) + liveFreeze)
+		end
+	else
+		e.freezeAct = nil
+	end
 	local pose, info = BossMotion.evaluate(e.ctx, st, now)
 	e.form = info.form -- BOSS-FRAMEWORK: 지금 세트(보폭 · 발 디딤 · 사망 복제가 쓴다)
 	noteImpacts(e, st)

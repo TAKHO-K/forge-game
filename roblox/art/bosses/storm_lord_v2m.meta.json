@@ -1,361 +1,361 @@
 {
  "parts": {
   "Hips": {
-   "tris": 274,
+   "tris": 224,
    "origin": [
     0.0,
     2.028,
     0.0
    ],
    "center": [
-    0.001,
-    1.738,
-    -0.049
+    0.005,
+    1.746,
+    -0.027
    ],
    "neon": false,
    "color": null
   },
   "Body": {
-   "tris": 3184,
+   "tris": 2429,
    "origin": [
     0.0,
     2.244,
     0.0
    ],
    "center": [
-    0.007,
+    0.004,
     2.943,
-    -0.204
+    -0.2
    ],
    "neon": false,
    "color": null
   },
   "Head": {
-   "tris": 1294,
+   "tris": 1792,
    "origin": [
     0.0,
     4.188,
     0.0
    ],
    "center": [
-    0.002,
-    4.537,
-    0.013
+    -0.003,
+    4.536,
+    0.011
    ],
    "neon": false,
    "color": null
   },
   "Plume": {
-   "tris": 929,
+   "tris": 711,
    "origin": [
     0.0,
     5.052,
     0.0
    ],
    "center": [
-    -0.092,
-    5.211,
-    0.245
+    -0.098,
+    5.215,
+    0.246
    ],
    "neon": false,
    "color": null
   },
   "Thigh_L": {
-   "tris": 606,
+   "tris": 473,
    "origin": [
     -0.396,
     1.884,
     0.0
    ],
    "center": [
-    -0.423,
-    1.22,
-    -0.188
+    -0.414,
+    1.21,
+    -0.185
    ],
    "neon": false,
    "color": null
   },
   "Shin_L": {
-   "tris": 463,
+   "tris": 359,
    "origin": [
     -0.396,
     0.66,
     -0.036
    ],
    "center": [
-    -0.438,
-    -0.127,
-    -0.164
+    -0.437,
+    -0.152,
+    -0.162
    ],
    "neon": false,
    "color": null
   },
   "Foot_L": {
-   "tris": 361,
+   "tris": 258,
    "origin": [
     -0.432,
     -0.996,
     0.0
    ],
    "center": [
-    -0.498,
-    -1.163,
-    -0.444
+    -0.494,
+    -1.14,
+    -0.443
    ],
    "neon": false,
    "color": null
   },
   "UpperArm_L": {
-   "tris": 414,
+   "tris": 305,
    "origin": [
     -1.08,
     3.612,
     0.0
    ],
    "center": [
-    -1.222,
-    2.982,
-    -0.067
+    -1.235,
+    2.966,
+    -0.054
    ],
    "neon": false,
    "color": null
   },
   "Forearm_L": {
-   "tris": 416,
+   "tris": 316,
    "origin": [
     -1.62,
     2.82,
     0.0
    ],
    "center": [
-    -1.709,
-    2.397,
-    -0.318
+    -1.696,
+    2.4,
+    -0.32
    ],
    "neon": false,
    "color": null
   },
   "Hand_L": {
-   "tris": 204,
+   "tris": 160,
    "origin": [
     -2.016,
     2.244,
     0.0
    ],
    "center": [
-    -1.955,
-    1.98,
-    -0.33
+    -1.959,
+    1.969,
+    -0.336
    ],
    "neon": false,
    "color": null
   },
   "LeftPauldron": {
-   "tris": 578,
+   "tris": 452,
    "origin": [
     -1.08,
     3.612,
     0.0
    ],
    "center": [
-    -1.002,
-    3.977,
-    -0.11
+    -1.001,
+    3.969,
+    -0.103
    ],
    "neon": false,
    "color": null
   },
   "Pauldron2_L": {
-   "tris": 4605,
+   "tris": 1200,
    "origin": [
     -1.08,
     3.612,
     0.0
    ],
    "center": [
-    -1.34,
-    3.987,
-    -0.006
+    -1.33,
+    4.007,
+    -0.0
    ],
    "neon": false,
    "color": null
   },
   "Gauntlet_L": {
-   "tris": 4070,
+   "tris": 1498,
    "origin": [
     -1.62,
     2.82,
     0.0
    ],
    "center": [
-    -1.848,
-    2.165,
-    0.006
+    -1.852,
+    2.18,
+    0.0
    ],
    "neon": false,
    "color": null
   },
   "Thigh_R": {
-   "tris": 599,
+   "tris": 475,
    "origin": [
     0.396,
     1.884,
     0.0
    ],
    "center": [
-    0.421,
-    1.208,
-    -0.185
+    0.411,
+    1.224,
+    -0.179
    ],
    "neon": false,
    "color": null
   },
   "Shin_R": {
-   "tris": 460,
+   "tris": 361,
    "origin": [
     0.396,
     0.66,
     -0.036
    ],
    "center": [
-    0.44,
-    -0.176,
-    -0.171
+    0.454,
+    -0.173,
+    -0.174
    ],
    "neon": false,
    "color": null
   },
   "Foot_R": {
-   "tris": 365,
+   "tris": 261,
    "origin": [
     0.432,
     -0.996,
     0.0
    ],
    "center": [
-    0.499,
-    -1.161,
-    -0.448
+    0.497,
+    -1.149,
+    -0.451
    ],
    "neon": false,
    "color": null
   },
   "UpperArm_R": {
-   "tris": 409,
+   "tris": 294,
    "origin": [
     1.08,
     3.612,
     0.0
    ],
    "center": [
-    1.217,
-    2.979,
-    -0.058
+    1.172,
+    2.977,
+    -0.062
    ],
    "neon": false,
    "color": null
   },
   "Forearm_R": {
-   "tris": 401,
+   "tris": 283,
    "origin": [
     1.62,
     2.82,
     0.0
    ],
    "center": [
-    1.706,
-    2.391,
+    1.697,
+    2.404,
     -0.319
    ],
    "neon": false,
    "color": null
   },
   "Hand_R": {
-   "tris": 218,
+   "tris": 157,
    "origin": [
     2.016,
     2.244,
     0.0
    ],
    "center": [
-    1.961,
-    1.975,
+    1.953,
+    1.982,
     -0.328
    ],
    "neon": false,
    "color": null
   },
   "RightPauldron": {
-   "tris": 577,
+   "tris": 432,
    "origin": [
     1.08,
     3.612,
     0.0
    ],
    "center": [
-    1.002,
-    3.986,
-    -0.108
+    1.0,
+    3.985,
+    -0.097
    ],
    "neon": false,
    "color": null
   },
   "Pauldron2_R": {
-   "tris": 4537,
+   "tris": 1200,
    "origin": [
     1.08,
     3.612,
     0.0
    ],
    "center": [
-    1.333,
-    3.979,
-    0.006
+    1.332,
+    4.007,
+    -0.001
    ],
    "neon": false,
    "color": null
   },
   "Gauntlet_R": {
-   "tris": 4269,
+   "tris": 1497,
    "origin": [
     1.62,
     2.82,
     0.0
    ],
    "center": [
-    1.848,
-    2.158,
-    0.002
+    1.845,
+    2.176,
+    0.001
    ],
    "neon": false,
    "color": null
   },
   "RobeF": {
-   "tris": 1021,
+   "tris": 835,
    "origin": [
     0.0,
     2.244,
     -0.324
    ],
    "center": [
-    -0.001,
-    1.626,
-    -0.449
+    -0.0,
+    1.629,
+    -0.443
    ],
    "neon": false,
    "color": null
   },
   "RobeB": {
-   "tris": 235,
+   "tris": 167,
    "origin": [
     0.0,
     2.244,
     0.324
    ],
    "center": [
-    -0.006,
-    1.557,
-    0.293
+    0.005,
+    1.547,
+    0.289
    ],
    "neon": false,
    "color": null
@@ -631,127 +631,127 @@
    "color": null
   },
   "Crown": {
-   "tris": 3685,
+   "tris": 2500,
    "origin": [
     0.0,
-    4.98,
+    4.764,
     0.0
    ],
    "center": [
-    -0.004,
-    5.211,
-    -0.016
+    -0.001,
+    5.015,
+    0.0
    ],
    "neon": false,
    "color": null
   },
   "ChestCore": {
-   "tris": 2184,
+   "tris": 800,
    "origin": [
     0.0,
     3.252,
     -0.504
    ],
    "center": [
-    -0.008,
-    3.251,
-    -0.572
+    0.002,
+    3.25,
+    -0.575
    ],
    "neon": false,
    "color": null
   },
   "Wing_L1": {
-   "tris": 1897,
+   "tris": 873,
    "origin": [
     -0.36,
     3.684,
     0.72
    ],
    "center": [
-    -0.957,
-    4.105,
-    0.899
+    -0.981,
+    4.041,
+    0.883
    ],
    "neon": false,
    "color": null
   },
   "Wing_L2": {
-   "tris": 868,
+   "tris": 871,
    "origin": [
     -1.872,
     4.404,
     0.864
    ],
    "center": [
-    -2.814,
-    4.498,
-    0.889
+    -2.788,
+    4.484,
+    0.899
    ],
    "neon": false,
    "color": null
   },
   "Wing_R1": {
-   "tris": 1849,
+   "tris": 873,
    "origin": [
     0.36,
     3.684,
     0.72
    ],
    "center": [
-    0.968,
-    4.017,
-    0.908
+    1.014,
+    4.042,
+    0.885
    ],
    "neon": false,
    "color": null
   },
   "Wing_R2": {
-   "tris": 871,
+   "tris": 874,
    "origin": [
     1.872,
     4.404,
     0.864
    ],
    "center": [
-    2.788,
-    4.484,
-    0.88
+    2.78,
+    4.48,
+    0.899
    ],
    "neon": false,
    "color": null
   },
-  "ChestCore_Deco1": {
-   "tris": 3565,
-   "origin": [
-    0.0,
-    3.252,
-    -0.504
-   ],
-   "center": [
-    -0.0,
-    3.251,
-    -0.573
-   ],
-   "neon": true,
-   "color": "#5ADDFF"
-  },
   "StaffOrb_Deco1": {
-   "tris": 2045,
+   "tris": 2443,
    "origin": [
     2.232,
     3.828,
     -0.216
    ],
    "center": [
-    2.235,
-    4.091,
+    2.234,
+    4.094,
     -0.212
    ],
    "neon": true,
    "color": "#5ADDFF"
   },
+  "ChestCore_Deco1": {
+   "tris": 286,
+   "origin": [
+    0.0,
+    3.252,
+    -0.504
+   ],
+   "center": [
+    -0.003,
+    3.265,
+    -0.586
+   ],
+   "neon": true,
+   "color": "#5ADBFF"
+  },
   "Staff_Deco1": {
-   "tris": 106,
+   "tris": 126,
    "origin": [
     2.196,
     1.884,
@@ -759,197 +759,167 @@
    ],
    "center": [
     2.194,
-    3.707,
-    -0.179
+    3.702,
+    -0.175
    ],
    "neon": true,
    "color": "#5ADDFF"
   },
   "Body_Outline": {
-   "tris": 2366,
+   "tris": 2429,
    "origin": [
     0.0,
     2.244,
     0.0
    ],
    "center": [
-    0.011,
-    2.958,
-    -0.205
+    0.015,
+    2.969,
+    -0.201
    ],
    "neon": false,
    "color": "#1E1B2E"
   },
   "LeftPauldron_Outline": {
-   "tris": 428,
+   "tris": 452,
    "origin": [
     -1.08,
     3.612,
     0.0
    ],
    "center": [
-    -1.037,
-    4.011,
-    -0.113
+    -1.046,
+    4.003,
+    -0.102
    ],
    "neon": false,
    "color": "#1E1B2E"
   },
   "RightPauldron_Outline": {
-   "tris": 429,
+   "tris": 432,
    "origin": [
     1.08,
     3.612,
     0.0
    ],
    "center": [
-    1.056,
+    1.026,
     4.018,
-    -0.106
+    -0.105
    ],
    "neon": false,
    "color": "#1E1B2E"
   },
   "Plume_Outline": {
-   "tris": 689,
+   "tris": 711,
    "origin": [
     0.0,
     5.052,
     0.0
    ],
    "center": [
-    -0.094,
-    5.213,
-    0.245
+    -0.109,
+    5.218,
+    0.241
    ],
    "neon": false,
    "color": "#1E1B2E"
   },
   "Hips_Outline": {
-   "tris": 202,
+   "tris": 224,
    "origin": [
     0.0,
     2.028,
     0.0
    ],
    "center": [
-    -0.006,
-    1.748,
-    -0.046
+    0.006,
+    1.754,
+    -0.047
    ],
    "neon": false,
    "color": "#1E1B2E"
   },
   "Head_Outline": {
-   "tris": 961,
+   "tris": 1792,
    "origin": [
     0.0,
     4.188,
     0.0
    ],
    "center": [
-    0.004,
-    4.517,
-    0.004
+    -0.003,
+    4.52,
+    0.01
    ],
    "neon": false,
    "color": "#1E1B2E"
   },
   "Shin_L_Outline": {
-   "tris": 343,
+   "tris": 359,
    "origin": [
     -0.396,
     0.66,
     -0.036
    ],
    "center": [
-    -0.44,
-    -0.127,
-    -0.164
+    -0.436,
+    -0.147,
+    -0.145
    ],
    "neon": false,
    "color": "#1E1B2E"
   },
   "Shin_R_Outline": {
-   "tris": 342,
+   "tris": 361,
    "origin": [
     0.396,
     0.66,
     -0.036
    ],
    "center": [
-    0.443,
-    -0.143,
-    -0.169
+    0.441,
+    -0.166,
+    -0.171
    ],
    "neon": false,
    "color": "#1E1B2E"
   },
   "Thigh_L_Outline": {
-   "tris": 450,
+   "tris": 473,
    "origin": [
     -0.396,
     1.884,
     0.0
    ],
    "center": [
-    -0.428,
-    1.216,
-    -0.18
+    -0.437,
+    1.214,
+    -0.194
    ],
    "neon": false,
    "color": "#1E1B2E"
   },
   "Thigh_R_Outline": {
-   "tris": 444,
+   "tris": 475,
    "origin": [
     0.396,
     1.884,
     0.0
    ],
    "center": [
-    0.433,
-    1.221,
-    -0.185
-   ],
-   "neon": false,
-   "color": "#1E1B2E"
-  },
-  "RobeF_Outline": {
-   "tris": 759,
-   "origin": [
-    0.0,
-    2.244,
-    -0.324
-   ],
-   "center": [
-    0.0,
-    1.616,
-    -0.449
-   ],
-   "neon": false,
-   "color": "#1E1B2E"
-  },
-  "RobeB_Outline": {
-   "tris": 173,
-   "origin": [
-    0.0,
-    2.244,
-    0.324
-   ],
-   "center": [
-    0.001,
-    1.565,
-    0.322
+    0.43,
+    1.203,
+    -0.174
    ],
    "neon": false,
    "color": "#1E1B2E"
   }
  },
- "partCount": 63,
- "totalTris": 63926,
- "triBudget": 36000,
- "budgetUse": 1.776,
+ "partCount": 61,
+ "totalTris": 42274,
+ "triBudget": 31800,
+ "budgetUse": 1.329,
  "version": "KIT1",
  "rigId": "storm_lord_v2",
  "partCap": 5000,
@@ -1004,13 +974,13 @@
   "Wing_R2": "Wing_R2"
  },
  "deco": {
-  "ChestCore_Deco1": "ChestCore",
   "StaffOrb_Deco1": "StaffOrb",
+  "ChestCore_Deco1": "ChestCore",
   "Staff_Deco1": "Staff"
  },
  "decoMaterial": {
-  "ChestCore_Deco1": "Neon",
   "StaffOrb_Deco1": "Neon",
+  "ChestCore_Deco1": "Neon",
   "Staff_Deco1": "Neon"
  },
  "lod2": [],
@@ -1024,9 +994,7 @@
   "Shin_L_Outline",
   "Shin_R_Outline",
   "Thigh_L_Outline",
-  "Thigh_R_Outline",
-  "RobeF_Outline",
-  "RobeB_Outline"
+  "Thigh_R_Outline"
  ],
  "texture": {
   "atlases": [
@@ -1087,8 +1055,6 @@
   "partAtlas": {
    "Hips": 1,
    "Body": 1,
-   "Head": 1,
-   "Plume": 1,
    "Thigh_L": 1,
    "Shin_L": 1,
    "Foot_L": 1,
@@ -1105,12 +1071,14 @@
    "RightPauldron": 1,
    "RobeF": 1,
    "RobeB": 1,
+   "Head": 2,
+   "Plume": 2,
    "Pauldron2_L": 2,
-   "Gauntlet_L": 2,
    "Pauldron2_R": 2,
-   "Gauntlet_R": 2,
    "Crown": 2,
    "ChestCore": 2,
+   "Gauntlet_L": 3,
+   "Gauntlet_R": 3,
    "CapeA1": 3,
    "CapeA2": 3,
    "CapeA3": 3,
@@ -1138,9 +1106,9 @@
  "kit": {
   "neonDemoted": [],
   "source": "storm_v1_body_meshy71.glb",
-  "sourceTris": 615228,
-  "overlapCopies": 15980,
-  "capped": 19553,
+  "sourceTris": 214805,
+  "overlapCopies": 11557,
+  "capped": 4245,
   "empty": []
  },
  "space": "sizeScale 1 · 루트 원점 · 발바닥 y −1.5 · 앞 −Z",

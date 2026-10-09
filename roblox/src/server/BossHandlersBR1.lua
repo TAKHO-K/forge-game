@@ -151,6 +151,23 @@ local function pickProjectileTargets(c)
 	if rule == "airborne" or (rule == "airbornePreferred" and #airborne > 0) then
 		return airborne
 	end
+	if rule == "beyond" then -- BOSS-NIGHT-2 폭풍 전류 구슬: 보스에게서 beyondStuds 밖 멤버 전원(가까운 순 · 최대 maxTargets)
+		local far = {}
+		for _, v in ipairs(all) do
+			local d = Reach.horizontalDistance(v.root.Position, c.position)
+			if d > (c.skill.beyondStuds or 30) then
+				table.insert(far, { v = v, d = d })
+			end
+		end
+		table.sort(far, function(x, y)
+			return x.d < y.d
+		end)
+		local out = {}
+		for i = 1, math.min(#far, c.skill.maxTargets or 4) do
+			out[i] = far[i].v
+		end
+		return out
+	end
 	return all
 end
 
@@ -199,7 +216,7 @@ local function launchProjectile(c, index, target)
 	nextProjectileId += 1
 	local projectile = {
 		id = nextProjectileId, position = position, dir = dir, speed = skill.speedStuds, turnRad = math.rad(skill.turnRateDeg or 0),
-		radius = skill.radiusStuds, expiresAt = c.now + (skill.lifetimeSeconds or 6), target = target.player, bornAt = c.now,
+		radius = skill.radiusStuds, expiresAt = c.now + (skill.lifetimeSeconds or 6), target = target.player, bornAt = c.now, origin = position,
 		heightMode = skill.heightMode or "air", pierce = skill.pierce == true, hitBy = {}, skill = skill, data = c.data, model = c.model,
 		bouncesLeft = skill.bounces or 0,
 		-- BR1-2 반사 대비(K 성기사 패링 · 반사 대결): 소유자 · 반사 가능 · 반사 횟수
@@ -410,7 +427,7 @@ function BossHandlersBR1.stepProjectiles(model, st, data, now, dt)
 			-- BR1-4c c-3: 따라가는 시간은 homingSeconds까지(날기 시작부터 - 반사로 모으던 시간 제외) · 목표 자리는 retargetSeconds마다 대상의 지금 자리로 갱신
 			local homing = BossData.mechanics.homing
 			local flying = now - (p.holdUntil or p.bornAt or now)
-			if target and p.turnRad > 0 and flying <= homing.homingSeconds then
+			if target and p.turnRad > 0 and flying <= (p.skill.homingSeconds or homing.homingSeconds) then -- BOSS-NIGHT-2: 스킬별 유도 시간(전류 구슬 2.5초)
 				if not p.aimAt or now >= (p.retargetAt or 0) then
 					p.aimAt = target.root.Position
 					p.retargetAt = now + homing.retargetSeconds
@@ -509,6 +526,10 @@ function BossHandlersBR1.stepProjectiles(model, st, data, now, dt)
 						if p.skill.damage.kind == "maxHpRaw" then -- BR1-2 반사된 투사체: 한 방에 죽을 수 있는 큰 피해(감소 · 1 ~ 30 보호 적용)
 							PlayerDamage.applyMaxHpFraction(v.player, p.skill.damage.fraction, p.skill.damageLabel)
 							BossTrap.noteSkillHit(v.player)
+						elseif p.skill.distanceDamage and p.origin then -- BOSS-NIGHT-2 검기: 피해 = 기본 × (1 + perMax × 비행 거리 ÷ maxStuds)(최대 × (1 + perMax))
+							local dd = p.skill.distanceDamage
+							local flown = Vector3.new(p.position.X - p.origin.X, 0, p.position.Z - p.origin.Z).Magnitude
+							damageWith(c, p.skill.damage.multiplier * (1 + dd.perMax * math.min(flown / dd.maxStuds, 1)), v.player)
 						else
 							damageWith(c, nil, v.player)
 						end

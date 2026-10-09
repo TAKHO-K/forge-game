@@ -1,5 +1,5 @@
 {
- "about": "BOSS-NIGHT-1 2 폭풍 군주 KIT 설정(boss_kit.py --kit) - 몸 = Meshy storm_v1_body_meshy71(원본 - 리메시본 없음 · KIT 자체 감량) + 부품 GLB 8(addons - 리그 상자에 맞춤) · 구름 보주 = 소품 KIT 따로",
+ "about": "BOSS-NIGHT-1 2 폭풍 군주 KIT 설정(boss_kit.py --kit) - 몸 = Meshy storm_v1_body_meshy71(원본 - 리메시본 없음 · KIT 자체 감량) + 부품 GLB 8(addons - 리그 상자에 맞춤) · 구름 보주 = 소품 KIT 따로 · BOSS-NIGHT-2 2: 2폼 어깨 방향(yaw 90 · 팔 구멍이 아래 바깥(-55°) · 왼쪽 반전) · 건틀릿 · 날개 · 왕관 · 가슴 코어 · 어깨 = 꼭짓점 용접(UV 조각 경계 = 깨짐) → 복셀 → 감량 → 늦은 자르기(건틀릿 팔꿈치 관) · 몸 복셀 0.011 · 머리/2폼 상체 부품 = 아틀라스 2장째(얼굴 해상도)",
  "height": 7.2,
  "yaw": 180,
  "islands": 0,
@@ -67,7 +67,9 @@
    "fit": "union",
    "scaleAxis": "x",
    "yaw": 180,
-   "islands": 0.01
+   "islands": 0.01,
+   "weld": 0.0008,
+   "voxel": 0.012
   },
   {
    "glb": "storm_v1_crown_meshy71.glb",
@@ -76,7 +78,9 @@
    ],
    "fit": "Crown",
    "yaw": 180,
-   "islands": 0.005
+   "islands": 0.005,
+   "weld": 0.0008,
+   "voxel": 0.008
   },
   {
    "glb": "storm_v1_chestcore_meshy71.glb",
@@ -85,7 +89,9 @@
    ],
    "fit": "ChestCore",
    "yaw": 180,
-   "islands": 0.005
+   "islands": 0.005,
+   "weld": 0.0008,
+   "voxel": 0.008
   },
   {
    "glb": "storm_v1_pauldron_meshy71.glb",
@@ -93,8 +99,15 @@
     "Pauldron2_R"
    ],
    "fit": "Pauldron2_R",
-   "yaw": 180,
-   "islands": 0.005
+   "yaw": 90,
+   "islands": 0.005,
+   "rot": [
+    0,
+    0,
+    -55
+   ],
+   "weld": 0.0008,
+   "voxel": 0.01
   },
   {
    "glb": "storm_v1_pauldron_meshy71.glb",
@@ -102,9 +115,16 @@
     "Pauldron2_L"
    ],
    "fit": "Pauldron2_L",
-   "yaw": 180,
+   "yaw": 90,
    "mirror": true,
-   "islands": 0.005
+   "islands": 0.005,
+   "rot": [
+    0,
+    0,
+    -55
+   ],
+   "weld": 0.0008,
+   "voxel": 0.01
   },
   {
    "glb": "storm_v1_gauntlet_meshy71.glb",
@@ -125,7 +145,9 @@
      "<"
     ]
    ],
-   "islands": 0.005
+   "islands": 0.005,
+   "weld": 0.0008,
+   "voxel": 0.012
   },
   {
    "glb": "storm_v1_gauntlet_meshy71.glb",
@@ -147,7 +169,9 @@
     ]
    ],
    "mirror": true,
-   "islands": 0.005
+   "islands": 0.005,
+   "weld": 0.0008,
+   "voxel": 0.012
   }
  ],
  "partTris": {
@@ -173,24 +197,27 @@
   "Wing_L2": 875,
   "Wing_R1": 875,
   "Wing_R2": 875,
-  "Crown": 1500,
+  "Crown": 2500,
   "ChestCore": 800,
   "Pauldron2_L": 1200,
   "Pauldron2_R": 1200,
   "Gauntlet_L": 1500,
-  "Gauntlet_R": 1500
+  "Gauntlet_R": 1500,
+  "Head": 1800
  },
- "bodyVoxel": 0.014,
+ "bodyVoxel": 0.011,
  "atlasGroups": [
   [
+   "Head",
+   "Plume",
    "Crown",
    "ChestCore",
    "Pauldron2_L",
-   "Pauldron2_R",
-   "Gauntlet_L",
-   "Gauntlet_R"
+   "Pauldron2_R"
   ],
   [
+   "Gauntlet_L",
+   "Gauntlet_R",
    "CapeA1",
    "CapeA2",
    "CapeA3",

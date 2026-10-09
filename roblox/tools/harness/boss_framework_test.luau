@@ -561,8 +561,16 @@ do
 	end
 	check("폭풍 폼 부품 · 2폼 번쩍 부위 = 리그에 있음", #missing == 0, ("1폼 숨김 %d · 2폼 숨김 %d · 빠짐 %s"):format(#set.formParts.before, #set.formParts.after, #missing == 0 and "0" or table.concat(missing, ",")))
 	local tg = g.v3 and g.v3.transformGuard
-	check("폭풍 50% 변신 무적 2.8초(변신 동작 ≤ 무적 · 돌풍 50% + 3초보다 먼저 끝)", tg ~= nil and tg.seconds == 2.8 and tg.hpBelow == 0.5 and set.transform.seconds <= tg.seconds + 1e-6 and tg.seconds < d.environment.firstDelaySeconds,
-		tg and ("무적 %.1f초 · 변신 동작 %.1f초 · 돌풍 첫 지연 %.1f초"):format(tg.seconds, set.transform.seconds, d.environment.firstDelaySeconds) or "없음")
+	-- BOSS-NIGHT-2 2-2(사용자: 아이언맨식 · 무적 3.5초): 변신 동작 ≤ 무적 · 조립(마지막 부품 · 번개 폭발)은 돌풍(50% + 3초) 전에 끝 · 부품 순서 건틀릿 L → R → 어깨 → 코어 → 왕관 → 날개
+	local A = set.transform.assemble
+	local order = {}
+	for _, step in ipairs(A and A.steps or {}) do
+		table.insert(order, step.wings and "wings" or table.concat(step.parts, "+"))
+	end
+	local lastAt = A and A.steps[#A.steps].at or math.huge
+	check("폭풍 50% 변신 무적 3.5초 · 조립(폭발) < 돌풍 시작 · 부품 순서", tg ~= nil and tg.seconds == 3.5 and tg.hpBelow == 0.5 and set.transform.seconds <= tg.seconds + 1e-6
+		and A and A.burst < d.environment.firstDelaySeconds and lastAt <= A.burst and table.concat(order, ">") == "Gauntlet_L>Gauntlet_R>Pauldron2_L+Pauldron2_R>ChestCore>Crown>wings",
+		tg and ("무적 %.1f초 · 변신 동작 %.1f초 · 폭발 %.2f초 · 돌풍 첫 지연 %.1f초 · %s"):format(tg.seconds, set.transform.seconds, A and A.burst or -1, d.environment.firstDelaySeconds, table.concat(order, " > ")) or "없음")
 	check("폭풍 근접 바닥 표시 끔 · 예비 +0.12 · 원거리 스킬 그대로", g.skills.swipe.noFloor == true and g.skills.innerSmash.noFloor == true and g.basicNoFloor and g.innerRingHidden
 		and math.abs(g.skills.swipe.telegraphSeconds - (d.skills.swipe.telegraphSeconds + 0.12)) < 1e-6 and g.skills.strike.telegraphSeconds == d.skills.strike.telegraphSeconds,
 		("강화 평타 %.2f → %.2f · 몸 가장자리 +%.2f"):format(d.skills.swipe.telegraphSeconds, g.skills.swipe.telegraphSeconds, edge))
