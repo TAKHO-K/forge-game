@@ -7,7 +7,7 @@
 |---|---|---|---|---|
 | 1 모션 다듬기 | 끝 | `ceb5053c` | 19 | 0 |
 | 2 결정 6건 | 끝 | `383a2027` | 35 | 0 |
-| 3 BossSim 대시 | 끝 | (커밋 뒤 기입) | 4 | 0 |
+| 3 BossSim 대시 | 끝 | `b8fc6ad6` | 4 | 0 |
 
 먼저 — 백그라운드 "Wait for sim results": 이 세션에는 남은 작업이 없었다. 찾아보니 그 결과(BOSS-NIGHT-2 보완 C · 발생 지점 끔 ↔ 켬 6보스 × 4칸 · 600판)는 이미 `docs/design/boss-bible/BOSS-NIGHT-2-finish-report.md` §5(커밋 `d257bcff`)에 들어가 있다(수호자 처음 · 원거리 46.3 → 51.5가 유일한 목표 초과). 남은 건 그 sim 입력 파일 6개(`roblox/tools/harness/_simo_*.luau` · 추적 안 된 파일)뿐 — 지우지 않고 그대로 둠.
 
