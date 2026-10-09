@@ -64,8 +64,9 @@ return {
 	classArt = {
 		greatsword = { legend = "ui/legends/class-warrior", face = "ui/legends/face-warrior", faceRect = { 173, 13, 314 } },
 		bow = { legend = "ui/legends/class-archer", face = "ui/legends/face-archer", faceRect = { 165, 5, 266 } },
-		healer = { legend = nil, face = nil, placeholder = "ui/legends/class-healer-placeholder" }, -- 전설 그림 대기 = 자리표시 그림(01 v2 · "그림 곧 공개")
-		dualblade = { legend = nil, face = nil, placeholder = "ui/legends/class-rogue-placeholder" },
+		-- BOSS-NIGHT-2 5: 도적 · 치유사 전설 그림(docs/art/ref/class_legend_*_v1.png 서 있는 자세 · 전사 · 궁수와 같은 자르기) · 자리표시 그림은 legend가 없을 때만(파일 · 키 유지)
+		healer = { legend = "ui/legends/class-healer", face = "ui/legends/face-healer", faceRect = { 130, 20, 320 }, placeholder = "ui/legends/class-healer-placeholder" },
+		dualblade = { legend = "ui/legends/class-rogue", face = "ui/legends/face-rogue", faceRect = { 190, 25, 315 }, placeholder = "ui/legends/class-rogue-placeholder" },
 	},
 	-- 공격 버튼 아이콘 = 지금 직업 무기 아이콘(무기 아이콘 키 = icons/weapons/<직업>_<등급> - client/ItemIcons.keyFor)
 	attackUsesWeaponIcon = true,

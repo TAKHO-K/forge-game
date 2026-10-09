@@ -8350,12 +8350,26 @@
   "status": "Approved",
   "imageId": 120602740243537
  },
+ "ui/legends/class-healer.png": {
+  "sha256": "88ace487b317586f19a45e78165eec5647e33f2336356ed447443f95e190220e",
+  "assetType": "Decal",
+  "assetId": 89919285284598,
+  "status": "Approved",
+  "imageId": 92434362712771
+ },
  "ui/legends/class-rogue-placeholder.png": {
   "sha256": "a77509998d637f1ed2bda6fe027ba92d737567ab7c09976e06f79d1dea710df2",
   "assetType": "Decal",
   "assetId": 136679024488622,
   "status": "Approved",
   "imageId": 109409195042542
+ },
+ "ui/legends/class-rogue.png": {
+  "sha256": "0569a3466fc47b2d27e28b76ccccc6723008a43c1bd25848cc9b942c20dbbdcc",
+  "assetType": "Decal",
+  "assetId": 138481054418951,
+  "status": "Approved",
+  "imageId": 124801699426293
  },
  "ui/legends/class-warrior.png": {
   "sha256": "22fa6d13a2efc84c3b9de85a95b1f830d01bb6207d8f6e33fab7a25ebb0891b0",
@@ -8370,6 +8384,20 @@
   "assetId": 112866663508837,
   "status": "Approved",
   "imageId": 77922789867028
+ },
+ "ui/legends/face-healer.png": {
+  "sha256": "d8b4d0ed66eb54c6e79c402453620f90250f88441b29ef2cb000ada7fa3bae69",
+  "assetType": "Decal",
+  "assetId": 74033550827149,
+  "status": "Approved",
+  "imageId": 73822378332888
+ },
+ "ui/legends/face-rogue.png": {
+  "sha256": "8d79f96fc770163310da27fd677af156d3684632f5d9a041e17b8a6347f29d95",
+  "assetType": "Decal",
+  "assetId": 111399181009625,
+  "status": "Approved",
+  "imageId": 78377789118617
  },
  "ui/legends/face-warrior.png": {
   "sha256": "ee5708a44c986499203e26445c46b28c836aca0e10573feea2e49bb0a9236a05",
