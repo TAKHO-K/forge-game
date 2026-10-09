@@ -8835,5 +8835,525 @@
   "assetType": "Model",
   "assetId": 136112769270173,
   "status": "Approved"
+ },
+ "weapons/v4/bow_g1.fbx": {
+  "sha256": "c302d4d731a24fb6ffcf58788bc1fa2232d49ea7145b96d0eff43a14f0575272",
+  "assetType": "Model",
+  "assetId": 112120927868659,
+  "status": "Approved"
+ },
+ "weapons/v4/bow_g1_atlas1.png": {
+  "sha256": "e504cce25af3e1a55096ce74e55e7d1b6b8160619c7a2a282181de987d757580",
+  "assetType": "Decal",
+  "assetId": 121501301459776,
+  "status": "Approved",
+  "imageId": 98754435901848
+ },
+ "weapons/v4/bow_g2.fbx": {
+  "sha256": "41ec27ad0a4222c6306b07855e9f9ca68a472ae0dc3e2178a61edbd178e57aa4",
+  "assetType": "Model",
+  "assetId": 72496023649792,
+  "status": "Approved"
+ },
+ "weapons/v4/bow_g2_atlas1.png": {
+  "sha256": "e1dc76cba13c72f8547533bc0ad12e1eb27351723ff774b0f64dea55baf44099",
+  "assetType": "Decal",
+  "assetId": 135005093771270,
+  "status": "Approved",
+  "imageId": 129000765583116
+ },
+ "weapons/v4/bow_g3.fbx": {
+  "sha256": "25ff64c8782454af9865fe32bbe92381b7d3e160bebe032c5c991b5baee3f227",
+  "assetType": "Model",
+  "assetId": 119937676816650,
+  "status": "Approved"
+ },
+ "weapons/v4/bow_g3_atlas1.png": {
+  "sha256": "2b6b41155bed0397784f635a9212769dc87daf5771fcbcb3227d1a300e873905",
+  "assetType": "Decal",
+  "assetId": 78680340122876,
+  "status": "Approved",
+  "imageId": 90359973143787
+ },
+ "weapons/v4/bow_g4.fbx": {
+  "sha256": "4b154ecf84791898b004411178292483a3a306d835ef550640baf5220c357cf5",
+  "assetType": "Model",
+  "assetId": 100520981520470,
+  "status": "Approved"
+ },
+ "weapons/v4/bow_g4_atlas1.png": {
+  "sha256": "ff5dd74df74273dfe8b6f7b2b0b03ce004a951c1e0970a75c7a1407e5879be6a",
+  "assetType": "Decal",
+  "assetId": 119077157886637,
+  "status": "Approved",
+  "imageId": 72470513939909
+ },
+ "weapons/v4/bow_g5.fbx": {
+  "sha256": "ed50f657ccbc19f1af0b55a7546848da5c80bc81916309aac6cecf8b5770e232",
+  "assetType": "Model",
+  "assetId": 81084008925837,
+  "status": "Approved"
+ },
+ "weapons/v4/bow_g5_atlas1.png": {
+  "sha256": "fa9858e00d4c2817b3f539c49e848b48e552c847e8f1cbffa40d3824e4b3b2f7",
+  "assetType": "Decal",
+  "assetId": 70502199927605,
+  "status": "Approved",
+  "imageId": 121901229121790
+ },
+ "weapons/v4/bow_g6.fbx": {
+  "sha256": "804bd54a8df1de065ccde3f4da6214c858c7cbd453ff8b1bef72846a68b65043",
+  "assetType": "Model",
+  "assetId": 127451101053355,
+  "status": "Approved"
+ },
+ "weapons/v4/bow_g6_atlas1.png": {
+  "sha256": "c4212c529ccdd5860e80d815900a95ec5593510ee41b026ec001ebc364e27715",
+  "assetType": "Decal",
+  "assetId": 133285400164793,
+  "status": "Approved",
+  "imageId": 128167564515830
+ },
+ "weapons/v4/bow_g7.fbx": {
+  "sha256": "a84bff80a527ec503abf39861fc4da219dbfa38226d8f688dc14389625e4e34c",
+  "assetType": "Model",
+  "assetId": 117073848497823,
+  "status": "Approved"
+ },
+ "weapons/v4/bow_g7_atlas1.png": {
+  "sha256": "a72340f08c0738f2fe04d19ed493275368c1ecb7f5c43468319817ffc7cad148",
+  "assetType": "Decal",
+  "assetId": 75574519581113,
+  "status": "Approved",
+  "imageId": 127226937746087
+ },
+ "weapons/v4/bow_g8.fbx": {
+  "sha256": "c6137dee8164fcf947e7187879712fa56b02af13a1b3165c36cd1c5c74cdbe1d",
+  "assetType": "Model",
+  "assetId": 110558530810481,
+  "status": "Approved"
+ },
+ "weapons/v4/bow_g8_atlas1.png": {
+  "sha256": "fa28d89478a0858397750957e7c92a54f7d99961643c986e662181c2c1c96f9a",
+  "assetType": "Decal",
+  "assetId": 104152023083477,
+  "status": "Approved",
+  "imageId": 114204314730402
+ },
+ "weapons/v4/db_g1.fbx": {
+  "sha256": "941c2de279294fe6b9fc1cd10b10e921b8d6baa88aea8ed7a5cfe7caf9261633",
+  "assetType": "Model",
+  "assetId": 84969686441605,
+  "status": "Approved"
+ },
+ "weapons/v4/db_g1_L.fbx": {
+  "sha256": "847aa864f9fe59ee253861cf2a366febbf627c3d71c95b90db7833ff67d29885",
+  "assetType": "Model",
+  "assetId": 134134890506030,
+  "status": "Approved"
+ },
+ "weapons/v4/db_g1_L_atlas1.png": {
+  "sha256": "d0f22fec2c63ac07e3a5f2f9ced65e21ace55916b75d8d67ec66e46ac2a8e9cb",
+  "assetType": "Decal",
+  "assetId": 127575210422909,
+  "status": "Approved",
+  "imageId": 126062814217849
+ },
+ "weapons/v4/db_g1_atlas1.png": {
+  "sha256": "9b34573317f1d66d27b81dac768754ab2de4572f813390d1474791df68922bae",
+  "assetType": "Decal",
+  "assetId": 73635213018435,
+  "status": "Approved",
+  "imageId": 102638913621469
+ },
+ "weapons/v4/db_g2.fbx": {
+  "sha256": "06ec8ced839f9af4508ea1b3fdae2fdbc05b62841167aad70af520ae8f008575",
+  "assetType": "Model",
+  "assetId": 79510830214327,
+  "status": "Approved"
+ },
+ "weapons/v4/db_g2_L.fbx": {
+  "sha256": "27a5a2c2d1feceb4966a87145d0620ed384ceda0e4a8e83358fdb3aec8818744",
+  "assetType": "Model",
+  "assetId": 92194102717146,
+  "status": "Approved"
+ },
+ "weapons/v4/db_g2_L_atlas1.png": {
+  "sha256": "03268eb81d0a701065bb20634db1433da272dff087929438f5533d5d5e675241",
+  "assetType": "Decal",
+  "assetId": 139324978100567,
+  "status": "Approved",
+  "imageId": 99433069186609
+ },
+ "weapons/v4/db_g2_atlas1.png": {
+  "sha256": "ffe0b1d5347865fd1f51c096babff9173d5e194be32eaa803f874b4560f3e83d",
+  "assetType": "Decal",
+  "assetId": 74641367585679,
+  "status": "Approved",
+  "imageId": 113394272586879
+ },
+ "weapons/v4/db_g3.fbx": {
+  "sha256": "b2934c24573343c05acfd93ae648d67b4303c47406d22e232c162b13573ec1a8",
+  "assetType": "Model",
+  "assetId": 74829279680648,
+  "status": "Approved"
+ },
+ "weapons/v4/db_g3_L.fbx": {
+  "sha256": "7b3799e8b2ad3c957b393823909ca9686f6f7b3e9042868d5b8e9a0ae9a0e073",
+  "assetType": "Model",
+  "assetId": 104454905456322,
+  "status": "Approved"
+ },
+ "weapons/v4/db_g3_L_atlas1.png": {
+  "sha256": "15ceb81c7c4b70e43581386650a999a6bbcf3628cb0f3b5069d12cbef1eaa6db",
+  "assetType": "Decal",
+  "assetId": 95356197055825,
+  "status": "Approved",
+  "imageId": 103972934404523
+ },
+ "weapons/v4/db_g3_atlas1.png": {
+  "sha256": "6f1bab7f5784a5c3d3b67c0d64bbb729350e622a0e68f888303073bc684f4531",
+  "assetType": "Decal",
+  "assetId": 77448241467284,
+  "status": "Approved",
+  "imageId": 75881134549834
+ },
+ "weapons/v4/db_g4.fbx": {
+  "sha256": "8ccd38f02d3ee981bee81a4a32a3027d55d356b18ec4d3d70bf3e37545e07153",
+  "assetType": "Model",
+  "assetId": 71640428323609,
+  "status": "Approved"
+ },
+ "weapons/v4/db_g4_L.fbx": {
+  "sha256": "f9907244508c4e7642c071960c2250088e385d974ed275bfa06eb9004a29a7dd",
+  "assetType": "Model",
+  "assetId": 73353246611233,
+  "status": "Approved"
+ },
+ "weapons/v4/db_g4_L_atlas1.png": {
+  "sha256": "55f763cbe08bf4592e9e37dd3f5a9f68a61c1150516a5709be784f37be52c629",
+  "assetType": "Decal",
+  "assetId": 76518868210695,
+  "status": "Approved",
+  "imageId": 95636852719128
+ },
+ "weapons/v4/db_g4_atlas1.png": {
+  "sha256": "17762f6b9c1d83a533edf5e7fcb6e6d0fcd0e99c3b8906022d5cba8a222bceb9",
+  "assetType": "Decal",
+  "assetId": 80731755206608,
+  "status": "Approved",
+  "imageId": 96895365442711
+ },
+ "weapons/v4/db_g5.fbx": {
+  "sha256": "a4711e71e6353b80ca357de2a1d8b74513b124cfeddd0bb12ee5f36f5234baa4",
+  "assetType": "Model",
+  "assetId": 85042976165548,
+  "status": "Approved"
+ },
+ "weapons/v4/db_g5_L.fbx": {
+  "sha256": "1e9f0866526e45992c8a8b8653604fb797e9bc26fd887fc46b841f39d4014fc1",
+  "assetType": "Model",
+  "assetId": 85688920538361,
+  "status": "Approved"
+ },
+ "weapons/v4/db_g5_L_atlas1.png": {
+  "sha256": "dd9e533000975da84b0e3ec4bbad32ac2d0b7cb35be4babdb0ba57c0759df2a3",
+  "assetType": "Decal",
+  "assetId": 103284273497840,
+  "status": "Approved",
+  "imageId": 96909636978238
+ },
+ "weapons/v4/db_g5_atlas1.png": {
+  "sha256": "7f0b78c7148ade8dc4367c798b6481c2e910fbe575e9801a15886037b0a5d832",
+  "assetType": "Decal",
+  "assetId": 119711514504525,
+  "status": "Approved",
+  "imageId": 115428741955625
+ },
+ "weapons/v4/db_g6.fbx": {
+  "sha256": "15a803d5bd4e3475874caad94ef3b0c15912fcb506657f808a3025fada137808",
+  "assetType": "Model",
+  "assetId": 129071179304161,
+  "status": "Approved"
+ },
+ "weapons/v4/db_g6_L.fbx": {
+  "sha256": "45442f83f70fe72b623a68ff12377c4eedbd6abbbc4aff52235ca6a6d7d8f35a",
+  "assetType": "Model",
+  "assetId": 89575776471671,
+  "status": "Approved"
+ },
+ "weapons/v4/db_g6_L_atlas1.png": {
+  "sha256": "cfadd6c1d4333b3e974625a91738d1cba0eeee8f7625106358f09db96280838d",
+  "assetType": "Decal",
+  "assetId": 88504070526371,
+  "status": "Approved",
+  "imageId": 80916185813732
+ },
+ "weapons/v4/db_g6_atlas1.png": {
+  "sha256": "da820390b40a0cdc29d2d90b61a554eb249cb2177a509736b599a52d41cac75c",
+  "assetType": "Decal",
+  "assetId": 131360331561010,
+  "status": "Approved",
+  "imageId": 117109607914934
+ },
+ "weapons/v4/db_g7.fbx": {
+  "sha256": "95a926c00ab09e73aa79a8997950232d65243d5bf178ec21d30f3d4996e45022",
+  "assetType": "Model",
+  "assetId": 108297201982274,
+  "status": "Approved"
+ },
+ "weapons/v4/db_g7_L.fbx": {
+  "sha256": "14c61e3efd1d14f02e63eadd8e882a8f51208edc310436028f3df74bf6bbdb77",
+  "assetType": "Model",
+  "assetId": 126243291035201,
+  "status": "Approved"
+ },
+ "weapons/v4/db_g7_L_atlas1.png": {
+  "sha256": "5850b26a854f9184b5ea828931f4f6d432bc2f77c89bafa183df5b8f9f12ff07",
+  "assetType": "Decal",
+  "assetId": 114665821294023,
+  "status": "Approved",
+  "imageId": 128701204088838
+ },
+ "weapons/v4/db_g7_atlas1.png": {
+  "sha256": "48453b19f8cfac8b145397e9d396e7f4a002e230cd5ad3a1fdec3882a91a0e8c",
+  "assetType": "Decal",
+  "assetId": 111457985814795,
+  "status": "Approved",
+  "imageId": 91237194783798
+ },
+ "weapons/v4/db_g8.fbx": {
+  "sha256": "c46c16df2a1aee91ece4d9cd65663430aadfd24bc8520c62ec74834584702670",
+  "assetType": "Model",
+  "assetId": 98423500719992,
+  "status": "Approved"
+ },
+ "weapons/v4/db_g8_L.fbx": {
+  "sha256": "5ecce5af3604f58c9f5835e49285727ad26a6beac0271c1533d1e13370a704f7",
+  "assetType": "Model",
+  "assetId": 78152205921966,
+  "status": "Approved"
+ },
+ "weapons/v4/db_g8_L_atlas1.png": {
+  "sha256": "a4a19aba1a74b0dc351080a2b3e27b718a17b1f893bb7780a093dab1816e0576",
+  "assetType": "Decal",
+  "assetId": 117243251420831,
+  "status": "Approved",
+  "imageId": 121351661742328
+ },
+ "weapons/v4/db_g8_atlas1.png": {
+  "sha256": "b2df2c45c15b6c7f40cb2445e5fb2daad4f32b70c882a3b1a5f8dc2f610cdf3c",
+  "assetType": "Decal",
+  "assetId": 119285473938362,
+  "status": "Approved",
+  "imageId": 132978175110565
+ },
+ "weapons/v4/gs_g1.fbx": {
+  "sha256": "6d409204b6b21999948114d01e5417649e52537bf9cd18d35e06cd3f6ddbaf88",
+  "assetType": "Model",
+  "assetId": 131749404185792,
+  "status": "Approved"
+ },
+ "weapons/v4/gs_g1_atlas1.png": {
+  "sha256": "123d14d762f5f4a3c1da01938a2883ebdd5dd1ac6015fa40351eb6607932ed73",
+  "assetType": "Decal",
+  "assetId": 135835376768029,
+  "status": "Approved",
+  "imageId": 85472021661135
+ },
+ "weapons/v4/gs_g2.fbx": {
+  "sha256": "136cac301d6d3454363d9e28907071d1bb2562ffa3ffa2317ca2faa823c2e4a5",
+  "assetType": "Model",
+  "assetId": 124727059771349,
+  "status": "Approved"
+ },
+ "weapons/v4/gs_g2_atlas1.png": {
+  "sha256": "58fbc4b2e73e96f803c9a23643896641650e1ef5c1f5af15f2a71b5a14334694",
+  "assetType": "Decal",
+  "assetId": 85868763135492,
+  "status": "Approved",
+  "imageId": 84467379659257
+ },
+ "weapons/v4/gs_g3.fbx": {
+  "sha256": "df6f8ee138e57f8bca74ca8607d176733732b0be82297651aa39e8947861f7de",
+  "assetType": "Model",
+  "assetId": 111599029047554,
+  "status": "Approved"
+ },
+ "weapons/v4/gs_g3_atlas1.png": {
+  "sha256": "77dd5fa0d2e33e8dbdcfe599bdad988e1e683b5fa305d1722a54a6c0dc634c7d",
+  "assetType": "Decal",
+  "assetId": 126560724399315,
+  "status": "Approved",
+  "imageId": 90430780888377
+ },
+ "weapons/v4/gs_g4.fbx": {
+  "sha256": "10547491109929704a9ebae8e002b2b4eed8d5588e685f41aa50f959bd2716ce",
+  "assetType": "Model",
+  "assetId": 92770808995395,
+  "status": "Approved"
+ },
+ "weapons/v4/gs_g4_atlas1.png": {
+  "sha256": "3709c8db284fbd9249a85ef166096fdf607a965745c436d8c54ffd01cd9ecd33",
+  "assetType": "Decal",
+  "assetId": 77240871410008,
+  "status": "Approved",
+  "imageId": 75884253555069
+ },
+ "weapons/v4/gs_g5.fbx": {
+  "sha256": "82f9d5afdcc2bc0d2df54e7c67d07cb12c94d911798552d158dd6145619fb313",
+  "assetType": "Model",
+  "assetId": 113986744455743,
+  "status": "Approved"
+ },
+ "weapons/v4/gs_g5_atlas1.png": {
+  "sha256": "234b214a9fa3f09adc363dc56f71f5cc3c919638d3aef76564c33f9fa3d46d14",
+  "assetType": "Decal",
+  "assetId": 134932917739834,
+  "status": "Approved",
+  "imageId": 127772314376517
+ },
+ "weapons/v4/gs_g6.fbx": {
+  "sha256": "5d83db14a969b822c8aefca6cbff41595f1514fd29c48693d6a89eae6a92e183",
+  "assetType": "Model",
+  "assetId": 91406934269172,
+  "status": "Approved"
+ },
+ "weapons/v4/gs_g6_atlas1.png": {
+  "sha256": "d09501167386cb7d429485b5998cdba3123d0fc261aeaf1127bb1fe5e532db2f",
+  "assetType": "Decal",
+  "assetId": 129801780064907,
+  "status": "Approved",
+  "imageId": 106338638111080
+ },
+ "weapons/v4/gs_g7.fbx": {
+  "sha256": "01a360baf36e834f691fb09afe4ee29fc5ea7d0946c5490ddde2c50c14de7f08",
+  "assetType": "Model",
+  "assetId": 122743159490132,
+  "status": "Approved"
+ },
+ "weapons/v4/gs_g7_atlas1.png": {
+  "sha256": "b3422561bb3273a1b9e9c92aba907c1c66a630eb473bf3099abc8f0c244b4e3f",
+  "assetType": "Decal",
+  "assetId": 87302868157458,
+  "status": "Approved",
+  "imageId": 139172192106273
+ },
+ "weapons/v4/gs_g8.fbx": {
+  "sha256": "81a8884e28f6bb6b3202f80ddb43d4facb562d8071e246a78394f4f6cd016ab6",
+  "assetType": "Model",
+  "assetId": 74073388781022,
+  "status": "Approved"
+ },
+ "weapons/v4/gs_g8_atlas1.png": {
+  "sha256": "b8cec4ffd1064283096592711c033bb404da098bb935e428bddb65e708dd50b6",
+  "assetType": "Decal",
+  "assetId": 107503635650010,
+  "status": "Approved",
+  "imageId": 89904891717604
+ },
+ "weapons/v4/staff_g1.fbx": {
+  "sha256": "59b8ffa1649f88fe125d01f5f7eb9331ce830f3de1d1c86c69175b737f56bf14",
+  "assetType": "Model",
+  "assetId": 98334171045352,
+  "status": "Approved"
+ },
+ "weapons/v4/staff_g1_atlas1.png": {
+  "sha256": "b4d8d23a4a7ddf13fca1edd06f0984c89162e984e749a0d081bff7b451053fea",
+  "assetType": "Decal",
+  "assetId": 101564288821072,
+  "status": "Approved",
+  "imageId": 121231233181040
+ },
+ "weapons/v4/staff_g2.fbx": {
+  "sha256": "8fc0fb1c37824a46141ac5776b76744741c6262242045aa1d67c4e9ef468ff04",
+  "assetType": "Model",
+  "assetId": 122584726853052,
+  "status": "Approved"
+ },
+ "weapons/v4/staff_g2_atlas1.png": {
+  "sha256": "13bf247b2ed668b36a631ea2e82144dcd7a73174057438c47ed3f8754c7ab189",
+  "assetType": "Decal",
+  "assetId": 123027163929052,
+  "status": "Approved",
+  "imageId": 108474522968804
+ },
+ "weapons/v4/staff_g3.fbx": {
+  "sha256": "eb005534a3484afef1314af930538af33dab82f0c9cffc21fe5cfbfd32209263",
+  "assetType": "Model",
+  "assetId": 118627490201313,
+  "status": "Approved"
+ },
+ "weapons/v4/staff_g3_atlas1.png": {
+  "sha256": "58756e30cff1f08db1d3883be3c38e55dbd697c4caa9f03d624a952ceb88fda1",
+  "assetType": "Decal",
+  "assetId": 117119615936946,
+  "status": "Approved",
+  "imageId": 75865401356570
+ },
+ "weapons/v4/staff_g4.fbx": {
+  "sha256": "8b7df8594bc1963affa527902b820687ca31e01835494802a128c750de17b1c8",
+  "assetType": "Model",
+  "assetId": 127199954703417,
+  "status": "Approved"
+ },
+ "weapons/v4/staff_g4_atlas1.png": {
+  "sha256": "9e48aa84fc8b285e03db1523b8dbe70515b262d7b184dfc1ca0ba99afc8b8bb1",
+  "assetType": "Decal",
+  "assetId": 135576335501591,
+  "status": "Approved",
+  "imageId": 92243832598394
+ },
+ "weapons/v4/staff_g5.fbx": {
+  "sha256": "c3cc404fd435d6fde6e0104a44585350fbd1da780a8b509ea31b6562488388f6",
+  "assetType": "Model",
+  "assetId": 73908109433892,
+  "status": "Approved"
+ },
+ "weapons/v4/staff_g5_atlas1.png": {
+  "sha256": "e928826dc2d5fb82798f6e30c871a08f85f4a77d66ea831197d25093b16519c7",
+  "assetType": "Decal",
+  "assetId": 86395000986726,
+  "status": "Approved",
+  "imageId": 77743205733436
+ },
+ "weapons/v4/staff_g6.fbx": {
+  "sha256": "157d783273254f58dc7e107b6702e7c8eab0fd7d9bb0a8421016b550f98595e9",
+  "assetType": "Model",
+  "assetId": 130219806109343,
+  "status": "Approved"
+ },
+ "weapons/v4/staff_g6_atlas1.png": {
+  "sha256": "2796eff764c74bd6db5e3eea6c19d3442aa1dcc664b8c79f83a7568c71136cb1",
+  "assetType": "Decal",
+  "assetId": 108238523406532,
+  "status": "Approved",
+  "imageId": 82832456365123
+ },
+ "weapons/v4/staff_g7.fbx": {
+  "sha256": "a2eb7584dabe7107d76a83d5c4d4d6a3019381e26234d115c26ea7fc7a5a72ae",
+  "assetType": "Model",
+  "assetId": 79934113453352,
+  "status": "Approved"
+ },
+ "weapons/v4/staff_g7_atlas1.png": {
+  "sha256": "84dd1e08a32b8e8e263aee9b9631403dbd1b378187526931916b3e7ee5043910",
+  "assetType": "Decal",
+  "assetId": 134864002802277,
+  "status": "Approved",
+  "imageId": 108612531605901
+ },
+ "weapons/v4/staff_g8.fbx": {
+  "sha256": "f5cf0acebe778a747faaf7b5b32cd687eaa2f282a4d5874898f55133551223e3",
+  "assetType": "Model",
+  "assetId": 135775471219115,
+  "status": "Approved"
+ },
+ "weapons/v4/staff_g8_atlas1.png": {
+  "sha256": "fd6dc798a4e8044546885aef4da064f8cb709c97fd82f3a730c8176ab07093ea",
+  "assetType": "Decal",
+  "assetId": 129426204483075,
+  "status": "Approved",
+  "imageId": 104172346641064
  }
 }

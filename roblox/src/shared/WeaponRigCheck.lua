@@ -89,7 +89,8 @@ function WeaponRigCheck.check(classId, pieceName, model)
 	local axis = AXES[piece.tipAxis]
 	local lo, hi = localBounds(model, frame)
 	local length = math.abs((hi - lo):Dot(axis))
-	add(("길이 %.2f(기준 %.2f ± %d%%)"):format(length, piece.refLength, C.lengthTolerance * 100), math.abs(length - piece.refLength) <= piece.refLength * C.lengthTolerance)
+	local refLength = piece.refLength * (model:GetAttribute("RefLengthScale") or 1) -- FINAL-1 2: 등급마다 크기가 다른 무기(단검 g1 0.693 ~ g8 1.0)
+	add(("길이 %.2f(기준 %.2f ± %d%%)"):format(length, refLength, C.lengthTolerance * 100), math.abs(length - refLength) <= refLength * C.lengthTolerance)
 	local tip = findAttachment(model, A.tip)
 	if tip then
 		-- 축 = 모델이 가장 긴 축(경계 상자)이 규격 축과 같고 · Tip이 손잡이보다 + 쪽(활은 손잡이가 날개 축에서 비껴 있어 "손잡이 → Tip" 각도는 못 쓴다)

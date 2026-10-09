@@ -37,6 +37,9 @@ local SPEC = {
 	bodyScale = { min = 0.7, max = 1.45, step = 0.05 },
 	-- 규격 검사 허용치(WeaponRigCheck): 길이 ±10% · 보조 손 거리(손잡이 점에서 stud). 축 = 모델의 가장 긴 축이 tipAxis + Tip이 손잡이보다 끝 쪽
 	check = { lengthTolerance = 0.1, supportMinStuds = 0.35, supportMaxStuds = 2.2 },
+	-- FINAL-1 2 바닥 위 유지(겉모습만): 손에 든 교체 무기의 끝(Tip · Butt · 활 양 날개)이 발밑 바닥 + marginStuds보다 내려가면 손잡이를 축으로 그만큼만 들어 올린다
+	--   (옛 = 대검 일어나기 칼 짚기 2.8 · 지팡이 짚기 1.6 · 쌍검 3타 0.5 · 활 무거운 착지 0.4 stud가 바닥에 묻혔다). probeStuds = 루트에서 아래로 바닥을 찾는 거리(공중이면 안 닿아 그대로)
+	groundKeep = { marginStuds = 0.05, probeStuds = 6 },
 	-- 교체 모델 자리(PropModels와 같은 방식): ReplicatedStorage.Shared.WeaponModels.<직업>(조각이 여럿이면 자식 이름 = 조각 이름) - 없으면 지금 메시
 	overrideFolder = "WeaponModels",
 }

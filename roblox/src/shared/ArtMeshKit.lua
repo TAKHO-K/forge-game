@@ -244,10 +244,101 @@ local function hex(s)
 	return Color3.fromHex(s)
 end
 
+-- FINAL-1 2 WEAPON-HOLD v4 조각 하나(캐시 메시 + 아틀라스 + WeaponV4Data 부착점). 원점 = 손잡이 · 길이 맞춤 없음(메시가 이미 규격 길이 - 단검은 등급 배율 RefLengthScale)
+local function weaponPieceV4(key, row, gradeId, gradeIndex, mirror)
+	local src = ArtMeshKit.get(key)
+	if not src then
+		return nil
+	end
+	local V4 = require(ReplicatedStorage.Shared.data.WeaponV4Data)
+	local ArtAssetIds = require(ReplicatedStorage.Shared.data.ArtAssetIds)
+	local model = src:Clone()
+	local primary = model:FindFirstChildWhichIsA("BasePart", true)
+	if not primary then
+		model:Destroy()
+		return nil
+	end
+	local tex = ArtAssetIds[key .. "_atlas1"]
+	for _, p in ipairs(model:GetDescendants()) do
+		if p:IsA("BasePart") then
+			if p:IsA("MeshPart") and tex and tex.image then
+				p.TextureID = "rbxassetid://" .. tostring(tex.image)
+				p.Color = Color3.new(1, 1, 1)
+			end
+			p.CastShadow = false
+		end
+	end
+	local sx = mirror and -1 or 1
+	for name, at in pairs(row.attachments) do
+		local a = Instance.new("Attachment")
+		a.Name = name
+		a.Position = primary.CFrame:PointToObjectSpace(Vector3.new(at.X * sx, at.Y, at.Z))
+		a.Parent = primary
+	end
+	-- 발광 = 보석 · 룬 자리(Glow)에 작은 빛만(무기 전체 Neon 아님) · g7 태초 = 마젠타 노브
+	local glow = primary:FindFirstChild("Glow")
+	local primal = V4.primalGlow.enabled and gradeIndex == V4.primalGlow.grade
+	if glow and (primal or gradeIndex >= V4.glow.minGrade) then
+		local light = Instance.new("PointLight")
+		light.Name = "WeaponGemGlow"
+		light.Color = primal and V4.primalGlow.color or require(ReplicatedStorage.Shared.GradeColor).of(gradeId)
+		light.Brightness = primal and V4.primalGlow.brightness or V4.glow.brightness
+		light.Range = primal and V4.primalGlow.range or V4.glow.range
+		light.Shadows = false
+		light.Parent = glow
+	end
+	local tip = row.attachments.Tip
+	if tip then -- 칼날 리본(WeaponVisual attachTrail - PrimaryPart 로컬): 손잡이 → Tip 선의 92% · 25% 자리
+		local t = Vector3.new(tip.X * sx, tip.Y, tip.Z)
+		model:SetAttribute("TrailTop", primary.CFrame:PointToObjectSpace(t * 0.92))
+		model:SetAttribute("TrailBottom", primary.CFrame:PointToObjectSpace(t * 0.25))
+	end
+	model:SetAttribute("RefLengthScale", row.refScale) -- 규격 검사(WeaponRigCheck) 길이 기준 배율 - 단검 등급 크기
+	model:SetAttribute("WeaponV4", key)
+	model.PrimaryPart = primary
+	primary.PivotOffset = primary.CFrame:Inverse() -- 피벗 = 리그 원점(손잡이 - A2-N4 P0-2와 같은 이유)
+	model.WorldPivot = CFrame.identity
+	return model
+end
+
+local function weaponModelV4(classId, gradeId)
+	local V4 = require(ReplicatedStorage.Shared.data.WeaponV4Data)
+	if not V4.enabled then
+		return nil
+	end
+	local key, rowKey, n = V4.key(classId, gradeId)
+	local row = key and V4.rows[rowKey]
+	if not row then
+		return nil
+	end
+	local pieces = Data.weaponPieces[classId]
+	if not pieces then
+		return weaponPieceV4(key, row, gradeId, n, false)
+	end
+	-- 쌍검: 오른손 = 원본 · 왼손 = 좌우 대칭 사본(_L - 없으면 원본 복제)
+	local box = Instance.new("Model")
+	for i, pieceName in ipairs(pieces) do
+		local left = i == 2
+		local m = (left and weaponPieceV4(V4.key(classId, gradeId, true), row, gradeId, n, true)) or weaponPieceV4(key, row, gradeId, n, false)
+		if not m then
+			box:Destroy()
+			return nil
+		end
+		m.Name = pieceName
+		m.Parent = box
+	end
+	box.Name = rowKey
+	return box
+end
+
 -- 무기 교체 모델(복제본 - 호출 쪽이 Destroy). 파트 색 · 네온 = 메타 look · 부착점 = PrimaryPart(Blade 또는 첫 파트) 아래 Attachment.
 function ArtMeshKit.weaponModel(classId, gradeId, options) -- options.keepDropParts = 코드가 그리는 부분(활 시위)을 메시로 남김(무대 - 그리는 코드 없음)
 	if not Data.weaponClasses[classId] then
 		return nil
+	end
+	local v4 = weaponModelV4(classId, gradeId) -- FINAL-1 2 WEAPON-HOLD(스위치 WeaponV4Data.enabled · 캐시에 있을 때만 - 없으면 아래 옛 경로)
+	if v4 then
+		return v4
 	end
 	local look = Data.weaponGradeFile[gradeId] or "normal"
 	-- QUEUE-ALL9E1 1-1 장비 v3: 스위치 GearV3Meshes · weapons/<직업>_<단계>(s1 ~ s5 - 같은 손잡이 원점 · 부착점 = 옛 메타) · 색 = GearV3.weaponColor(구역) · 문 부품(초월 균열 Tr) = 그 등급만

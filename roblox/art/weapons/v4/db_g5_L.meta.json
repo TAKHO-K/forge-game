@@ -1,0 +1,70 @@
+{
+ "parts": {
+  "Weapon": {
+   "tris": 2903,
+   "origin": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "center": [
+    -0.001,
+    0.002,
+    0.712
+   ],
+   "neon": false,
+   "color": null
+  }
+ },
+ "partCount": 1,
+ "totalTris": 2903,
+ "triBudget": 5000,
+ "budgetUse": 0.581,
+ "version": "WEAPON4",
+ "metaName": "db_g5_L",
+ "kind": "db",
+ "length": 2.192,
+ "attachments": {
+  "Grip": [
+   -0.0,
+   0.0,
+   0.0
+  ],
+  "Tip": [
+   -0.0,
+   0.0,
+   1.8084
+  ],
+  "Glow": [
+   -0.0,
+   0.0,
+   0.2959
+  ]
+ },
+ "hold": {
+  "gripThickness": 0.1299,
+  "gripLength": 0.3288,
+  "gripFrom": 0.1,
+  "gripTo": 0.25,
+  "size": [
+   0.7507,
+   0.275,
+   2.192
+  ],
+  "tipAxis": "+Z"
+ },
+ "texture": {
+  "atlases": [
+   "db_g5_L_atlas1.png"
+  ],
+  "parts": [
+   "Weapon"
+  ]
+ },
+ "kit": {
+  "source": "gear_weapon_db_g5_remesh3k.glb",
+  "sourceTris": 2903,
+  "mirror": true
+ },
+ "space": "Roblox 공간 · 원점 = 손잡이(Grip) · 끝 축 +Z"
+}

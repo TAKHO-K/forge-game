@@ -220,10 +220,29 @@ local function buildWeapon(classId, colorOverride, parentFolder, artModel, bodyS
 				return nil
 			end
 			p.custom = clone
+			if clone:IsA("Model") then
+				p.customParts = {}
+				for _, d in ipairs(clone:GetDescendants()) do
+					if d:IsA("BasePart") then
+						p.customParts[d] = frame:ToObjectSpace(d.CFrame)
+					end
+				end
+			end
 			if TrailData.ribbon.classes[classId] and clone:GetAttribute("TrailTop") and clone.PrimaryPart then -- A2-S: 교체 모델도 칼날 리본(부착점 = 모델 Attribute · PrimaryPart 로컬)
 				p.trail, p.gloss = attachTrail(clone.PrimaryPart, clone:GetAttribute("TrailTop") * bodyScale, clone:GetAttribute("TrailBottom") * bodyScale)
 			end
 			p.gripLocal = localOf(WeaponRigSpec.attachments.grip)
+			-- FINAL-1 2 바닥 위 유지: 무기 끝 점(Tip · Butt · 활은 Tip 좌우 대칭 = 반대 날개)
+			p.endsLocal = {}
+			for _, name in ipairs({ WeaponRigSpec.attachments.tip, "Butt" }) do
+				local e = localOf(name)
+				if e then
+					table.insert(p.endsLocal, e)
+					if model.kind == "bow" and name == WeaponRigSpec.attachments.tip then
+						table.insert(p.endsLocal, Vector3.new(-e.X, e.Y, e.Z))
+					end
+				end
+			end
 			p.supportLocal = localOf(WeaponRigSpec.attachments.support)
 			p.nockLocal = localOf(WeaponRigSpec.attachments.stringNock)
 			p.scale = 1
@@ -881,7 +900,11 @@ local POLE_SUPPORT = Vector3.new(-1, -1.2, 0.2) -- 왼팔 보조 손 팔꿈치 =
 local POLE_STRING = Vector3.new(1, 0.1, 1) -- 시위 당기는 오른팔 팔꿈치 = 오른쪽 뒤
 
 local function placePiece(p, cf)
-	if p.custom then
+	if p.customParts then -- FINAL-1 2: 강화 외곽선(WeaponEnhanceVisual Weapon_EnhanceRoot)이 파트를 다른 Model로 옮겨 가도 따라간다(옛 = 빈 모델만 PivotTo → 무기가 원점에 멈춤)
+		for part, offset in pairs(p.customParts) do
+			part.CFrame = cf * offset
+		end
+	elseif p.custom then
 		if p.custom:IsA("Model") then
 			p.custom:PivotTo(cf)
 		else
@@ -1119,6 +1142,45 @@ local function updatePose(st, now, camPos)
 	end
 end
 
+-- FINAL-1 2 바닥 위 유지(WeaponRigSpec.groundKeep): 가장 낮은 끝이 바닥 아래면 손잡이를 축으로 그 끝만큼 들어 올린다(겉모습만)
+local groundParams = RaycastParams.new()
+groundParams.FilterType = Enum.RaycastFilterType.Exclude
+groundParams.RespectCanCollide = true
+local function groundBelow(character, folder, root)
+	groundParams.FilterDescendantsInstances = { character, folder }
+	local hit = Workspace:Raycast(root.Position, Vector3.new(0, -WeaponRigSpec.groundKeep.probeStuds, 0), groundParams)
+	return hit and hit.Position.Y
+end
+
+local function keepAboveGround(p, wcf, groundY)
+	if not groundY or not p.endsLocal or #p.endsLocal == 0 then
+		return wcf
+	end
+	local floorY = groundY + WeaponRigSpec.groundKeep.marginStuds
+	local grip = wcf:PointToWorldSpace(p.gripLocal)
+	if grip.Y <= floorY then
+		return wcf -- 손이 바닥에 닿는 자세 - 돌려도 못 올린다
+	end
+	local lowest
+	for _, e in ipairs(p.endsLocal) do
+		local w = wcf:PointToWorldSpace(e)
+		if not lowest or w.Y < lowest.Y then
+			lowest = w
+		end
+	end
+	if lowest.Y >= floorY then
+		return wcf
+	end
+	local v = lowest - grip
+	local axis = v:Cross(Vector3.yAxis)
+	if axis.Magnitude < 1e-4 then
+		return wcf
+	end
+	local len = v.Magnitude
+	local angle = math.asin(math.clamp((floorY - grip.Y) / len, -1, 1)) - math.asin(math.clamp(v.Y / len, -1, 1))
+	return CFrame.new(grip) * CFrame.fromAxisAngle(axis.Unit, angle) * CFrame.new(-grip) * wcf
+end
+
 -- ② 무기 자리(RenderStepped - 물리가 이번 포즈로 놓은 실제 손 · 몸 파트 기준)
 local function placeWeapon(st, now, camPos)
 	local character = st.character
@@ -1133,11 +1195,12 @@ local function placeWeapon(st, now, camPos)
 	end
 	local f = st.frame or { inHand = false, draw = 0, trailOn = false, heavyMul = 1 }
 	local weapon = st.weapon
+	local groundY = f.inHand and groundBelow(character, weapon.folder, root) or nil
 	for _, p in pairs(weapon.pieces) do
 		local wcf
 		local hand = character:FindFirstChild(p.spec.hand)
 		if f.inHand and hand then
-			wcf = pieceCFrame(p, hand.CFrame, f.heavyMul)
+			wcf = keepAboveGround(p, pieceCFrame(p, hand.CFrame, f.heavyMul), groundY)
 		else
 			local mount = character:FindFirstChild(p.spec.sheath.mount == "hip" and "LowerTorso" or "UpperTorso")
 			if mount then

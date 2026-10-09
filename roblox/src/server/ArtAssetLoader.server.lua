@@ -30,7 +30,11 @@ local function loadAll()
 	end)
 	-- 1단계 = 소품(맵 · 제단이 부팅 때 기다린다) → PropsReady · 2단계 = 나머지
 	local first, priority, rest = {}, {}, {}
+	local V4 = require(ReplicatedStorage.Shared.data.WeaponV4Data)
 	local function isPriority(key) -- 우선 순위(접두사 순서 · 없으면 nil)
+		if V4.enabled and V4.priorityOnly and key:sub(1, 8) == "weapons/" and key:sub(1, #V4.prefix) ~= V4.prefix then
+			return nil -- FINAL-1 2: v4가 켜져 있으면 옛 무기 메시(되돌림 예비)는 우선 묶음에서 빼 Ready_weapons를 앞당긴다
+		end
 		for i, prefix in ipairs(Data.priorityPrefixes or {}) do
 			if key:sub(1, #prefix) == prefix then
 				return i
