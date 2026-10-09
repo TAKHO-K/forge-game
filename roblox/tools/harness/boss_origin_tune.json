@@ -1,20 +1,22 @@
 {
  "_about": "BOSS-NIGHT-2 3 Studio 실측 보정(stud · 스테이지 15 크기 · 대상 쪽 기준 앞 fwd / 오른쪽 right): 보이는 접촉 부위(가장 낮은 프레임 · 투사체 = 발사 순간) - 서버 지점의 중앙값. 클라 전용 층(시선 돌리기 · 겹침 · 손목 튕김)을 오프라인 FK가 재현 못 하는 몫. forms = 적용 폼. n = 표본 수.",
  "section_guardian_v2/heavy": {
-  "fwd": 0.34,
-  "right": 0.06,
-  "n": 2
+  "fwd": 0.96,
+  "right": 0.03,
+  "n": 5,
+  "note": "BOSS-NIGHT-2 A 재측정(조준 고정 · 판정 시각 ±0.3초 최저 프레임 · 투사체 = 발사 프레임)"
  },
  "section_guardian_v2/shockwave": {
-  "fwd": 0.44,
+  "fwd": 1.01,
   "right": 0.04,
-  "n": 3
+  "n": 10,
+  "note": "BOSS-NIGHT-2 A 재측정(조준 고정 · 판정 시각 ±0.3초 최저 프레임 · 투사체 = 발사 프레임)"
  },
  "section_guardian_v2/cross": {
-  "fwd": 1.1,
-  "right": 0.0,
-  "n": 1,
-  "note": "1볼리만(2볼리는 빔이 돌아 좌우가 흔들림)"
+  "fwd": 1.29,
+  "right": 0.09,
+  "n": 4,
+  "note": "BOSS-NIGHT-2 A 재측정(조준 고정 · 판정 시각 ±0.3초 최저 프레임 · 투사체 = 발사 프레임) · 2볼리 = 클립 몸 45° 돌기 제거(CROSS_TURN2)"
  },
  "section_guardian_v2/banana": {
   "fwd": -1.45,
@@ -27,14 +29,16 @@
   "n": 1
  },
  "frost_giant_v2/stomp": {
-  "fwd": 2.08,
-  "right": -4.27,
-  "n": 1
+  "fwd": -0.83,
+  "right": -1.97,
+  "n": 4,
+  "note": "BOSS-NIGHT-2 A 재측정(조준 고정 · 판정 시각 ±0.3초 최저 프레임 · 투사체 = 발사 프레임)"
  },
  "frost_giant_v2/snowball": {
-  "fwd": -0.59,
-  "right": -4.28,
-  "n": 1
+  "fwd": -0.94,
+  "right": -3.68,
+  "n": 4,
+  "note": "BOSS-NIGHT-2 A 재측정(조준 고정 · 판정 시각 ±0.3초 최저 프레임 · 투사체 = 발사 프레임)"
  },
  "frost_giant_v2/tuskShot": {
   "fwd": -2.9,
@@ -43,9 +47,9 @@
   "note": "좌우 상아 번갈아(±2.7) - 앞뒤만"
  },
  "storm_lord_v2/thunderRing": {
-  "fwd": 0.14,
+  "fwd": 0.04,
   "right": -0.05,
-  "n": 3,
+  "n": 9,
   "forms": [
    "before"
   ]
@@ -75,9 +79,10 @@
   ]
  },
  "abyssal_lord_v2/tide": {
-  "fwd": 3.83,
-  "right": -4.9,
-  "n": 3
+  "fwd": 1.52,
+  "right": -1.14,
+  "n": 9,
+  "note": "BOSS-NIGHT-2 A 재측정(조준 고정 · 판정 시각 ±0.3초 최저 프레임 · 투사체 = 발사 프레임)"
  },
  "abyssal_lord_v2/bubbles": {
   "fwd": -0.9,
@@ -99,5 +104,29 @@
   "right": 0.0,
   "n": 6
  },
- "_excluded": "frost_giant_v2/slam · spike = 보정 뺌(매머드 머리 · 코가 대상을 따라 도는 클라 층 때문에 시전마다 3 ~ 10 stud 흔들림 - 표본 1개 보정이 오히려 나빠짐 · FK 값 유지)"
+ "frost_giant_v2/slam": {
+  "fwd": -1.91,
+  "right": -1.28,
+  "n": 3,
+  "note": "BOSS-NIGHT-2 A 재측정(조준 고정 · 판정 시각 ±0.3초 최저 프레임 · 투사체 = 발사 프레임) (옛 = 측정 방식 탓 제외)"
+ },
+ "frost_giant_v2/spike": {
+  "fwd": -3.02,
+  "right": -2.95,
+  "n": 3,
+  "note": "BOSS-NIGHT-2 A 재측정(조준 고정 · 판정 시각 ±0.3초 최저 프레임 · 투사체 = 발사 프레임) (옛 = 측정 방식 탓 제외)"
+ },
+ "storm_lord_v2/boltSpear@before": {
+  "fwd": 0.51,
+  "right": 0.73,
+  "n": 5,
+  "note": "BOSS-NIGHT-2 A 재측정(조준 고정 · 판정 시각 ±0.3초 최저 프레임 · 투사체 = 발사 프레임)"
+ },
+ "abyssal_lord_v2/tridentThrow": {
+  "fwd": 1.69,
+  "right": -1.24,
+  "n": 2,
+  "note": "BOSS-NIGHT-2 B 첫 측정(부메랑 던지는 순간 = 예고 끝)"
+ },
+ "_excluded": "BOSS-NIGHT-2 A: 매머드 slam · spike는 측정 방식(충격 뒤 0.7초 최저점 - 앞발이 늘 땅에 닿아 걷는 프레임을 잡음)을 바꿔 다시 넣음"
 }

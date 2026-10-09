@@ -168,6 +168,7 @@ do
 		local r = p.RootJoint or { 0, 0, 0, 0, 0, 0 }
 		return merge(p, { RootJoint = { r[1], deg, r[3], r[4] or 0, r[5] or 0, r[6] or 0 } })
 	end
+	local CROSS_TURN2 = 0
 	C.k_cross = {
 		pre = {
 			{ f = 0.35, ease = "inout", pose = merge(STAND, { Shoulder_L = { 80, 0, 50 }, Shoulder_R = { 80, 0, -50 }, Elbow_L = { 40, 0, 0 }, Elbow_R = { 40, 0, 0 } }) }, -- 팔을 가슴 앞 X
@@ -176,13 +177,14 @@ do
 		post = {
 			{ s = 0.08, ease = "in", pose = X_HIT },
 			{ s = 0.45, ease = "out", pose = merge(X_HIT, { Waist = { -38, 0, 0 } }) },
-			{ s = 0.85, ease = "inout", pose = turned(X_UP, 45) }, -- 45° 돌며 다시 들어 올림(둘째 볼리 전조)
-			{ s = 1.5, ease = "in", pose = turned(X_HIT, 45) }, -- 둘째 볼리 판정(첫 판정 + 전조 1.5초)
-			{ s = 1.85, ease = "out", pose = turned(merge(X_HIT, { Waist = { -38, 0, 0 } }), 45) },
+			-- BOSS-NIGHT-2 A: 둘째 볼리 몸 돌기 45 → 0(CROSS_TURN2) - 서버 발생 지점은 둘째 볼리도 대상 쪽이라 45° 돌면 두 주먹이 지점에서 10 stud 옆에 찍혔다(빔만 45° 돈다)
+			{ s = 0.85, ease = "inout", pose = turned(X_UP, CROSS_TURN2) }, -- 다시 들어 올림(둘째 볼리 전조)
+			{ s = 1.5, ease = "in", pose = turned(X_HIT, CROSS_TURN2) }, -- 둘째 볼리 판정(첫 판정 + 전조 1.5초)
+			{ s = 1.85, ease = "out", pose = turned(merge(X_HIT, { Waist = { -38, 0, 0 } }), CROSS_TURN2) },
 			{ s = 2.6, ease = "inout", pose = REST_POSE },
 		},
 		hitstop = 0.07, squash = 0.2,
-		extraStrikes = { post = { 0.85, 1.5 } }, -- 둘째 볼리(45° 돌며 다시 들어 찍기)
+		extraStrikes = { post = { 0.85, 1.5 } }, -- 둘째 볼리(다시 들어 찍기)
 	}
 	-- 6 강화 평타 swipe(부채 r14): 오른팔을 몸 앞으로 감아 떨다가 손등으로 바깥으로 휘두름(Hand_R 번쩍)
 	C.k_swipe = {

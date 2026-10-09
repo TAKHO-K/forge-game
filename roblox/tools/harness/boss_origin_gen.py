@@ -19,15 +19,17 @@ TUNE = json.load(io.open(os.path.join(os.path.dirname(__file__), "boss_origin_tu
 KSCALE = json.load(io.open(os.path.join(os.path.dirname(__file__), "boss_origin_k.json"), encoding="utf-8"))
 for rig in rows:
     for sid, e in rows[rig].items():
-        t = TUNE.get(f"{rig}/{sid}")
-        if not t:
-            continue
-        k = KSCALE[rig]
-        for f in t.get("forms", ["before", "after"]):
-            if f in e:
-                x, y, z = e[f]
-                e[f] = (x + t["right"] / k, y, z - t["fwd"] / k)
-        e["tuned"] = t.get("n", 0)
+        # BOSS-NIGHT-2 A: "rig/skill@after" = 그 폼만의 보정(2폼 = 다른 부위로 때림 - 폭풍 주먹)
+        for key, only in ((f"{rig}/{sid}", None), (f"{rig}/{sid}@before", "before"), (f"{rig}/{sid}@after", "after")):
+            t = TUNE.get(key)
+            if not t:
+                continue
+            k = KSCALE[rig]
+            for f in ([only] if only else t.get("forms", ["before", "after"])):
+                if f in e:
+                    x, y, z = e[f]
+                    e[f] = (x + t["right"] / k, y, z - t["fwd"] / k)
+            e["tuned"] = e.get("tuned", 0) + t.get("n", 0)
 out = ["-- BOSS-NIGHT-2 3 발생 지점 표(자동 생성 - tools/harness/boss_origin_dump.luau → boss_origin_gen.py · 손으로 고치지 말 것)",
        "-- [리그][스킬] = { kind = \"ground\"(그 부위 아래 바닥 - 파동 · 균열선 · 지면 투사체) | \"launch\"(부위 가운데 - 투사체), part = 부위, contact = 접촉 프레임(초 · 동작 시작부터),",
        "--   before / after = { x(오른쪽), y(지면 위), z(앞 = −) } 리그 단위 = 접촉 프레임의 보스 루트 기준 오프라인 FK + Studio 실측 보정(tuned = 표본 수 · boss_origin_tune.json) } · 월드 = × 크기(sizeScale × rig.scale) · 대상 쪽 방향으로 돌림(shared/BossOrigin)",

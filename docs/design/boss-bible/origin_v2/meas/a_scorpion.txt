@@ -1,0 +1,15 @@
+scorpion_queen_v2/claw|cross#1|0.05|0.05|0.00|false
+scorpion_queen_v2/clawSweep|sector#1|7.71|7.43|2.07|false
+scorpion_queen_v2/clawSweep|sector#2|7.99|7.82|-1.66|false
+scorpion_queen_v2/stingJab|cross#1|2.14|-1.34|1.67|false
+scorpion_queen_v2/stingJab|cross#2|0.73|0.55|0.48|false
+scorpion_queen_v2/stingJab|cross#3|4.76|-4.71|-0.72|false
+scorpion_queen_v2/swipe|sector#1|10.52|4.18|9.66|false
+scorpion_queen_v2/claw|cross#1|0.08|0.08|0.00|false
+scorpion_queen_v2/clawSweep|sector#1|7.71|7.43|2.07|false
+scorpion_queen_v2/clawSweep|sector#2|8.00|7.82|-1.65|false
+scorpion_queen_v2/stingJab|cross#1|1.38|-0.35|-1.33|false
+scorpion_queen_v2/stingJab|cross#2|3.84|-3.47|-1.65|false
+scorpion_queen_v2/stingJab|cross#3|3.58|-3.20|1.60|false
+scorpion_queen_v2/swipe|sector#1|10.53|4.19|9.66|false
+scorpion_queen_v2/clawSweep|sector#1|7.71|7.43|2.05|false

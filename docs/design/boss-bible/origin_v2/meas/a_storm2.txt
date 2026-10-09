@@ -1,0 +1,14 @@
+storm_lord_v2/discharge@2|shockwave#1|0.02|-0.01|-0.01|true
+storm_lord_v2/discharge@2|shockwave#2|0.02|-0.01|-0.01|true
+storm_lord_v2/discharge@2|shockwave#3|0.02|-0.01|-0.01|true
+storm_lord_v2/boltSpear@2|projTelegraph#1|0.08|-0.04|0.07|false
+storm_lord_v2/tornado@2|projSpawn#1|13.14|8.46|-10.05|false
+storm_lord_v2/discharge@2|shockwave#1|0.02|-0.01|-0.02|true
+storm_lord_v2/boltSpear@2|projTelegraph#1|0.19|0.06|0.18|false
+storm_lord_v2/thunderRing@2|shockwave#1|0.02|-0.01|-0.02|true
+storm_lord_v2/thunderRing@2|shockwave#2|0.02|-0.01|-0.02|true
+storm_lord_v2/tornado@2|projSpawn#1|13.14|8.46|-10.05|false
+storm_lord_v2/discharge@2|shockwave#3|0.02|-0.01|-0.02|true
+storm_lord_v2/stormOrbs@2|projSpawn#1|0.08|0.06|-0.06|false
+storm_lord_v2/boltSpear@2|projTelegraph#1|0.08|-0.05|0.07|true
+storm_lord_v2/tornado@2|projSpawn#1|13.14|8.46|-10.05|false

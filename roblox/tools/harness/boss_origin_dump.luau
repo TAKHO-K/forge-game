@@ -9,7 +9,7 @@ local walk = MODS.WorldConfig.playerWalkSpeedStuds
 local LIST = {
 	section_guardian = { { "shockwave", "ground", { "Hand_L", "Hand_R" } }, { "heavy", "ground" }, { "cross", "ground" }, { "banana", "launch", { "Hand_R" } }, { "orbs", "launch" } },
 	frost_giant = { { "slam", "ground" }, { "stomp", "ground" }, { "spike", "ground" }, { "snowball", "launch" }, { "tuskShot", "launch" } },
-	storm_lord = { { "thunderRing", "ground" }, { "discharge", "ground" }, { "boltSpear", "launch" }, { "stormOrbs", "launch", { "Gauntlet_R", "Gauntlet_L" } }, { "swordWave", "ground", { "StaffOrb" } }, { "tornado", "ground", { "StaffOrb" } } },
+	storm_lord = { { "thunderRing", "ground" }, { "discharge", "ground" }, { "boltSpear", "launch" }, { "stormOrbs", "launch", { "Gauntlet_R", "Gauntlet_L" } }, { "swordWave", "ground", { "StaffOrb" } }, { "tornado", "ground" } }, -- BOSS-NIGHT-2 A: 회오리 부위 = 폼별 flash(1폼 지팡이 보주 · 2폼 두 주먹 - 옛 고정 StaffOrb는 2폼에 숨긴 지팡이를 가리켜 13 stud 어긋남)
 	abyssal_lord = { { "tide", "ground", { "TridentHead" } }, { "bubbles", "launch" }, { "tridentThrow", "launch", { "TridentHead" } } },
 	crystal_queen = { { "magicMissiles", "launch", { "ScepterGem" } }, { "shards", "launch" } },
 	scorpion_queen = { { "claw", "ground" } }, -- stingJab = 예외(접촉 때 꼬리 끝이 몸 위 · 뒤 - 몸 중심 유지)

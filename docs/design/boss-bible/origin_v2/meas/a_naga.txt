@@ -1,0 +1,16 @@
+abyssal_lord_v2/tide|shockwave#1|4.41|-2.31|3.76|true
+abyssal_lord_v2/tide|shockwave#2|4.41|-2.31|3.76|true
+abyssal_lord_v2/tide|shockwave#3|4.41|-2.31|3.76|true
+abyssal_lord_v2/bubbles|projSpawn#1|0.10|0.10|-0.00|true
+abyssal_lord_v2/bubbles|projSpawn#2|0.08|0.08|-0.00|false
+abyssal_lord_v2/tridentThrow|boomTelegraph#1|2.09|1.69|-1.24|true
+abyssal_lord_v2/tide|shockwave#1|4.41|-2.31|3.76|true
+abyssal_lord_v2/tide|shockwave#4|4.41|-2.31|3.76|true
+abyssal_lord_v2/swipe|sector#1|15.86|12.03|10.33|false
+abyssal_lord_v2/tailSweep|sector#1|8.25|-1.54|8.10|false
+abyssal_lord_v2/tide|shockwave#1|4.41|-2.31|3.76|true
+abyssal_lord_v2/bubbles|projSpawn#1|0.10|0.10|-0.00|true
+abyssal_lord_v2/bubbles|projSpawn#2|0.02|-0.02|-0.00|false
+abyssal_lord_v2/tridentThrow|boomTelegraph#1|2.09|1.69|-1.24|false
+abyssal_lord_v2/swipe|sector#1|15.86|12.03|10.33|false
+abyssal_lord_v2/tailSweep|sector#1|2.96|2.77|-1.03|false

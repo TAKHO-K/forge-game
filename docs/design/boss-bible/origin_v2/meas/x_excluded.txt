@@ -1,0 +1,6 @@
+# 제외(사유): 소환 직후 대상이 정해지기 전 첫 시전(조준 고정 없음) · 대상 없는 강제 시전(옛 = 월드 -Z - 이번에 마지막 조준 방향으로 고침) · Play 첫 보스 블록 몸(메시 라이브러리 준비 전)
+section_guardian_v2/cross|cross#1|6.47|-2.46|5.98|false
+storm_lord_v2/boltSpear|projTelegraph#1|8.54|8.32|1.94|false
+abyssal_lord_v2/tide_notarget|shockwave#1|16.50|4.92|-15.75|false
+abyssal_lord_v2/bubbles_notarget|projSpawn#1|8.64|-6.47|-5.73|false
+scorpion_queen_v2/claw|cross#1|19.57|-19.57|-0.00|false

@@ -1,0 +1,3 @@
+abyssal_lord_v2/tide_notarget|shockwave#1|16.50|4.92|-15.75|false
+abyssal_lord_v2/bubbles_notarget|projSpawn#1|8.64|-6.47|-5.73|false
+scorpion_queen_v2/claw_outlier|cross#1|19.57|-19.57|-0.00|false

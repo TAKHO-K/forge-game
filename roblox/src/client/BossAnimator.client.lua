@@ -646,6 +646,11 @@ local function updateEntry(e, now, dt, camPos)
 	end
 	-- BOSS-NIGHT-1(매머드 v3.lockFacing): 서버가 스킬 시작 순간 고정한 방향(BossFaceLockYaw) - 스킬 동안 몸이 대상을 따라 돌지 않는다(등 뒤가 생긴다 · 뒷발차기)
 	local lockYaw = not e.isClone and e.model:GetAttribute("BossFaceLockYaw")
+	local aimYaw = not e.isClone and BossMotionData.aimLock and BossMotionData.aimLock.enabled and e.model:GetAttribute("BossAimLockYaw") -- BOSS-NIGHT-2 A 조준 고정
+	e.aimLocked = aimYaw ~= nil and aimYaw ~= false
+	if e.aimLocked then
+		lockYaw = aimYaw
+	end
 	if lockYaw then
 		yawT = lockYaw
 	end
@@ -721,8 +726,12 @@ local function updateEntry(e, now, dt, camPos)
 	-- A2-M1 겹침 지연 표본은 가까울 때만(먼 보스는 비용 절약) · 잡기 중에는 끔(서버 잡기 FK와 같은 부착점 - server/BossAirGrab도 끈다)
 	st.noOverlap = distance > LOD.fullStuds or (st.act ~= nil and e.ctx.skills ~= nil and e.ctx.skills[st.act] ~= nil and e.ctx.skills[st.act].primitive == "grab")
 	local lookT = distance <= LOD.fullStuds and lookYawFor(e) or nil
+	local lookRate = 6
+	if e.aimLocked then -- BOSS-NIGHT-2 A: 조준 고정 중 = 머리도 정면(가까운 사람을 따라가지 않는다)
+		lookT, lookRate = 0, BossMotionData.aimLock.lookRate
+	end
 	if lookT then
-		e.lookSmooth = (e.lookSmooth or lookT) + (lookT - (e.lookSmooth or lookT)) * (1 - math.exp(-dt * 6))
+		e.lookSmooth = (e.lookSmooth or lookT) + (lookT - (e.lookSmooth or lookT)) * (1 - math.exp(-dt * lookRate))
 	end
 	-- A2-M1: 대상이 생기고 사라질 때 가중치를 천천히(0.3초 남짓) - 마지막 바라본 각에서 두리번으로 넘어간다
 	e.lookW = (e.lookW or 0) + ((lookT and 1 or 0) - (e.lookW or 0)) * (1 - math.exp(-dt * 7))

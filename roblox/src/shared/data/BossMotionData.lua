@@ -754,6 +754,9 @@ D.flinchAmp = { base = 0.7, perHpRatio = 60, max = 2.0 }
 D.interp = { omega = 16, velBlend = 0.5, staleSeconds = 0.08, stopDecay = 18, maxLeadSeconds = 0.05, springLeadFraction = 0.85 }
 -- A2-N4 P0-1: 보이는 방향 - 이 속도(stud/초)를 넘게 움직이면 가는 쪽 · 아니면 대상 쪽(클라 BossAnimator)
 D.faceMoveMinSpeed = 2
+-- BOSS-NIGHT-2 A 조준 고정(겉모습만): 발생 지점 스킬(BossOriginData)은 서버가 예고 순간 정한 조준 방향(모델 Attribute BossAimLockYaw)으로 스킬 끝까지 몸을 고정하고
+--   머리 시선은 정면(0°)으로 lookRate(1/초)로 모은다 - 시선 추적 · 몸 회전 때문에 시전마다 손 · 부위 자리가 흔들리던 것(MELEE-ORIGIN §4). enabled = false면 옛 동작.
+D.aimLock = { enabled = true, lookRate = 14 }
 -- A2-N4 §3-3(A2-N3 결정 ④): 평타 예비(basicPrepSeconds) 동안 몸 전체 약한 흰 번쩍임 - 최대 채움 불투명 peak(사인 곡선 · 예비 한가운데가 가장 밝다)
 D.prepFlash = { color = Color3.fromRGB(255, 255, 255), peak = 0.28 }
 

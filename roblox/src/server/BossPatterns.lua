@@ -95,10 +95,21 @@ end
 -- BOSS-NIGHT-2 3 발생 지점(shared/BossOrigin · data/BossOriginData = 접촉 프레임 오프라인 FK): 표에 있는 스킬이면 때리는 · 쏘는 부위 자리(아레나 밖이면 경계 안으로),
 --   없으면 nil(몸 중심 그대로 - 예외). 방향 = 보스 → 대상 · 크기 = sizeScale × rig.scale · 폼 = 체력 50%. 예고 · 판정 · 사건 자리 모두 이 값 하나를 쓴다.
 local function originOf(c, skillId)
+	-- BOSS-NIGHT-2 A: 대상이 없으면(강제 시전 · 대상 이탈) 마지막 조준 방향 - 옛 = 월드 −Z로 계산돼 보이는 몸(마지막 방향 그대로)과 8 ~ 16 stud 어긋났다
+	local aim = c.targetRoot and Vector3.new(c.targetRoot.Position.X - c.position.X, 0, c.targetRoot.Position.Z - c.position.Z)
+	if aim and aim.Magnitude > 0.5 then
+		c.st.lastAimDir = aim.Unit
+	elseif c.st.lastAimDir then
+		aim = c.st.lastAimDir * 10
+	end
 	local p = BossOrigin.point(c.model:GetAttribute("BossRigKey"), c.data.sizeScale, MonsterState.getHpRatio(c.model), skillId or c.st.current,
-		c.position, c.targetRoot and c.targetRoot.Position, c.st.floorY or c.position.Y)
+		c.position, aim and (c.position + aim), c.st.floorY or c.position.Y)
 	if not p then
 		return nil
+	end
+	-- BOSS-NIGHT-2 A: 이 조준 방향으로 보이는 몸을 스킬 끝까지 고정(클라 BossAnimator만 읽음 - 판정 · 서버 루트 무변경)
+	if aim and aim.Magnitude > 0.5 then
+		c.model:SetAttribute("BossAimLockYaw", math.atan2(-aim.X, -aim.Z))
 	end
 	local inside = clampToZone(Vector3.new(p.X, 0, p.Z), zoneOf(c.model), 1)
 	return Vector3.new(inside.X, p.Y, inside.Z)
@@ -510,6 +521,7 @@ local function endSkill(model, st, data, now, interrupted)
 		st.lockedFacing.untilAt = now + 0.3
 		model:SetAttribute("BossFaceLockYaw", nil)
 	end
+	model:SetAttribute("BossAimLockYaw", nil) -- BOSS-NIGHT-2 A 조준 고정 풀기
 	model:SetAttribute("BossAct", nil) -- BR1-4b 모션: 스킬 끝(클라가 동작을 풀어 제자리로)
 	model:SetAttribute("BossActPhase", nil)
 	if id and data.skills[id] and data.skills[id].reactive then
