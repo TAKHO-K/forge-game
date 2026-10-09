@@ -1,0 +1,50 @@
+EDGE	section_guardian	edge 5.69	chaseStop 13.69	size 3.900
+REACH	section_guardian	banana	before	projectile	fwd 10.8	side 22.1	R 2.0	speed 110 height air
+REACH	section_guardian	banana	after	projectile	fwd 11.0	side 22.1	R 2.0	speed 110 height air
+REACH	section_guardian	cross	before	line	fwd 15.8	side 0.0	R 0.0	len nil halfW 3.45531197301855
+REACH	section_guardian	cross	after	line	fwd 15.8	side 0.0	R 0.0	len nil halfW 3.45531197301855
+REACH	section_guardian	heavy	before	circleBoss	fwd 16.1	side 0.1	R 21.8	
+REACH	section_guardian	heavy	after	circleBoss	fwd 16.1	side 0.1	R 21.8	
+REACH	section_guardian	orbs	before	projectile	fwd -11.0	side 1.8	R 3.5	speed 12 height air
+REACH	section_guardian	orbs	after	projectile	fwd -11.0	side 1.5	R 3.5	speed 12 height air
+REACH	section_guardian	shockwave	before	ring	fwd 16.0	side 0.0	R 0.0	maxR nil speed 24
+REACH	section_guardian	shockwave	after	ring	fwd 16.0	side 0.0	R 0.0	maxR nil speed 24
+EDGE	frost_giant	edge 3.81	chaseStop 11.81	size 4.455
+REACH	frost_giant	slam	before	circleBoss	fwd 7.1	side 0.8	R 24.5	
+REACH	frost_giant	slam	after	circleBoss	fwd 7.1	side 0.8	R 24.5	
+REACH	frost_giant	snowball	before	projectile	fwd 28.5	side -0.5	R 5.8	speed 22 height ground
+REACH	frost_giant	snowball	after	projectile	fwd 28.5	side -0.5	R 5.8	speed 22 height ground
+REACH	frost_giant	spike	before	line	fwd 21.1	side 2.5	R 0.0	len nil halfW 3.45531197301855
+REACH	frost_giant	spike	after	line	fwd 21.1	side 2.5	R 0.0	len nil halfW 3.45531197301855
+REACH	frost_giant	stomp	before	sector	fwd 7.2	side 3.7	R 38.4	angle 360
+REACH	frost_giant	stomp	after	sector	fwd 7.2	side 3.7	R 38.4	angle 360
+REACH	frost_giant	tuskShot	before	projectile	fwd 22.7	side -0.1	R 2.5	speed 70 height air
+REACH	frost_giant	tuskShot	after	projectile	fwd 22.7	side -0.1	R 2.5	speed 70 height air
+EDGE	storm_lord	edge 1.15	chaseStop 9.15	size 3.750
+REACH	storm_lord	boltSpear	before	projectile	fwd 2.2	side -11.9	R 2.3	speed 55 height air
+REACH	storm_lord	boltSpear	after	projectile	fwd 4.7	side -3.7	R 2.3	speed 55 height air
+REACH	storm_lord	discharge	before	ring	fwd 5.5	side 5.4	R 0.0	maxR nil speed 24
+REACH	storm_lord	discharge	after	ring	fwd 4.7	side 0.0	R 0.0	maxR nil speed 24
+REACH	storm_lord	stormOrbs	before	projectile	fwd 7.8	side -0.0	R 2.5	speed 26 height air
+REACH	storm_lord	stormOrbs	after	projectile	fwd 7.6	side 0.0	R 2.5	speed 26 height air
+REACH	storm_lord	swordWave	before	projectile	fwd 7.4	side 2.1	R 5.0	speed 45 height ground
+REACH	storm_lord	swordWave	after	projectile	fwd 7.7	side 1.9	R 5.0	speed 45 height ground
+REACH	storm_lord	thunderRing	before	ring	fwd 6.7	side 6.3	R 0.0	maxR nil speed 12
+REACH	storm_lord	thunderRing	after	ring	fwd 4.7	side 0.0	R 0.0	maxR nil speed 12
+REACH	storm_lord	tornado	before	projectile	fwd -0.4	side 10.0	R 5.8	speed 10 height ground
+REACH	storm_lord	tornado	after	projectile	fwd -1.4	side 10.0	R 5.8	speed 10 height ground
+EDGE	abyssal_lord	edge 0.00	chaseStop 8.00	size 3.600
+REACH	abyssal_lord	bubbles	before	projectile	fwd 5.8	side -0.2	R 4.0	speed 14 height air
+REACH	abyssal_lord	bubbles	after	projectile	fwd 5.8	side -0.2	R 4.0	speed 14 height air
+REACH	abyssal_lord	tide	before	ring	fwd 7.7	side 9.3	R 0.0	maxR nil speed 24
+REACH	abyssal_lord	tide	after	ring	fwd 7.7	side 9.3	R 0.0	maxR nil speed 24
+REACH	abyssal_lord	tridentThrow	before	boomerang	fwd 5.9	side 11.2	R 0.0	speed nil height nil
+REACH	abyssal_lord	tridentThrow	after	boomerang	fwd 5.9	side 11.2	R 0.0	speed nil height nil
+EDGE	crystal_queen	edge 0.00	chaseStop 8.00	size 3.600
+REACH	crystal_queen	magicMissiles	before	projectile	fwd 1.5	side 8.4	R 1.5	speed 50 height air
+REACH	crystal_queen	magicMissiles	after	projectile	fwd 1.5	side 8.4	R 1.5	speed 50 height air
+REACH	crystal_queen	shards	before	projectile	fwd 4.5	side -8.2	R 2.9	speed 26 height air
+REACH	crystal_queen	shards	after	projectile	fwd 4.5	side -8.2	R 2.9	speed 26 height air
+EDGE	scorpion_queen	edge 1.11	chaseStop 9.11	size 3.500
+REACH	scorpion_queen	claw	before	line	fwd 9.8	side 0.0	R 0.0	len nil halfW 3.45531197301855
+REACH	scorpion_queen	claw	after	line	fwd 9.8	side 0.0	R 0.0	len nil halfW 3.45531197301855

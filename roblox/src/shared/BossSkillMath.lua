@@ -453,10 +453,16 @@ end
 -- 뛸 수 있는가"(repeatInterval ≥ perception + 체공 × margin)와 "겹이 점프 한 번에 다 지나가는가"로 검사한다.
 -- standoffStuds = 보스가 멈춰 서는 거리(근접 플레이어가 서는 자리), walkSpeedStuds = 검사 기준 이동 속도.
 -- 반환: { { label, availableSeconds, requiredSeconds, distanceStuds, ok }, ... } - 판정이 여러 번인 스킬은 여러 줄.
-function BossSkillMath.dodgeChecks(skill, standoffStuds, walkSpeedStuds)
+-- originForwardStuds(BOSS-NIGHT-2 C · 없으면 0 = 옛 계산 그대로): 발생 지점(shared/BossOrigin)이 보스 중심에서 대상 쪽으로 앞선 거리 - 보스 원형 · 부채꼴의 중심과
+--   지진파 · 투사체가 출발하는 자리를 그만큼 옮긴다(서 있는 자리 = 보스에서 standoff ~ 원거리 자리 · 대상 쪽 직선 위). 직선 · 부메랑(옆걸음)은 그대로.
+function BossSkillMath.dodgeChecks(skill, standoffStuds, walkSpeedStuds, originForwardStuds)
 	local dodge = BossData.mechanics.dodge
 	local half = dodge.characterHalfWidthStuds
 	local checks = {}
+	local f = originForwardStuds or 0
+	-- 발생 지점에서 서 있는 자리 구간 [standoff, 원거리 자리]까지 가장 가까운 거리(지진파 · 투사체 도착이 가장 이른 자리)
+	local farStand = math.max(dodge.rangedStandoffStuds, standoffStuds)
+	local nearestStand = f <= standoffStuds and (standoffStuds - f) or (f <= farStand and 0 or f - farStand)
 	local function walk(label, availableSeconds, distanceStuds, speedMultiplier)
 		local required = dodge.perceptionSeconds + distanceStuds / (walkSpeedStuds * (speedMultiplier or 1)) * dodge.marginFactor
 		table.insert(checks, {
@@ -472,12 +478,23 @@ function BossSkillMath.dodgeChecks(skill, standoffStuds, walkSpeedStuds)
 		for index, pulse in ipairs(BossSkillMath.pulsesOf(skill)) do
 			local inner, outer = pulse.innerRadiusStuds or 0, pulse.radiusStuds
 			local worst = 0
-			local d = math.max(standoffStuds, inner)
-			local to = math.min(math.max(dodge.rangedStandoffStuds, standoffStuds), outer)
-			while d <= to + 1e-6 do
-				local need = inner > 0 and math.min(d - inner, outer - d) or (outer - d)
-				worst = math.max(worst, need)
-				d += 0.5
+			if f == 0 then
+				local d = math.max(standoffStuds, inner)
+				local to = math.min(math.max(dodge.rangedStandoffStuds, standoffStuds), outer)
+				while d <= to + 1e-6 do
+					local need = inner > 0 and math.min(d - inner, outer - d) or (outer - d)
+					worst = math.max(worst, need)
+					d += 0.5
+				end
+			else
+				local s = standoffStuds
+				while s <= farStand + 1e-6 do -- 중심 = 앞 f · 서 있는 자리 s의 중심 거리 |s − f|
+					local d = math.abs(s - f)
+					if d >= inner and d <= outer then
+						worst = math.max(worst, inner > 0 and math.min(d - inner, outer - d) or (outer - d))
+					end
+					s += 0.5
+				end
 			end
 			walk(("펄스 %d"):format(index), skill.telegraphSeconds, worst + half)
 		end
@@ -519,9 +536,18 @@ function BossSkillMath.dodgeChecks(skill, standoffStuds, walkSpeedStuds)
 				local d = standoffStuds
 				local to = math.min(math.max(dodge.rangedStandoffStuds, standoffStuds), volley.radiusStuds)
 				local halfAngle = math.rad(math.min(volley.angleDeg, 180) / 2)
+				if f ~= 0 then -- 꼭짓점 = 앞 f: 서 있는 자리 s의 꼭짓점 거리(뒤쪽은 360°일 때만 덮인다)
+					d, to = standoffStuds, farStand
+				end
 				while d <= to + 1e-6 do
-					local side = volley.angleDeg >= 180 and d or d * math.sin(halfAngle)
-					worst = math.max(worst, math.min(side, volley.radiusStuds - d))
+					local r = f ~= 0 and (d - f) or d
+					if r < 0 and volley.angleDeg >= 360 then
+						r = -r
+					end
+					if r >= 0 and r <= volley.radiusStuds then
+						local side = volley.angleDeg >= 180 and r or r * math.sin(halfAngle)
+						worst = math.max(worst, math.min(side, volley.radiusStuds - r))
+					end
 					d += 0.5
 				end
 			end
@@ -534,7 +560,7 @@ function BossSkillMath.dodgeChecks(skill, standoffStuds, walkSpeedStuds)
 	elseif primitive == "projectile" then
 		-- BR1 투사체. 지면(ground): 대상 쪽으로 굴러오는 것을 옆으로 비킨다 - 쓸 수 있는 시간 = 전조 + 보스 곁에서 닿기까지.
 		-- 공중(air): 대상을 쫓는다 - 느리면(속도 < 걷기) 땅에서 걸어 따돌리고, 빠르면 궤도를 바꾸거나 착지한다(인지만 되면 된다).
-		local arrival = skill.telegraphSeconds + standoffStuds / skill.speedStuds
+		local arrival = skill.telegraphSeconds + (f ~= 0 and nearestStand or standoffStuds) / skill.speedStuds
 		if skill.heightMode == "ground" then
 			walk("굴러오는 것 옆으로", arrival, skill.radiusStuds + half)
 		elseif skill.speedStuds < walkSpeedStuds then
@@ -613,7 +639,7 @@ function BossSkillMath.dodgeChecks(skill, standoffStuds, walkSpeedStuds)
 	elseif primitive == "ring" then
 		local waves = BossSkillMath.ringWaves(skill)
 		-- 첫 파동: 서 있다가 뛰면 된다 - 찍기 예고 + 파동이 standoff까지 오는 시간 안에 인지만 하면 된다.
-		local firstArrival = waves[1].startSeconds + standoffStuds / waves[1].speedStuds
+		local firstArrival = waves[1].startSeconds + (f ~= 0 and nearestStand or standoffStuds) / waves[1].speedStuds
 		table.insert(checks, { label = "첫 점프", availableSeconds = firstArrival, requiredSeconds = dodge.perceptionSeconds, distanceStuds = 0, ok = firstArrival >= dodge.perceptionSeconds })
 		-- P3c A1: 다시 뛰기 = 앞 파동의 마지막 겹과 다음 파동이 **같은 자리에 닿는 시각 차**. 속도가 다르면 거리에 따라 차가 변한다(빠른 파동이 느린 파동을
 		-- 뒤따르면 멀수록 좁아진다) - 차는 거리에 대해 1차식이라 보스 곁(standoff)과 파동이 사라지는 반경(WAVE_MAX) 두 끝에서 최솟값이 난다.

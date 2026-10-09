@@ -1,0 +1,24 @@
+SAFE	section_guardian	cross	before	line	hug 14.4	fwd 15.8	전 12/36 앞 맞음	후 10/36 앞 맞음
+SAFE	section_guardian	cross	after	line	hug 14.4	fwd 15.8	전 12/36 앞 맞음	후 10/36 앞 맞음
+SAFE	section_guardian	heavy	before	circleBoss	hug 14.4	fwd 16.1	전 36/36 앞 맞음	후 19/36 앞 맞음
+SAFE	section_guardian	heavy	after	circleBoss	hug 14.4	fwd 16.1	전 36/36 앞 맞음	후 19/36 앞 맞음
+SAFE	section_guardian	shockwave	before	ring	hug 14.4	fwd 16.0	전 36/36 앞 맞음	후 36/36 앞 맞음	(점프 회피)
+SAFE	section_guardian	shockwave	after	ring	hug 14.4	fwd 16.0	전 36/36 앞 맞음	후 36/36 앞 맞음	(점프 회피)
+SAFE	frost_giant	slam	before	circleBoss	hug 11.4	fwd 7.1	전 36/36 앞 맞음	후 36/36 앞 맞음
+SAFE	frost_giant	slam	after	circleBoss	hug 11.4	fwd 7.1	전 36/36 앞 맞음	후 36/36 앞 맞음
+SAFE	frost_giant	spike	before	line	hug 11.4	fwd 21.1	전 3/36 앞 맞음	후 0/36 앞 안전
+SAFE	frost_giant	spike	after	line	hug 11.4	fwd 21.1	전 3/36 앞 맞음	후 0/36 앞 안전
+SAFE	frost_giant	stomp	before	sector	hug 11.4	fwd 7.2	전 36/36 앞 맞음	후 36/36 앞 맞음
+SAFE	frost_giant	stomp	after	sector	hug 11.4	fwd 7.2	전 36/36 앞 맞음	후 36/36 앞 맞음
+SAFE	storm_lord	discharge	before	ring	hug 6.7	fwd 5.5	전 36/36 앞 맞음	후 36/36 앞 맞음	(점프 회피)
+SAFE	storm_lord	discharge	after	ring	hug 6.7	fwd 4.7	전 36/36 앞 맞음	후 36/36 앞 맞음	(점프 회피)
+SAFE	storm_lord	swordWave	before	projectile	hug 6.7	fwd 7.4	전 0/36 앞 안전	후 0/36 앞 안전
+SAFE	storm_lord	swordWave	after	projectile	hug 6.7	fwd 7.7	전 0/36 앞 안전	후 0/36 앞 안전
+SAFE	storm_lord	thunderRing	before	ring	hug 6.7	fwd 6.7	전 36/36 앞 맞음	후 36/36 앞 맞음	(점프 회피)
+SAFE	storm_lord	thunderRing	after	ring	hug 6.7	fwd 4.7	전 36/36 앞 맞음	후 36/36 앞 맞음	(점프 회피)
+SAFE	storm_lord	tornado	before	projectile	hug 6.7	fwd -0.4	전 0/36 앞 안전	후 0/36 앞 안전
+SAFE	storm_lord	tornado	after	projectile	hug 6.7	fwd -1.4	전 0/36 앞 안전	후 0/36 앞 안전
+SAFE	abyssal_lord	tide	before	ring	hug 5.6	fwd 7.7	전 36/36 앞 맞음	후 36/36 앞 맞음	(점프 회피)
+SAFE	abyssal_lord	tide	after	ring	hug 5.6	fwd 7.7	전 36/36 앞 맞음	후 36/36 앞 맞음	(점프 회피)
+SAFE	scorpion_queen	claw	before	line	hug 6.5	fwd 9.8	전 13/36 앞 맞음	후 1/36 앞 맞음
+SAFE	scorpion_queen	claw	after	line	hug 6.5	fwd 9.8	전 13/36 앞 맞음	후 1/36 앞 맞음

@@ -12,6 +12,7 @@ local BossRules = require(ReplicatedStorage.Shared.BossRules)
 local BossScheduler = require(ReplicatedStorage.Shared.BossScheduler)
 local BossSkillMath = require(ReplicatedStorage.Shared.BossSkillMath)
 local BossOverlap = require(ReplicatedStorage.Shared.BossOverlap)
+local BossOrigin = require(ReplicatedStorage.Shared.BossOrigin)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local BalanceAnchorConfig = require(ReplicatedStorage.Shared.data.BalanceAnchorConfig)
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
@@ -27,9 +28,9 @@ local function newRng(seed)
 end
 
 -- 판정 목록: { at(스킬 시작부터 초), share(맞으면 최대체력 비율 · 현재 체력 비율이면 current = true), class(확률 키), slack, perMember }
-local function judgmentsOf(skill, surviveHits, standoff)
+local function judgmentsOf(skill, surviveHits, standoff, originForward)
 	local list = {}
-	local dodge = BossSkillMath.dodgeChecks(skill, standoff or 8, WorldConfig.playerWalkSpeedStuds) -- GUARDIAN-V2: 서 있는 거리 = 추격 정지 거리(6보스 모두 8 - 몸 가장자리 장치가 켜진 새 몸만 늘어난다)
+	local dodge = BossSkillMath.dodgeChecks(skill, standoff or 8, WorldConfig.playerWalkSpeedStuds, originForward) -- GUARDIAN-V2: 서 있는 거리 = 추격 정지 거리(6보스 모두 8 - 몸 가장자리 장치가 켜진 새 몸만 늘어난다) · BOSS-NIGHT-2 C 발생 지점
 	local minSlack = math.huge
 	for _, check in ipairs(dodge) do
 		minSlack = math.min(minSlack, check.availableSeconds - check.requiredSeconds)
@@ -104,7 +105,7 @@ local function judgmentsOf(skill, surviveHits, standoff)
 end
 
 -- options = { partySize(1), seed, role("ranged"/"melee"), familiar(false), stage(100), bodyEdgeRig(GUARDIAN-V2 - 새 몸 리그 키: 실전 스폰과 같은 몸 가장자리 반경 · 밸런스 사본),
---   noV3(GUARDIAN-V3 - true면 V3 설정을 얹지 않는다 = V2 비교), assistFails(첫 보스 도움 - 이번 판 앞의 전멸 수 → 받는 피해 배율) }
+--   noV3(GUARDIAN-V3 - true면 V3 설정을 얹지 않는다 = V2 비교), origin(BOSS-NIGHT-2 C - true면 bodyEdgeRig의 발생 지점 표(BossOriginData)를 회피 여유 계산에 넣는다 · 기본 끔 = 옛 값), assistFails(첫 보스 도움 - 이번 판 앞의 전멸 수 → 받는 피해 배율) }
 -- GUARDIAN-V3 반응 스킬(바나나 · 도약 - BossScheduler ⑧): 대상이 30 stud 밖인 구간을 가정으로 굴린다(원거리 rangedFarShare · 근접 meleeFarShare - 구간 평균 farSegmentSeconds) →
 --   조건이 차면 패턴이 안 도는 틈에 시작 · 바나나 명중 = bananaHit(처음 · 두 번째부터) · 빗나감 2회/12초 → 도약(leapHit) · 도약 뒤 대상은 가까이(구간 끝). 가정 값 = BossFrameworkData.v3[보스].sim.
 function BossDifficultySim.run(bossId, options)
@@ -359,7 +360,12 @@ function BossDifficultySim.run(bossId, options)
 				for _, m in ipairs(members) do
 					m.evadeUntil = math.max(m.evadeUntil, t + evade)
 				end
-				for _, j in ipairs(judgmentsOf(skill, surviveHits, data.chaseStopDistanceStuds)) do
+				local originForward = nil -- BOSS-NIGHT-2 C: 발생 지점이 대상 쪽으로 앞선 거리(크기 배율 · 폼 = 체력 50% - 실전 BossOrigin.point와 같은 값)
+				if options.origin and options.bodyEdgeRig then
+					local p = BossOrigin.point(options.bodyEdgeRig, data.sizeScale, hp / maxHp, pick, Vector3.zero, Vector3.new(0, 0, -100), 0)
+					originForward = p and -p.Z or nil
+				end
+				for _, j in ipairs(judgmentsOf(skill, surviveHits, data.chaseStopDistanceStuds, originForward)) do
 					j.at += t
 					j.skill = skill
 					j.id = pick
