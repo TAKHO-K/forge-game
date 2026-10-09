@@ -9,6 +9,11 @@ return {
 	loadConcurrency = 4, -- 동시에 부르는 LoadAsset 수
 	propsFirstPrefix = "props/", -- 로더 1단계(맵 소품 · 제단에 먼저 입힌다 → PropsReady)
 	propsReadyAttribute = "PropsReady",
+	-- FINAL-1 0: 서버 첫 순간 블록 몸 막기 - 소품 다음에 이 접두사 메시를 이 순서로 먼저 받는다(무기 = 허브에서 바로 보임 → 펫 → 보스 → 잡몹 · 약 84개) · 나머지(방어구 252 등)는 그 뒤
+	priorityPrefixes = { "weapons/", "pets/", "bosses/", "monsters/" },
+	priorityReadyAttribute = "PriorityReady", -- 캐시 폴더 Attribute: 우선 묶음까지 끝나면 true
+	bossMeshWaitSeconds = 12, -- 보스 소환이 자기 메시를 기다리는 최대 시간(입장 연출 동안) - 넘으면 블록으로 뜨고 준비되는 즉시 갈아입는다
+	lateSwapSeconds = 600, -- 갈아입기를 기다리는 최대 시간(그 뒤엔 블록 그대로 - 로드 실패)
 	mapBuiltAttribute = "WorldMapBuilt", -- Workspace Attribute - HuntingGround가 맵 · 제단을 다 지은 뒤 true(소품 메시는 그 뒤에 입힌다)
 	-- 몬스터: 가져오기 순서표 6(슬라임 · 양 제외 - 아트 샘플 몸체 · 옛 몸체 유지)
 	monsterSkip = { moss_slime = true, cloud_sheep = true },

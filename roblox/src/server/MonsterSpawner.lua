@@ -84,6 +84,70 @@ local function displayNameFor(data, variant)
 	return data.displayName
 end
 
+-- FINAL-1 0 서버 첫 순간 블록 몸: 메시 캐시(ArtAssetLoader)가 아직 그 키를 못 받았으면 기다린다 · 늦으면 블록으로 뜬 뒤 준비 즉시 갈아입는다(판정 사본 · 이름 · HP 그대로).
+local function meshPending(meshKey)
+	if not ArtMeshKit.enabled() or ArtMeshKit.get(meshKey) then
+		return false
+	end
+	local cache = ReplicatedStorage:FindFirstChild(ArtImportData.cacheFolder)
+	return not (cache and cache:GetAttribute(ArtImportData.readyAttribute))
+end
+
+local function waitMesh(meshKey, seconds)
+	local t0 = os.clock()
+	while meshPending(meshKey) and os.clock() - t0 < seconds do
+		task.wait(0.1)
+	end
+	return ArtMeshKit.get(meshKey) ~= nil
+end
+
+-- 갈아입기: 부위에 붙은 표시물(이름표 · 빛 · 소리 · 입자 · Highlight)은 새 메시 부위로 옮긴다(관절 · 부착점은 MeshSwap이 옮긴다). 클라 BossAnimator는 MeshSwapped가 바뀌면 다시 등록한다.
+local KEEP_ON_SWAP = { BillboardGui = true, Highlight = true, ParticleEmitter = true, PointLight = true, Sound = true }
+local function lateSwap(model, meshKey, rigId, S, lift)
+	task.spawn(function()
+		if not waitMesh(meshKey, ArtImportData.lateSwapSeconds) or not model.Parent or model:GetAttribute("MeshSwapped") then
+			return
+		end
+		local keep = {}
+		for _, part in ipairs(model:GetChildren()) do
+			if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+				for _, c in ipairs(part:GetChildren()) do
+					if KEEP_ON_SWAP[c.ClassName] then
+						table.insert(keep, { c = c, name = part.Name, old = part })
+						c.Parent = nil
+					end
+				end
+			end
+		end
+		local n, lines = ArtMeshKit.applyRig(model, meshKey, rigId, S, lift)
+		for _, k in ipairs(keep) do
+			local p = model:FindFirstChild(k.name)
+			if p and p:IsA("BasePart") then
+				if k.c:IsA("BillboardGui") and k.c.Adornee == k.old then
+					k.c.Adornee = p
+				end
+				k.c.Parent = p
+			else
+				k.c:Destroy()
+			end
+		end
+		print(("[forge-game] 늦은 메시 갈아입기: %s %s · 부위 %d"):format(model.Name, meshKey, n or 0))
+		if n == 0 and lines then
+			warn(lines[#lines])
+		end
+	end)
+end
+
+-- 보스 소환 전 메시 키(buildModel과 같은 규칙 - 리그 v2면 rig.meshKey 또는 bosses/<리그 id>)
+local function bossMeshKey(data)
+	local rigKey = BossFramework.rigKeyFor(data.id)
+	local rig = (rigKey and BossRig.specFor(rigKey)) or BossRig.specFor(data.id)
+	if not rig then
+		return nil
+	end
+	return rig.meshKey or ("bosses/" .. tostring(rigKey or data.id))
+end
+
 -- 기본 파트 조합으로 "구분되는 덩어리" 하나를 만든다. Humanoid는 애니메이션·이름표 전용이고
 -- 실제 HP는 MonsterState가 관리한다(Humanoid.MaxHealth=100은 쓰이지 않는 더미값).
 --
@@ -155,6 +219,8 @@ local function buildModel(data, position, variant)
 			if n == 0 and lines then
 				warn(lines[#lines])
 			end
+		elseif meshPending(meshKey) then
+			lateSwap(model, meshKey, rigId, sizeScale, BossRig.rootLift(rig, sizeScale)) -- FINAL-1 0: 캐시 준비 전 = 블록으로 뜨고 준비 즉시 갈아입기
 		end
 		-- A2-M1 덩치: 몸이 커진 만큼만 플레이어 공격 도달을 넓힌다(Reach.bodyRadius - 조준 · 평타 · 스킬 · 화살) = 몸통 반폭 × (지금 배율 − 옛 배율). 배율이 같으면 0 = 옛 판정.
 		if rigKey and rig.edgeHalfWidth then -- GUARDIAN-V2: 옛 몸 피격 반경 + 몸 가장자리가 늘어난 만큼(BossFramework.edgeGrowth - 보스 공격 반경과 같은 값)
@@ -188,6 +254,8 @@ local function buildModel(data, position, variant)
 			if n == 0 and lines then
 				warn(lines[#lines])
 			end
+		elseif not artRig and not ArtImportData.monsterSkip[data.speciesId] and meshPending(meshKey) then
+			lateSwap(model, meshKey, data.speciesId, sizeScale, 0) -- FINAL-1 0: 서버 첫 순간 잡몹도 준비 즉시 갈아입기(이름표 · Hitbox 그대로)
 		end
 		if artRig then
 			model:SetAttribute("ArtV1", true) -- 클라 ArtV1View가 대기 · 걷기 · 쓰러짐 움직임을 붙인다
@@ -492,6 +560,15 @@ function MonsterSpawner.spawn(data, position, zoneKey, forcedVariant)
 	-- 자체가 성립하지 않는다).
 	local variant = data.isBoss and {} or (forcedVariant or rollVariant())
 	position = snapToGround(position)
+	-- FINAL-1 0: 보스 = 자기 메시가 캐시에 올 때까지 잠깐 기다린다(입장 연출 동안 · 멈출 수 있는 스레드일 때만)
+	if data.isBoss and coroutine.isyieldable() then
+		local key = bossMeshKey(data)
+		if key and meshPending(key) then
+			local t0 = os.clock()
+			local ready = waitMesh(key, ArtImportData.bossMeshWaitSeconds)
+			print(("[forge-game] 보스 메시 대기 %s %.1f초 · %s"):format(key, os.clock() - t0, ready and "준비됨" or "시간 초과(블록 → 준비 즉시 갈아입기)"))
+		end
+	end
 
 	if variant.isChest then
 		return MonsterSpawner.spawnChest(data, position, zoneKey)

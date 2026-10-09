@@ -1247,6 +1247,15 @@ ReplicatedStorage.ChildAdded:Connect(hookPreviewEvent)
 local function watch(model)
 	if model:GetAttribute("BossRig") then
 		register(model)
+		-- FINAL-1 0: 서버가 늦게 메시를 갈아입히면(캐시 준비 전 소환) 새 부위 · 관절로 다시 등록
+		model:GetAttributeChangedSignal("MeshSwapped"):Connect(function()
+			task.wait(0.3) -- 새 부위 · Motor6D 복제 대기
+			local e = rigs[model]
+			if model.Parent and not (e and (e.isClone or e.preview)) then
+				rigs[model] = nil
+				register(model)
+			end
+		end)
 	end
 end
 for _, m in ipairs(CollectionService:GetTagged("Monster")) do

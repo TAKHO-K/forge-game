@@ -1230,6 +1230,13 @@ local function bindPlayer(p)
 	end)
 	task.spawn(function() -- A2-N3: 메시 캐시가 늦게 차면(서버 로드 완료) 한 번 다시 짓는다
 		local cache = ReplicatedStorage:WaitForChild(ArtImportData.cacheFolder, 120)
+		-- FINAL-1 0: 무기 메시는 우선 묶음(약 20초)에 온다 → 그때 한 번 먼저 다시 짓는다(전체 완료 약 50초를 기다리지 않음)
+		while cache and not cache:GetAttribute("Ready_weapons") and not cache:GetAttribute(ArtImportData.priorityReadyAttribute) and not cache:GetAttribute(ArtImportData.readyAttribute) do
+			cache.AttributeChanged:Wait()
+		end
+		if cache and rigs[p] == st and not cache:GetAttribute(ArtImportData.readyAttribute) then
+			refresh()
+		end
 		while cache and not cache:GetAttribute(ArtImportData.readyAttribute) do
 			cache:GetAttributeChangedSignal(ArtImportData.readyAttribute):Wait()
 		end

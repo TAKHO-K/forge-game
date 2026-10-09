@@ -29,10 +29,29 @@ local function loadAll()
 		return a.key < b.key
 	end)
 	-- 1단계 = 소품(맵 · 제단이 부팅 때 기다린다) → PropsReady · 2단계 = 나머지
-	local first, rest = {}, {}
-	for _, item in ipairs(queue) do
-		table.insert(item.key:sub(1, #Data.propsFirstPrefix) == Data.propsFirstPrefix and first or rest, item)
+	local first, priority, rest = {}, {}, {}
+	local function isPriority(key) -- 우선 순위(접두사 순서 · 없으면 nil)
+		for i, prefix in ipairs(Data.priorityPrefixes or {}) do
+			if key:sub(1, #prefix) == prefix then
+				return i
+			end
+		end
+		return nil
 	end
+	for _, item in ipairs(queue) do
+		if item.key:sub(1, #Data.propsFirstPrefix) == Data.propsFirstPrefix then
+			table.insert(first, item)
+		else
+			table.insert(isPriority(item.key) and priority or rest, item) -- FINAL-1 0: 무기 · 펫 · 보스 · 잡몹 먼저(서버 첫 순간 블록 몸)
+		end
+	end
+	table.sort(priority, function(a, b)
+		local pa, pb = isPriority(a.key), isPriority(b.key)
+		if pa ~= pb then
+			return pa < pb
+		end
+		return a.key < b.key
+	end)
 	local t0 = os.clock()
 	local ok, failed, running = 0, {}, 0
 	local nextIndex = 1
@@ -87,7 +106,26 @@ local function loadAll()
 		if not okSkin then
 			warn("[ArtAssetLoader] 소품 메시 입히기 실패(지금 모습 그대로): " .. tostring(err))
 		end
+		-- QUEUE-ALL7B 3: 허브 건물 · NPC · 게시판 메시(server/HubArt) · FINAL-1 0: 소품 묶음(props/)만 쓰므로 전체 완료(약 50초) 대신 소품 직후
+		local okHub, buildings, npcs = pcall(require(script.Parent.HubArt).apply)
+		if okHub then
+			print(("[ArtAssetLoader] 허브 건물 메시 %d · NPC %d"):format(buildings, npcs))
+		else
+			warn("[ArtAssetLoader] 허브 메시 실패(지금 모습 그대로): " .. tostring(buildings))
+		end
 	end)
+	for i, prefix in ipairs(Data.priorityPrefixes or {}) do -- 접두사 묶음마다 받고 신호(Ready_weapons 등 - 클라 무기 · 펫이 바로 다시 짓는다)
+		local group = {}
+		for _, item in ipairs(priority) do
+			if isPriority(item.key) == i then
+				table.insert(group, item)
+			end
+		end
+		runAll(group)
+		folder:SetAttribute("Ready_" .. prefix:gsub("/", ""), true)
+	end
+	folder:SetAttribute(Data.priorityReadyAttribute, true)
+	print(("[ArtAssetLoader] 우선 메시(무기 · 펫 · 보스 · 잡몹) %d개 · %.1f초"):format(#priority, os.clock() - t0))
 	runAll(rest)
 	folder:SetAttribute("Loaded", ok)
 	folder:SetAttribute(Data.readyAttribute, true)
@@ -103,15 +141,8 @@ local function loadAll()
 		else
 			warn("[ArtAssetLoader] 관문 메시 실패(지금 모습 그대로): " .. tostring(frames))
 		end
-		-- QUEUE-ALL7B 3: 허브 건물 · NPC · 게시판 메시(server/HubArt)
-		local okHub, buildings, npcs = pcall(require(script.Parent.HubArt).apply)
-		if okHub then
-			print(("[ArtAssetLoader] 허브 건물 메시 %d · NPC %d"):format(buildings, npcs))
-		else
-			warn("[ArtAssetLoader] 허브 메시 실패(지금 모습 그대로): " .. tostring(buildings))
-		end
 	end)
-	print(("[ArtAssetLoader] 메시 캐시 %d/%d(소품 %d 먼저) · %.1f초"):format(ok, #first + #rest, #first, os.clock() - t0))
+	print(("[ArtAssetLoader] 메시 캐시 %d/%d(소품 %d 먼저) · %.1f초"):format(ok, #first + #priority + #rest, #first, os.clock() - t0))
 	if #failed > 0 then
 		warn(("[ArtAssetLoader] 로드 실패 %d개(지금 모델 그대로): %s"):format(#failed, table.concat(failed, ", ")))
 	end

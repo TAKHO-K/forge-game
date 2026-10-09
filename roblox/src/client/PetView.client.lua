@@ -159,6 +159,7 @@ task.spawn(function() -- A2-N3: 메시 캐시가 차거나 스위치가 바뀌�
 	local cache = ReplicatedStorage:WaitForChild(ArtImportData.cacheFolder, 120)
 	if cache then
 		cache:GetAttributeChangedSignal(ArtImportData.readyAttribute):Connect(refreshAll)
+		cache:GetAttributeChangedSignal("Ready_pets"):Connect(refreshAll) -- FINAL-1 0: 펫 메시 = 우선 묶음(무기 다음)
 		refreshAll()
 	end
 end)
