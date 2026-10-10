@@ -46,6 +46,13 @@ local teleportFrozen = setmetatable({}, { __mode = "k" })
 -- 것과 별개로, "이미 나간" 저장과의 겹침은 여기서 막는다.
 local saving = setmetatable({}, { __mode = "k" })
 
+-- SEC-FIX-1 1: 캐릭터 칸 전환 중 저장 잠금(SlotSwitch가 전환 flush 뒤 켜고 새 프로필 · 세션이 자리 잡으면 끈다). 옛 = 새 칸을 읽는(yield) 사이 자동저장이
+-- 옛 프로필 · 옛 세션으로 계정 키를 써서 새 세션의 기준 시각이 낡았다 → 그 뒤 계정 키 저장이 전부 stale_session(캐릭터 키만 써져 "받음" 표시가 빠짐 = 재접속 후 다시 받기).
+local switchLocked = setmetatable({}, { __mode = "k" })
+function SaveCoordinator.setSwitchLocked(player, on)
+	switchLocked[player] = on and true or nil
+end
+
 -- QUEUE-ALL4 C 출시 감사: 진행 중인 saveForPlayer 수(종료 대기용) · 에러 실패 누계(관측) · 실패 안내 마지막 시각(사람별 간격).
 local activeSaves = 0
 local saveFailures = 0
@@ -104,6 +111,9 @@ function SaveCoordinator.saveForPlayer(player)
 	if saveSuspended[player] then
 		return false
 	end
+	if switchLocked[player] then
+		return false
+	end
 
 	local profile = PlayerProfile.getProfile(player)
 	if not profile then
@@ -114,9 +124,9 @@ function SaveCoordinator.saveForPlayer(player)
 	while saving[player] do
 		task.wait()
 	end
-	if PlayerProfile.getProfile(player) ~= profile or teleportFrozen[player] or saveSuspended[player] then
+	if PlayerProfile.getProfile(player) ~= profile or teleportFrozen[player] or saveSuspended[player] or switchLocked[player] then
 		activeSaves -= 1
-		return false -- 기다리는 동안 프로필이 지워졌거나(퇴장) 동결·중단됐다
+		return false -- 기다리는 동안 프로필이 지워졌거나(퇴장) 동결·중단 · 칸 전환이 시작됐다
 	end
 	saving[player] = true
 	local okCall, ok, err = pcall(SaveSystem.saveProfile, player, profile)

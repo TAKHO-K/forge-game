@@ -108,11 +108,13 @@ function SlotSwitch.switch(player, target)
 	if why then
 		return false, why
 	end
+	local SaveCoordinator = require(script.Parent.SaveCoordinator)
 	local ok, err = pcall(function()
 		leaveParty(player)
 		if not require(script.Parent.ImmediateSave).flush(player) then
 			error("save_failed", 0)
 		end
+		SaveCoordinator.setSwitchLocked(player, true) -- SEC-FIX-1 1: 마지막 저장(flush) 뒤 ~ 새 프로필 자리 잡기까지 다른 저장 금지(옛 프로필 · 세션이 계정 키를 쓰면 새 세션이 stale)
 		local profile, loadErr = SaveSystem.loadSlotProfile(player, target)
 		if not profile then
 			error("load_failed:" .. tostring(loadErr), 0) -- 지금 캐릭터(메모리 · 세션)는 그대로
@@ -126,6 +128,7 @@ function SlotSwitch.switch(player, target)
 		local cs = profile.classId and profile.classes[profile.classId]
 		require(script.Parent.CharacterRuntime).restore(player, cs, true) -- 새 몸 = 그 캐릭터 마지막 자리
 	end)
+	SaveCoordinator.setSwitchLocked(player, false)
 	busy[player] = nil
 	if not ok then
 		warn(("[SlotSwitch] 전환 실패: %s → %s - %s"):format(player.Name, tostring(target), tostring(err)))

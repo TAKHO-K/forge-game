@@ -2469,7 +2469,10 @@ local function pullSanitized(dst, src)
 	end
 end
 
--- 슬롯 저장: 캐릭터 키 → 계정 키. 직업 선택(캐릭터 없음 → 직업 생김) = 새 칸 잡기
+-- 슬롯 저장: 계정 키 → 캐릭터 키(새 캐릭터 첫 저장만 캐릭터 키 먼저). 직업 선택(캐릭터 없음 → 직업 생김) = 새 칸 잡기
+--   SEC-FIX-1 1: 옛 = 캐릭터 키 → 계정 키라 계정 키만 실패(stale_session · 장애)하면 보상(골드 · 가방 = 캐릭터 키)은 남고 "받음" 표시(도감 · 시즌 · 출석 · 퀘스트 · 보스 첫 처치 = 계정 키)는
+--   빠져 재접속 후 다시 받을 수 있었다. 이제 계정 키를 먼저 써서 성공해야 캐릭터 키를 쓴다 - 계정 키 실패 = 둘 다 안 써짐(다음 저장이 함께 다시) · 다른 서버가 더 새로우면 캐릭터 키도 안 덮음.
+--   새 캐릭터(charSavedAt 0 = 키 아직 없음)는 캐릭터 키 먼저 - 계정 칸이 없는 키를 가리키면 다음 로드가 missing_character로 실패한다.
 function SaveSystem.saveSlotProfile(player, profile)
 	local sess = slotSession[player]
 	if not sess then
@@ -2487,19 +2490,8 @@ function SaveSystem.saveSlotProfile(player, profile)
 		end
 		sess.charId, sess.classId, sess.slot, sess.charSavedAt = charId, profile.classId, slot, 0
 	end
-	if sess.charId then
-		if profile.classId ~= sess.classId then
-			warn(("[SaveSystem] 캐릭터 직업 고정 - 프로필 직업 %s ≠ 캐릭터 %s(%s) · 캐릭터 직업으로 저장"):format(tostring(profile.classId), tostring(sess.classId), player.Name))
-		end
-		local cs = profile.classes and profile.classes[sess.classId]
-		if type(cs) == "table" and SaveSystem.runtimeHook then
-			pcall(SaveSystem.runtimeHook, player, cs) -- QUEUE-MENU2 D: 쿨 · 궁 게이지 · 마지막 위치(CharacterRuntime.capture - 서버가 시작 때 건다 · 하네스는 없음)
-		end
-		if type(cs) == "table" then
-			cs.playSeconds = (tonumber(cs.playSeconds) or 0) + math.max(0, now - (sess.playMark or now))
-			sess.playMark = now
-		end
-		local ch = { charId = sess.charId, classId = sess.classId, data = SlotSave.extractCharacter(profile, sess.classId) }
+	local ch, cs = nil, nil
+	local function writeCharacter()
 		local ok, err, at = updateKey(player, characterKeyBase(player.UserId, sess.charId), sess.charSavedAt, function()
 			return { charId = ch.charId, classId = ch.classId, data = ch.data }
 		end)
@@ -2517,6 +2509,28 @@ function SaveSystem.saveSlotProfile(player, profile)
 			pullSanitized(cs, ch.data.classState)
 		end
 		sess.charSavedAt = at
+		return true
+	end
+	local characterFirst = sess.charId ~= nil and (tonumber(sess.charSavedAt) or 0) <= 0
+	if sess.charId then
+		if profile.classId ~= sess.classId then
+			warn(("[SaveSystem] 캐릭터 직업 고정 - 프로필 직업 %s ≠ 캐릭터 %s(%s) · 캐릭터 직업으로 저장"):format(tostring(profile.classId), tostring(sess.classId), player.Name))
+		end
+		cs = profile.classes and profile.classes[sess.classId]
+		if type(cs) == "table" and SaveSystem.runtimeHook then
+			pcall(SaveSystem.runtimeHook, player, cs) -- QUEUE-MENU2 D: 쿨 · 궁 게이지 · 마지막 위치(CharacterRuntime.capture - 서버가 시작 때 건다 · 하네스는 없음)
+		end
+		if type(cs) == "table" then
+			cs.playSeconds = (tonumber(cs.playSeconds) or 0) + math.max(0, now - (sess.playMark or now))
+			sess.playMark = now
+		end
+		ch = { charId = sess.charId, classId = sess.classId, data = SlotSave.extractCharacter(profile, sess.classId) }
+		if characterFirst then
+			local ok, err = writeCharacter()
+			if not ok then
+				return false, err
+			end
+		end
 		local sum = SlotSave.summarize(ch, now, sess.account.slots[sess.slot] or nil)
 		sum.lastPlayedAt = now
 		sess.account.slots[sess.slot] = sum
@@ -2532,6 +2546,12 @@ function SaveSystem.saveSlotProfile(player, profile)
 	pullSanitized(profile, sess.account.shared)
 	sess.acctSavedAt = at
 	profile.savedAt = at
+	if ch and not characterFirst then
+		local okC, errC = writeCharacter()
+		if not okC then
+			return false, errC
+		end
+	end
 	return true
 end
 
