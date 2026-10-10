@@ -9449,6 +9449,90 @@
   "status": "Approved",
   "imageId": 130760141716309
  },
+ "ui/ember/btn-enhance-round-disabled.png": {
+  "sha256": "643aa4eed42aa945bd70d2e24624ba9aa5a89a722bae5442eb64a2c95b2d2598",
+  "assetType": "Decal",
+  "assetId": 105681082427531,
+  "status": "Approved",
+  "imageId": 126246792507302
+ },
+ "ui/ember/btn-enhance-round-full.png": {
+  "sha256": "5dbdd0a8c4e1ba755cebf61cc94e11d26e92f430b30d5845ec5b7a1b2283c2c1",
+  "assetType": "Decal",
+  "assetId": 104756851262640,
+  "status": "Approved",
+  "imageId": 120024969807777
+ },
+ "ui/ember/btn-enhance-round-normal.png": {
+  "sha256": "710aef6499027c47f8f01ef5d5bb3de71066e5ce9b9804491d3f33dc9eb97d8d",
+  "assetType": "Decal",
+  "assetId": 109846873932974,
+  "status": "Approved",
+  "imageId": 97405941757854
+ },
+ "ui/ember/btn-enhance-round-pressed.png": {
+  "sha256": "2df6f56784b9ef4ee4e88b0cd60c6bffa92cead17ff4bb666d22bb39a50ab8ff",
+  "assetType": "Decal",
+  "assetId": 94959777292182,
+  "status": "Approved",
+  "imageId": 109651856227667
+ },
+ "ui/ember/ember-flame.png": {
+  "sha256": "6116e9366c5ca57bab02e8c4885288d3a0d5664c02a91047f30ea5745d6a0557",
+  "assetType": "Decal",
+  "assetId": 124257191861093,
+  "status": "Approved",
+  "imageId": 101559522603299
+ },
+ "ui/ember/ember-ghost-stripe.png": {
+  "sha256": "38aab0c380e124847236d8305ac7769727f30aa69e3ce0f806d183f371c6abcb",
+  "assetType": "Decal",
+  "assetId": 125564934752232,
+  "status": "Approved",
+  "imageId": 123753546352263
+ },
+ "ui/ember/ember-medal-off.png": {
+  "sha256": "8671d056a24635a1f5e35f6ef0129177232f41b7f51bd414f2e3ecb15f6dec18",
+  "assetType": "Decal",
+  "assetId": 131536505554523,
+  "status": "Approved",
+  "imageId": 128862856776089
+ },
+ "ui/ember/ember-medal-on.png": {
+  "sha256": "cab432469fc07ea14e475c4da7ff878fb345e320e5d80897afe99431a707533d",
+  "assetType": "Decal",
+  "assetId": 129834592398024,
+  "status": "Approved",
+  "imageId": 80159030062444
+ },
+ "ui/ember/ember-shield-off.png": {
+  "sha256": "2e720cea89fa2d74bda1543a0cc63b048f6601344fc9edd6bca04cab3c936776",
+  "assetType": "Decal",
+  "assetId": 113838174284121,
+  "status": "Approved",
+  "imageId": 88305430204286
+ },
+ "ui/ember/ember-shield-on.png": {
+  "sha256": "e4d53a32751addf76c2381562f7774298782093d11c0016df061868a1cf6bb5d",
+  "assetType": "Decal",
+  "assetId": 95060307610189,
+  "status": "Approved",
+  "imageId": 83914621748467
+ },
+ "ui/ember/ember-shimmer.png": {
+  "sha256": "041305333d17b236f78da53ed8f7f122db7640206bae5388350ea8230cfee27b",
+  "assetType": "Decal",
+  "assetId": 76722878904147,
+  "status": "Approved",
+  "imageId": 128153066436456
+ },
+ "ui/ember/ember-spark.png": {
+  "sha256": "2d98645c3064da59176c573b848a6190c16b2f87ab634dcb4a191003cf0dbc27",
+  "assetType": "Decal",
+  "assetId": 95344038053347,
+  "status": "Approved",
+  "imageId": 135295072269657
+ },
  "ui/hud/disc-256.png": {
   "sha256": "43740fe47355b9cd5fa4898459b9e78ade0b901d7434b042373d195f2789d2dc",
   "assetType": "Decal",

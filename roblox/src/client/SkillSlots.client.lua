@@ -646,7 +646,7 @@ applyPhoneCombatV6 = function(touch)
 		jumpButton = buildJumpButton(phoneRoot)
 	end
 	if phoneRoot then
-		phoneRoot.Visible = touch
+		phoneRoot.Visible = touch and not player:GetAttribute("EnhanceStationOpen") -- UI-1 6단계: 폰 강화대 창 = 전투 버튼 숨김(그 자리에 둥근 [강화])
 	end
 	hideDefaultJump(touch)
 	if not touch then
@@ -781,6 +781,7 @@ end
 
 applyLayout()
 player:GetAttributeChangedSignal("ForceTouchLayout"):Connect(applyLayout)
+player:GetAttributeChangedSignal("EnhanceStationOpen"):Connect(applyLayout)
 screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
 	if isTouchLayout() or UiV2Flags.hud then -- UI-1: PC 줄도 HUD 배율 m을 다시
 		applyLayout()

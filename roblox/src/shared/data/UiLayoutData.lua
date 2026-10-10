@@ -213,4 +213,24 @@ return {
 			gemLockedText = "ui1.bag.gemSoon", -- 보석 홈 열기 방식 = 사용자 확인 대기 → 잠긴 홈 = 자물쇠 + "곧 열려요"(지시 "준비 중" = 글자 검사 ALL8 A3 금지 문구라 같은 뜻으로 · 새 힘 · 비용 없음)
 		},
 	},
+	-- UI-1 6단계 E 강화 불씨(05_enhance-inherit/v4 spec §3 ~ 6): 강화대 창(빠른 창) + 불씨 칸 · 큰 창 = 옛 강화 패널([i]로 열기)
+	enhance = {
+		v4 = {
+			pc = { cx = 960, bottom = 846, w = 640, pad = 12, head = 44, levelRow = 40, chips = 36, ember = 104, foot = 56, short = 20, gap = 8, button = { 190, 56 }, info = 44, close = 44 },
+			phone = { x = 266, bottom = 352, w = 388, pad = 8, head = 40, chips = 28, ember = 70, foot = 30, short = 16, gap = 6, close = 40, round = { 688, 250, 96, 96 } },
+			ember = {
+				pc = { cellH = 22, gap = 3, gapMany = 2, manyFrom = 18, corner = 4, medal = 44, big = 32, small = 15, foot = 13 },
+				phone = { cellH = 16, gap = 3, gapMany = 2, manyFrom = 18, corner = 3, medal = 32, big = 22, small = 12, foot = 11 },
+				fill = { "FFF1C2", "FFD45A", "FFB13D" }, stroke = "3A4466", strokeFull = "FFD45A", strokeLast = "FFB13D", base = "141826", amber = "FFB13D",
+				stripeTile = 32, breathe = 1.2, lastBreathe = 0.8, shimmerEvery = 1.6,
+			},
+			window = { bg = "161A2B", bgT = 0.06, stroke = "3A4466", strokeFull = "FFD45A", success = "5BD18A", down = "FF6B6B" },
+			band = { seconds = 2 }, -- 결과 띠: 2초 뒤 접힘 · 누르면 바로
+			images = {
+				flame = "ui/ember/ember-flame", stripe = "ui/ember/ember-ghost-stripe", medalOn = "ui/ember/ember-medal-on", medalOff = "ui/ember/ember-medal-off",
+				shieldOn = "ui/ember/ember-shield-on", shieldOff = "ui/ember/ember-shield-off", shimmer = "ui/ember/ember-shimmer", spark = "ui/ember/ember-spark",
+				round = { normal = "ui/ember/btn-enhance-round-normal", pressed = "ui/ember/btn-enhance-round-pressed", disabled = "ui/ember/btn-enhance-round-disabled", full = "ui/ember/btn-enhance-round-full" },
+			},
+		},
+	},
 }

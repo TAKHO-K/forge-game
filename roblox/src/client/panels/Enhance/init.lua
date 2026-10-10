@@ -26,6 +26,9 @@ local RebirthView = require(script.RebirthView)
 local TicketView = require(script.TicketView)
 local ResultFx = require(script.ResultFx)
 local TranscendView = require(script.TranscendView) -- QUEUE-ALL10 2-7 초월 모드(계승 · 초월 강화 · 초월 보석)
+local EmberBar = require(script.EmberBar)
+local StationV4 = require(script.StationV4)
+local V4 = require(ReplicatedStorage.Shared.data.UiV2Flags).enhance -- UI-1 6단계 E 강화 불씨(05 v4): 강화대 = 빠른 창(StationV4) · 이 패널 = 큰 창([i]) · 불씨 줄 = 불씨 칸(EmberBar)
 
 local EnhancePanel = {}
 
@@ -116,8 +119,14 @@ local function refresh()
 	end
 	CostView.update(built.cost, state)
 	OddsView.updateTable(built.odds, state.level, state.outcomes)
-	OddsView.updateGaugeRow(built.gauge, state)
-	OddsView.updateEmberHint(built.emberHint, state)
+	if built.ember then
+		if not (built.emberPendingUntil and os.clock() < built.emberPendingUntil) then
+			built.ember.update(state)
+		end
+	else
+		OddsView.updateGaugeRow(built.gauge, state)
+		OddsView.updateEmberHint(built.emberHint, state)
+	end
 	TicketView.update(built.tickets, state)
 	OddsView.updateHint(built.hint, state)
 	OddsView.updateResetFloor(built.resetFloor, state)
@@ -317,10 +326,15 @@ local function build()
 	y += CostView.height() + 2
 	refs.odds = OddsView.buildTable(scroll, PAD, y, innerWidth)
 	y += OddsView.tableHeight() + 4
-	refs.gauge = OddsView.buildGaugeRow(scroll, PAD, y, innerWidth)
-	y += OddsView.gaugeRowHeight() + 2
-	refs.emberHint = OddsView.buildHint(scroll, PAD, y, innerWidth, "EmberHint") -- QUEUE-ALL9B G2 불씨 안내
-	y += OddsView.hintHeight() + 2
+	if V4 then -- UI-1 6단계: 불씨 줄 + 안내 두 줄 → 불씨 칸(강화대 창과 같은 부품 · 폰 크기)
+		refs.ember = EmberBar.build(scroll, PAD, y, innerWidth, true)
+		y += EmberBar.height(true) + 4
+	else
+		refs.gauge = OddsView.buildGaugeRow(scroll, PAD, y, innerWidth)
+		y += OddsView.gaugeRowHeight() + 2
+		refs.emberHint = OddsView.buildHint(scroll, PAD, y, innerWidth, "EmberHint") -- QUEUE-ALL9B G2 불씨 안내
+		y += OddsView.hintHeight() + 2
+	end
 	refs.tickets = TicketView.build(scroll, PAD, y, innerWidth, Controller.ticketKinds, {
 		onToggle = function(kind, value)
 			Controller.setToggle(kind, value)
@@ -381,6 +395,9 @@ local function build()
 		anchorPoint = Vector2.new(0.5, 0),
 		position = UDim2.new(0.5, 0, 0, buttonY),
 		onActivated = function()
+			if built and built.ember then
+				built.emberPendingUntil = os.clock() + 3
+			end
 			Controller.requestEnhance(EnhancePanel.id, OddsView.formatPercent)
 		end,
 	})
@@ -430,6 +447,10 @@ local function build()
 		refs.resultLabel.Text = text
 		refs.resultLabel.TextColor3 = Theme.color(colorName)
 		refresh()
+		if refs.ember and refs.emberPendingUntil then
+			refs.emberPendingUntil = nil
+			refs.ember.play(data, Controller.getState())
+		end
 		if refs.tab == "enhance" then
 			local gradeName = Controller.getState().gradeName
 			ResultFx.play(refs, data, function(level)
@@ -467,7 +488,25 @@ local function ensureBuilt()
 end
 
 -- 강화대 근접 열림 · 닫힘 - 걸어서 들어오면 열고 벗어나면 닫는다(window가 열려 있으면 UIManager가 열지 않는다).
+local function stepV4()
+	if not Controller.isNear() then
+		StationV4.dismissed = false
+		StationV4.close()
+		if built and UIManager.isOpen(EnhancePanel.id) then
+			UIManager.close(EnhancePanel.id)
+		end
+		return
+	end
+	if StationV4.dismissed or StationV4.isOpen() or (built and UIManager.isOpen(EnhancePanel.id)) or anyWindowOpen() then
+		return
+	end
+	StationV4.open()
+end
+
 local function step()
+	if V4 then
+		return stepV4()
+	end
 	if not Controller.isNear() then
 		dismissed = false
 		if built and UIManager.isOpen(EnhancePanel.id) then
@@ -481,6 +520,12 @@ local function step()
 	ensureBuilt()
 	UIManager.open(EnhancePanel.id)
 end
+
+-- UI-1 6단계: 강화대 창 [i] = 큰 창(이 패널 - station끼리라 빠른 창은 닫힌다 · 큰 창을 닫으면 강화대 옆에서 빠른 창이 다시 열림)
+StationV4.setInfo(function()
+	ensureBuilt()
+	UIManager.open(EnhancePanel.id)
+end)
 
 function EnhancePanel.start()
 	RunService.Heartbeat:Connect(step)
