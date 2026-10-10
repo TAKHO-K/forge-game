@@ -263,7 +263,7 @@ local function buildCard()
 		local ax, ox, ay, oy = HudPlace.udim(spec, spec.anchor, m, phone)
 		-- 지금 칩 묶음(구역 · 재화 · 레벨 · 전투력 · 스테이지 + 최고 기록)이 v6 3줄보다 길다 → v6 자리와 칩 묶음 아래 + 8 중 더 아래(AbsolutePosition = 상단 바 아래 공통 좌표 + 58 = 화면)
 		local chips = player.PlayerGui:FindFirstChild("TopChipsGui") and player.PlayerGui.TopChipsGui:FindFirstChild("TopChipsRow")
-		if chips and chips.AbsoluteSize.Y > 0 and not phone then
+		if chips and chips.AbsoluteSize.Y > 0 then -- UI-1b 2절 4: 폰도 같은 규칙(옛 = 폰 제외 → 칩 줄과 겹침 · 8단계 결함 1)
 			oy = math.max(oy, chips.AbsolutePosition.Y + chips.AbsoluteSize.Y + game:GetService("GuiService"):GetGuiInset().Y + 8 * m)
 		end
 		card.Position = UDim2.new(ax, ox, ay, oy)

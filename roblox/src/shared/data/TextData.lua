@@ -891,6 +891,7 @@ for _, parts in ipairs({
 	require(script.Parent.TextData_items), -- QUEUE-ALL6 C 아이템 이름 · 설명
 	require(script.Parent.TextData_menu), -- QUEUE-ALL9C 2-3 메인 메뉴 · 2-4 직업 선택
 	require(script.Parent.TextData_ui1), -- UI-1 새 UI 글자(en = 초안 · 검수 필요)
+	require(script.Parent.TextData_ui1b), -- UI-1b 새 글자(en = 초안 · 검수 필요)
 }) do
 	for lang, part in pairs(parts) do
 		for key, template in pairs(part) do

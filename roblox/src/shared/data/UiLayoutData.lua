@@ -313,6 +313,21 @@ return {
 	character = { v1 = { avatarBottom = 120, titleCardH = 70 } },
 	-- UI-1 7c 파티 창 빠른 말 줄(F v2.1 · H §5): 말 8 + 이모트 4 = 한 격자
 	quickChat = { v1 = { height = 112, cellW = 106, cellH = 44 } },
+	-- UI-1b A 설명 창(I v1 0-2 · 0-4 · pc_10): 재화 칩 설명 · [?] 도움말 · 보상 칸 설명 = 같은 틀(client/ui/v2/InfoTip) · 크기 = 기준 px(HUD 배율 m 곱)
+	infoTip = {
+		pc = { w = 520, pad = 18, head = 44, rowPad = 10 },
+		phone = { w = 330, pad = 12, head = 34, rowPad = 7 },
+		bg = "161A2B", bgT = 0.04, stroke = "8FD8FF", strokeW = 3, ringW = 3, line = "2A3352", corner = 14, gap = 10, displayOrder = 175,
+	},
+	-- UI-1b 1절 16(I v1 spec 0-4 · pc_10 · ph_06): HUD 오른쪽 위 칩 = 왼쪽 메뉴 버튼과 같은 크기 단계 · 아이콘 크게 + 이름 · 누르면 설명(InfoTip)
+	--   기준 px(HUD 배율 m 곱 · 폰 칩 배율 없음) · 줄 1 = 재화 · 줄 2 = 구역 · 스테이지 · 최고 + Lv · 전투력(폰 = 줄 2 = Lv · 전투력만 - 스테이지는 지도 · 구역 선택)
+	infoChips = {
+		pc = { h = 52, icon = 36, name = 15, num = 20, padX = 12, gap = 10, rowGap = 8, right = 24, top = 68, stage = true },
+		-- 폰 이름 글자 = 보임(사용자 10-10) · 줄 1 폭 > maxW면 그때만 이름 숨김(아이콘 + 숫자 + 누르면 설명)
+		phone = { maxW = 300, h = 40, icon = 26, name = 12, num = 14, padX = 8, gap = 6, rowGap = 6, right = 8, top = 62, stage = false },
+		row1 = { pc = { "gold", "sparkleShard", "enhanceStone" }, phone = { "gold", "sparkleShard" } }, -- 줄 1 재화(좌표 표 밖 - 글자 목록)
+		bg = "0E1120", bgT = 0.25, stroke = "3A4466", strokeW = 2,
+	},
 	-- UI-1b 1절 2(I v1 spec 0-3 · pc_11 · ph_06): 보스 바 = 로블록스 상단 바 가운데 빈 칸 안(전투 중에만 · 상단 바 비움의 유일한 예외)
 	--   화면 px(상단 바는 우리 배율과 무관) · 폭 = min(w, 빈 칸 폭 − 2 × margin) · minW보다 좁으면 상단 바 바로 아래(below) · 상태 아이콘 줄 = 바 바로 아래 · 위쪽 알림 = 그 아래
 	topbarBoss = {
