@@ -34,6 +34,7 @@ if not catalogOk then
 end
 
 local inFlight = {} -- 리뷰 의심: 처리 중(저장 대기) PurchaseId - 겹친 두 번째 호출은 NotProcessedYet
+local lastShopView = {} -- [Player] = os.clock() - 상점 연 횟수 중복 거름(UI-1b 0절)
 local restricted = {} -- [Player] = bool(유료 랜덤 제한 - nil = 아직 모름 → failClosed면 제한)
 local syncRemote = nil
 local resultRemote = nil -- 결정 10: ShopResult(action, ok, why) - 창이 결과 한 줄을 정확히 쓴다
@@ -355,7 +356,9 @@ function MonetizationService.view(player)
 		starter = {
 			owned = s.purchases.bagSources.starter == true,
 			-- UI-1 7c(04 v2 #9 · 지시): 첫 구역 보스 처치 **그리고** 상점을 한 번 연 뒤(다음에 열 때 = 연 횟수 2 이상) - 옛 = 둘 중 하나
-			visible = s.purchases.bagSources.starter ~= true and (PlayerProfile.getAccountBestBossCleared(player) or 0) > 0 and (s.purchases.shopViews or 0) >= 2,
+			visible = s.purchases.bagSources.starter ~= true and (if require(ReplicatedStorage.Shared.data.UiV2Flags).rest -- UI-1b 0절: 스위치 끔 = 옛 OR
+				then (PlayerProfile.getAccountBestBossCleared(player) or 0) > 0 and (s.purchases.shopViews or 0) >= 2
+				else (PlayerProfile.getAccountBestBossCleared(player) or 0) > 0 or (s.purchases.shopViews or 0) >= 2),
 		},
 		bag = { slots = require(script.Parent.InventorySync).capacity(PlayerProfile.getProfile(player)), max = require(script.Parent.InventorySync).maxCapacity(PlayerProfile.getProfile(player)), -- QUEUE-ALL10 0-4 마일스톤 칸은 상한 밖
 			pass = s.gamepasses.bagExpand == true, starter = s.purchases.bagSources.starter == true,
@@ -493,7 +496,7 @@ function MonetizationService.promptPass(player, key)
 	return true
 end
 
-local ACTIONS = { view = true, buyShards = true, buyTokens = true, buyRobux = true, buyPass = true, equip = true, equipAll = true, seasonClaim = true, seasonClaimAll = true, giftClaim = true, giftOpen = true } -- giftOpen = QUEUE-UI2 HUD [보상] 선물함 줄
+local ACTIONS = { view = true, viewOpen = true, buyShards = true, buyTokens = true, buyRobux = true, buyPass = true, equip = true, equipAll = true, seasonClaim = true, seasonClaimAll = true, giftClaim = true, giftOpen = true } -- giftOpen = QUEUE-UI2 HUD [보상] 선물함 줄 · viewOpen = UI-1b 상점 창 열기(연 횟수)
 function MonetizationService.handle(player, action, a, b)
 	if type(action) ~= "string" or not ACTIONS[action] then
 		return false, "bad_action"
@@ -524,15 +527,19 @@ function MonetizationService.handle(player, action, a, b)
 	elseif action == "giftOpen" then -- QUEUE-UI2 UI2-4 HUD [보상] 선물함 줄
 		GiftService.pushPopup(player)
 		ok = true
-	elseif action == "view" then
-		local s = PlayerProfile.getMonetizationState(player) -- QUEUE-ALL9C 1-6: 상점을 연 횟수(스타터 노출 조건 - 두 번째 방문)
-		if s then
+	elseif action == "viewOpen" then
+		-- QUEUE-ALL9C 1-6: 상점을 연 횟수(스타터 노출 조건 - 두 번째 방문) · UI-1b 0절(VERIFY-5): 접속 · 꾸미기 보기의 "view"는 세지 않고
+		-- 사용자가 상점 창을 연 신호만 센다(짧은 시간 중복 = 한 번)
+		local s = PlayerProfile.getMonetizationState(player)
+		local now = os.clock()
+		if s and now - (lastShopView[player] or -math.huge) >= MonetizationData.shopViewDedupeSeconds then
+			lastShopView[player] = now
 			s.purchases.shopViews = math.min((s.purchases.shopViews or 0) + 1, 1000)
 		end
 	elseif action ~= "view" then
 		ok, why = false, "bad_args"
 	end
-	if resultRemote and action ~= "view" and typeof(player) == "Instance" and player.Parent then
+	if resultRemote and action ~= "view" and action ~= "viewOpen" and typeof(player) == "Instance" and player.Parent then
 		resultRemote:FireClient(player, action, ok == true, why ~= nil and tostring(why) or nil)
 	end
 	MonetizationService.push(player)
@@ -605,6 +612,7 @@ function MonetizationService.start()
 	end)
 	Players.PlayerRemoving:Connect(function(player)
 		restricted[player] = nil
+		lastShopView[player] = nil
 	end)
 end
 

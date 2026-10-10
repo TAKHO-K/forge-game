@@ -1,6 +1,7 @@
 -- QUEUE-10h Q14 P4d 설정 저장(계정 - SAVE v54 profile.settings). 서버 = server/SettingsService.lua(검증 · 저장 · Player Attribute로 적용) · 창 = client/panels/Settings.
 --   키마다 attrs = 적용할 Player Attribute(클라 코드는 전부 이 Attribute만 읽는다 - 저장 전과 같은 입구) · default · kind(boolean | preset | volume).
 --   B4 사운드: kind volume(0 ~ 1 숫자) = 카테고리별 음량(SoundData.categories가 settingKey로 가리킨다 · 클라 SoundHooks가 Attribute로 읽는다). 저장은 같은 settings 표(없는 키 = 기본값 - 이관 없음).
+--   UI-1b 0절(VERIFY-5): UI-1에서 바꾼 기본값은 해당 UiV2Flags를 끄면 옛 값(doubleTapDash = map).
 --   reduceFlashes = 번개 · 태초 화면 섬광 끄기(관문 날씨 섬광 끔 · 피뢰침 방전은 흰 번쩍 대신 밝기만 · 태초 연출의 화면 밝아짐 없음 - 보스 경고 표시는 그대로).
 return {
 	order = { "cameraTopDown", "reduceFlashes", "screenShake", "dimOthersTrail", "autoStage", "volumeSfx", "volumeMusic", "volumeUi", "volumeBossCue", "transcendNotice", "fxLevel", "volumeAmbient", "muteSfx", "muteUi", "muteAmbient", "muteMusic", "windowPositions", "graphics", "language", "quietOthersSfx", "minimapOn", "minimapRotate", "minimapFar", "mapHintSeen", "hubIntroRank", "hubIntroBoard", "hubIntroChallenge", "hubIntroTailor", "bulkSellGrades", "sellHintSeen", "weekendBannerAt", "skipMenu", "autoProcessMode", "autoProcessHintSeen", "menuLoreSeen", "lastSeenNewsId", "textScale", "doubleTapDash", "bagSort", "bagSortAsc", "hudLayoutPc", "hudLayoutPhone", "hudLayoutVersion", "showKeys", "vibrationOff" },
@@ -28,7 +29,7 @@ return {
 		autoProcessHintSeen = { kind = "boolean", default = false, attrs = { "AutoProcessHintSeen" } },
 		menuLoreSeen = { kind = "boolean", default = false, attrs = { "MenuLoreSeen" } }, -- QUEUE-UI UI-1 메인 메뉴 첫 실행 설정 문구 1회(01 spec - 계정 · 없는 키 = 기본값, 이관 없음)
 		lastSeenNewsId = { kind = "stamp", default = 0, attrs = { "LastSeenNewsId" } }, -- QUEUE-UI1F-1 소식 창을 열 때 본 가장 큰 소식 id(SocialRewardData.news[].id - 계정 · 없는 키 = 0 = 빨간 점, 이관 없음)
-		doubleTapDash = { kind = "boolean", default = false, attrs = { "SettingDoubleTapDash" } }, -- UI-1 7b(06 v3 · G spec §5): 기본 끔(옛 true - 저장한 값은 그대로)
+		doubleTapDash = { kind = "boolean", default = not require(script.Parent.UiV2Flags).map, attrs = { "SettingDoubleTapDash" } }, -- UI-1 7b(06 v3 · G spec §5): 기본 끔(옛 true - 저장한 값은 그대로)
 		-- UI-1 7b HUD 편집(08 v7 §6 · 이름 = FINAL-1b 확정): "id:x,y;…" 기준 px · 서버 검사 = shared/HudEditRules(화면 밖 · 금지 자리 · id 화이트리스트) · 없는 키 = 기본 자리(이관 없음)
 		hudLayoutPc = { kind = "hudLayout", device = "pc", default = "", attrs = { "HudLayoutPc" } },
 		hudLayoutPhone = { kind = "hudLayout", device = "phone", default = "", attrs = { "HudLayoutPhone" } },

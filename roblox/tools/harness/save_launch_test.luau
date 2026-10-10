@@ -419,7 +419,7 @@ local function main()
 		{ "직업 하나 빠짐(새 직업 추가) → 기본 상태", function(d) d.classes.healer = nil end, function(p) return p and p.classes.healer and p.classes.healer.weapon.level == 0 end },
 		{ "중첩 NaN(직업 경험치) → 0", function(d) d.classes.bow.characterExp = 0 / 0 end, function(p) return p and p.classes.bow.characterExp == 0 end },
 		{ "강화 게이지 상한 넘음 → 상한", function(d) d.classes.bow.weapon.enhanceGauge = 999999 end, function(p) return p and p.classes.bow.weapon.enhanceGauge == MODS.EnhanceConfig.gauge.max end },
-		{ "자동 처리 등급 모름 → epic · 끔", function(d) d.autoProcess.maxGrade = "mythic" d.autoProcess.enabled = true end, function(p) return p and p.autoProcess.maxGrade == "epic" and p.autoProcess.enabled == false end },
+		{ "자동 처리 등급 모름 → 기본 등급(UI-1b: bag 켬 = normal) · 끔", function(d) d.autoProcess.maxGrade = "mythic" d.autoProcess.enabled = true end, function(p) return p and p.autoProcess.maxGrade == (MODS.UiV2Flags.bag and "normal" or "epic") and p.autoProcess.enabled == false end },
 		{ "classes 문자열 → invalid_schema(고치지 않음)", function(d) d.classes = "broken" end, function(p, info, err) return p == nil and err == "invalid_schema" end },
 		{ "classes 빈 표 → invalid_schema(진행 덮어쓰기 방지)", function(d) d.classes = {} end, function(p, info, err) return p == nil and err == "invalid_schema" end },
 		{ "inventory nil → invalid_schema(고치지 않음)", function(d) d.inventory = nil end, function(p, info, err) return p == nil and err == "invalid_schema" end },

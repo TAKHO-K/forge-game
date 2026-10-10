@@ -28,6 +28,6 @@ local okRun, err = pcall(function()
 	check("상한 +30 = 칸 0", E.compute(30, 0).cells == 0)
 end)
 if not okRun then
-	print("[EMBER] 에러 " .. tostring(err))
+	print("[EMBER] 하네스 에러 " .. tostring(err))
 end
 print(("[EMBER] 끝 %d/%d"):format(pass, total))

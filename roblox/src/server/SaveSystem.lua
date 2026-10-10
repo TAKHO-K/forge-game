@@ -16,6 +16,7 @@ local BossData = require(ReplicatedStorage.Shared.data.BossData)
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
 local OptionData = require(ReplicatedStorage.Shared.data.OptionData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData) -- G1-2: 자동 처리 기준 등급 검사(v36)
+local AUTO_GRADE = require(ReplicatedStorage.Shared.data.UiV2Flags).bag and "normal" or "epic" -- UI-1b 0절: 자동 정리 기본 등급(새 계정 · v36 이관 · 복구 같은 값) · bag 스위치 끔 = 옛 epic
 -- 28-1 S03: 강화 천장 게이지(weapon.enhanceGauge)의 상한 검사용(v24->v25 · isValidProfile).
 local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
 -- 28-1 S04: 강화 재료 보유량(profile.materials)의 기본값 · 이관(v25->v26) · isValidProfile 검사용.
@@ -324,7 +325,7 @@ local function defaultProfile()
 		leaderboardTainted = false,
 
 		-- 줍는 순간 자동 처리(G1-2, v36) - 계정 단위(bulkSellCutoffGrade와 같은 층). enabled = 켜짐 · maxGrade = 이 등급 이하(ArmorData.autoProcessGradeChoices 중 하나).
-		autoProcess = { enabled = false, maxGrade = "normal" }, -- UI-1 4단계: 기본 = 가장 낮은 등급(일반)부터(사용자 10-10 · 옛 기본 epic)
+		autoProcess = { enabled = false, maxGrade = AUTO_GRADE }, -- UI-1 4단계: 기본 = 가장 낮은 등급(일반)부터(사용자 10-10 · 옛 기본 epic)
 	}
 end
 
@@ -1072,7 +1073,7 @@ local function migrate(data)
 
 	if data.version < 36 then
 		-- G1-2: 줍는 순간 자동 처리 필터 신설 - 기본 끔(옛 동작 = 전부 가방에 보관).
-		data.autoProcess = { enabled = false, maxGrade = "epic" }
+		data.autoProcess = { enabled = false, maxGrade = AUTO_GRADE } -- UI-1b 0절(VERIFY-5 상1): 새 계정도 이 단계를 타므로 defaultProfile과 같은 값(옛 "epic")
 		data.version = 36
 	end
 
@@ -1913,13 +1914,13 @@ function SaveSystem.repairProfile(data)
 			tableAt(data, key, key, {})
 		end
 	end
-	local auto = tableAt(data, "autoProcess", "autoProcess", { enabled = false, maxGrade = "epic" })
+	local auto = tableAt(data, "autoProcess", "autoProcess", { enabled = false, maxGrade = AUTO_GRADE })
 	if type(auto.enabled) ~= "boolean" then
 		auto.enabled = false
 		note("autoProcess.enabled")
 	end
 	if not table.find(ArmorData.autoProcessGradeChoices, auto.maxGrade) then
-		auto.maxGrade = table.find(ArmorData.autoProcessGradeChoices, "epic") and "epic" or ArmorData.autoProcessGradeChoices[1] -- defaultProfile과 같은 값
+		auto.maxGrade = table.find(ArmorData.autoProcessGradeChoices, AUTO_GRADE) and AUTO_GRADE or ArmorData.autoProcessGradeChoices[1] -- defaultProfile과 같은 값
 		auto.enabled = false
 		note("autoProcess.maxGrade")
 	end

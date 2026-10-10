@@ -472,18 +472,21 @@ local function refresh()
 		refs.root.Visible = false
 		a.name.Text = Text.name(boss:GetAttribute("BossName") or boss.Name)
 		setArtRatio(ratio)
-		if V6ON and v6 then
-			local B = V6.bossBar
-			local guard = boss:GetAttribute("BossTransformGuard") == true
-			-- 2폼 카드 = 폼이 바뀌는 순간(체력 formAt 아래로 · 폭풍 군주만) - 변신 무적(v3 transformGuard)은 새 몸이 켜졌을 때만 있어 신호로 쓰지 않는다
-			local form2 = ratio < B.formAt
-			if form2 and not lastGuard and require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).boss then
+		-- 2폼 카드 = 폼이 바뀌는 순간(체력 formAt 아래로 · 폭풍 군주만) - 변신 무적(v3 transformGuard)은 새 몸이 켜졌을 때만 있어 신호로 쓰지 않는다
+		-- UI-1b 0절(VERIFY-5): F 보스 창 스위치(boss)만 따른다(옛 = hud 스위치 안에 묶여 hud를 끄면 같이 사라짐)
+		if require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).boss then
+			local form2 = ratio < V6.bossBar.formAt
+			if form2 and not lastGuard then
 				local bid = boss:GetAttribute("BossRig")
-				if B.formBosses[bid] then
+				if V6.bossBar.formBosses[bid] then
 					showForm2Card(bid, boss)
 				end
 			end
 			lastGuard = form2
+		end
+		if V6ON and v6 then
+			local B = V6.bossBar
+			local guard = boss:GetAttribute("BossTransformGuard") == true
 			a.fill.BackgroundColor3 = guard and Color3.fromHex(B.guardFill) or Color3.new(1, 1, 1)
 			v6.stripes.Visible = guard
 			local bossId = boss:GetAttribute("BossRig") -- 보스 데이터 id(MonsterSpawner)

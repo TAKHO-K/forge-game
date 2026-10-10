@@ -224,7 +224,7 @@ return {
 				fill = { "FFF1C2", "FFD45A", "FFB13D" }, stroke = "3A4466", strokeFull = "FFD45A", strokeLast = "FFB13D", base = "141826", amber = "FFB13D",
 				stripeTile = 32, breathe = 1.2, lastBreathe = 0.8, shimmerEvery = 1.6,
 			},
-			window = { bg = "161A2B", bgT = 0.06, stroke = "3A4466", strokeFull = "FFD45A", success = "5BD18A", down = "FF6B6B" },
+			window = { bg = "161A2B", bgT = 0.06, stroke = "3A4466", strokeFull = "FFD45A", success = "5BD18A", down = "FF6B6B", close = "E5484D" }, -- close = 닫기 버튼(빨강 = 닫기 규칙 · UI-1b 0절 코드에서 옮김)
 			band = { seconds = 2 }, -- 결과 띠: 2초 뒤 접힘 · 누르면 바로
 			images = {
 				flame = "ui/ember/ember-flame", stripe = "ui/ember/ember-ghost-stripe", medalOn = "ui/ember/ember-medal-on", medalOff = "ui/ember/ember-medal-off",

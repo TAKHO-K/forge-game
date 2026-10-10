@@ -102,6 +102,13 @@ local ok, err = pcall(function()
 	-- 5) 새 계정 빈 표
 	local okEmpty, m = pcall(SaveSystem.migrate, {})
 	check("migrate({})", okEmpty and type(m) == "table" and m.version == MODS.SaveConfig.saveVersion, okEmpty and ("v" .. tostring(m.version)) or tostring(m))
+	-- UI-1b 0절(VERIFY-5 상1): 자동 정리 기본 = 가장 낮은 등급(일반) - 새 계정 · v36 전 계정 · 복구 경로 모두 · 사용자가 고른 값은 그대로
+	check("새 계정 autoProcess = normal · 끔", okEmpty and m.autoProcess.maxGrade == "normal" and m.autoProcess.enabled == false, okEmpty and tostring(m.autoProcess.maxGrade) or "")
+	local picked = SaveSystem.migrate({ version = 40, autoProcess = { enabled = true, maxGrade = "epic" } })
+	check("고른 값(epic · 켬) 유지", picked.autoProcess.maxGrade == "epic" and picked.autoProcess.enabled == true, tostring(picked.autoProcess.maxGrade))
+	local broken = { autoProcess = { enabled = false, maxGrade = "nope" } }
+	SaveSystem.repairProfile(broken)
+	check("복구 경로 = normal", broken.autoProcess.maxGrade == "normal", tostring(broken.autoProcess.maxGrade))
 end)
 if not ok then print("[MIG] 에러 " .. tostring(err)) end
 print(("[MIG] 끝 %d/%d"):format(pass, total))

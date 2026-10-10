@@ -79,6 +79,7 @@ local D = {
 	--   QUEUE-ALL10 0-4(결정 3): 마일스톤 +5는 이 상한 밖(InventorySync.maxCapacity) → 전부 = 80
 	bagSources = { starter = { slots = 20 } },
 	bagMaxSlots = 75,
+	shopViewDedupeSeconds = 2, -- UI-1b 0절(VERIFY-5): 상점 연 횟수(스타터 노출) = 사용자가 창을 연 것(viewOpen)만 · 이 시간 안 중복은 한 번으로
 	-- QUEUE-ALL9B 3-4 가격 등급(표시 · 검사용): premium = 499R$급 대표 치장. 상품의 tier가 여기 이름이면 robux가 이 값이어야 한다(checkCatalog).
 	tiers = { premium = { robux = 499 } },
 	-- QUEUE-ALL9B 3-3 꾸미기 토큰 가격 = 로벅스 가격에 비례(499R$급 = premiumTokens · roundTo 단위 반올림) - 계산 = shared/Monetization.tokenPriceForRobux 한 곳.

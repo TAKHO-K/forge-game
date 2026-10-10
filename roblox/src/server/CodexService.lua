@@ -188,8 +188,9 @@ function refresh(player)
 	end
 	if BOX_ON then -- UI-1 5단계: 상자 열림 = 전체 점수 칸의 10%마다(그때 계정 최고 스테이지로 골드 고정 - 점수판과 같은 규칙)
 		r.boxDone = type(r.boxDone) == "table" and r.boxDone or {}
+		local byBoard = CodexRules.boxesOpenedByBoard(r.boardDone) -- UI-1b 0절: 옛 점수판을 열어 둔 몫 → 해당 상자까지 열림(100% 상자까지 밀리지 않게)
 		for n = 1, CodexData.boxes.count do
-			if score >= CodexRules.boxThreshold(n, BUILT.totalScore) and not r.boxDone[tostring(n)] then
+			if (score >= CodexRules.boxThreshold(n, BUILT.totalScore) or n <= byBoard) and not r.boxDone[tostring(n)] then
 				r.boxDone[tostring(n)] = stage
 				changed = true
 			end
@@ -281,7 +282,16 @@ local function claimBoard(player, r, key)
 	if not r.boardDone[key] or r.boardClaimed[key] then
 		return nil
 	end
-	local ok, summary = pay(player, CodexRules.reward({ kind = "board", threshold = tonumber(key) }, r.boardDone[key], goldPerKill))
+	-- UI-1b 0절(VERIFY-5): 상자로 이미 받은 몫은 빼고 준다(받은 장부 하나 = CodexRules.paidLedger · 스위치를 껐다 켜도 이중 지급 0)
+	local full = CodexData.boardReward(tonumber(key) or 0)
+	local d = CodexRules.boardPay(key, r.boardClaimed, r.boxClaimed)
+	local reward
+	if d.goldKills == (full.goldKills or 0) and d.enhanceStone == (full.enhanceStone or 0) then
+		reward = CodexRules.reward({ kind = "board", threshold = tonumber(key) }, r.boardDone[key], goldPerKill)
+	else
+		reward = { gold = d.goldKills > 0 and require(ReplicatedStorage.Shared.GoldCost).niceReward(math.floor(d.goldKills * goldPerKill(r.boardDone[key]))) or nil, enhanceStone = d.enhanceStone > 0 and d.enhanceStone or nil }
+	end
+	local ok, summary = pay(player, reward)
 	if ok then
 		r.boardClaimed[key] = true
 	end

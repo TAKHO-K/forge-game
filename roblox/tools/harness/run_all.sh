@@ -1,16 +1,62 @@
 #!/usr/bin/env bash
 # QUEUE-ALL5 G: 로컬 하네스 전부를 한 번에(Studio 없이). 사용: LUAU=<luau.exe> bash roblox/tools/harness/run_all.sh
 #   결과 = 하네스마다 "끝 n/m" 줄(boss_motion은 "total jumps") · 상세 = %TEMP%/res_*.txt
+#   UI-1b 0절(VERIFY-5): "끝 a/b"의 b는 실제 돈 검사 수라 중간에 멈춰도 a = b가 된다 → 하네스마다 기대 검사 수(EXP)를 고정해 두고
+#   다르면 X · 실행 전에 결과 파일을 지움(이전 실행 결과가 통과로 찍히지 않게) · 종료 코드 · 에러 문구는 ERR_RE 하나로 판정.
+#   검사를 늘리거나 줄였으면 EXP도 같이 고친다. 끝 줄 = "전체 n개 · X m"(X 0이어야 통과).
 set -u
 H="$(cd "$(dirname "$0")" && pwd)"
 cd "$H"
 : "${LUAU:?LUAU=<luau.exe 경로>를 주세요}"
 export LUAU PYTHONIOENCODING=utf-8
 T="${TEMP:-/tmp}"
+# 에러 문구 = "[태그] 에러 …" · "[태그] 하네스 에러 …" · "[태그] 스레드 에러 …"(하네스가 pcall로 잡은 것) + luau가 못 잡은 에러(stacktrace:)
+ERR_RE='^\[[A-Za-z0-9_]+\] ([^ ]+ )?에러 |^stacktrace:'
+declare -A EXP=( # 기대 검사 수(끝 a/b의 b) · require_path는 최소값(require가 늘면 같이 늘어남)
+	[security_launch]=45 [save_launch]=65 [save_lock]=12 [migrate_curve]=24 [id_quarantine]=15 [slot_save]=70 [monetize]=86 [dupe]=11
+	[multiplayer]=12 [attack]=10 [request_gate]=7 [mesh_import]=34 [ops_security]=34 [season_pass]=13 [economy_all9b]=34 [enhance_g]=25
+	[bignum]=67 [bulk_sell]=11 [stat_sheet]=9 [all10]=57 [gear_v3]=10 [gem_home]=25 [monster_stats]=5 [dash_modes]=19 [boss_feel]=13
+	[menu_gate]=14 [menu_gate_src]=11 [hud_v5_src]=10 [ui1_static]=9 [ui_v2]=74 [hud_layout]=13 [ui1_parts]=11 [codex_box]=35
+	[ember_view]=8 [hud_edit]=16 [pet_ui]=7 [quick_chat]=6 [ui_rules]=4 [community_goal]=24 [require_path]=5542 [regrow_timing]=8
+)
+NALL=0; NBAD=0
+verdict() { # 이름 결과파일 종료코드 → 한 줄 출력
+	local name="$1" f="$2" rc="$3" line bad="" a b exp="${EXP[$1]:-}"
+	line="$(grep -a -E '끝 [0-9]+/[0-9]+|결과 [0-9]+/[0-9]+ 통과|total jumps|===MESH 하네스|결과: ' "$f" 2>/dev/null | tail -1)"
+	[ "$name" = dupe ] && line="O $(grep -a -c '^\[DUPE\].* O$' "$f") · X $(grep -a -c '^\[DUPE\].* X$' "$f")"
+	if [ ! -s "$f" ] || [ -z "$line" ]; then bad=" · X 결과 없음"
+	else
+		[ "$rc" != 0 ] && bad="$bad · X 종료 코드 $rc"
+		grep -a -q -E "$ERR_RE" "$f" && bad="$bad · X 하네스 에러(중간 멈춤): $(grep -a -m1 -E "$ERR_RE" "$f" | cut -c1-120)"
+		if [[ "$line" =~ ([0-9]+)/([0-9]+) ]]; then a="${BASH_REMATCH[1]}"; b="${BASH_REMATCH[2]}"
+			[ "$a" != "$b" ] && bad="$bad · X 실패 $((b - a))"
+			if [ -n "$exp" ]; then
+				if [ "$name" = require_path ]; then [ "$b" -lt "$exp" ] && bad="$bad · X 검사 수 $b < 최소 $exp"
+				elif [ "$b" != "$exp" ]; then bad="$bad · X 검사 수 $b ≠ 기대 $exp"; fi
+			fi
+		fi
+		case "$name" in
+			dupe) [[ "$line" == "O $exp · X 0" ]] || bad="$bad · X 기대 O $exp · X 0";;
+			boss_motion) [[ "$line" == *"total jumps 0"* ]] || bad="$bad · X 튐";;
+			meshswap) [[ "$line" == *"하네스 O"* ]] || bad="$bad · X";;
+			id_registry) [[ "$line" == *"통과"* ]] || bad="$bad · X";;
+		esac
+	fi
+	NALL=$((NALL + 1)); [ -n "$bad" ] && NBAD=$((NBAD + 1))
+	printf "%-22s %s%s\n" "$name" "$line" "$bad"
+}
 run() { # 이름 결과파일 의존 테스트파일 [prelude]
-	local name="$1" res="$2" deps="$3" test="$4" prelude="${5:-server_prelude.luau}"
-	PRELUDE="$prelude" EXTRA_SERVER="$deps" ECON_RES="$res" ECON_OUT="out_$res.luau" python build_run.py "$test" >/dev/null
-	printf "%-22s %s\n" "$name" "$(grep -a -E '끝 [0-9]+/[0-9]+|결과 [0-9]+/[0-9]+ 통과|total jumps|하네스 에러' "$T/$res" | tail -1) $(case "$name" in dupe) printf "O %s · X %s" "$(grep -a -c '^\[DUPE\].* O$' "$T/$res")" "$(grep -a -c '^\[DUPE\].* X$' "$T/$res")";; esac)$(grep -a -q '하네스 에러' "$T/$res" && printf ' · 하네스 에러(중간 멈춤)')"
+	local name="$1" res="$2" deps="$3" test="$4" prelude="${5:-server_prelude.luau}" out rc
+	rm -f "$T/$res"
+	out="$(PRELUDE="$prelude" EXTRA_SERVER="$deps" ECON_RES="$res" ECON_OUT="out_$res.luau" python build_run.py "$test" 2>&1)"; rc=$?
+	[[ "$out" =~ ^exit\ ([0-9]+) ]] && [ "$rc" = 0 ] && rc="${BASH_REMATCH[1]}" # python은 성공 · luau 종료 코드는 "exit n"
+	verdict "$name" "$T/$res" "$rc"
+}
+pyrun() { # 이름 명령… (python 정적 하네스 · 출력을 결과 파일로)
+	local name="$1"; shift
+	rm -f "$T/res_py_$name.txt"
+	"$@" > "$T/res_py_$name.txt" 2>&1
+	verdict "$name" "$T/res_py_$name.txt" "$?"
 }
 ATTACK=$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem,SettingsService,FallServer,InventoryServer.server)
 run security_launch res_sec.txt "$(python deps.py SocialRewardService,CodexService,CommunityGoalService,WeeklyChallengeService,SpectateService.server,RequestGate,QuestService,PlayerProfile,SaveSystem,Travel)" security_launch_test.luau
@@ -39,9 +85,9 @@ run monster_stats res_mstat.txt "" monster_stats_test.luau # QUEUE-N1004 C-4 몹
 run dash_modes res_dash.txt "" dash_modes_test.luau # FINAL-1 3 MOVE-2 대시 모드(긴 · 짧은 · 기울기) · 두 번 연속 누름 · 거리 식
 run boss_feel res_feel.txt "$(python deps.py BossHandlersBR1,PlayerCC)" boss_feel_test.luau # BOSS-NIGHT-3 보스 손맛 · 공정성(분신 줄 겹침 · 새 몸 스킬 곡선 · CC · 투사체 · 범위)
 run menu_gate res_menu.txt SlotSwitch,SlotSave menu_gate_test.luau # 메인 메뉴 버그(10-05): 테스트 플래그만 건너뜀 · 접속 미스폰 · 입장 스폰 · 메뉴 왕복
-printf "%-22s %s\n" menu_gate_src "$(python menu_gate_static.py 2>&1 | grep -a -E '끝 [0-9]+/[0-9]+' | tail -1)"
-printf "%-22s %s\n" hud_v5_src "$(python hud_v5_static.py 2>&1 | grep -a -E '끝 [0-9]+/[0-9]+' | tail -1)" # QUEUE-UI2 UI2-4 환생 진입 경로 · 메뉴 창 = PanelRegistry · 키 칩 · 빨강
-printf "%-22s %s\n" ui1_static "$(PYTHONIOENCODING=utf-8 python ui1_static.py 2>&1 | grep -a -E '끝 [0-9]+/[0-9]+' | tail -1)" # UI-1 7c 전투력 = 한 함수(HUD · 캐릭터 · 관문 · 가방)
+pyrun menu_gate_src python menu_gate_static.py
+pyrun hud_v5_src python hud_v5_static.py # QUEUE-UI2 UI2-4 환생 진입 경로 · 메뉴 창 = PanelRegistry · 키 칩 · 빨강
+pyrun ui1_static python ui1_static.py # UI-1 7c 전투력 = 한 함수(HUD · 캐릭터 · 관문 · 가방)
 EXTRA_FILES=first/MenuArtFit.lua,first/MenuBootData.lua run ui_v2 res_uiv2.txt SlotSave ui_v2_test.luau # QUEUE-UI UI-0 토큰 · 좌표 표 · 아이콘 표 · 배율 · 신직업 = 데이터 추가만
 run hud_layout res_hudlayout.txt "" hud_layout_test.luau # UI-1 0단계 02 v6 배치: 해상도 7 × 평상시 · 보스전 · 화면 밖 · 상단 바 · 터치 44 · 접기 · 폰 전투 버튼(겹침 = 목록)
 run ui1_parts res_ui1parts.txt "" ui1_parts_test.luau # UI-1 1단계 A 부품: 상태 아이콘 39 · 그림 기록 · ko/en 짝 · 색 3개 · 잡힘 종류
@@ -53,7 +99,9 @@ run quick_chat res_qchat.txt "" quick_chat_test.luau # UI-1 7c 파티 빠른 말
 run ui_rules res_ui.txt "" ui_rules_test.luau # QUEUE-ALL9C 블록 1 화면 규칙(순위 상위 약 n% 등 순수 함수)
 run community_goal res_goal.txt "" community_goal_test.luau # QUEUE-ALL7 B5 합동 목표 00 · ±25% · 문턱 순서
 run boss_motion res_motion.txt "" boss_motion_test.luau motion_prelude.luau
-printf "%-22s %s\n" require_path "$(python require_path_test.py 2>&1 | grep -a -E '^\[REQ\] (X|끝)' | tail -3 | tr '\n' ' ')" # BOSS-NIGHT-2 D: require 경로 = 실제 파일(Rojo 매핑) - 하네스는 이름으로 묶어 틀린 경로도 통과시킨다
-printf "%-22s %s\n" regrow_timing "$(python regrow_timing_test.py 2>&1 | grep -a -E '끝 [0-9]+/[0-9]+' | tail -1)"
-(cd ../meshswap_harness && python mk_mesh.py test_mesh.luau >/dev/null && printf "%-22s %s\n" meshswap "$("$LUAU" mesh_run.luau 2>&1 | grep -a -E '===MESH 하네스' | tail -1)")
-printf "%-22s %s\n" id_registry "$(python ../ids/id_registry.py | tail -1)"
+pyrun require_path python require_path_test.py # BOSS-NIGHT-2 D: require 경로 = 실제 파일(Rojo 매핑) - 하네스는 이름으로 묶어 틀린 경로도 통과시킨다
+pyrun regrow_timing python regrow_timing_test.py
+pyrun meshswap bash -c 'cd ../meshswap_harness && python mk_mesh.py test_mesh.luau >/dev/null && "$LUAU" mesh_run.luau'
+pyrun id_registry python ../ids/id_registry.py
+printf "%-22s %s\n" "전체" "${NALL}개 · X ${NBAD}$([ "$NBAD" = 0 ] && printf ' · 통과')"
+[ "$NBAD" = 0 ]

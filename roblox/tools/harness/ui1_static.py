@@ -36,4 +36,9 @@ for root, _, files in os.walk(os.path.join(SRC, 'client')):
             if 'offensePowerOf' in t:
                 dup.append(fn)
 check('클라가 전투력을 따로 계산하지 않음(offensePowerOf 0곳)', not dup, ','.join(dup))
+# UI-1b 0절(VERIFY-5): HUD 편집 모드 전역 입력 연결 = state.conns에 모아 close에서 끊음(들어갈 때마다 쌓이던 누수)
+he = read('client/hud/HudEdit.lua')
+uis = re.findall(r'^.*UserInputService\.\w+:Connect\(.*$', he, re.M)
+check('HUD 편집 전역 입력 연결 = 전부 state.conns에 모음', len(uis) > 0 and all('table.insert(state.conns,' in l for l in uis), '%d개' % len(uis))
+check('HUD 편집 close = conns 끊기', re.search(r'local function close[\s\S]{0,1500}for _, c in ipairs\(state\.conns\) do\s*c:Disconnect\(\)', he) is not None)
 print('[UI1S] 끝 %d/%d' % (passed, total))

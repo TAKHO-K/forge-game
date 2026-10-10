@@ -402,7 +402,7 @@ local function build(L)
 			if built then
 				built.scroll.CanvasPosition = Vector2.zero
 			end
-			shopRequest:FireServer("view")
+			shopRequest:FireServer("viewOpen") -- UI-1b 0절: 서버가 세는 "창을 연 것"(접속 때 "view"는 안 셈)
 			task.defer(R.render)
 		end,
 	})

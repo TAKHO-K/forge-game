@@ -116,14 +116,15 @@ local function makeBox(parent, e)
 			renderBoxes()
 		end
 	end)
-	UserInputService.InputChanged:Connect(function(input)
+	-- UI-1b 0절(VERIFY-5): 전역 입력 연결은 state.conns에 모아 close에서 끊는다(옛 = 편집 모드에 들어갈 때마다 쌓임)
+	table.insert(state.conns, UserInputService.InputChanged:Connect(function(input)
 		if dragStart and state and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
 			local d = (Vector2.new(input.Position.X, input.Position.Y) - dragStart) / state.m
 			state.positions[e.id] = { from[1] + d.X, from[2] + d.Y }
 			renderBoxes()
 		end
-	end)
-	UserInputService.InputEnded:Connect(function(input)
+	end))
+	table.insert(state.conns, UserInputService.InputEnded:Connect(function(input)
 		if dragStart and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
 			dragStart = nil
 			b.dragging = false
@@ -139,7 +140,7 @@ local function makeBox(parent, e)
 				renderBoxes()
 			end
 		end
-	end)
+	end))
 	return b
 end
 
@@ -160,6 +161,9 @@ local function close(saveIt)
 	if hum and state.walk then
 		hum.WalkSpeed = state.walk
 	end
+	for _, c in ipairs(state.conns) do
+		c:Disconnect()
+	end
 	state = nil
 	if gui then
 		gui:Destroy()
@@ -173,7 +177,7 @@ end
 local function build()
 	local device, m, view = deviceNow()
 	local cur = HudEditRules.parse(player:GetAttribute(device == "phone" and "HudLayoutPhone" or "HudLayoutPc"))
-	state = { device = device, m = m, view = view, positions = cur, history = {}, boxes = {}, corr = {} }
+	state = { device = device, m = m, view = view, positions = cur, history = {}, boxes = {}, corr = {}, conns = {} }
 	local inset = game:GetService("GuiService"):GetGuiInset().Y
 	for _, e in ipairs(HudEditRules.elements(device)) do -- 실제 프레임이 보이면 그 자리에 상자를 맞춘다(보정 = 실제 − 기준 계산)
 		local node = player.PlayerGui

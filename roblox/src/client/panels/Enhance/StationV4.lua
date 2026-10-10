@@ -181,7 +181,7 @@ local function build()
 	end
 	local close = Instance.new("ImageButton")
 	close.Name = "Close"
-	close.BackgroundColor3 = hex("E5484D")
+	close.BackgroundColor3 = hex(L.window.close)
 	close.AnchorPoint = Vector2.new(1, 0.5)
 	close.Position = UDim2.fromScale(1, 0.5)
 	close.Size = UDim2.fromOffset(P.close, P.close)

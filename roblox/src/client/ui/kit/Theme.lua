@@ -43,7 +43,11 @@ function Theme.recompute()
 	-- UI-1 0단계 폰 판정 하나(HudPlace.isPhone): 안전 영역 짧은 변 ≤ 500 또는 터치만 → 폰 배치(옛 = 터치 + 키보드 기기는 작은 화면이어도 PC 배치 → 메뉴 배율 0.33)
 	local camera = workspace.CurrentCamera
 	local view = camera and camera.ViewportSize or Vector2.zero
-	Theme.isMobile = HudPlace.isPhone(view.X, view.Y, UserInputService.TouchEnabled, UserInputService.KeyboardEnabled) or forced
+	if require(ReplicatedStorage.Shared.data.UiV2Flags).hud then
+		Theme.isMobile = HudPlace.isPhone(view.X, view.Y, UserInputService.TouchEnabled, UserInputService.KeyboardEnabled) or forced
+	else
+		Theme.isMobile = (UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled) or forced -- UI-1b 0절: 스위치 끔 = 옛 판정
+	end
 	Theme.buttonHeight = Theme.buttonHeightFor(Theme.isMobile)
 	Theme.tabHeight = Theme.isMobile and 40 or 28
 end

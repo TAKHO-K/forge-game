@@ -21,3 +21,11 @@
 UI-1 끝. 다음 = 사용자: rojo serve 다시 켜고 Connect · 보고서 11절.
 
 **정정(7단계 중 발견)**: `hud_layout`(0단계)는 2단계부터 · `ui_v2`(옛 UI-0)는 0단계부터 하네스가 중간 에러로 멈춰 있었는데 run_all 요약 줄이 "끝 2/2" · "끝 n/n"으로만 보여 놓쳤음(앞 단계 "전부 통과" 기록은 이 2개가 틀림). 원인 = 폰 `menuTop`(좌표 4칸이 아닌 표) · UI-1 판 표(hud.v6 등)가 옛 화면 걷기에 들어감 → 하네스 고침(hud_layout 13/13 · ui_v2 74/74) · run_all 요약에 "하네스 에러(중간 멈춤)" 표시 추가.
+
+## UI-1b (지시 = `claude-design-handoff\CC-UI-1b-prompt.md` · 10-10 추가 지시: 1-2 · 15 · 16 · 20 = `08_other-screens\v9-more` 기준 · 글자 3단 = 새 보통 1.0 · 1.15 · 1.3 · I 묶음(명예의 전당 · 도감 v3 · 칭호 · 장비 상세) 손대지 않음)
+
+| 단계 | 상태 | 커밋 | 메모 |
+|---|---|---|---|
+| 0-가 VERIFY-5 서버 · 하네스 | 완료 | (아래 커밋) | run_all = 기대 검사 수 EXP 고정 · 실행 전 결과 파일 지움 · 종료 코드 · 에러 문구 ERR_RE 하나("[태그] 에러" · "하네스 에러" · stacktrace) · 끝 줄 "전체 n개 · X m" · 상1 autoProcess 새 계정 = normal(v36 단계 · 복구 · 하네스 migrate_curve 24) · 여러 칸 판매/분해 중복 번호 거름 + 처리 직전 확인값(attack 10 · 옛 코드 X 확인) · 스타터 = viewOpen만 셈(2초 중복 = 1 · monetize 86) · 도감 받은 장부 하나(CodexRules.paidLedger · 스위치 끔 점수판 = 증가분만 · 열어 둔 점수판 → 해당 상자 · codex_box 35 고정값 4445 · 442) · UiV2Flags 끔 = 옛 fitRight · 인셋 · 배율 · Theme 옛 폰 판정 · 기본값(doubleTapDash = map · 스타터 OR = rest · autoProcess epic = bag) · 2폼 카드 = boss 스위치만 · HudEdit 연결 누수(ui1_static 9) · 강화대 닫기 색 = 데이터 |
+
+다음 시작: 0-나 = 도감 그림 160×288 재업로드 · 실제 GUI 겹침 검사(Studio) · 빠진 13건 표.

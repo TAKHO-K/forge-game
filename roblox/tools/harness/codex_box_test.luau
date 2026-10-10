@@ -43,6 +43,62 @@ local okRun, err = pcall(function()
 		got.enhanceStone += p.enhanceStone
 	end
 	check("일부 받은 사람 = 받은 점수판 + 상자 = 옛 총량", got.goldKills == t.goldKills and got.enhanceStone == t.enhanceStone, ("%d · %d"):format(got.goldKills, got.enhanceStone))
+	-- UI-1b 0절(VERIFY-5): 옛 합계를 손으로 계산한 고정값(같은 식 반복 X) · 받은 장부 하나 · 스위치 왕복 이중 수령 0 · 열어만 둔 점수판 → 해당 상자
+	check("옛 점수판 합 고정값 = 골드 몫 4445 · 강화석 442", t.goldKills == 4445 and t.enhanceStone == 442, ("%d · %d"):format(t.goldKills, t.enhanceStone))
+	local function sumBoard(boardClaimed, boxClaimed, keys)
+		local g = { goldKills = 0, enhanceStone = 0 }
+		for _, k in ipairs(keys) do
+			local d = R.boardPay(k, boardClaimed, boxClaimed)
+			g.goldKills += d.goldKills
+			g.enhanceStone += d.enhanceStone
+			boardClaimed[k] = true
+		end
+		return g
+	end
+	local function sumBox(boardClaimed, boxClaimed, ns)
+		local g = { goldKills = 0, enhanceStone = 0 }
+		for _, n in ipairs(ns) do
+			local p = R.boxPay(n, boardClaimed)
+			-- 상자 경로는 장부 증가분(= boxPay)을 준다
+			local before = R.paidLedger(boardClaimed, boxClaimed)
+			boxClaimed[tostring(n)] = true
+			local after = R.paidLedger(boardClaimed, boxClaimed)
+			check(("상자 %d 지급 = 장부 증가분"):format(n), p.goldKills == after.goldKills - before.goldKills and p.enhanceStone == after.enhanceStone - before.enhanceStone)
+			g.goldKills += p.goldKills
+			g.enhanceStone += p.enhanceStone
+		end
+		return g
+	end
+	local allKeys = {}
+	for _, th in ipairs(C.board) do table.insert(allKeys, tostring(th)) end
+	-- ① 상자 10개 다 받음 → 스위치 끔 → 점수판 29개 다 받기 = 추가 0
+	local bc, xc = {}, {}
+	local g1 = sumBox(bc, xc, { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 })
+	local g2 = sumBoard(bc, xc, allKeys)
+	check("상자 다 받은 뒤 점수판(스위치 끔) = 추가 0 · 합 = 옛 합계", g2.goldKills == 0 and g2.enhanceStone == 0 and g1.goldKills == 4445 and g1.enhanceStone == 442, ("%d · %d"):format(g2.goldKills, g2.enhanceStone))
+	-- ② 점수판 일부 → 상자 3개 → 점수판 나머지 → 상자 나머지 = 합 4445 · 442(이중 0 · 손실 0)
+	bc, xc = {}, {}
+	local a = sumBoard(bc, xc, { "5", "10", "15", "60", "330" })
+	local b = sumBox(bc, xc, { 1, 2, 3 })
+	local c = sumBoard(bc, xc, allKeys)
+	local d = sumBox(bc, xc, { 4, 5, 6, 7, 8, 9, 10 })
+	local gk, es = a.goldKills + b.goldKills + c.goldKills + d.goldKills, a.enhanceStone + b.enhanceStone + c.enhanceStone + d.enhanceStone
+	check("점수판 ↔ 상자 섞어 받기 = 합 4445 · 442", gk == 4445 and es == 442, ("%d · %d"):format(gk, es))
+	-- ③ 열어만 두고 안 받은 점수판(5 ~ 100 = 13개) → 해당 상자까지 열림 · 누적 몫 ≤ 열린 몫
+	local done = {}
+	local open = { goldKills = 0, enhanceStone = 0 }
+	for _, th in ipairs(C.board) do
+		if th <= 100 then
+			done[tostring(th)] = 5
+			local r = C.boardReward(th)
+			open.goldKills += r.goldKills
+			open.enhanceStone += r.enhanceStone
+		end
+	end
+	local nOpen = R.boxesOpenedByBoard(done)
+	local cumN, cumN1 = R.boxCumulative(nOpen), R.boxCumulative(math.min(nOpen + 1, 10))
+	check("열린 점수판 몫 → 상자 n까지 열림(넘치지 않음 · 다음 상자는 넘침)", nOpen >= 1 and cumN.goldKills <= open.goldKills and (nOpen == 10 or cumN1.goldKills > open.goldKills or cumN1.enhanceStone > open.enhanceStone), ("열린 몫 %d · 상자 %d(누적 %d)"):format(open.goldKills, nOpen, cumN.goldKills))
+	check("아무것도 안 연 계정 = 0", R.boxesOpenedByBoard({}) == 0)
 	local tok = 0
 	for n = 1, 10 do
 		tok += R.boxShare(n).sparkleShard or 0

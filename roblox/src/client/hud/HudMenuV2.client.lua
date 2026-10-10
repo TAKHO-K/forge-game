@@ -33,15 +33,18 @@ gui.Name = "HudMenuV2Gui"
 gui.ResetOnSpawn = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- 자식(아이콘 · 칩 · 점) = 부모 위(펼침 창 버튼 ZIndex를 올려도 아이콘이 가려지지 않게)
 gui.IgnoreGuiInset = true -- spec 좌표 원점 = 화면 왼쪽 위(로블록스 버튼 자리 0 ~ 60 비움 포함)
-gui.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets -- UI-1 0단계(02 v6 §2): 노치 = 기기 안전 영역 안 · 상단 바는 좌표로 비움
+local V2HUD = require(ReplicatedStorage.Shared.data.UiV2Flags).hud -- UI-1b 0절(VERIFY-5): 끄면 옛 배치 그대로(인셋 · 배율 · 오른쪽 열 fitRight)
+if V2HUD then
+	gui.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets
+end -- UI-1 0단계(02 v6 §2): 노치 = 기기 안전 영역 안 · 상단 바는 좌표로 비움
 gui.DisplayOrder = 150 -- 창 딤(100 ~ 149) 위 · overlay(200 ~) 아래 - 열린 창을 같은 버튼으로 닫는다(옛 MenuBar와 같은 층)
 gui.Parent = player:WaitForChild("PlayerGui")
 local recallEvent = Instance.new("BindableEvent") -- 귀환 = WorldClient(시전 · 취소 · 쿨 - 같은 동작)
 recallEvent.Name = "HudRecallPress"
 recallEvent.Parent = gui
 
-local leftRoot = UiRoot.new(gui, "HudLeft", 0, 0, true) -- UI-1 0단계: HUD 배율 하나(m - HudPlace.scale)
-local rightRoot = UiRoot.new(gui, "HudRight", 1, 0, true)
+local leftRoot = UiRoot.new(gui, "HudLeft", 0, 0, V2HUD) -- UI-1 0단계: HUD 배율 하나(m - HudPlace.scale)
+local rightRoot = UiRoot.new(gui, "HudRight", 1, 0, V2HUD)
 local phone = leftRoot.isPhone
 local L = phone and Layout.phone or Layout.pc
 if phone and require(ReplicatedStorage.Shared.data.UiV2Flags).hud then -- UI-1 2단계(02 v6 §4): 폰 메뉴 줄 = 상단 바 밖 (8, 62) · 펼침 창 = 그 아래
@@ -334,6 +337,28 @@ local function rightTop(m)
 	return top
 end
 
+-- 옛 오른쪽 열(UiV2Flags.hud 끔 · 옛 UI 코드 삭제 금지 - UI-1b 0절로 되살림)
+-- PC 오른쪽 열 시작 = max(spec 248, 메인 퀘스트 칸 아래 + 12) · 화면 아래 끝(− 24)까지 안 들어가면 간격 → 칸 크기 순서로 줄임(이름표는 간격이 좁으면 숨김)
+local function fitRight(spec, n)
+	local s = math.max(rightRoot.scale.Scale, 0.01)
+	local top = spec.y
+	local tg = player.PlayerGui:FindFirstChild("TodayGoalGui")
+	local box = tg and tg:FindFirstChild("TodayGoal")
+	if box and box.Visible and box.AbsoluteSize.Y > 0 then
+		local bottom = box.AbsolutePosition.Y + box.AbsoluteSize.Y + (tg.IgnoreGuiInset and 0 or GuiService:GetGuiInset().Y)
+		top = math.max(top, math.ceil((bottom - rightRoot.frame.AbsolutePosition.Y) / s) + 12)
+	end
+	local room = Tokens.base.pc.h - 24 - top
+	local size, gap = spec.size, spec.gap
+	if n * size + (n - 1) * gap > room then
+		gap = math.max(10, math.floor((room - n * size) / math.max(1, n - 1)))
+	end
+	if n * size + (n - 1) * gap > room then
+		size = math.max(L.leftBoss.size, math.floor((room - (n - 1) * gap) / n))
+	end
+	return { x = spec.x + (spec.size - size), y = top, size = size, gap = gap }, gap >= 30
+end
+
 local function placeRight(col, boss)
 	local m = math.max(rightRoot.scale.Scale, 0.01)
 	local visible = {}
@@ -398,7 +423,15 @@ local function placeColumn(col, boss)
 			labelsFit = gap >= 30
 		end
 	end
-	if col == columns.right then
+	if col == columns.right and not V2HUD then
+		local n = 0
+		for _, id in ipairs(col.ids) do
+			if not hidden(id) then
+				n += 1
+			end
+		end
+		spec, labelsFit = fitRight(spec, n)
+	elseif col == columns.right then
 		placeRight(col, boss)
 		for _, id in ipairs(col.ids) do
 			local item = items[id]
@@ -502,7 +535,9 @@ local function placeMore()
 				col += 1
 			end
 		end
-		moreWin.Size = UDim2.fromOffset(math.max(L.moreWindow[3], spec.x * 2 + col * spec.size + math.max(col - 1, 0) * spec.gap), L.moreWindow[4])
+		if V2HUD then
+			moreWin.Size = UDim2.fromOffset(math.max(L.moreWindow[3], spec.x * 2 + col * spec.size + math.max(col - 1, 0) * spec.gap), L.moreWindow[4])
+		end
 	end
 end
 

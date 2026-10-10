@@ -104,22 +104,28 @@ sellRequest.OnServerEvent:Connect(function(player, action, arg, signature)
 			return
 		end
 		local Loot = require(ReplicatedStorage.Shared.Loot)
-		local list = {}
+		-- UI-1b 0절(VERIFY-5): 같은 번호가 두 번 오면 첫 판매 뒤 한 칸 당겨진 다른 장비가 팔렸다 → 번호 중복 거름 + 처리 직전 확인값 다시 대조
+		-- (착용 장비는 가방 밖 equipment라 번호로 닿지 않음 · 잠금 · 초월은 sellItem/dismantleItem이 거절)
+		local list, seen = {}, {}
 		for _, e in ipairs(arg) do
 			if type(e) == "table" and type(e[1]) == "number" and type(e[2]) == "string" then
 				local i = math.floor(e[1])
 				local item = profile.inventory[i]
-				if item and Loot.itemSignature(item) == e[2] then
-					table.insert(list, i)
+				if not seen[i] and item and Loot.itemSignature(item) == e[2] then
+					seen[i] = true
+					table.insert(list, { i, e[2] })
 				end
 			end
 		end
 		table.sort(list, function(a, b)
-			return a > b
+			return a[1] > b[1]
 		end)
 		local done = 0
-		for _, i in ipairs(list) do
-			local ok
+		for _, e in ipairs(list) do
+			local i, ok = e[1], false
+			if Loot.itemSignature(profile.inventory[i]) ~= e[2] then
+				continue
+			end
 			if action == "sellList" then
 				ok = PlayerProfile.sellItem(player, i)
 			else

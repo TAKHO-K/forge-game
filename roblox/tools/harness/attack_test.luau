@@ -92,6 +92,28 @@ local ok, err = pcall(function()
 	-- ⑤ 낙하 위조: server 표시를 보내도 핸들러가 걸러 준다(F1)
 	fire("FallLanded", 0, { server = true, water = true, ladder = true })
 	check("낙하 신고 위조 server 표시 = 버려짐(water · ladder만 전달)", captured ~= nil and captured.server == nil and captured.water == true, captured and tostring(captured.server) or "nil")
+
+	-- ⑥ UI-1b 0절(VERIFY-5): 여러 칸 판매 · 분해에 같은 번호 두 번 = 그 칸 하나만 · 당겨진 다른 장비 안 팔림 · 잠금 거절
+	local function fill()
+		p.inventory = {}
+		for i = 1, 6 do table.insert(p.inventory, { grade = "epic", part = "armor", itemLevel = i, dropStage = 5, tierIndex = 1 }) end
+	end
+	local function gap() local t = os.clock() while os.clock() - t < 0.3 do end end
+	local S = MODS.Loot.itemSignature
+	for _, act in ipairs({ "sellList", "dismantleList" }) do
+		fill()
+		gap()
+		local s5 = S(p.inventory[5])
+		fire("SellRequest", act, { { 5, s5 }, { 5, s5 } })
+		local levels = {}
+		for _, it in ipairs(p.inventory) do table.insert(levels, it.itemLevel) end
+		check(act .. " 같은 번호 두 번 = 5번만 처리(6번 남음)", #p.inventory == 5 and p.inventory[5].itemLevel == 6, table.concat(levels, ","))
+	end
+	fill()
+	p.inventory[3].locked = true
+	gap()
+	fire("SellRequest", "sellList", { { 3, S(p.inventory[3]) }, { 4, S(p.inventory[4]) }, { 2, "위조" } })
+	check("sellList 잠금 · 위조 거절 · 정상 칸만", #p.inventory == 5 and p.inventory[3].locked and p.inventory[4].itemLevel == 5 and p.inventory[2].itemLevel == 2, ("남은 %d"):format(#p.inventory))
 end)
 if not ok then print("[R3] 하네스 에러 " .. tostring(err)) end
 print(("[R3] 끝 %d/%d"):format(pass, total))

@@ -512,6 +512,20 @@ local ok, err = pcall(function()
 		and s.cosmetics.items.starterEdge == true and s.cosmetics.themes.starterStar == true and not okAgain and whyAgain == "owned" and MODS.InventorySync.capacity(p) == 55, ("%s · %s"):format(tostring(rStarter), tostring(whyAgain)))
 	Data.products.starter_pack.productId = 0
 	p.purchases.bagSources = {}
+	-- UI-1b 0절(VERIFY-5): 스타터 노출 = 상점 연 횟수 2 이상 - 접속 · 꾸미기 "view"는 안 셈 · 창 열기 "viewOpen"만 · 짧은 시간 중복 = 한 번
+	p.purchases.shopViews = 0
+	for _ = 1, 3 do MS.handle(player, "view") end
+	local afterView = p.purchases.shopViews
+	local dd = Data.shopViewDedupeSeconds
+	Data.shopViewDedupeSeconds = 0.2
+	MS.handle(player, "viewOpen")
+	MS.handle(player, "viewOpen")
+	local afterDup = p.purchases.shopViews
+	local tv = os.clock()
+	while os.clock() - tv < 0.25 do end
+	MS.handle(player, "viewOpen")
+	Data.shopViewDedupeSeconds = dd
+	check("상점 연 횟수 = view 0 · 같은 순간 viewOpen 2번 = 1 · 간격 뒤 = 2", afterView == 0 and afterDup == 1 and p.purchases.shopViews == 2, ("%d · %d · %d"):format(afterView, afterDup, p.purchases.shopViews))
 	-- 순차 공개: 비공개 상품 = 프롬프트 · 토큰 구매 거부(게임패스도)
 	Data.products.item_goldenHammer.productId = 9202
 	MS.validProducts.item_goldenHammer = true

@@ -254,6 +254,56 @@ function CodexRules.boxPay(n, boardClaimed)
 	return out
 end
 
+-- UI-1b 0절(VERIFY-5): 받은 장부 하나(스위치와 무관) = 받은 점수판 몫 + 받은 상자가 실제로 준 몫(boxPay). 점수판 · 상자 어느 쪽으로 받든 이 장부의 증가분만 준다
+--   → 스위치를 끄고 켜도 같은 몫을 두 번 받지 않는다(합 ≤ boardTotals).
+function CodexRules.paidLedger(boardClaimed, boxClaimed)
+	local paid = { goldKills = 0, enhanceStone = 0 }
+	for key, yes in pairs(boardClaimed or {}) do
+		if yes then
+			local r = CodexData.boardReward(tonumber(key) or 0)
+			paid.goldKills += r.goldKills or 0
+			paid.enhanceStone += r.enhanceStone or 0
+		end
+	end
+	for key, yes in pairs(boxClaimed or {}) do
+		local n = tonumber(key)
+		if yes and n then
+			local p = CodexRules.boxPay(n, boardClaimed)
+			paid.goldKills += p.goldKills
+			paid.enhanceStone += p.enhanceStone
+		end
+	end
+	return paid
+end
+
+-- 옛 점수판 key를 받을 때 줄 몫(스위치 끔 경로) = 장부 증가분(상자로 이미 받은 몫은 빠짐)
+function CodexRules.boardPay(key, boardClaimed, boxClaimed)
+	local after = table.clone(boardClaimed or {})
+	after[key] = true
+	local a, b = CodexRules.paidLedger(after, boxClaimed), CodexRules.paidLedger(boardClaimed, boxClaimed)
+	return { goldKills = a.goldKills - b.goldKills, enhanceStone = a.enhanceStone - b.enhanceStone }
+end
+
+-- 옛 점수판을 열어만 두고 안 받은 계정: 열린 점수판 몫(받은 것 포함 합)이 덮는 상자까지 = 열림(몫이 100% 상자까지 밀리지 않게) - 넘치게 주지 않도록 누적 몫 ≤ 열린 몫인 상자까지만
+function CodexRules.boxesOpenedByBoard(boardDone)
+	local open = { goldKills = 0, enhanceStone = 0 }
+	for key in pairs(boardDone or {}) do
+		local r = CodexData.boardReward(tonumber(key) or 0)
+		open.goldKills += r.goldKills or 0
+		open.enhanceStone += r.enhanceStone or 0
+	end
+	local n = 0
+	for i = 1, CodexData.boxes.count do
+		local c = CodexRules.boxCumulative(i)
+		if c.goldKills <= open.goldKills and c.enhanceStone <= open.enhanceStone then
+			n = i
+		else
+			break
+		end
+	end
+	return n
+end
+
 -- 상자 n이 열리는 점수(전체 점수 칸 × n × 10% · 올림)
 function CodexRules.boxThreshold(n, totalScore)
 	return math.ceil(totalScore * n / CodexData.boxes.count)
