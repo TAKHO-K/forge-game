@@ -15,7 +15,8 @@
 | 7 | 보석 판매가 차익(#7 · #8) · 일괄 분해 개수(#10) | 끝 | 2cb4d544 | `sec_econ_test` 옛 4/7 → 새 7/7 |
 | 8 | 패스 칸 건너뛰기 = 못 한 출석 따라잡기(#6 · 사용자 결정 10-11) | 끝 | 2adb861d | `sec_shop_test` 8: 옛 6/14 → 새 14/14 |
 | 9 | 로그 단계 스위치(#12) | 끝 | a5f18f61 | `sec_log_static` 옛 0/4 → 새 4/4 |
-| 10 | 압박 문구 2건 · 할로윈 기간 한정 | 끝 | (이 커밋) | `sec_text_static` 옛 0/3 → 새 3/3 |
+| 10 | 압박 문구 2건 · 할로윈 기간 한정 | 끝 | d70066ae | `sec_text_static` 옛 0/3 → 새 3/3 |
+| 11 | 다른 작업으로 넘길 목록 · 라이브 저장소 이름 자리 | 끝 | (이 커밋) | `sec_save_test` 11: 옛 13/15 → 새 15/15 |
 | 2 | 같은 서버 재접속 저장 멈춤(AUDIT1 #15) | 끝 | 1bd638ec | `sec_save_test` 2: 옛(c75bea32) 10/13 → 새 13/13 |
 | 3 | 결제 applyReward 에러 시 잠금 안 풀림 | 끝 | 71d0eae9 | `sec_shop_test` 3: 옛 1/6 → 새 6/6 |
 | 4a | 교환 코드 표 → 서버 전용 | 끝 | c631de4f | `sec_secret_static` 옛 2/6 → 새 6/6 · `security_launch` +2(게시판 공개분만) |
@@ -131,3 +132,14 @@
 - 고침: `shop.cos.offSeason`("{month}월 한정 판매") · `item.reason.offSeason`("…(10월 한정)") 두 문구의 압박 표현 삭제 → 중립 "지금은 판매하지 않아요"(ko · en - 키는 코드가 참조해서 남김 · 지금 이 문구를 쓰는 치장 없음). 할로윈 테마: `CosmeticSlotData` seasonMonth 10 제거(기간 한정 아님) · `MonetizationData.release.theme_halloween` 1 → 2(출시 때 숨김 - 서버가 프롬프트 · 토큰 구매도 거절). 달 판매 기능(`Monetization.onSale`) 자체는 남김(쓰는 치장 0).
 - 하네스 `sec_text_static.py`: 화면 문구 ko · en에 기간 한정 판매 · 압박 표현(한정 판매 · 월 한정 · 지금만 · 놓치 · 마지막 기회 · October only …) 0 · 할로윈 seasonMonth 없음 · 공개 단계 2 - 옛 0/3 → 새 3/3. `monetize_test` 할로윈 2검사 기대 = 새 결정으로 바꿈(86/86).
 - 보고서 #15의 "유료 줄 구름 고래 = 시즌 1 한정"은 화면 문구가 아니라 데이터 주석 · 시즌 대표 보상 설계(패스 전용)라 이번 범위 밖 - 12번 표에 적음.
+
+## 11. 목록만(다른 작업으로) · 라이브 DataStore 이름 자리
+
+| 항목 | 지금(10-11 코드 기준) | 넘길 곳 | 이번에 한 것 |
+|---|---|---|---|
+| 효과음 id 빈 자리값 | `SoundData` soundId 빈 문자열 14 · `BossSoundData` 156칸 자리 · `ArtAssetIds` 효과음 시트 3개 status "Reviewing"(audio/sfx_combat · sfx_loot · sfx_ui) | LAUNCH-PREP 소리 | 없음(목록만) |
+| 서버 하드코딩 한국어 | 구역 밖 공격 알림(AttackServer) · 저장 실패 알림 2(SaveCoordinator) · 관전 실패(SpectateService) · 코드/초대 보상 메시지(SocialRewardData.text) · 견습 본문(TutorialState) · 스킬 아이콘 짧은 이름 20(SkillIconData) · 프롬프트 "구출"(BossTrap) · WorldConfig 2곳 | LOCALE-1(영어 출시 결정 M33과 묶음) | 없음(목록만) |
+| 상품 23 · 게임패스 6 id = 0 | `MonetizationData` productId 0 = 23줄 · passId 0 = 6줄(프롬프트 `not_ready` · id 0 영수증 = unknown → NotProcessedYet이라 안전) | 사용자가 Creator Hub에서 만들어 전달 → id 기입. 8번 결정으로 `pass_skip5`(5칸 묶음)는 숨김 = **만들 필요 없음** · 할로윈 테마도 출시 때 숨김(10번) | 없음 |
+| 라이브 DataStore 이름 = 개발과 같음(M03) | `SaveConfig.dataStoreName` = "ForgeGamePlayerData_v1"(Studio · 라이브 같은 이름) | 출시 직전(사용자 확인 뒤 한 번) | **자리 만듦**: `server/LiveStoreConfig.playerDataStoreName`(서버 전용 · 지금 nil = 옛 이름 그대로 = 동작 변화 0) · `SaveSystem.storeName` = 라이브 서버면 그 이름 · Studio는 늘 SaveConfig 이름. 바꾸는 순간 라이브 저장이 새 저장소에서 시작(실제 유저 전에 한 번만) |
+
+- 하네스 `sec_save_test` 11(라이브 경로): 이름을 넣으면 라이브 저장소 = 그 이름 · 비어 있으면 옛 이름(옛 = 자리 없음 → X 2). `save_launch` · `slot_save`의 의존 목록에 LiveStoreConfig 추가(라이브 경로 하네스라 새 모듈을 읽는다 - 검사 수 그대로 65 · 75).

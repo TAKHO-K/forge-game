@@ -1,7 +1,7 @@
 -- QUEUE-ALL4 C 출시 전 저장 · 예산 감사 하네스(실제 SaveSystem · SaveCoordinator · ImmediateSave + 가짜 DataStore · 가상 시계 스케줄러).
 MODS.SlotSaveData.enabled = false -- QUEUE-MENU2: 이 하네스 = 옛 키(Player_) 경로 시험(슬롯 경로 = slot_save_test)
 MODS.SlotSaveData.mergeOnDisable = false -- [BUDGET] = 슬롯을 쓴 적 없는 옛 게임 기준(끈 경로의 계정 키 확인 읽기 +1은 slot_save_test [SLOT] 예산 줄)
--- 실행: LUAU=<luau.exe> PRELUDE=server_prelude.luau EXTRA_SERVER=SaveSystem,SaveCoordinator,ImmediateSave ECON_RES=res_launch.txt python build_run.py save_launch_test.luau
+-- 실행: LUAU=<luau.exe> PRELUDE=server_prelude.luau EXTRA_SERVER=SaveSystem,SlotSave,SaveCoordinator,ImmediateSave,LiveStoreConfig ECON_RES=res_launch.txt python build_run.py save_launch_test.luau
 -- 묶음: [MIG] 이관(v0 · v1 · v12 · v21 · v34 · v44 · v54 표본 → 현재 · 멱등 · 새 계정) · [BAD] 손상 복구 · [LOCK] 세션 잠금 · 두 서버 · 메아리
 --       [FAIL] 실패 처리 · [CLOSE] 종료 저장(12명 · 동시 vs 옛 차례) · [BUDGET] 12인 호출 수(분당) - 끝 줄 "[LAUNCH] 끝 n/m".
 local pass, total = 0, 0

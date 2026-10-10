@@ -138,7 +138,10 @@ local function defaultClasses()
 	return classes
 end
 
-local store = DataStoreService:GetDataStore(SaveConfig.dataStoreName)
+-- SEC-FIX-1 11: 라이브 이름 자리(server/LiveStoreConfig - nil = 옛 이름 그대로 · Studio = 늘 SaveConfig 이름)
+local liveStoreName = not RunService:IsStudio() and require(script.Parent.LiveStoreConfig).playerDataStoreName or nil
+SaveSystem.storeName = liveStoreName or SaveConfig.dataStoreName
+local store = DataStoreService:GetDataStore(SaveSystem.storeName)
 
 local function profileKey(player)
 	return "Player_" .. player.UserId

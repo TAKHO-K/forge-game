@@ -366,6 +366,19 @@ local function main()
 		check("SECSAVE", "2 다시 나감 = 마지막 진행 저장", ch2 and prof2 and ch2.data.gold == prof2.gold, tostring(ch2 and ch2.data.gold))
 	end
 	HALT = true -- 자동저장 루프 멈춤(가상 시계가 끝나게)
+
+	-- ═══ 11. 라이브 플레이어 저장소 이름 자리(server/LiveStoreConfig - 이 하네스 = 라이브 경로 IsStudio false) ═══
+	local Live = LOADERS["LiveStoreConfig"] and MODS.LiveStoreConfig or nil
+	if Live then
+		Live.playerDataStoreName = "ForgeHarnessLive1"
+	end
+	local SL = LOADERS["SaveSystem"]()
+	check("SECSAVE", "11 라이브 이름을 넣으면 라이브 서버 저장소 = 그 이름(옛 = 자리 없음)", SL.storeName == "ForgeHarnessLive1", tostring(SL.storeName))
+	if Live then
+		Live.playerDataStoreName = nil
+	end
+	local SN = LOADERS["SaveSystem"]()
+	check("SECSAVE", "11 자리 비어 있으면(지금) = 옛 이름 그대로(동작 변화 없음)", SN.storeName == SaveConfig.dataStoreName, tostring(SN.storeName))
 end
 
 task.spawn(function()
