@@ -59,9 +59,14 @@ return {
 		lore = { pc = 24, phone = 16 },
 		caption = "caption",
 		micro = "micro",
+		hudNumber = { pc = 16, phone = 13 }, -- UI-1b 1절 1: HUD 숫자(체력 · 경험치 %) - 숫자 우선 키움(× textBase = PC 18 · 폰 15)
 	},
 	-- 설정 "글자 크기"(계정 설정 textScale) = 글자 토큰에만 곱함(아이콘 · 칸 · 버튼 크기 그대로)
 	textScaleSteps = { normal = 1.0, large = 1.15, xlarge = 1.3 },
+	-- UI-1b 1절 1(사용자 10-10 "글자가 아직 작음" · I v1 spec 0-1): 모든 글자 토큰 기준 × textBase(새 보통 = 옛 크게) · 3단 = 새 보통 기준 1.0 · 1.15 · 1.3(= 옛 1.15 · 1.32 · 1.5)
+	--   최소(이보다 작은 글자 없음): PC 본문 18 · 작은 글자 15 / 폰(논리 800×360) 본문 14 · 작은 글자 12. UiV2Flags.text 끔 = textBase 1 · 옛 최소.
+	textBase = 1.15,
+	minText = { pc = { body = 18, small = 15 }, phone = { body = 14, small = 12 } },
 	textScaleOrder = { "normal", "large", "xlarge" },
 	-- 로블록스 자체 글자 크기 설정(GuiService.PreferredTextSize) → 배율. 우리 배율과 곱하지 않고 큰 쪽 하나만(두 번 커지지 않게 - UiKit.textMul)
 	platformTextScale = { Medium = 1.0, Large = 1.15, Larger = 1.3, Largest = 1.5 },

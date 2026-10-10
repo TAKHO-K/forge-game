@@ -7,6 +7,7 @@ local UltimateData = require(ReplicatedStorage.Shared.data.UltimateData)
 local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local IconData = require(ReplicatedStorage.Shared.data.UiIconData)
 local Tokens = require(ReplicatedStorage.Shared.data.UiTokens)
+local UiV2Flags = require(ReplicatedStorage.Shared.data.UiV2Flags) -- UI-1b 글자 한 단계(text)
 
 local UiModel = {}
 
@@ -163,12 +164,17 @@ function UiModel.textToken(name, isPhone)
 		t = Tokens.textScale[t]
 	end
 	assert(type(t) == "table", "UiModel.textToken: UiTokens.text에 없는 글자 - " .. tostring(name))
-	return math.max(isPhone and t.phone or t.pc, isPhone and Tokens.minPhoneText or 0)
+	local v = math.max(isPhone and t.phone or t.pc, isPhone and Tokens.minPhoneText or 0)
+	if UiV2Flags.text then -- UI-1b: 최소 = 작은 글자(본문 단계 이름은 본문 최소)
+		local min = Tokens.minText[isPhone and "phone" or "pc"]
+		v = math.max(v, (name == "body" or name == "cardInfo" or name == "confirmBody") and min.body or min.small)
+	end
+	return v
 end
 
 -- 글자 배율 = max(설정 글자 크기 단계, 로블록스 PreferredTextSize 배율) - 둘을 곱하지 않는다(두 번 커지지 않게)
 function UiModel.textMul(stepKey, platformName)
-	local user = Tokens.textScaleSteps[stepKey or "normal"] or 1
+	local user = (Tokens.textScaleSteps[stepKey or "normal"] or 1) * (UiV2Flags.text and Tokens.textBase or 1) -- UI-1b: 새 보통 = 옛 크게
 	local platform = Tokens.platformTextScale[platformName or "Medium"] or 1
 	return math.max(user, platform)
 end

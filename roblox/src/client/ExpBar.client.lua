@@ -110,6 +110,9 @@ if V6ON then
 		track.Size = UDim2.new(1, 0, 0, math.max(4, math.floor(spec[4] * m)))
 		percentLabel.Visible = not Theme.isMobile
 		percentLabel.TextSize = math.max(12, math.floor(12 * m))
+		if require(ReplicatedStorage.Shared.data.UiV2Flags).text then -- UI-1b 1절 1: 숫자 우선 키움(HUD 배율 m 곱 · 최소 12)
+			percentLabel.TextSize = math.max(12, math.floor(require(script.Parent.ui.v2.UiKit).size("hudNumber") * m))
+		end
 	end
 	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(placeExp)
 	placeExp()

@@ -212,6 +212,9 @@ hpLabel.Size = UDim2.new(1, 0, 1, 0)
 hpLabel.Text = ""
 hpLabel.Font = Enum.Font.GothamBold
 hpLabel.TextSize = 12 -- 16-2: 바 높이가 34->19로 줄어든 만큼 글자도 목업 크기(11.5px)로.
+if require(ReplicatedStorage.Shared.data.UiV2Flags).text then -- UI-1b 1절 1: 숫자 우선 키움(글자 토큰 hudNumber · 설정 글자 크기 따라감)
+	require(script.Parent.ui.v2.UiKit).setTextSize(hpLabel, "hudNumber")
+end
 hpLabel.TextColor3 = Color3.new(1, 1, 1)
 hpLabel.ZIndex = 3
 hpLabel.Parent = container

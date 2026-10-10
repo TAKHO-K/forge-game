@@ -38,9 +38,13 @@ local okRun, err = pcall(function()
 	local w2 = M0.wrapChunks("Lv.38  최고 스테이지 21", 100, mlen)
 	check("UI2-3 판정 카드 줄바꿈: \"스테이지 21\" 덩어리 유지", #w2 == 2 and w2[2] == "최고 스테이지 21", table.concat(w2, "/"))
 	check("UI2-3 판정 카드 줄바꿈: 넓으면 한 줄", #M0.wrapChunks("환생 4회  총 0시간  1분 전", 1000, mlen) == 1)
-	check("UI2-2 글자 크기 설정 = 보통 1.0 · 크게 1.15 · 아주 크게 1.3", M0.textMul("normal") == 1 and M0.textMul("large") == 1.15 and M0.textMul("xlarge") == 1.3)
-	check("UI2-2 PreferredTextSize와 안 겹침(큰 쪽 하나 - 1.3 × 1.3 아님)", M0.textMul("xlarge", "Larger") == 1.3 and M0.textMul("normal", "Largest") == 1.5 and M0.textMul("large", "Medium") == 1.15)
-	check("UI2-2 루트 배율 보정: 1080 = 토큰 그대로 · 592 창(0.548) = 화면 글자 ≥ 토큰 × 0.75", M0.textPx("cardInfo", false, "normal", "Medium", 1) == 18 and M0.textPx("cardInfo", false, "normal", "Medium", 0.548) * 0.548 >= 18 * 0.75 - 0.5)
+	-- UI-1b 1절 1: 3단 = 새 보통 기준 1.0 · 1.15 · 1.3 × textBase 1.15(= 옛 1.15 · 1.3225 · 1.495)
+	local B = MODS.UiV2Flags.text and MODS.UiTokens.textBase or 1
+	local function near(a, b) return math.abs(a - b) < 1e-9 end
+	check("UI2-2 글자 크기 설정 = 보통 1.0 · 크게 1.15 · 아주 크게 1.3(× 새 기준)", near(M0.textMul("normal"), B) and near(M0.textMul("large"), 1.15 * B) and near(M0.textMul("xlarge"), 1.3 * B))
+	check("UI2-2 PreferredTextSize와 안 겹침(큰 쪽 하나 - 곱하지 않음)", near(M0.textMul("xlarge", "Larger"), math.max(1.3 * B, 1.3)) and near(M0.textMul("normal", "Largest"), math.max(B, 1.5)) and near(M0.textMul("large", "Medium"), 1.15 * B))
+	local card = math.floor(18 * B + 0.5) -- UI-1b: 새 보통 = 토큰 × textBase
+	check("UI2-2 루트 배율 보정: 1080 = 토큰 × 새 기준 · 592 창(0.548) = 화면 글자 ≥ 그 × 0.75", M0.textPx("cardInfo", false, "normal", "Medium", 1) == card and M0.textPx("cardInfo", false, "normal", "Medium", 0.548) * 0.548 >= card * 0.75 - 0.5, tostring(M0.textPx("cardInfo", false, "normal", "Medium", 1)))
 
 	-- 2. 좌표 표: 모든 rect = 숫자 4개 · 기준 화면 안 · 폰 버튼 44 이상
 	local bad, out, touch = {}, {}, {}

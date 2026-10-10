@@ -62,10 +62,18 @@ Theme.recompute()
 function Theme.textSizeFor(name, mobile)
 	local base = Theme.text[name]
 	assert(base, "Theme.textSize: 알 수 없는 글씨 단 - " .. tostring(name))
+	local Tokens = require(ReplicatedStorage.Shared.data.UiTokens)
+	local on = require(ReplicatedStorage.Shared.data.UiV2Flags).text
+	local v = on and base * Tokens.textBase or base -- UI-1b 1절 1: 옛 창 글자도 한 단계(새 보통 = 옛 크게)
 	if mobile then
-		return math.floor(base * Theme.mobileTextScale + 0.5)
+		v = v * Theme.mobileTextScale
 	end
-	return base
+	v = math.floor(v + 0.5)
+	if on then -- 최소: 본문 = PC 18 · 폰 14 / 나머지 = PC 15 · 폰 12
+		local min = Tokens.minText[mobile and "phone" or "pc"]
+		v = math.max(v, name == "body" and min.body or min.small)
+	end
+	return v
 end
 
 function Theme.textSize(name)

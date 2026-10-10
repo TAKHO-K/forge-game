@@ -13,15 +13,20 @@ local okRun, err = pcall(function()
 	local V6 = MODS.UiLayoutData.hud.v6
 	local combat = MODS.UiLayoutData.hud.phone.combat
 	local TOPBAR = 58
+	-- UI-1b 1절 1: 글자 배율 = 실제 UiModel.textMul(새 보통 = 옛 ×1.15 · 아주 크게 = 새 기준 × 1.3)
+	local T1, T13 = MODS.UiModel.textMul("normal"), MODS.UiModel.textMul("xlarge")
 	local VIEWS = {
-		{ name = "PC 1920×1080", w = 1920, h = 1080, phone = false, text = 1 },
-		{ name = "PC 1366×768", w = 1366, h = 768, phone = false, text = 1 },
-		{ name = "PC 1280×720", w = 1280, h = 720, phone = false, text = 1 },
-		{ name = "PC 1280×720 글자 1.3", w = 1280, h = 720, phone = false, text = 1.3 },
-		{ name = "폰 800×360", w = 800, h = 360, phone = true, text = 1 },
-		{ name = "폰 800×360 글자 1.3", w = 800, h = 360, phone = true, text = 1.3 },
-		{ name = "폰 844×390", w = 844, h = 390, phone = true, text = 1 },
+		{ name = "PC 1920×1080", w = 1920, h = 1080, phone = false, text = T1 },
+		{ name = "PC 1366×768", w = 1366, h = 768, phone = false, text = T1 },
+		{ name = "PC 1280×720", w = 1280, h = 720, phone = false, text = T1 },
+		{ name = "PC 1920×1080 새 기준 × 1.3", w = 1920, h = 1080, phone = false, text = T13 },
+		{ name = "PC 1366×768 새 기준 × 1.3", w = 1366, h = 768, phone = false, text = T13 },
+		{ name = "PC 1280×720 새 기준 × 1.3", w = 1280, h = 720, phone = false, text = T13 },
+		{ name = "폰 800×360", w = 800, h = 360, phone = true, text = T1 },
+		{ name = "폰 800×360 새 기준 × 1.3", w = 800, h = 360, phone = true, text = T13 },
+		{ name = "폰 844×390", w = 844, h = 390, phone = true, text = T1 },
 	}
+	check("글자 배율 = 새 보통 1.15 · 아주 크게 1.495(옛 1.5)", math.abs(T1 - 1.15) < 1e-9 and math.abs(T13 - 1.495) < 1e-9, ("%.3f · %.3f"):format(T1, T13))
 	check("폰 판정: 짧은 변 ≤ 500 = 폰(터치 + 키보드여도) · 터치만 = 폰 · PC 큰 화면 = PC",
 		P.isPhone(800, 360, true, true) and P.isPhone(1920, 1080, true, false) and not P.isPhone(1920, 1080, true, true) and not P.isPhone(1366, 768, false, true) and P.isPhone(800, 450, false, true))
 	check("배율 m 하나: 1920 = 1 · 1366×768 = 0.75(하한) · 2560×1440 = 1.25(상한) · 폰 800×360 = 1",
