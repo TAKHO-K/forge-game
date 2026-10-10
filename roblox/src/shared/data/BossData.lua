@@ -1495,6 +1495,9 @@ end
 
 return {
 	stageInterval = STAGE_INTERVAL,
+	-- PROG-2B-1 3(PROG-2A D7 K1 · 사용자 확정): 아는 보스 체력 배율 - 입장하는 모두가 그 스테이지 보스를 이미 클리어했을 때만(BossEncounter.applyKnownBoss).
+	--   파티 = 한 명이라도 처음이면 원래 체력. 토벌(깬 보스만 열림) = 늘 아는 보스 · 주간 도전 = 그대로(변형 · 처치 시간 순위).
+	knownBossHpMultiplier = 0.75,
 	-- A2-N3 결정 ②(사용자 승인): 보스 평타 예비 동작 - 쿨이 끝나기 이만큼 전에 서버가 "곧 친다"를 알린다(Attribute BossSwingPrepAt = 예정 타격 서버 시각 · 대상 조건 = 평타와 같은 식).
 	--   타격 시각 · 공격 간격 · 피해 · 판정은 그대로(타격 순간 대상 재판정 - 그 사이 빠지면 헛동작). 클라 BossMotion이 이 시간 동안 팔을 들어 올린다(BossMotionData basicPrep).
 	basicPrepSeconds = 0.25,

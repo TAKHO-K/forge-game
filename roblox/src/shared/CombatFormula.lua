@@ -6,6 +6,7 @@ local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
 local Sanitize = require(ReplicatedStorage.Shared.Sanitize)
+local ReferenceBuild = require(ReplicatedStorage.Shared.ReferenceBuild) -- PROG-2B-1 3 몹 기준 함수(권장 전투력 = 몹 HP와 같은 계수)
 
 local CombatFormula = {}
 
@@ -74,14 +75,15 @@ function CombatFormula.dealFlatLow(stage)
 end
 
 -- 권장 전투력(스테이지 · 몹 기본 HP - 없으면 기준 구역 몹 = 스테이지 권장): 그 몹 HP(스테이지 적용) ÷ 대표 한 대 수 × 후반 벽 배수.
+-- PROG-2B-1 3(CRIT-TRAIN-1 C7): × 몹 기준 함수 계수(ReferenceBuild.hpFactor - 몹 HP와 같은 계수 · 안 곱하면 새 힘을 가진 기준 빌드가 벽 벌칙을 벗어나 빨라짐).
 function CombatFormula.recommendedPower(stage, baseHp)
-	return math.max(InfiniteStage.getTrashHp(baseHp or referenceBaseHp(), stage) / CombatFormula.representativeHits(stage) * CombatFormula.lateLift(stage), 1e-9) -- C4-1 잡몹 구간 배율(대표 = 잡몹 기준)
+	return math.max(InfiniteStage.getTrashHp(baseHp or referenceBaseHp(), stage) / CombatFormula.representativeHits(stage) * CombatFormula.lateLift(stage) * ReferenceBuild.hpFactor(stage), 1e-9) -- C4-1 잡몹 구간 배율(대표 = 잡몹 기준)
 end
 
 -- C3 0-3 화면 표시용 권장 전투력(판정은 recommendedPower): 표시 곡선(representative.displayHits - 실제 힘 점프를 완만히) 기준.
 function CombatFormula.displayRecommendedPower(stage, baseHp)
 	local points = CombatFormulaData.representative.displayHits or CombatFormulaData.representative.hits
-	return math.max(InfiniteStage.getTrashHp(baseHp or referenceBaseHp(), stage) / interpLog(points, stage) * CombatFormula.lateLift(stage), 1e-9)
+	return math.max(InfiniteStage.getTrashHp(baseHp or referenceBaseHp(), stage) / interpLog(points, stage) * CombatFormula.lateLift(stage) * ReferenceBuild.hpFactor(stage), 1e-9) -- PROG-2B-1 3: 판정과 같은 계수
 end
 
 -- 권장 방어(스테이지 · 때린 몹의 공격 - 없으면 기준 구역 몹): α × 몹 공격 × 대표 방어 비율.

@@ -18,7 +18,7 @@ declare -A EXP=( # 기대 검사 수(끝 a/b의 b) · require_path는 최소값(
 	[bignum]=71 [bulk_sell]=11 [stat_sheet]=9 [all10]=57 [gear_v3]=10 [gem_home]=25 [monster_stats]=5 [dash_modes]=19 [boss_feel]=13
 	[menu_gate]=14 [menu_gate_src]=11 [hud_v5_src]=10 [ui1_static]=9 [ui1c_static]=13 [ui_v2]=77 [hud_layout]=18 [ui1_parts]=11 [codex_box]=35
 	[ember_view]=8 [hud_edit]=16 [pet_ui]=7 [quick_chat]=6 [ui_rules]=4 [window_layers]=7 [help_data]=6 [train_bundle]=5 [community_goal]=24 [require_path]=5542 [regrow_timing]=8
-	[sec_save]=15 [sec_shop]=14 [sec_secret]=9 [sec_zone]=11 [sec_move]=8 [sec_econ]=7 [sec_log]=4 [sec_text]=3 [sec_textkey]=2 [sec_enhance]=3 [sec_gem]=8 [gold_curve]=26
+	[sec_save]=15 [sec_shop]=14 [sec_secret]=9 [sec_zone]=11 [sec_move]=8 [sec_econ]=7 [sec_log]=4 [sec_text]=3 [sec_textkey]=2 [sec_enhance]=3 [sec_gem]=8 [gold_curve]=26 [ref_build]=12
 )
 NALL=0; NBAD=0
 verdict() { # 이름 결과파일 종료코드 → 한 줄 출력
@@ -90,6 +90,7 @@ run stat_sheet res_sheet.txt "$(python deps.py PlayerProfile,PetService,QuestSer
 run all10 res_all10.txt "$(python deps.py TranscendService,TranscendFirsts,PlayerProfile,PetService,QuestService,SaveSystem,BaseLayer)" all10_test.luau # QUEUE-ALL10 초월 계승(스위치 끔 = 지금 게임 · 저장 v70 · 계승 · 초월 강화 · 수련 · 보석 · 몹 곡선)
 EXTRA_FILES=client/ArmorColors.lua,shared/MeshMeta/armor_wear.lua run gear_v3 res_gear.txt "" gear_v3_test.luau # QUEUE-ALL9E1 1-1 장비 v3 48조합 예약 색 · 문 부품 · 무기 색 · 메시 메타 60 + 문장 6 · 1인 MeshPart ≤ 24
 EXTRA_FILES=client/ItemIcons.lua run gem_home res_gemhome.txt "" gem_home_test.luau # QUEUE-ALL9E1 기능: 보석 탭 무기 키 · 보석 아이콘 한 소스 · 초월 이펙트 단계
+run ref_build res_refb.txt "$(python deps.py BossEncounter)" ref_build_test.luau # PROG-2B-1 3 몹 기준 함수(수련 × 치명 비) · HP = 권장 = 시뮬 = UI 같은 계수 · 아는 보스 × 0.75
 run monster_stats res_mstat.txt "" monster_stats_test.luau # QUEUE-N1004 C-4 몹 스탯 공용 함수 값 불변(골든 1,736값 · 31지점 · 오차 0)
 run dash_modes res_dash.txt "" dash_modes_test.luau # FINAL-1 3 MOVE-2 대시 모드(긴 · 짧은 · 기울기) · 두 번 연속 누름 · 거리 식
 run boss_feel res_feel.txt "$(python deps.py BossHandlersBR1,PlayerCC)" boss_feel_test.luau # BOSS-NIGHT-3 보스 손맛 · 공정성(분신 줄 겹침 · 새 몸 스킬 곡선 · CC · 투사체 · 범위)

@@ -510,6 +510,25 @@ local function spawnEncounter(data, stage, members, party, size, owner, isTutori
 	return encounter
 end
 
+-- PROG-2B-1 3(PROG-2A D7 K1): 아는 보스 = 그 계정이 그 스테이지 보스를 이미 클리어(첫 클리어 기록 또는 계정 최고 스테이지가 그 뒤) · 입장 모두가 알면 HP × knownBossHpMultiplier.
+--   프로필 없는 멤버(더미 · 스탠드인) = 처음으로 봄(파티 한 명이라도 처음이면 원래 체력). 반환 = 적용했나
+function BossEncounter.knowsBoss(player, stage)
+	return PlayerProfile.hasBossFirstClearReward(player, stage) or PlayerProfile.getAccountBestStage(player) > stage -- 프로필 없음(더미) = false · 1
+end
+function BossEncounter.applyKnownBoss(data, stage, members)
+	for _, member in ipairs(members) do
+		if not BossEncounter.knowsBoss(member, stage) then
+			return false
+		end
+	end
+	if #members == 0 then
+		return false
+	end
+	data.hp *= BossData.knownBossHpMultiplier
+	data.knownBoss = true
+	return true
+end
+
 -- targetStage가 보스 스테이지이고 아직 이 플레이어의 보스가 없으면 솔로로 스폰한다. 이미
 -- 있으면(예: 같은 스테이지 안에서 위/아래로 왔다 갔다) 아무것도 안 한다 - 중복 스폰 방지.
 function BossEncounter.spawnFor(player, stage)
@@ -530,10 +549,11 @@ function BossEncounter.spawnFor(player, stage)
 	if not data then
 		return
 	end
+	BossEncounter.applyKnownBoss(data, stage, { player }) -- PROG-2B-1 3: 아는 보스 HP × 0.75
 
 	local encounter = spawnEncounter(data, stage, { player }, nil, 1, player, false)
-	print(("[forge-game] 보스 등장: %s - 스테이지 %d, 대상 %s (아레나 %s)"):format(
-		data.displayName, stage, player.Name, encounter.zoneKey))
+	print(("[forge-game] 보스 등장: %s - 스테이지 %d, 대상 %s (아레나 %s)%s"):format(
+		data.displayName, stage, player.Name, encounter.zoneKey, data.knownBoss and " · 아는 보스" or ""))
 end
 
 -- QUEUE-10h Q5 BR2 토벌 입장(솔로): 고른 보스(bossId)를 토벌 스테이지(RaidRules - min(선택 스테이지, 최근 클리어 보스 스테이지)) 레벨로 연다.
@@ -548,6 +568,7 @@ function BossEncounter.spawnRaidFor(player, bossId, stage)
 		return nil
 	end
 	data.isRaid = true
+	BossEncounter.applyKnownBoss(data, stage, { player }) -- PROG-2B-1 3: 토벌 = 깬 보스(아는 보스)
 	local encounter = spawnEncounter(data, stage, { player }, nil, 1, player, false)
 	encounter.raid = true
 	print(("[forge-game] 토벌 등장: %s - 토벌 스테이지 %d, 대상 %s (아레나 %s)"):format(data.displayName, stage, player.Name, encounter.zoneKey))
@@ -658,6 +679,7 @@ function BossEncounter.spawnForParty(party, leader, stage)
 	if not data then
 		return false
 	end
+	BossEncounter.applyKnownBoss(data, stage, members) -- PROG-2B-1 3: 들어가는 모두가 알 때만(한 명이라도 처음 = 원래 체력)
 
 	local encounter = spawnEncounter(data, stage, members, party, size, leader, false)
 	for _, member in ipairs(excluded) do
