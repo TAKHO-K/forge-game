@@ -56,4 +56,6 @@ UI-1b 끝. 다음 = 사용자: 보고서 5절 결정(F6 환생 무료권 · 능�
 | 1 공통 | 확인(코드 0) | - | 글자 3단 · [?] · 재화 칩 · HUD 칩 묶음 = UI-1b(2c557bba · 6b37eed3 · a5d2df24)에 이미 있음 · 저장값 textScale = 같은 키(보통 → 보통) |
 | 2 보스 바 | 완료 | (이 커밋) | 내 기여 알약 = 서버 MonsterState Attribute BossContributionPct + 판 번호 BossContributionEnc(PC만 · 폰 숨김 · 알약 줄 칸 늘 비움) · BREAK = 데이터 없음 → 안 그림 · 매머드 = "빙하 매머드"/Glacier Mammoth(BossData 한 곳) · ui1c_static 6 · 실제 타격 = 100%(혼자 처치) 확인 · 캡처 docs/design/ui1c/2 |
 
-다음 시작 = 3단계 명예의 전당(새 저장소 = 역대 개인 · 역대 직업 · 시즌 파티 보스 처치 수 · 게시판 Part = 데이터 크기로 새로 세움 - hub_hall 메시엔 게시판 파트 없음).
+| 3 명예의 전당 | 완료 | (이 커밋) | 그림 15 업로드(ui/v9 · Approved · 이미지 id 15) · panels/HallOfFameV1(같은 창 id leaderboard · 스위치 UiV2Flags.hall) · 탭 = 역대(all_personal) · 직업별 역대(all_class_<직업>) · 파티 = 시즌 보스 처치 수(partyKills · IncrementAsync) · 시즌(personal) - 서버 Leaderboard 새 정렬 저장소 3종(추가만 · 옛 순위표 계속 씀 · 전당 복사 = 시즌 순위표만) · 단상 2·1·3 HeadShot(실패 = 회색 원 + 첫 글자) · 직업 열 = 줄에 직업 있을 때만 · 파티 = "보스 처치(파티)" · "처치 n" · 시즌 알약 = 끝 날짜만(지금 시작일 미정 = "시즌 1") · 빈 상태 · [?] hall · 게시판 = server/HallBoard(24 × 16 stud 새 파트 - hub_hall 메시엔 게시판 없음) + client/HallBoardView(같은 podium 함수 · 같은 board "all" · 90초 · 바꿔 끼움 · [E] = HubServicePrompt) · P3b(UI) 옛 순위 창 점검 = 스위치 켬이면 건너뜀 · ui1c_static 10 · help_data 11곳 · 캡처 docs/design/ui1c/3 |
+
+다음 시작 = 4단계 도감 v3.

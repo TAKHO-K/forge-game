@@ -13,7 +13,8 @@ H.ids = { -- 줄 = { 항목 키, 글 키 } · 글 키는 이미 있던 문구를
 	shop = { title = "ui1b.help.shop.title", rows = { { "ui1b.help.row.token", "ui1b.help.shop.token" }, { "ui1b.help.row.starter", "ui1b.help.shop.starter" } } },
 	training = { title = "ui1b.help.training.title", rows = { { "ui1b.help.row.rule", "training.line" }, { "ui1b.help.row.unlock", "training.adv.locked" } } },
 	quests = { title = "ui1b.help.quests.title", rows = { { "ui1b.help.row.daily", "ui1b.help.quests.daily" }, { "ui1b.help.row.weekly", "quests.weekly" } } },
+	hall = { title = "ui1c.help.hall.title", rows = { { "ui1c.help.row.tabs", "ui1c.help.hall.tabs" }, { "ui1c.help.row.record", "ui1c.help.hall.record" }, { "ui1c.help.row.refresh", "ui1c.help.hall.refresh" } } }, -- UI-1c 3단계 명예의 전당
 }
-H.order = { "ember", "codex", "egg", "attendance", "settings", "hudEdit", "bossGate", "shop", "training", "quests" }
+H.order = { "ember", "codex", "egg", "attendance", "settings", "hudEdit", "bossGate", "shop", "training", "quests", "hall" }
 H.maxLen = 400 -- 설정 helpSeen 글 길이 상한(id 목록 "a,b,c")
 return H

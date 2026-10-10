@@ -793,12 +793,20 @@ local function ensureBuilt()
 	end
 end
 
+-- UI-1c 3단계: 스위치 hall = 명예의 전당 창(panels/HallOfFameV1 · 같은 창 id)으로 넘김 - 옛 창은 짓지 않는다
+local HALL = require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).hall
 function Leaderboard.open()
+	if HALL then
+		return require(script.Parent.HallOfFameV1).open()
+	end
 	ensureBuilt()
 	return UIManager.open(Leaderboard.id)
 end
 
 function Leaderboard.toggle()
+	if HALL then
+		return require(script.Parent.HallOfFameV1).toggle()
+	end
 	ensureBuilt()
 	local ok, text = UIManager.switchTo(Leaderboard.id)
 	if not ok and text then
@@ -877,6 +885,9 @@ local function buildToggleButton()
 end
 
 function Leaderboard.init()
+	if HALL then
+		return require(script.Parent.HallOfFameV1).init()
+	end
 	ensureBuilt()
 	buildToggleButton()
 end

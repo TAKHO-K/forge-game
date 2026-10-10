@@ -9932,6 +9932,111 @@
   "status": "Approved",
   "imageId": 136736411616590
  },
+ "ui/v9/boss-tier-badge-1.png": {
+  "sha256": "db0fd4aa194c8a431681578e4d2dda663c4d994703f278424a3e492143498563",
+  "assetType": "Decal",
+  "assetId": 111499981437455,
+  "status": "Approved",
+  "imageId": 80150132828102
+ },
+ "ui/v9/boss-tier-badge-10.png": {
+  "sha256": "290b4ff7e9b9ac839bf1192b1f56940be7422f9ec2435c21a18995e23bc33d9f",
+  "assetType": "Decal",
+  "assetId": 76214561318224,
+  "status": "Approved",
+  "imageId": 126400493967125
+ },
+ "ui/v9/boss-tier-badge-20.png": {
+  "sha256": "9c4065d57f9be57dc6f24025053466e3fbd30d1736848420d7b7062e8e753d82",
+  "assetType": "Decal",
+  "assetId": 100179461102640,
+  "status": "Approved",
+  "imageId": 70553425061662
+ },
+ "ui/v9/boss-tier-badge-3.png": {
+  "sha256": "8c879667ca2904dc11f42dbc50a8269466db230b79620190860aa25996688ea7",
+  "assetType": "Decal",
+  "assetId": 126002452399738,
+  "status": "Approved",
+  "imageId": 85130976289159
+ },
+ "ui/v9/boss-tier-badge-5.png": {
+  "sha256": "391a3e6ecc9244000fcb5a44a2970c62fe0c11871ebb4881875cf934363156b0",
+  "assetType": "Decal",
+  "assetId": 137348794449961,
+  "status": "Approved",
+  "imageId": 112309315371751
+ },
+ "ui/v9/boss-tier-frame-1.png": {
+  "sha256": "8bffa9b649ffdc35ffd6f89b8a7efd9606d791cba6478afeb0a025670c0e44d1",
+  "assetType": "Decal",
+  "assetId": 72528019998285,
+  "status": "Approved",
+  "imageId": 82146251117139
+ },
+ "ui/v9/boss-tier-frame-10.png": {
+  "sha256": "6fe50ff8b52042daab2507f1a38c25bf86656aedba9d69b4f81386deec29c175",
+  "assetType": "Decal",
+  "assetId": 122124100095359,
+  "status": "Approved",
+  "imageId": 120888874077756
+ },
+ "ui/v9/boss-tier-frame-20.png": {
+  "sha256": "da664d6abcbcd563b2f82ea48786cb42fb786c35acbaec0282d471579982f5c5",
+  "assetType": "Decal",
+  "assetId": 123452746647991,
+  "status": "Approved",
+  "imageId": 84046945054058
+ },
+ "ui/v9/boss-tier-frame-3.png": {
+  "sha256": "6571dfe1b8edef5be41c9abd432572db72ff3a87dea784fc28be5fb3d00d67ae",
+  "assetType": "Decal",
+  "assetId": 128811897877320,
+  "status": "Approved",
+  "imageId": 121972924707862
+ },
+ "ui/v9/boss-tier-frame-5.png": {
+  "sha256": "fe3a4ef3f10a563f61f9dc11fde43f7d9c5e1ac66a41e34a0b793df62e834129",
+  "assetType": "Decal",
+  "assetId": 114627396803167,
+  "status": "Approved",
+  "imageId": 82051157108725
+ },
+ "ui/v9/icon-help.png": {
+  "sha256": "aade30da1260099674f3d25d44b88ba77b2705efed1a4594d4862ad8cb1a9e31",
+  "assetType": "Decal",
+  "assetId": 127604223152673,
+  "status": "Approved",
+  "imageId": 122324515866302
+ },
+ "ui/v9/rank-crown.png": {
+  "sha256": "f7876c732988ce3a6aaa7d47d100ef8ae9cb4481692c439b1e5b36352c95ef81",
+  "assetType": "Decal",
+  "assetId": 120954918108345,
+  "status": "Approved",
+  "imageId": 85227941715897
+ },
+ "ui/v9/rank-medal-1.png": {
+  "sha256": "c6601bd60534e6555012d1e5a0c111379b455b46d813201991d433dbf5c5e834",
+  "assetType": "Decal",
+  "assetId": 113088548705771,
+  "status": "Approved",
+  "imageId": 103860079178431
+ },
+ "ui/v9/rank-medal-2.png": {
+  "sha256": "dc804a09c91ad9b9494eb725ffdb7ecb01b3d3d00f3ce616b71089856f864da1",
+  "assetType": "Decal",
+  "assetId": 79468978343464,
+  "status": "Approved",
+  "imageId": 110626004473162
+ },
+ "ui/v9/rank-medal-3.png": {
+  "sha256": "c0a8d6741e37fcbeb8fb300a6f654523886db5851feb00ade47ce6774a365c09",
+  "assetType": "Decal",
+  "assetId": 109270000694363,
+  "status": "Approved",
+  "imageId": 125016602423402
+ },
  "ui/weapon/cell-check-off.png": {
   "sha256": "96b203e5bee62f613fcce0bce67e50b771f24108ece149653e923d0393212508",
   "assetType": "Decal",

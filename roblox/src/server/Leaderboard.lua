@@ -31,6 +31,7 @@ local PlayerInspect = require(script.Parent.PlayerInspect)
 local HeightGuard = require(script.Parent.HeightGuard) -- G2a: 보스전 중 높이 보정을 받은 판은 기록 거절
 
 local Leaderboard = {}
+local HALL = require(ReplicatedStorage.Shared.data.UiV2Flags).hall -- UI-1c 3단계 명예의 전당(새 순위표)
 
 -- ═══ 모드 · 저장소 ═══
 
@@ -53,7 +54,11 @@ local function prefix()
 end
 
 -- season을 안 주면 지금 시즌 - 새 시즌이 되면 저장소 이름이 바뀌어 순위표가 0부터 시작한다.
+-- UI-1c 3단계: "all_"로 시작하는 종류(역대 개인 all_personal · 역대 직업 all_class_<직업>)는 시즌과 무관한 저장소 하나(<prefix>_all_…).
 local function storeName(kind, season)
+	if kind:sub(1, 4) == "all_" then
+		return ("%s_%s"):format(prefix(), kind)
+	end
 	return ("%s_s%d_%s"):format(prefix(), season or Leaderboard.currentSeason(), kind)
 end
 Leaderboard.storeName = storeName
@@ -181,6 +186,14 @@ local function readHistogram(kind)
 	end
 	histCache[kind] = { counts = counts, at = os.clock() }
 	return counts
+end
+
+-- UI-1c 3단계: 이번 시즌 파티로 처치한 보스 수(정렬 저장소 partyKills · 키 u<UserId>) - 처치 1번 = +1(IncrementAsync).
+local function bumpOrdered(kind, key, delta)
+	stats.orderedWrite += 1
+	return withRetry(("더하기 %s/%s"):format(kind, key), function()
+		ordered(kind):IncrementAsync(key, delta)
+	end)
 end
 
 local function setPlain(kind, key, value)
@@ -355,6 +368,10 @@ function Leaderboard.onBossCleared(info)
 			spawnWrite(function()
 				local _, raisedP, oldP = raiseOrdered("personal", key, info.stage)
 				local _, raisedC, oldC = raiseOrdered("class_" .. classId, key, value)
+				if HALL then -- UI-1c 3단계: 역대 개인 · 역대 직업(시즌과 무관 - "더 좋을 때만")
+					raiseOrdered("all_personal", key, info.stage)
+					raiseOrdered("all_class_" .. classId, key, value)
+				end
 				if raisedP then
 					noteHistogram("personal", oldP, info.stage)
 				end
@@ -365,6 +382,19 @@ function Leaderboard.onBossCleared(info)
 			end)
 		elseif entry.advanced then
 			stats.skipped += 1
+		end
+	end
+
+	-- UI-1c 3단계 파티 탭 = 이번 시즌 파티로 처치한 보스 수: 파티 보스전 · 보상 기여 문턱 이상 · 기록 자격이 있는 멤버마다 +1(진도 판정과 무관)
+	if HALL and info.isParty then
+		for _, entry in ipairs(info.members) do
+			if (entry.ratio or 0) >= CombatConfig.contributionRewardThreshold and eligibility(entry.player) then
+				local key = playerKey(entry.player.UserId)
+				judgement.partyKills = (judgement.partyKills or 0) + 1
+				spawnWrite(function()
+					bumpOrdered("partyKills", key, 1)
+				end)
+			end
 		end
 	end
 
@@ -393,10 +423,25 @@ end
 -- ═══ 읽기 캐시 ═══
 
 -- 순위표 id 목록: personal · class:<직업> · party.
-local function boardIds()
+-- UI-1c 3단계(스위치 hall): 명예의 전당 창이 읽는 것만 갱신 = all(역대 개인) · allclass:<직업>(역대 직업) · partyKills(시즌 파티 보스 처치 수) · personal(시즌 탭)
+--   옛 시즌 직업 · 파티 구성 순위표는 계속 쓰기만 한다(지우지 않음 · 전당 복사 = seasonBoardIds).
+local function seasonBoardIds()
 	local list = { "personal", "party" }
 	for _, classId in ipairs(ClassData.order) do
 		table.insert(list, "class:" .. classId)
+	end
+	if HALL then
+		table.insert(list, "partyKills")
+	end
+	return list
+end
+local function boardIds()
+	if not HALL then
+		return seasonBoardIds()
+	end
+	local list = { "all", "partyKills", "personal" }
+	for _, classId in ipairs(ClassData.order) do
+		table.insert(list, "allclass:" .. classId)
 	end
 	return list
 end
@@ -405,9 +450,19 @@ local function kindOf(boardId)
 	if boardId == "personal" or boardId == "party" then
 		return boardId
 	end
+	if HALL and boardId == "all" then
+		return "all_personal"
+	end
+	if HALL and boardId == "partyKills" then
+		return "partyKills"
+	end
 	local classId = boardId:match("^class:(.+)$")
 	if classId and ClassData.classes[classId] then
 		return "class_" .. classId
+	end
+	classId = HALL and boardId:match("^allclass:(.+)$")
+	if classId and ClassData.classes[classId] then
+		return "all_class_" .. classId
 	end
 	return nil
 end
@@ -482,10 +537,13 @@ local function decodeEntry(boardId, rank, item)
 	if boardId == "party" then
 		entry.members = keyUserIds(item.key) -- 파티 키 = 멤버 UserId(오름차순)
 	end
-	if boardId == "personal" then
+	if boardId == "personal" or boardId == "all" then
 		entry.stage = item.value
+	elseif boardId == "partyKills" then
+		entry.count = item.value -- UI-1c: 값 = 보스 처치 수(스테이지 아님)
 	else
 		entry.stage, entry.seconds = LeaderboardRules.decode(item.value)
+		entry.classId = boardId:match("^%a*class:(.+)$") -- UI-1c: 줄에 직업이 있을 때만 직업 열
 	end
 	return entry
 end
@@ -551,7 +609,7 @@ function Leaderboard.snapshotHall(season)
 		return false
 	end
 	local boards, names = {}, {}
-	for _, boardId in ipairs(boardIds()) do
+	for _, boardId in ipairs(seasonBoardIds()) do -- UI-1c: 전당 = 시즌 순위표만(역대 순위표는 시즌과 무관)
 		local entries = readTop(boardId, season, LeaderboardConfig.hallTopN)
 		if not entries then
 			hallChecked[season] = nil -- 읽기 실패 - 다음 갱신에서 다시
@@ -636,7 +694,7 @@ end
 local function mineInCache(boardId, userId)
 	for _, entry in ipairs((cache[boardId] or {}).entries or {}) do
 		if table.find(entry.members or { entry.userId }, userId) then
-			return { rank = entry.rank, stage = entry.stage, seconds = entry.seconds, key = entry.key }
+			return { rank = entry.rank, stage = entry.stage, seconds = entry.seconds, key = entry.key, count = entry.count } -- UI-1c: 파티 탭 = 처치 수
 		end
 	end
 	return nil
@@ -719,7 +777,7 @@ function Leaderboard.handle(player, action, boardId, key, now)
 		end
 		local rank, entry = Leaderboard.rankInCache(boardId, player.UserId)
 		if rank then
-			return { ok = true, rank = rank, stage = entry.stage, seconds = entry.seconds }
+			return { ok = true, rank = rank, stage = entry.stage, seconds = entry.seconds, count = entry.count }
 		end
 		if Leaderboard.writeMode() == "off" then
 			-- Studio 수동 Play는 저장소를 읽지 않는다(리뷰 10) - 가짜 순위(/gg lb fake)의 "캐시 밖" 값만 돌려준다.
@@ -740,6 +798,9 @@ function Leaderboard.handle(player, action, boardId, key, now)
 			return { ok = true, rank = nil, outOfTop = false }
 		end
 		local decoded = decodeEntry(boardId, nil, { key = playerKey(player.UserId), value = value })
+		if decoded.count then -- UI-1c 파티 탭(보스 처치 수) = 인원 구간 없음
+			return { ok = true, rank = nil, outOfTop = true, topN = LeaderboardConfig.topN, count = decoded.count }
+		end
 		local topPercent = LeaderboardRules.topPercent(readHistogram(kindOf(boardId)), decoded.stage, LeaderboardConfig.histBucketStages) -- QUEUE-ALL9C 1-5: 인원 구간이 비면 nil(옛 "100위 밖")
 		return { ok = true, rank = nil, outOfTop = true, topN = LeaderboardConfig.topN, stage = decoded.stage, seconds = decoded.seconds, topPercent = topPercent }
 	elseif action == "card" then
@@ -834,12 +895,15 @@ function Leaderboard.debugFill(player)
 	end
 	local filled = 0
 	for _, boardId in ipairs(boardIds()) do
-		local classId = boardId:match("^class:(.+)$")
+		local classId = boardId:match("^%a*class:(.+)$")
 		local entries = {}
 		for rank = 1, LeaderboardConfig.topN do
 			local stage = 5 * math.max(1, 60 - math.floor(rank / 2))
 			local seconds = 40 + rank * 3.7
-			local entry = { rank = rank, stage = stage, seconds = boardId ~= "personal" and seconds or nil }
+			local entry = { rank = rank, stage = stage, seconds = boardId ~= "personal" and boardId ~= "all" and seconds or nil, classId = classId }
+			if boardId == "partyKills" then -- UI-1c: 값 = 처치 수
+				entry.stage, entry.seconds, entry.count = nil, nil, math.max(1, 120 - rank)
+			end
 			if boardId == "party" then
 				local ids = {}
 				for m = 1, 2 + rank % 3 do
@@ -851,7 +915,7 @@ function Leaderboard.debugFill(player)
 				entry.members = ids
 				entry.key = LeaderboardRules.partyKey(ids)
 			else
-				local id = (rank == 37 and boardId == "personal" or rank == 12 and classId == myClass) and player.UserId or (fakeBase + rank)
+				local id = (rank == 37 and (boardId == "personal" or boardId == "all" or boardId == "partyKills") or rank == 12 and classId == myClass) and player.UserId or (fakeBase + rank)
 				entry.userId, entry.key = id, playerKey(id)
 			end
 			for i, id in ipairs(entry.members or { entry.userId }) do
@@ -880,7 +944,7 @@ function Leaderboard.debugFill(player)
 	fakeMine = {}
 	for _, classId in ipairs(ClassData.order) do
 		if classId ~= myClass then
-			fakeMine["class:" .. classId] = { ok = true, rank = nil, outOfTop = true, topN = LeaderboardConfig.topN, stage = 40, seconds = 612.3, topPercent = 37 } -- QUEUE-ALL9C 1-5 "상위 약 n%" 화면 확인
+			fakeMine[(HALL and "allclass:" or "class:") .. classId] = { ok = true, rank = nil, outOfTop = true, topN = LeaderboardConfig.topN, stage = 40, seconds = 612.3, topPercent = 37 } -- QUEUE-ALL9C 1-5 "상위 약 n%" 화면 확인
 		end
 	end
 	return filled

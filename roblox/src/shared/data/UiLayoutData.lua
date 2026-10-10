@@ -377,4 +377,38 @@ return {
 		},
 		sizes = { { 1920, 1080 }, { 1366, 768 }, { 800, 360, phone = true } }, -- 보고용 기준(Studio 창으로 만들 수 있는 크기는 실측 크기를 함께 적는다)
 	},
+	-- UI-1c 3단계 명예의 전당(I v1 §1 · pc_01 · ph_01 · sheet_02): 좌표 = 기준 화면(PC 1920×1080 · 폰 800×360) px · 창 안 좌표 = 창 왼쪽 위 기준.
+	--   글자 = spec 값(새 보통 기준 - textBase 다시 안 곱함 · 설정 3단만 곱함) · 단상 순서 2 · 1 · 3 · 블록 높이 = 단상 판 높이 비율
+	hall = {
+		pc = {
+			win = { 160, 80, 1600, 920 }, head = 64, close = 44, title = 28, icon = 36,
+			tabs = { x = 16, y = 80, h = 44, gap = 8, padX = 18, text = 18 },
+			basis = { h = 44, text = 18, small = 15 }, -- "기준 최고 스테이지 ▾" + 시즌 알약(오른쪽 16)
+			podium = { 16, 140, 1568, 360, width = 1100, block = 0.86, heights = { 0.54, 0.44, 0.38 }, avatar = { 122, 104, 104 }, crown = 40, name = 22, small = 15, value = 24, rank = 56, rankT = 0.65, avatarStroke = 5 },
+			list = { 16, 512, 1568, 312, headH = 34, rowH = 52, face = 44, text = 18, small = 15, rankW = 64, classX = 1270, padR = 24 },
+			me = { h = 68, bottom = 16, stroke = 3, text = 18 },
+		},
+		phone = {
+			win = { 8, 60, 784, 296 }, head = 40, close = 32, title = 18, icon = 24,
+			tabs = { x = 10, y = 50, h = 36, gap = 6, padX = 10, text = 14 },
+			basis = { h = 32, text = 14, small = 12 },
+			podium = { 10, 94, 330, 192, width = 320, block = 0.9, heights = { 0.5, 0.42, 0.36 }, avatar = { 56, 46, 46 }, crown = 20, name = 13, small = 12, value = 13, rank = 26, rankT = 0.65, avatarStroke = 3 },
+			list = { 350, 94, 424, 136, headH = 0, rowH = 44, face = 30, text = 14, small = 12, rankW = 36, classX = 262, padR = 12 },
+			me = { h = 50, bottom = 8, stroke = 3, text = 14 },
+		},
+		colors = {
+			window = "161A2B", stroke = "3A4466", panel = "1E2438", panelLight = "36406A", row = "1B2133", rowLine = "2A3150", muted = "9AA3C0",
+			tabOn = "FFC83D", tabOnText = "1A1300", tabOff = "262C44", tabOffText = "C9D0E6", pill = "0E1120", me = "FFC83D", meBg = "232A44",
+			gold = { "FFD45A", "C9901A", "6B4A10" }, silver = { "E3E7EE", "9AA3B2", "4A5266" }, bronze = { "E0A06A", "A8653A", "5A3418" }, empty = { "4A5168", "333A52", "8B93A6" },
+			faceBg = "3A4466", faceText = "E3E7EE",
+		},
+		-- 마을 게시판 겉면(sheet_02): SurfaceGui 1200 × 800 · PixelsPerStud 50 = 24 × 16 stud · 자리 = 명예의 전당 자리(Spot hallOfFame) 기준 오프셋(hub_hall 메시엔 게시판 파트가 없어 새로 세움)
+		board = {
+			canvas = { 1200, 800 }, pps = 50, offset = { -22, 0, 4 }, yawDeg = 0, liftStuds = 1, depth = 0.6,
+			frameGold = 6, frameWood = 14, head = 84, podium = { 30, 110, 600, 660 }, list = { 660, 110, 510, 660 }, rows = 7, rowH = 50, rowText = 22, rowNum = 24,
+			wood = "6B4423", goldLine = "FFD45A", promptDistance = 10,
+		},
+		refreshSeconds = 90, -- 게시판 겉면 다시 읽기(서버 캐시 갱신 주기와 같음 · LeaderboardConfig.refreshSeconds)
+		displayOrder = 160,
+	},
 }

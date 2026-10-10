@@ -25,7 +25,7 @@ local okRun, err = pcall(function()
 		end
 	end
 	check("도움말 키 ko · en(제목 + 줄)", #miss == 0, table.concat(miss, ","))
-	check("도움말 id 10곳 = order와 ids 같음", #H.order == 10 and (function()
+	check("도움말 id 11곳 = order와 ids 같음(UI-1c 명예의 전당 +1)", #H.order == 11 and (function()
 		for _, id in ipairs(H.order) do
 			if not H.ids[id] then return false end
 		end

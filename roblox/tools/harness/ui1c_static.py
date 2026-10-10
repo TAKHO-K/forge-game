@@ -67,4 +67,13 @@ check('서버: BossContributionPct + 판 번호 BossContributionEnc', 'SetAttrib
 bb = read('client/hud/BossBar.client.lua')
 check('보스 바: 판 번호가 내 BossEncounterId와 같을 때만 알약', re.search(r'GetAttribute\("BossContributionEnc"\) == player:GetAttribute\("BossEncounterId"\)', bb) is not None)
 check('보스 바: BREAK 게이지 안 그림(데이터 없음)', 'BreakGauge' not in bb)
+# 3단계 명예의 전당: 새 순위표(역대 = 시즌 무관 저장소 · 파티 = 시즌 보스 처치 수) · 압박 문구 없음 · [?] · 게시판 = 같은 단상 함수
+lb = read('server/Leaderboard.lua')
+check('역대 순위표 = 시즌과 무관한 저장소(all_ 접두)', re.search(r'if kind:sub\(1, 4\) == "all_" then\s*return \("%s_%s"\):format\(prefix\(\), kind\)', lb) is not None)
+check('파티 탭 = 보스 처치 수 +1(IncrementAsync · 보상 기여 문턱 · 기록 자격)', 'IncrementAsync(key, delta)' in lb and re.search(r'contributionRewardThreshold and eligibility\(entry\.player\)', lb) is not None)
+tx = read('shared/data/TextData_ui1c.lua')
+hall_ko = [l for l in tx.splitlines() if '"ui1c.hall.' in l]
+check('명예의 전당 글자에 남은 시간 · 차이 · 따라잡기 없음', not any(w in l for l in hall_ko for w in ('남은', '차이', '따라잡', '카운트')))
+hv = read('client/HallBoardView.client.lua')
+check('게시판 겉면 = 창과 같은 단상 함수 · 같은 순위표(all)', 'Hall.podium(' in hv and 'InvokeServer("board", "all")' in hv and '"hall"' in read('shared/data/HelpData.lua'))
 print('[UI1C] 끝 %d/%d' % (passed, total))

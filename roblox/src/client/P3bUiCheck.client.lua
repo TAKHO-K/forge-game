@@ -17,6 +17,10 @@ local current = DevToolsConfig.verify.current
 if not (DevToolsConfig.verify.regression or table.find(current, "P3b(UI)")) then
 	return
 end
+if require(ReplicatedStorage.Shared.data.UiV2Flags).hall then -- UI-1c 3단계: 순위 창 = 명예의 전당(HallOfFameV1) - 옛 창은 안 지음
+	print("[P3b][UI] 명예의 전당 스위치 켬 - 옛 순위 창 점검 건너뜀(끝 0/0)")
+	return
+end
 
 local Theme = require(script.Parent.ui.kit.Theme)
 local UIManager = require(script.Parent.UIManager)
