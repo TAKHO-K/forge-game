@@ -167,7 +167,7 @@ local ok, err = pcall(function()
 	check("소품 지급(상품 · 선물 공통 입구) 멱등 · 테마/글라이더 표에 안 섞임", g1 and not g2 and wg2 == "owned" and s.cosmetics.items.petCrown == true and s.cosmetics.gliderSkins.petCrown == nil and s.cosmetics.themes.petCrown == nil)
 	local oct = os.time({ year = 2026, month = 10, day = 15, hour = 3 })
 	local sep = os.time({ year = 2026, month = 9, day = 15, hour = 3 })
-	check("할로윈 테마 = 10월(KST)만 판매 · 다른 테마는 늘", Mon.onSale(Cos, "cosmeticTheme", "halloween", oct) and not Mon.onSale(Cos, "cosmeticTheme", "halloween", sep) and Mon.onSale(Cos, "cosmeticTheme", "anvil", sep))
+	check("할로윈 테마 = 기간 한정 아님(SEC-FIX-1 10 - 옛 = 10월만) · 다른 테마도 늘", Mon.onSale(Cos, "cosmeticTheme", "halloween", oct) and Mon.onSale(Cos, "cosmeticTheme", "halloween", sep) and Mon.onSale(Cos, "cosmeticTheme", "anvil", sep))
 
 	-- ④-2 QUEUE-ALL9B 3-5 토큰 구매(상품 키 - 묶음 포함): 499급 묶음 = 800 · 시즌 유료 줄 · 시즌 한정 = 토큰 불가 · 연타 = 두 번째 owned · 부족 거부 · 감사
 	MS.validProducts.bundle_blacksmith = true
@@ -544,8 +544,8 @@ local ok, err = pcall(function()
 	Data.products.item_goldenHammer.productId = 0
 	check("비공개(2단계) 상품 · 게임패스 = 프롬프트 · 토큰 거부 not_released", not okHidden and whyHidden == "not_released" and not okHiddenTok and whyHiddenTok == "not_released" and not okSet and whySet == "not_released",
 		("%s · %s · %s"):format(tostring(whyHidden), tostring(whyHiddenTok), tostring(whySet)))
-	check("공개 단계 표: 출시 = 스타터 · 패스 · 모루 · 젤리 · 할로윈 · 드래곤 날개 · 슬라임 · 로켓 · 풍선 · 수정 · 하이파이브 · 펫 왕관 · 편의 5 / 나중 = 황금 망치 · 화로 · 이름표 세트 · 패스 보상 5",
-		Mon.isReleased(Data, "starter_pack") and Mon.isReleased(Data, "theme_halloween") and Mon.isReleased(Data, "item_petCrown") and Mon.isReleased(Data, "recallCooldown")
+	check("공개 단계 표: 출시 = 스타터 · 패스 · 모루 · 젤리 · 드래곤 날개 · 슬라임 · 로켓 · 풍선 · 수정 · 하이파이브 · 펫 왕관 · 편의 5 / 나중 = 황금 망치 · 화로 · 이름표 세트 · 패스 보상 5 · 할로윈(SEC-FIX-1 10)",
+		Mon.isReleased(Data, "starter_pack") and not Mon.isReleased(Data, "theme_halloween") and Mon.isReleased(Data, "item_petCrown") and Mon.isReleased(Data, "recallCooldown")
 		and not Mon.isReleased(Data, "item_forgeBrazier") and not Mon.isReleased(Data, "nameplateSet") and not Mon.isReleased(Data, "theme_starlight") and not Mon.isReleased(Data, "glider_kite"))
 	check("표시 가격: 줍기 79 · 귀환 49 · 이름표 세트 79", Data.gamePasses.pickupRadius.robux == 79 and Data.gamePasses.recallCooldown.robux == 49 and Data.gamePasses.nameplateSet.robux == 79)
 

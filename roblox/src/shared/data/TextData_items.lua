@@ -28,7 +28,7 @@ return {
 		["item.owned"] = "가진 것: {n}",
 		["item.collapseHint"] = "닫기",
 		["item.attendance.today"] = "오늘",
-		["item.reason.offSeason"] = "지금은 판매 기간이 아니에요(10월 한정)",
+		["item.reason.offSeason"] = "지금은 판매하지 않아요", -- SEC-FIX-1 10: 옛 "(10월 한정)" 삭제
 		["cos.anvil.clang"] = "깡!",
 		["cos.emote.offer"] = "{name}님의 하이파이브 받기!",
 		["cos.emote.clap"] = "짝!",
@@ -65,7 +65,7 @@ return {
 		["item.owned"] = "You have: {n}",
 		["item.collapseHint"] = "Close",
 		["item.attendance.today"] = "Today",
-		["item.reason.offSeason"] = "Not on sale right now (October only)",
+		["item.reason.offSeason"] = "Not on sale right now",
 		["cos.anvil.clang"] = "Clang!",
 		["cos.emote.offer"] = "High five {name}!",
 		["cos.emote.clap"] = "Clap!",

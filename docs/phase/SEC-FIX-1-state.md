@@ -14,7 +14,8 @@
 | 6 | 폴링 사이 순간이동 공격 | 끝 | 848956ef | `sec_move_test` 옛 5/8 → 새 8/8 |
 | 7 | 보석 판매가 차익(#7 · #8) · 일괄 분해 개수(#10) | 끝 | 2cb4d544 | `sec_econ_test` 옛 4/7 → 새 7/7 |
 | 8 | 패스 칸 건너뛰기 = 못 한 출석 따라잡기(#6 · 사용자 결정 10-11) | 끝 | 2adb861d | `sec_shop_test` 8: 옛 6/14 → 새 14/14 |
-| 9 | 로그 단계 스위치(#12) | 끝 | (이 커밋) | `sec_log_static` 옛 0/4 → 새 4/4 |
+| 9 | 로그 단계 스위치(#12) | 끝 | a5f18f61 | `sec_log_static` 옛 0/4 → 새 4/4 |
+| 10 | 압박 문구 2건 · 할로윈 기간 한정 | 끝 | (이 커밋) | `sec_text_static` 옛 0/3 → 새 3/3 |
 | 2 | 같은 서버 재접속 저장 멈춤(AUDIT1 #15) | 끝 | 1bd638ec | `sec_save_test` 2: 옛(c75bea32) 10/13 → 새 13/13 |
 | 3 | 결제 applyReward 에러 시 잠금 안 풀림 | 끝 | 71d0eae9 | `sec_shop_test` 3: 옛 1/6 → 새 6/6 |
 | 4a | 교환 코드 표 → 서버 전용 | 끝 | c631de4f | `sec_secret_static` 옛 2/6 → 새 6/6 · `security_launch` +2(게시판 공개분만) |
@@ -123,3 +124,10 @@
   - 대상 = server 폴더에서 검증(`*Verify`) · 시뮬 · 개발 도구(DevTools · EconSim · PerfProbe 등 - 라이브에서 안 불림) 뺀 파일 · warn 41줄은 그대로(라이브에 남음 - 이름 · 에러 문구뿐 · UserId · PurchaseId · 코드 · 토큰 출력 0 확인).
 - 하네스 `sec_log_static.py`: 로거 · 단계 표 · 라이브 WARN/Studio DEBUG · 라이브 파일 print 전부 가림(첫 print보다 앞) - 옛 0/4 → 새 4/4. 새 라이브 파일에 print를 쓰면 이 검사가 X(가림 줄을 넣어야 통과).
 - 남은 것: 클라 print(본인 콘솔에만 보임)는 범위 밖 · 라이브에서 잠깐 자세히 보기 = `LogConfig.liveLevel` 바꿔 배포(운영 명령은 안 만듦 - 필요하면 `/ops log <단계>`로 `Log.setLevel` 연결).
+
+## 10. 압박 문구 "10월 한정 판매" 등 2건
+
+- 결정(설계 담당 10-11): 할로윈 = 출시 때 숨김 · **기간 한정 아님** · 압박 금지.
+- 고침: `shop.cos.offSeason`("{month}월 한정 판매") · `item.reason.offSeason`("…(10월 한정)") 두 문구의 압박 표현 삭제 → 중립 "지금은 판매하지 않아요"(ko · en - 키는 코드가 참조해서 남김 · 지금 이 문구를 쓰는 치장 없음). 할로윈 테마: `CosmeticSlotData` seasonMonth 10 제거(기간 한정 아님) · `MonetizationData.release.theme_halloween` 1 → 2(출시 때 숨김 - 서버가 프롬프트 · 토큰 구매도 거절). 달 판매 기능(`Monetization.onSale`) 자체는 남김(쓰는 치장 0).
+- 하네스 `sec_text_static.py`: 화면 문구 ko · en에 기간 한정 판매 · 압박 표현(한정 판매 · 월 한정 · 지금만 · 놓치 · 마지막 기회 · October only …) 0 · 할로윈 seasonMonth 없음 · 공개 단계 2 - 옛 0/3 → 새 3/3. `monetize_test` 할로윈 2검사 기대 = 새 결정으로 바꿈(86/86).
+- 보고서 #15의 "유료 줄 구름 고래 = 시즌 1 한정"은 화면 문구가 아니라 데이터 주석 · 시즌 대표 보상 설계(패스 전용)라 이번 범위 밖 - 12번 표에 적음.

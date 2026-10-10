@@ -36,7 +36,7 @@ local D = {
 		pass_skip5 = { productId = 0, robux = 99, grants = { { kind = "passTierSkip", amount = 5 } } },
 		-- QUEUE-ALL6 H 꾸미기 TOP 10(사용자 확정 · 유료 랜덤 없음 · 자리값 0). 키 규칙 = theme_<id> · glider_<id> · item_<id>
 		theme_anvil = { productId = 0, robux = 199, grants = { { kind = "cosmeticTheme", id = "anvil" } } },
-		theme_halloween = { productId = 0, robux = 199, grants = { { kind = "cosmeticTheme", id = "halloween" } } }, -- 10월만 판매(CosmeticSlotData seasonMonth)
+		theme_halloween = { productId = 0, robux = 199, grants = { { kind = "cosmeticTheme", id = "halloween" } } }, -- SEC-FIX-1 10: 기간 한정 아님 · 출시 때 숨김(공개 단계 2)
 		glider_slimeParachute = { productId = 0, robux = 149, grants = { { kind = "gliderSkin", id = "slimeParachute" } } },
 		item_rocketPop = { productId = 0, robux = 99, grants = { { kind = "cosmeticItem", id = "rocketPop" } } },
 		item_balloonPop = { productId = 0, robux = 99, grants = { { kind = "cosmeticItem", id = "balloonPop" } } },
@@ -56,11 +56,12 @@ local D = {
 	releaseDefault = 2,
 	release = {
 		starter_pack = 1, season_premium = 1, season_premium_sale = 1, pass_skip1 = 1,
-		theme_anvil = 1, theme_jelly = 1, theme_halloween = 1, glider_dragonWing = 1, glider_slimeParachute = 1,
+		theme_anvil = 1, theme_jelly = 1, glider_dragonWing = 1, glider_slimeParachute = 1,
 		item_rocketPop = 1, item_balloonPop = 1, item_crystalBlade = 1, item_highFive = 1, item_petCrown = 1,
 		bagExpand = 1, pickupRadius = 1, recallCooldown = 1, nameplateColor = 1, nameplateBadge = 1,
 		-- 나중(2): 황금 망치 · 화로 · 이름표 세트 · (새벽 깃 날개 · 별의 수호룡 = 상품 자리 없음 - ALL9E 이후) · 대장장이 묶음(제안) · 패스 보상 치장 5종
 		item_goldenHammer = 2, item_forgeBrazier = 2, nameplateSet = 2, bundle_blacksmith = 2,
+		theme_halloween = 2, -- SEC-FIX-1 10(결정 10-11): 할로윈 = 출시 때 숨김 · 기간 한정 아님(옛 = 1단계 + 10월만)
 		pass_skip5 = 2, -- SEC-FIX-1 8(사용자 결정 10-11): 따라잡기 = 한 번에 1칸 · 하루 1번 → 5칸 묶음은 살 수 없다(상점에서 숨김 · 상품 자리는 남김 · 옛 = 1단계)
 		theme_starlight = 2, theme_ember = 2, theme_frost = 2, glider_petal = 2, glider_kite = 2,
 	},

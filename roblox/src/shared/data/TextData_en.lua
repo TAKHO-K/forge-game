@@ -774,7 +774,7 @@ return {
 	["shop.slot.weaponMark"] = "Weapon Mark", -- QUEUE-ALL9E1 0-2
 	["shop.cos.itemSection"] = "Accessories",
 	["shop.cos.noItem"] = "Buy an item for this slot to pick one",
-	["shop.cos.offSeason"] = "On sale in month {month}",
+	["shop.cos.offSeason"] = "Not on sale right now",
 	["shop.cos.itemSub.killFx"] = "Used for how monsters are defeated. Drops and hits are unchanged.",
 	["shop.cos.itemSub.weaponSkin"] = "Used for your weapon's look. Grade glow stays.",
 	["shop.cos.itemSub.enhanceFx"] = "Used for the enhance success scene.",

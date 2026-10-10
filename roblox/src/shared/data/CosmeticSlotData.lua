@@ -46,7 +46,7 @@ return {
 		{ id = "anvil", name = "망치와 모루", looks = { dashTrail = "anvil", jumpFx = "anvil", glideTrail = "anvil", footstep = "anvil" } }, -- QUEUE-ALL6 H #42 대시 금노랑 불꽃 · 점프 "깡!" 고리 · 활강 불씨 줄 · 발자국 망치 자국
 		-- QUEUE-ALL9C 1-6 스타터 팩 전용: 짧은 별빛 궤적(대시 칸만 - 나머지 칸은 기본 모습 "")
 		{ id = "starterStar", name = "모험가 별빛 궤적", looks = { dashTrail = "starterStar", jumpFx = "", glideTrail = "", footstep = "" }, starterOnly = true },
-		{ id = "halloween", name = "할로윈 박쥐", looks = { dashTrail = "halloween", jumpFx = "halloween", glideTrail = "halloween", footstep = "halloween" }, seasonMonth = 10 },
+		{ id = "halloween", name = "할로윈 박쥐", looks = { dashTrail = "halloween", jumpFx = "halloween", glideTrail = "halloween", footstep = "halloween" } }, -- SEC-FIX-1 10(결정): 기간 한정 아님(옛 seasonMonth = 10 - 10월만 판매 + "10월 한정 판매" 압박 문구) · 출시 때 숨김 = MonetizationData.release 2
 		-- QUEUE-ALL9B 4 시즌 패스 전용(passOnly - 상점 · 토큰 · 선물 X · 시즌 줄에서만) · 외형 = ArtV1CosmeticData 색 변형
 		{ id = "meadowStar", name = "초원 별빛", looks = { dashTrail = "meadowStar", jumpFx = "meadowStar", glideTrail = "meadowStar", footstep = "meadowStar" }, passOnly = true },
 		{ id = "violetStar", name = "보랏빛 별", looks = { dashTrail = "violetStar", jumpFx = "violetStar", glideTrail = "violetStar", footstep = "violetStar" }, passOnly = true },
