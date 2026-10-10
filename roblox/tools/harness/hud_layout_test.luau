@@ -127,6 +127,15 @@ local okRun, err = pcall(function()
 	check("폰 전투 버튼 화면 끝 ≥ 8", minEdge >= 8, tostring(minEdge))
 	check("폰 전투 버튼 엄지(조이스틱) 영역 밖", #inThumb == 0, table.concat(inThumb, ","))
 	check("폰 고정 = 가운데 (638, 186) · 대시 = (570, 232)", combat.lockon[1] + 22 == 638 and combat.lockon[2] + 22 == 186 and combat.dash[1] + 26 == 570 and combat.dash[2] + 26 == 232)
+	-- UI-1b 0절(VERIFY-5 상3): 실제 화면 판정 함수(Studio HudRealCheck와 같은 함수) - VERIFY-5 사례(칩 줄 y 6 ~ 152 × 다음 목표 y 96)를 잡는가
+	local HR = MODS.HudRealRules
+	local res = HR.check({ { id = "chips/Gold", x = 552, y = 6, w = 240, h = 146 }, { id = "nextGoal", x = 530, y = 96, w = 262, h = 44 }, { id = "exp", x = 0, y = 290, w = 800, h = 10 } }, { w = 800, h = 302 })
+	check("실제 판정: 칩 줄 × 다음 목표 겹침 잡음 · 떨어진 칸 없음", #res.overlaps == 1 and res.overlaps[1][2] == "nextGoal", tostring(#res.overlaps))
+	local edge = HR.check({ { id = "a", x = -2, y = 10, w = 50, h = 20 }, { id = "b", x = 100, y = -5, w = 20, h = 20 }, { id = "c", x = 780, y = 290, w = 30, h = 20 } }, { w = 800, h = 302 })
+	check("실제 판정: 화면 밖 2 · 상단 바 1", #edge.offscreen == 2 and #edge.topbar == 1, ("%d · %d"):format(#edge.offscreen, #edge.topbar))
+	check("실제 판정: allow 짝은 겹침에서 뺌", #HR.check({ { id = "x/1", x = 0, y = 0, w = 10, h = 10 }, { id = "y", x = 5, y = 5, w = 10, h = 10 } }, { w = 100, h = 100 }, { { "x", "y" } }).overlaps == 0)
+	local units = MODS.UiLayoutData.realCheck.units
+	check("실제 검사 대상 13칸(빈 목록이면 통과 못 함)", #units == 13, tostring(#units))
 end)
 if not okRun then
 	print("[HUDL] 하네스 에러 " .. tostring(err))

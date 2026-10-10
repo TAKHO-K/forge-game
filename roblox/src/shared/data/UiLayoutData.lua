@@ -313,4 +313,25 @@ return {
 	character = { v1 = { avatarBottom = 120, titleCardH = 70 } },
 	-- UI-1 7c 파티 창 빠른 말 줄(F v2.1 · H §5): 말 8 + 이모트 4 = 한 격자
 	quickChat = { v1 = { height = 112, cellW = 106, cellH = 44 } },
+	-- UI-1b 0절(VERIFY-5 상3) 실제 화면 겹침 검사: 표 사각형이 아니라 실제 GUI 인스턴스의 AbsolutePosition · AbsoluteSize로 잰다(hud/HudRealCheck · shared/HudRealRules).
+	--   path = PlayerGui 기준 · each = 보이는 직속 자식마다 한 칸(메뉴 버튼 · 칩) · allow = 겹쳐도 되는 짝(설계상 겹침 - 이유 적기)
+	realCheck = {
+		units = {
+			{ id = "leftMenu", path = "HudMenuV2Gui/HudLeft", each = true },
+			{ id = "rightMenu", path = "HudMenuV2Gui/HudRight", each = true },
+			{ id = "chips", path = "TopChipsGui/TopChipsRow", each = true },
+			{ id = "minimap", path = "MinimapGui/Minimap" },
+			{ id = "nextGoal", path = "NextGoalGui/NextGoal" },
+			{ id = "exp", path = "ExpBarGui/ExpTrack" },
+			{ id = "health", path = "PlayerHealthBarGui/HealthBar" },
+			{ id = "status", path = "StatusHudGui/StatusRowHolder" },
+			{ id = "skills", path = "SkillSlotsGui/CentralRow" },
+			{ id = "phoneCombat", path = "SkillSlotsGui/PhoneCombat", each = true },
+			{ id = "bossBar", path = "BossBarGui/BossBar" },
+			{ id = "party", path = "PartyHudGui/PartyList" },
+			{ id = "region", path = "WorldHud/RegionLabel" },
+		},
+		allow = {},
+		sizes = { { 1920, 1080 }, { 1366, 768 }, { 800, 360, phone = true } }, -- 보고용 기준(Studio 창으로 만들 수 있는 크기는 실측 크기를 함께 적는다)
+	},
 }
