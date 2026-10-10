@@ -1,0 +1,11 @@
+태그 | 1000 | 5000 | 10000 | 15000 | 20000 | 25300 | 25,300 대비 A | 사냥 간격(시간 가중 평균 · 구간 1,001~25,300) | 보유/수입(청크 끝 보유 ÷ 청크 수입 중앙)
+zA | 3.9 | 80.0 | 222.2 | 469.1 | 721.6 | 2154.5 | +0.00% | 60.6 | 56.86 | earned 1.172e+23|newinc 0|pet 0|cls nil|home nil|savAdj 0
+zAh | 4.0 | 81.9 | 225.6 | 460.4 | 693.7 | 2063.0 | -4.25% | 60.8 | 58.90 | earned 1.187e+23|newinc 0|pet 0|cls nil|home nil|savAdj 0
+zAK | 3.9 | 84.0 | 235.4 | 477.0 | 719.6 | 2047.3 | -4.98% | 61.4 | 56.36 | earned 1.235e+23|newinc 0|pet 0|cls nil|home nil|savAdj 2.824e+23
+zAhK | 4.0 | 79.9 | 223.6 | 469.7 | 710.2 | 1952.8 | -9.36% | 61.7 | 57.90 | earned 1.149e+23|newinc 0|pet 0|cls nil|home nil|savAdj 2.748e+23
+zC | 3.9 | 79.9 | 223.6 | 460.2 | 696.8 | 1973.8 | -8.39% | 61.4 | 60.26 | earned 9.969e+09|newinc 0|pet 0|cls nil|home nil|savAdj 0
+zCg | 3.9 | 79.9 | 220.7 | 466.8 | 699.3 | 2046.1 | -5.03% | 60.9 | 60.21 | earned 9.946e+09|newinc 0|pet 0|cls nil|home nil|savAdj 0
+zCx | 3.9 | 84.2 | 228.1 | 470.6 | 713.2 | 2052.2 | -4.75% | 61.2 | 57.85 | earned 9.949e+09|newinc 0|pet 0|cls nil|home nil|savAdj 0
+zCS | 3.9 | 80.6 | 229.3 | 479.0 | 721.2 | 2081.4 | -3.39% | 61.0 | 60.38 | earned 1.016e+10|newinc 0|pet 0|cls nil|home nil|savAdj -6.082e+09
+zCxS | 3.9 | 85.9 | 226.7 | 477.3 | 714.0 | 2163.7 | +0.43% | 60.9 | 58.01 | earned 1.048e+10|newinc 0|pet 0|cls nil|home nil|savAdj -6.352e+09
+zChK | 4.0 | 81.8 | 222.1 | 461.0 | 698.3 | 1958.9 | -9.08% | 61.6 | 61.00 | earned 1.015e+10|newinc 0|pet 0|cls nil|home nil|savAdj 2.898e+08

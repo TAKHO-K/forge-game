@@ -82,6 +82,25 @@ if C.gapComp then -- GOLD-CURVE-1 "같은 변환": 새 곡선에서도 "계정 �
 		return v
 	end
 end
+-- PROG-2B-1 0번(5% 원인 계측): 실제 사냥 스테이지(직전 청크 hunt.stage = P2HUNT)로 비용 기준을 정확히 맞춘다.
+--   costAtHunt = 비용 기준을 계정 최고 → 사냥 스테이지로(A에서 "할증 없음") · gapExact = 새 곡선에서도 할증을 1.001^(최고 − 사냥)으로 정확히 되돌림(고정 50칸 대신)
+if C.costAtHunt then
+	local oldScale = GoldCost.scale
+	GoldCost.scale = function(stage, kind)
+		return oldScale(stage and P2HUNT and math.min(stage, P2HUNT) or stage, kind)
+	end
+end
+if C.gapExact then
+	local oldScale = GoldCost.scale
+	GoldCost.scale = function(stage, kind)
+		local v = oldScale(stage, kind)
+		if stage and P2HUNT and stage > P2HUNT then
+			local g = stage - P2HUNT
+			v *= 1.001 ^ g / (Mg(stage) / Mg(P2HUNT))
+		end
+		return v
+	end
+end
 if C.incomeScale then -- GOLD-CURVE-1 §5: 수입만 배율(사냥 · 보스 · 판매 = getGoldReward · 보스 첫 클리어 표) - 비용(GoldCost)은 그대로
 	local oldReward = InfiniteStage.getGoldReward
 	InfiniteStage.getGoldReward = function(baseGold, stage)
@@ -223,9 +242,21 @@ local sink = C.sink
 local EconSim = M.EconSim
 local oldWO = EconSim.withOverrides
 EconSim.withOverrides = function(whatIf, fn, state, ...)
+	local r0 = type(state) == "table" and state.reach
 	local r = oldWO(whatIf, fn, state, ...)
 	if type(state) ~= "table" or not state.training or type(r) ~= "table" or not r.reach then
 		return r
+	end
+	P2HUNT = r.stage -- PROG-2B-1 0번: 다음 청크의 비용 기준(costAtHunt · gapExact)
+	-- PROG-2B-1 0번: 모으는 동안의 인플레이션(청크 동안 최고 스테이지 r0 → r1이 오르면 보유 골드의 구매력이 Mg(r1)/Mg(r0)만큼 준다)
+	--   savings = "keep" → 보유 골드 × Mg(r1)/Mg(r0)(구매력 유지 = 인플레이션 0) · "A" → × (Mg(r1)/Mg(r0)) / 1.001^(r1 − r0)(새 곡선에서도 지금 곡선만큼 깎임)
+	if C.savings and r0 and state.reach > r0 then
+		local f = Mg(state.reach) / Mg(r0)
+		if C.savings == "A" then
+			f /= 1.001 ^ (state.reach - r0)
+		end
+		state.p2savAdj = (state.p2savAdj or 0) + state.gold * (f - 1)
+		state.gold *= f
 	end
 	local hours = state.seconds / 3600
 	local earned = (r.gold or 0) + (r.sellGold or 0) + (r.bossGold or 0)
@@ -349,7 +380,7 @@ PROG2.report = function(run)
 	for k, v in pairs(PROG2.log) do
 		print(("X_LOG|%s|%s"):format(k, table.concat(v, "|")))
 	end
-	print(("X_INC|earned %.4g|newinc %.4g|pet %.4g|cls %s|home %s"):format(st.p2earned or 0, st.p2income or 0, st.p2pet or 0, tostring(st.abilities.__p2cls), tostring(st.abilities.__p2home)))
+	print(("X_INC|earned %.4g|newinc %.4g|pet %.4g|cls %s|home %s|savAdj %.4g"):format(st.p2earned or 0, st.p2income or 0, st.p2pet or 0, tostring(st.abilities.__p2cls), tostring(st.abilities.__p2home), st.p2savAdj or 0))
 	if PROG2.compAt then
 		local t = {}
 		for _, s in ipairs({ 100, 500, 1000, 2000, 5000, 10000, 20000, 25300 }) do
