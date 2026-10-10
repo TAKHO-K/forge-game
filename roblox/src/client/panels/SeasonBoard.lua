@@ -15,6 +15,7 @@ local ClaimFx = require(script.Parent.Parent.ui.AttendanceClaimFx) -- QUEUE-ALL9
 
 local SeasonBoard = {}
 SeasonBoard.id = "seasonBoard"
+local V2 = require(ReplicatedStorage.Shared.data.UiV2Flags).auto -- UI-1 7단계: AttendanceV2 [시즌 출석판] 탭(이 창 자동 열림 끔)
 
 local player = Players.LocalPlayer
 local PANEL_SIZE = Vector2.new(760, 430)
@@ -146,11 +147,17 @@ function SeasonBoard.render()
 end
 
 function SeasonBoard.open()
+	if V2 then
+		return require(script.Parent.AttendanceV2).open("season")
+	end
 	UIManager.open(SeasonBoard.id)
 end
 
 -- 5-4 접속 창 순서: 일일 접속 보상 창이 닫힐 때(panels/Attendance) · 그 창이 안 뜨는 날의 자동 1회
 function SeasonBoard.openIfReady()
+	if V2 then
+		return false
+	end
 	local b = view and view.board
 	if b and b.todayKind and player:GetAttribute("TutorialCompleted") == true and not UIManager.isOpen(SeasonBoard.id) then
 		autoShown = true
@@ -189,7 +196,7 @@ function SeasonBoard.init(attendanceWillShow)
 		if UIManager.isOpen(SeasonBoard.id) and not ClaimFx.isPlaying() then
 			SeasonBoard.render()
 		end
-		if not autoShown and v and v.board and v.board.todayKind and player:GetAttribute("TutorialCompleted") == true and not attendanceWillShow(v) then
+		if not V2 and not autoShown and v and v.board and v.board.todayKind and player:GetAttribute("TutorialCompleted") == true and not attendanceWillShow(v) then
 			autoShown = true
 			task.delay(2.5, function()
 				if #UIManager.getStack() == 0 then

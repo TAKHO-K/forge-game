@@ -10,7 +10,7 @@ T="${TEMP:-/tmp}"
 run() { # 이름 결과파일 의존 테스트파일 [prelude]
 	local name="$1" res="$2" deps="$3" test="$4" prelude="${5:-server_prelude.luau}"
 	PRELUDE="$prelude" EXTRA_SERVER="$deps" ECON_RES="$res" ECON_OUT="out_$res.luau" python build_run.py "$test" >/dev/null
-	printf "%-22s %s\n" "$name" "$(grep -a -E '끝 [0-9]+/[0-9]+|결과 [0-9]+/[0-9]+ 통과|total jumps|하네스 에러' "$T/$res" | tail -1) $(case "$name" in dupe) printf "O %s · X %s" "$(grep -a -c '^\[DUPE\].* O$' "$T/$res")" "$(grep -a -c '^\[DUPE\].* X$' "$T/$res")";; esac)"
+	printf "%-22s %s\n" "$name" "$(grep -a -E '끝 [0-9]+/[0-9]+|결과 [0-9]+/[0-9]+ 통과|total jumps|하네스 에러' "$T/$res" | tail -1) $(case "$name" in dupe) printf "O %s · X %s" "$(grep -a -c '^\[DUPE\].* O$' "$T/$res")" "$(grep -a -c '^\[DUPE\].* X$' "$T/$res")";; esac)$(grep -a -q '하네스 에러' "$T/$res" && printf ' · 하네스 에러(중간 멈춤)')"
 }
 ATTACK=$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem,SettingsService,FallServer,InventoryServer.server)
 run security_launch res_sec.txt "$(python deps.py SocialRewardService,CodexService,CommunityGoalService,WeeklyChallengeService,SpectateService.server,RequestGate,QuestService,PlayerProfile,SaveSystem,Travel)" security_launch_test.luau

@@ -233,4 +233,23 @@ return {
 			},
 		},
 	},
+	-- UI-1 7단계 F 자동 창(08 v5-auto-boss §1 ~ 4 · v6-auto-boss-v2 pc_01 · pc_02 · ph_01 · ph_02): 출석 + 시즌판 = 창 1개 · 탭 2 · [오늘 모두 받기]
+	auto = {
+		v6 = {
+			pc = { x = 360, w = 1200, week = { y = 260, h = 540 }, season = { y = 180, h = 720 }, head = 64, line = 4, pad = 20, tabY = 80, tabH = 44, tabW = 132,
+				note = { y = 144, h = 24 }, weekCell = { y = 180, w = 152, h = 236, gap = 12, icon = 44 }, seasonTop = { y = 140, h = 30 },
+				seasonCell = { y = 182, w = 132, h = 100, gapX = 12, gapY = 10, icon = 36 }, foot = { h = 64, bottom = 18 }, button = { 300, 60 }, badge = 28, close = 44, dot = 14 },
+			phone = { x = 8, y = 62, w = 784, h = 290, head = 48, line = 3, pad = 10, tabH = 40, tabW = 64, weekCell = { y = 66, w = 100, h = 150, gap = 8, icon = 30 },
+				seasonCell = { y = 58, w = 88, h = 40, gapX = 7, gapY = 4, icon = 20 }, foot = { h = 46, bottom = 8 }, button = { 200, 46 }, badge = 20, close = 40, dot = 12 },
+			colors = { window = "161A2B", cell = "1E2438", cellClaimed = "12162A", stroke = "3A4466", today = "FFD45A", day7 = "D8B96E", tabOn = "FFC83D", tabOff = "232A42", dot = "EB3C3C", line = "FFC83D" },
+			resetHourUtc = 0, kstOffset = 9, -- 서버 초기화 = UTC 자정(QuestService resetIn) → 한국 시간 오전 9시(문구는 이 값으로 계산)
+			openDelay = 2, giftDelay = 1, -- 마을 2초 뒤 출석 · 닫히고 1초 뒤 선물함
+			displayOrder = 160, -- HUD 메뉴(150) 위
+			check = "ui/ds/icon-check", headIcon = "ui/ds/icon-reward",
+			rewardIcons = { gold = "ui/ds/icon-gold", goldKills = "ui/ds/icon-gold", sparkleShard = "ui/ds/icon-token", enhanceStone = "ui/ds/icon-reward-enhance-stone",
+				highEnhanceStone = "ui/ds/icon-reward-enhance-stone-high", egg = "ui/ds/icon-reward-egg", gemDust = "ui/ds/icon-reward-gem-dust", rerollTicket = "ui/ds/icon-reward-reroll",
+				rebirthTicket = "ui/ds/icon-reward-rebirth-ticket", passExp = "ui/ds/icon-reward-pass-exp", title = "ui/ds/icon-reward-title", cosmeticItem = "ui/ds/icon-reward-cosmetic" },
+			rewardOrder = { "gold", "sparkleShard", "enhanceStone", "highEnhanceStone", "egg", "gemDust", "rerollTicket", "rebirthTicket", "passExp", "title", "cosmeticItem" },
+		},
+	},
 }

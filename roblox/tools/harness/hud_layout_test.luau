@@ -34,7 +34,10 @@ local okRun, err = pcall(function()
 		for _, mode in ipairs({ "normal", "boss" }) do
 			local rects = {}
 			for name, r in pairs(tbl) do
-				if r.reserve or (r.modes and r.modes[mode]) or (not r.modes and not r.reserve) then
+				if r.x and r.size and not r[1] then -- 폰 메뉴 줄(menuTop = x · y · 칸 크기 · 간격 - UI-1 2단계) → 3칸(가방 · 보상 · 더보기) 줄 사각형
+					r = { r.x, r.y, 3 * r.size + 2 * r.gap, r.size }
+				end
+				if r[4] and (r.reserve or (r.modes and r.modes[mode]) or (not r.modes and not r.reserve)) then
 					local rr = { r[1], r[2], r[3], r[4] + (r.text or 0) * (v.text - 1) }
 					if name == "rightColumn" then -- 접기 결과 크기
 						local f = P.rightFold(V6.rightFold, 5, v.h, m, v.text)

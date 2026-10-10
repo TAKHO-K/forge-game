@@ -156,6 +156,10 @@ function GiftPopup.start(send)
 	sendRequest = send
 	local remote = ReplicatedStorage:WaitForChild("GiftPopup")
 	remote.OnClientEvent:Connect(function(gifts)
+		if require(ReplicatedStorage.Shared.data.UiV2Flags).auto then -- UI-1 7단계 자동 창 순서: 출석 창이 닫히고 1초 뒤(보스전 · 다른 창이면 기다림)
+			require(script.Parent.Parent.AttendanceV2).queueGift(gifts)
+			return
+		end
 		-- 접속 직후 다른 창(직업 선택 등)이 뜨는 중일 수 있다 - 한 박자 뒤에 연다
 		task.delay(1, function()
 			if Players.LocalPlayer.Parent then

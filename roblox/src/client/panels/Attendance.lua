@@ -14,6 +14,7 @@ local ClaimFx = require(script.Parent.Parent.ui.AttendanceClaimFx) -- QUEUE-ALL9
 
 local Attendance = {}
 Attendance.id = "attendance"
+local V2 = require(ReplicatedStorage.Shared.data.UiV2Flags).auto -- UI-1 7단계: 출석 + 시즌판 = AttendanceV2 창 하나(이 창 · 자동 열림은 끔 - 스위치 끄면 그대로)
 
 local player = Players.LocalPlayer
 local PANEL_SIZE = Vector2.new(680, 330)
@@ -28,6 +29,9 @@ local function build()
 	local panel = Panel.create({ id = Attendance.id, kind = "window", title = Text.get("attendance.windowTitle"), size = PANEL_SIZE, onOpen = function()
 		task.defer(Attendance.render)
 	end, onClose = function() -- QUEUE-ALL9B 5-4: 닫으면 시즌 출석판(받을 것이 있을 때만)
+		if V2 then
+			return
+		end
 		task.delay(0.3, function()
 			require(script.Parent.SeasonBoard).openIfReady()
 		end)
@@ -139,6 +143,9 @@ end
 Attendance.hasClaimable = require(ReplicatedStorage.Shared.RewardHub).attendance -- QUEUE-UI2: HUD [보상] 점과 같은 판정 한 곳(위 지역 함수와 같은 규칙)
 
 function Attendance.open()
+	if V2 then
+		return require(script.Parent.AttendanceV2).open("week")
+	end
 	UIManager.switchTo(Attendance.id)
 end
 
@@ -182,7 +189,7 @@ function Attendance.init()
 			Attendance.render()
 		end
 		-- 하루 첫 접속 자동 1회: 견습을 마쳤고 · 받을 칸이 있고 · 다른 창이 안 열렸을 때
-		if not autoShown and hasClaimable(v) and player:GetAttribute("TutorialCompleted") == true and #UIManager.getStack() == 0 then
+		if not V2 and not autoShown and hasClaimable(v) and player:GetAttribute("TutorialCompleted") == true and #UIManager.getStack() == 0 then
 			autoShown = true
 			task.delay(2, function()
 				if #UIManager.getStack() == 0 then

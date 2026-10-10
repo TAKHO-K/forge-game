@@ -4,3 +4,6 @@ require(script.Parent.panels.Training).init()
 require(script.Parent.panels.WorldMapPanel).init()
 require(script.Parent.panels.Attendance).init() -- 7일 출석 · 첫 접속 보상(하루 첫 접속 자동 1회)
 require(script.Parent.panels.SeasonBoard).init(require(script.Parent.panels.Attendance).hasClaimable) -- QUEUE-ALL9B 5 시즌 출석판(접속 보상 창 다음 · 그 창이 없는 날은 혼자)
+if require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).auto then
+	require(script.Parent.panels.AttendanceV2).init() -- UI-1 7단계 출석 + 시즌판 창 하나 · 자동 창 규칙(출석 → 1초 뒤 선물함)
+end

@@ -8714,6 +8714,13 @@
   "status": "Approved",
   "imageId": 117718531598572
  },
+ "ui/ds/icon-check.png": {
+  "sha256": "f186c7967eb9894faec8e43ad273262cd4b9076bf3a15a6b3d3a83a0e0f66da6",
+  "assetType": "Decal",
+  "assetId": 108141040073570,
+  "status": "Approved",
+  "imageId": 117973119392454
+ },
  "ui/ds/icon-close.png": {
   "sha256": "d73cd575b93456b3adfbb90a84b5e9516961559c83219dbbc4882ddb71d6f8d3",
   "assetType": "Decal",
@@ -8868,6 +8875,69 @@
   "status": "Approved",
   "imageId": 109476606601291
  },
+ "ui/ds/icon-reward-cosmetic.png": {
+  "sha256": "84a606acf24762bdb30ab3e9e4a3ec00c744d4581a8055ec52351eda99809bd8",
+  "assetType": "Decal",
+  "assetId": 107787502298576,
+  "status": "Approved",
+  "imageId": 82909079149476
+ },
+ "ui/ds/icon-reward-egg.png": {
+  "sha256": "1bb1a86d9410afaea3c272b0d8265645ff2601f3bf52023a0b7a6ada3d5fa8ca",
+  "assetType": "Decal",
+  "assetId": 99288918272233,
+  "status": "Approved",
+  "imageId": 111606439704896
+ },
+ "ui/ds/icon-reward-enhance-stone-high.png": {
+  "sha256": "2b422999c45af56be9779d50c949247bebeca48a7b6d854ca36a39d574611d9e",
+  "assetType": "Decal",
+  "assetId": 85623969564572,
+  "status": "Approved",
+  "imageId": 118505663601044
+ },
+ "ui/ds/icon-reward-enhance-stone.png": {
+  "sha256": "d2ebb8d7a8aa5035d9698f2027bf82fc077c7b798c9c476d8b00d87af41783b6",
+  "assetType": "Decal",
+  "assetId": 74306625390018,
+  "status": "Approved",
+  "imageId": 92507614901428
+ },
+ "ui/ds/icon-reward-gem-dust.png": {
+  "sha256": "9931211ffc0d1cfe91ee8713b74b5c91ffe359fb0291d21f4d37d94de894b43c",
+  "assetType": "Decal",
+  "assetId": 88090104732298,
+  "status": "Approved",
+  "imageId": 88344888847935
+ },
+ "ui/ds/icon-reward-pass-exp.png": {
+  "sha256": "5fcac40790484d01f7a2a80b1c766b35f2af8e2ceb35bff43a45a0da8b1a8a33",
+  "assetType": "Decal",
+  "assetId": 102625738369951,
+  "status": "Approved",
+  "imageId": 85076654325489
+ },
+ "ui/ds/icon-reward-rebirth-ticket.png": {
+  "sha256": "dc7756297c96f010e3d35ddff1e435dfa6b7e92a679a6ca661bdff5bb5de1bab",
+  "assetType": "Decal",
+  "assetId": 115392989961298,
+  "status": "Approved",
+  "imageId": 76966039519035
+ },
+ "ui/ds/icon-reward-reroll.png": {
+  "sha256": "776c5704c70caad9445d6fee804a182f75b9df4a82c961f3d6563540523ecde3",
+  "assetType": "Decal",
+  "assetId": 98878423590488,
+  "status": "Approved",
+  "imageId": 92254240172625
+ },
+ "ui/ds/icon-reward-title.png": {
+  "sha256": "25ea363e2cd2d66049cdbf89350a8f387884ef635eee332337fda68e71eb4475",
+  "assetType": "Decal",
+  "assetId": 134427856916866,
+  "status": "Approved",
+  "imageId": 76222428457085
+ },
  "ui/ds/icon-reward.png": {
   "sha256": "3eb40ca3d8ce9d6051f0fb16643de9566ce5d25cd901f44c491b053aa04b65f1",
   "assetType": "Decal",
@@ -9014,6 +9084,13 @@
   "assetId": 89842789484173,
   "status": "Approved",
   "imageId": 139821311732585
+ },
+ "ui/ds/icon-token.png": {
+  "sha256": "afa185874210a9efe7b885a77fad3b0b8c12eff06e9b7f265831f5eb2c8d00b1",
+  "assetType": "Decal",
+  "assetId": 75928425872089,
+  "status": "Approved",
+  "imageId": 126819995534236
  },
  "ui/ds/icon-training.png": {
   "sha256": "c9cf368bbb3122902920d0e94f68679245cea03d408a5dba230f3ee0c65a7436",

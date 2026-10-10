@@ -66,7 +66,9 @@ local okRun, err = pcall(function()
 	end
 	for screenName, screen in pairs(L) do
 		for _, device in ipairs({ "pc", "phone" }) do
-			walk(screenName, device, screen[device], "")
+			if screen[device] then -- UI-1 판 표(hud.v6 · bag.v3 · enhance.v4 · auto.v6 = 기준점 · 글자 섞임)는 제외 - HUD = hud_layout 하네스가 따로 잼
+				walk(screenName, device, screen[device], "")
+			end
 		end
 	end
 	check("좌표 표 = 숫자만 · 화면 밖 0", #bad == 0 and #out == 0, table.concat(bad, ",") .. table.concat(out, ","))
