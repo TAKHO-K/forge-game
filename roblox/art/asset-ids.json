@@ -7538,6 +7538,55 @@
   "status": "Approved",
   "imageId": 108717344439121
  },
+ "ui/boss/boss-portrait-abyssal.png": {
+  "sha256": "eed39d4fcaee835ed31360df4450a796142e7bfe9f95f9f12bb17dd9e1b9ba58",
+  "assetType": "Decal",
+  "assetId": 96685998527548,
+  "status": "Approved",
+  "imageId": 83366126460906
+ },
+ "ui/boss/boss-portrait-crystal.png": {
+  "sha256": "fd5bf0bb4155b25d70d6c4b1e5f2d903940186365ba9dbe6e57f6473e526657a",
+  "assetType": "Decal",
+  "assetId": 135064785848778,
+  "status": "Approved",
+  "imageId": 72155494502211
+ },
+ "ui/boss/boss-portrait-guardian.png": {
+  "sha256": "e9b8590ecdc781135b88159cfbd365063d3e7daa49c99829328d768f759bf515",
+  "assetType": "Decal",
+  "assetId": 122408061899584,
+  "status": "Approved",
+  "imageId": 87944012231520
+ },
+ "ui/boss/boss-portrait-mammoth.png": {
+  "sha256": "8c310e31c6bbdd9184757b6890c38d50a87b5bf566a61bd6eb6178d0a1d06bea",
+  "assetType": "Decal",
+  "assetId": 129170811328596,
+  "status": "Approved",
+  "imageId": 81292390692952
+ },
+ "ui/boss/boss-portrait-scorpion.png": {
+  "sha256": "7f87461d0b39bfb87d9c9fb5269da348843070c647a08de0d4572ef4ad0c551a",
+  "assetType": "Decal",
+  "assetId": 92925745497063,
+  "status": "Approved",
+  "imageId": 82966376171921
+ },
+ "ui/boss/boss-portrait-storm.png": {
+  "sha256": "c58f6f067e19f33fab536db935b90d526d2089d0629c9543bac107bfabb2438f",
+  "assetType": "Decal",
+  "assetId": 112546337189535,
+  "status": "Approved",
+  "imageId": 74107584630088
+ },
+ "ui/boss/boss-portrait-storm2.png": {
+  "sha256": "53f88fb8878eb4684119349542f2f81325974d2b4900e47e3ef994d7f91ce94f",
+  "assetType": "Decal",
+  "assetId": 123534452384507,
+  "status": "Approved",
+  "imageId": 138329550071587
+ },
  "ui/ds/banner-icon-golden.png": {
   "sha256": "f3233a94a440c87ff86c5423b1b604a129c01f7c2c7330aaa23d0fb864e8ccef",
   "assetType": "Decal",

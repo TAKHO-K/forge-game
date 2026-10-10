@@ -76,6 +76,31 @@ local okRun, err = pcall(function()
 		ctOk = ctOk and T.ko[k.textKey] ~= nil and T.en[k.textKey] ~= nil
 	end
 	check("전투 문구 4 = 큰 영어 + 한국어 줄 키", ctOk)
+	-- 3단계 보스 초상: 배치표 6보스 전부 · 그림 기록 · 대표 색 hex · 폭풍 2폼 · 폼 꼬리표 = 폭풍만 · 3단계 글자 짝
+	local PD = MODS.BossPortraitData
+	local B = MODS.BossData
+	local missingP = {}
+	for _, id in ipairs(B.placement.laps[1] or {}) do
+		local e = PD.bosses[id]
+		if not (e and A[e.image] and A[e.image].image and e.color:match("^%x%x%x%x%x%x$")) then
+			table.insert(missingP, id)
+		end
+	end
+	check("보스 초상 = 배치표 6보스 · 그림 기록 · 대표 색", #missingP == 0 and #(B.placement.laps[1] or {}) == 6, table.concat(missingP, ","))
+	local form = MODS.UiLayoutData.hud.v6.bossBar.formBosses
+	local nForm = 0
+	for _ in pairs(form) do
+		nForm += 1
+	end
+	check("폼 꼬리표 · 2폼 카드 = 폭풍 군주만(2폼 초상 있음)", nForm == 1 and form.storm_lord == true and PD.bosses.storm_lord.form2 ~= nil and A[PD.bosses.storm_lord.form2.image] ~= nil)
+	local keys3 = { "ui1.intro.top", "ui1.intro.topZone", "ui1.intro.loading", "ui1.form2.storm_lord.name", "ui1.form2.storm_lord.desc", "ui1.form2.storm_lord.descShort", "ui1.firstMeet.head", "ui1.firstMeet.once", "ui1.firstMeet.ok", "ui1.linger.title", "ui1.linger.reward", "ui1.linger.auto", "ui1.linger.stay", "ui1.linger.town" }
+	local miss3 = {}
+	for _, k in ipairs(keys3) do
+		if not (T.ko[k] and T.en[k]) then
+			table.insert(miss3, k)
+		end
+	end
+	check("3단계 보스 창 글자 ko · en 짝", #miss3 == 0, table.concat(miss3, ","))
 end)
 if not okRun then
 	print("[UI1P] 하네스 에러 " .. tostring(err))

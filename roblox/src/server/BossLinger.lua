@@ -56,6 +56,7 @@ BossEncounter.onLingerStarted(function(encounter)
 		fire(member, {
 			kind = "start", stage = encounter.stage, seconds = BossData.lingerSeconds,
 			isParty = encounter.party ~= nil, isLeader = encounter.party == nil or PartyState.isLeader(member), canNext = canGoNext(member, encounter.stage),
+			bossId = encounter.data and encounter.data.id, bossName = encounter.data and encounter.data.displayName, -- UI-1 3단계: 잔류 막대 초상 · 이름
 		})
 	end
 end)

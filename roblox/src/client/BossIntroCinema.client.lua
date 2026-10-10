@@ -50,7 +50,9 @@ local function awaitMeshes(model, maxSeconds)
 		end
 	end
 	if #parts == 0 then
-		return 0
+		return 0, true, function()
+			return true
+		end
 	end
 	local done = false
 	local t0 = os.clock()
@@ -63,7 +65,9 @@ local function awaitMeshes(model, maxSeconds)
 	while not done and os.clock() - t0 < maxSeconds do
 		task.wait()
 	end
-	return os.clock() - t0
+	return os.clock() - t0, done, function()
+		return done
+	end
 end
 
 local token = 0
@@ -74,7 +78,106 @@ local function serverNow()
 end
 
 -- 이름 카드: 위아래 영화 띠 · 칭호(강조색 작은 글씨) · 이름(큰 글씨) · 강조색 밑줄이 펼쳐짐. 폰(짧은 변 360)에서도 글씨 실효 12 이상(TextScaled + 최소 크기).
-local function nameCard(bossId, displayName, accent, showAt, hideAt, full)
+-- UI-1 3단계 F 진입 카드(08 v5-auto-boss §6): 왼쪽 아래(레터박스 바로 위 · 보스가 가운데에 보이게) · 초상 300(폰 132) · 위 줄 "스테이지 n · 구역"(대표 색) · 이름 · 폼 알약(폭풍 군주만) ·
+--   로딩 줄 = 보스 모습을 받는 중일 때만 · 1.6초 뒤 왼쪽으로 접힘(받는 중이면 다 받을 때까지 · 최대 5초). 스위치 UiV2Flags.boss = false → 옛 가운데 이름 글씨.
+local BossFlags = require(ReplicatedStorage.Shared.data.UiV2Flags)
+local function introCardV6(gui, info, showAt, isLoading)
+	local PD = require(ReplicatedStorage.Shared.data.BossPortraitData)
+	local Theme = require(script.Parent.ui.kit.Theme)
+	local BossPortrait = require(script.Parent.ui.v2.BossPortrait)
+	local HudPlace = require(ReplicatedStorage.Shared.HudPlace)
+	local phone = Theme.isMobile
+	local P = phone and PD.intro.phone or PD.intro.pc
+	local size = phone and PD.size.intro.phone or PD.size.intro.pc
+	local view = Workspace.CurrentCamera.ViewportSize
+	local m = HudPlace.scale(view.X, view.Y, phone)
+	local color = BossPortrait.color(info.bossId)
+	local card = Instance.new("CanvasGroup")
+	card.Name = "IntroCardV6"
+	card.BackgroundTransparency = 1
+	card.AnchorPoint = Vector2.new(0, 1)
+	local textW = phone and 300 or 760
+	card.Size = UDim2.fromOffset(size + 24 + textW, size)
+	card.Position = UDim2.new(0, P.left * m, 1, -P.bottom * m)
+	card.GroupTransparency = 1
+	card.Parent = gui
+	local sc = Instance.new("UIScale")
+	sc.Scale = m
+	sc.Parent = card
+	BossPortrait.make(card, info.bossId, size, { corner = P.corner })
+	local x = size + 24
+	local zone = nil
+	for _, z in ipairs(require(ReplicatedStorage.Shared.data.WorldMapData).zones or {}) do
+		if z.bossId == info.bossId then
+			zone = Text.name(z.theme)
+		end
+	end
+	local function lbl(name, text, y, h, px, col, font)
+		local l = Instance.new("TextLabel")
+		l.Name = name
+		l.BackgroundTransparency = 1
+		l.Position = UDim2.fromOffset(x, y)
+		l.Size = UDim2.fromOffset(textW, h)
+		l.Font = font
+		l.TextSize = px
+		l.TextXAlignment = Enum.TextXAlignment.Left
+		l.TextColor3 = col
+		l.TextStrokeTransparency = 0.35
+		l.Text = text
+		l.Parent = card
+		return l
+	end
+	local nameY = size * 0.30
+	lbl("Top", Text.get(zone and "ui1.intro.topZone" or "ui1.intro.top", { stage = tostring(info.stage or "?"), zone = zone or "" }), nameY - P.top - 10, P.top + 6, P.top, color, Enum.Font.GothamBold)
+	local name = lbl("Name", Text.name(info.displayName or ""), nameY, P.name + 10, P.name, Color3.new(1, 1, 1), Enum.Font.GothamBlack)
+	local B = require(ReplicatedStorage.Shared.data.UiLayoutData).hud.v6.bossBar
+	if B.formBosses[info.bossId] then -- 폼 알약 = 폭풍 군주만(F v2 0절 4)
+		local pill = lbl("Form", Text.get("ui1.boss.form1"), nameY + P.name + 18, P.form + 6, P.form - 8, Color3.new(1, 1, 1), Enum.Font.GothamBold)
+		pill.TextXAlignment = Enum.TextXAlignment.Center
+		pill.Size = UDim2.fromOffset(P.form * 3, P.form + 6)
+		pill.BackgroundTransparency = 0.2
+		pill.BackgroundColor3 = color
+		local c = Instance.new("UICorner")
+		c.CornerRadius = UDim.new(0.5, 0)
+		c.Parent = pill
+	end
+	local loadY = size - 24
+	local track = Instance.new("Frame")
+	track.Name = "Loading"
+	track.BackgroundColor3 = Color3.fromRGB(26, 31, 51)
+	track.Position = UDim2.fromOffset(x, loadY)
+	track.Size = UDim2.fromOffset(P.loadW, 6)
+	track.ClipsDescendants = true
+	track.Parent = card
+	local shine = Instance.new("Frame")
+	shine.BackgroundColor3 = color
+	shine.BorderSizePixel = 0
+	shine.Size = UDim2.fromScale(0.35, 1)
+	shine.Parent = track
+	local loadText = lbl("LoadingText", Text.get("ui1.intro.loading"), loadY - (phone and 16 or 22), phone and 14 or 20, phone and 11 or 14, Color3.fromRGB(184, 192, 214), Enum.Font.GothamBold)
+	local shownAt = os.clock() + math.max(showAt, 0)
+	task.delay(math.max(showAt, 0), function()
+		if card.Parent then
+			TweenService:Create(card, TweenInfo.new(0.25), { GroupTransparency = 0 }):Play()
+		end
+	end)
+	task.spawn(function()
+		while card.Parent do
+			local loading = isLoading()
+			track.Visible, loadText.Visible = loading, loading
+			shine.Position = UDim2.fromScale(-0.35 + 1.35 * ((os.clock() * 0.8) % 1), 0)
+			local t = os.clock() - shownAt
+			if t >= PD.intro.maxHold or (t >= PD.intro.foldAfter and not loading) then
+				TweenService:Create(card, TweenInfo.new(PD.intro.foldSeconds), { GroupTransparency = 1, Position = card.Position - UDim2.fromOffset(120 * m, 0) }):Play()
+				return
+			end
+			task.wait(0.05)
+		end
+	end)
+	return name
+end
+
+local function nameCard(bossId, displayName, accent, showAt, hideAt, full, info, isLoading)
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "BossIntroBanner"
 	gui.IgnoreGuiInset = true
@@ -119,6 +222,12 @@ local function nameCard(bossId, displayName, accent, showAt, hideAt, full)
 		return l
 	end
 	local labels = {}
+	if BossFlags.boss and info then -- UI-1 3단계: F 진입 카드(가운데 이름 글씨 대신)
+		introCardV6(gui, info, showAt, isLoading or function()
+			return false
+		end)
+		holder.Visible = false
+	end
 	if full then
 		table.insert(labels, label("Title", Text.get("boss.title." .. tostring(bossId)), 0, 0.3, accent:Lerp(Color3.new(1, 1, 1), 0.35), Enum.Font.GothamBold))
 	end
@@ -186,7 +295,49 @@ event.OnClientEvent:Connect(function(data)
 	if not data.model then
 		return
 	end
-	local waited = awaitMeshes(data.model, 2)
+	-- UI-1 3단계 검은 실루엣(코드 6): 받기 전엔 3D 몸 · _Outline 숨김 + 대표 색 빛만(이 클라만 · LocalTransparencyModifier) · 다 받으면(최대 5초) 보임
+	local veiled, veilLight = {}, nil
+	if BossFlags.boss then
+		for _, d in ipairs(data.model:GetDescendants()) do
+			if d:IsA("BasePart") and d.LocalTransparencyModifier < 1 then
+				d.LocalTransparencyModifier = 1
+				table.insert(veiled, d)
+			end
+		end
+		if data.model.PrimaryPart then
+			veilLight = Instance.new("PointLight")
+			veilLight.Name = "UI1VeilLight"
+			veilLight.Color = require(script.Parent.ui.v2.BossPortrait).color(data.bossId)
+			veilLight.Brightness = 3
+			veilLight.Range = 24
+			veilLight.Parent = data.model.PrimaryPart
+		end
+		require(script.Parent.ui.v2.BossPortrait).preload(data.bossId)
+	end
+	local function unveil()
+		for _, d in ipairs(veiled) do
+			if d.Parent then
+				d.LocalTransparencyModifier = 0
+			end
+		end
+		table.clear(veiled)
+		if veilLight then
+			veilLight:Destroy()
+			veilLight = nil
+		end
+	end
+	local waited, meshDone, meshDoneFn = awaitMeshes(data.model, 2)
+	if meshDone then
+		unveil()
+	else
+		task.spawn(function()
+			local t0 = os.clock()
+			while not meshDoneFn() and os.clock() - t0 < 3 do -- 앞 2초 + 3초 = 최대 5초
+				task.wait(0.05)
+			end
+			unveil()
+		end)
+	end
 	player:SetAttribute("BossIntroMeshWait", math.floor(waited * 100 + 0.5) / 100) -- 측정용(A2-N4)
 	token += 1
 	local my = token
@@ -200,7 +351,9 @@ event.OnClientEvent:Connect(function(data)
 	local rig = BossRigSpec.rigs[data.bossId or ""]
 	local accent = (rig and rig.themeColors and rig.themeColors.accent) or (rig and rig.accent) or Color3.fromRGB(255, 220, 120)
 	local tNow = serverNow() - startServer
-	local banner = nameCard(data.bossId, data.displayName, accent, (data.full and riseT or 0.1) - tNow, seconds - 0.45 - tNow, data.full)
+	local banner = nameCard(data.bossId, data.displayName, accent, (data.full and riseT or 0.1) - tNow, seconds - 0.45 - tNow, data.full, data, function()
+		return #veiled > 0 -- 아직 받는 중(몸을 가린 동안)
+	end)
 	local shakeOn = player:GetAttribute("SettingScreenShake") ~= false and player:GetAttribute("SettingBossScreenShake") ~= false
 	local roarAt = data.full and (riseT + 0.4) or 0.5
 	local root = data.model.PrimaryPart

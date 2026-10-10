@@ -99,7 +99,7 @@ RunService.Heartbeat:Connect(function(dt)
 		end
 	end
 	row.update(list)
-	gui.Enabled = player:GetAttribute("InMainMenu") ~= true
+	gui.Enabled = player:GetAttribute("InMainMenu") ~= true and player:GetAttribute("BossIntroLock") ~= true -- 진입 연출 동안 숨김(연출이 다른 HUD를 끈다)
 end)
 
 -- Studio 촬영 · 점검 훅: Player Attribute DebugUi1 = "ct:break" | "ct:dodge" | "banner:rift" | "banner:golden" | "gauge"(A 부품 표본 창)

@@ -74,6 +74,77 @@ local ArtImage = require(script.Parent.Parent.ui.ArtImage)
 local v6 = nil -- { ticks, statusRow, form, stripes }
 local boss = nil -- 지금 표시 중인 보스 모델
 
+-- UI-1 3단계 2폼 카드(08 v5-auto-boss §7 · F v2 §1-6): 폭풍 군주 변신 무적이 시작되는 순간 · 보스 바 아래 가운데(PC y 190 · 폰 130) · 2폼 초상 140 + "2폼" + 이름 + 한 줄 ·
+--   테 3 #8FE6FF · 2.5초 · 레터박스 없음(전투 계속) · 문구 = TextData_ui1 · 초 = BossFrameworkData.v3[보스].transformGuard.seconds(데이터)
+local lastGuard = false
+local function showForm2Card(bossId, bossModel)
+	local RS = game:GetService("ReplicatedStorage")
+	local PD = require(RS.Shared.data.BossPortraitData)
+	local BossPortrait = require(script.Parent.Parent.ui.v2.BossPortrait)
+	local tg = ((require(RS.Shared.data.BossFrameworkData).v3 or {})[bossId] or {}).transformGuard
+	local phone = Theme.isMobile
+	local view = workspace.CurrentCamera.ViewportSize
+	local m = HudPlace.scale(view.X, view.Y, phone)
+	local size = phone and PD.size.form2.phone or PD.size.form2.pc
+	local color = BossPortrait.color(bossId, true)
+	local card = Instance.new("CanvasGroup")
+	card.Name = "Form2Card"
+	card.BackgroundColor3 = Color3.fromHex("161A2B")
+	card.BackgroundTransparency = 0.06
+	card.AnchorPoint = Vector2.new(0.5, 0)
+	card.Size = UDim2.fromOffset(size + (phone and 300 or 560), size + 24)
+	card.Position = UDim2.new(0.5, 0, 0, HudPlace.topY(phone and PD.form2.y.phone or PD.form2.y.pc, 0, 0, m, phone and HudPlace.base.phone or HudPlace.base.pc))
+	card.GroupTransparency = 1
+	card.Parent = refs.screenGui
+	local sc = Instance.new("UIScale")
+	sc.Scale = m
+	sc.Parent = card
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, 16)
+	c.Parent = card
+	local st = Instance.new("UIStroke")
+	st.Color = color
+	st.Thickness = PD.form2.stroke
+	st.Parent = card
+	local portrait = BossPortrait.make(card, bossId, size, { form2 = true })
+	portrait.Position = UDim2.fromOffset(12, 12)
+	local x = size + 28
+	local function lbl(text, y, px, col, font)
+		local l = Instance.new("TextLabel")
+		l.BackgroundTransparency = 1
+		l.Position = UDim2.fromOffset(x, y)
+		l.Size = UDim2.new(1, -(x + 12), 0, px + 6)
+		l.Font = font
+		l.TextSize = px
+		l.TextXAlignment = Enum.TextXAlignment.Left
+		l.TextWrapped = true
+		l.TextColor3 = col
+		l.Text = text
+		l.Parent = card
+		return l
+	end
+	local small = phone and 0.55 or 1
+	lbl(Text.get("ui1.boss.form2"), 14, math.floor(22 * small + 0.5) + (phone and 4 or 0), color, Enum.Font.GothamBold)
+	lbl(Text.get("ui1.form2." .. bossId .. ".name"), 14 + 30 * small + (phone and 6 or 0), math.floor(44 * small), Color3.new(1, 1, 1), Enum.Font.GothamBlack)
+	local desc = lbl(Text.get("ui1.form2." .. bossId .. ".descShort"), 14 + 84 * small + (phone and 8 or 0), math.max(13, math.floor(17 * small)), Color3.fromRGB(184, 192, 214), Enum.Font.GothamBold)
+	task.spawn(function() -- 변신 무적이 실제로 켜지면(새 몸) "n초 동안 피해 없음"(초 = 데이터)
+		for _ = 1, 10 do
+			if bossModel and bossModel:GetAttribute("BossTransformGuard") == true and tg then
+				desc.Text = Text.get("ui1.form2." .. bossId .. ".desc", { seconds = tostring(tg.seconds) })
+				return
+			end
+			task.wait(0.1)
+		end
+	end)
+	TweenService:Create(card, TweenInfo.new(0.2), { GroupTransparency = 0 }):Play()
+	task.delay(2.5, function()
+		TweenService:Create(card, TweenInfo.new(0.3), { GroupTransparency = 1 }):Play()
+		task.delay(0.35, function()
+			card:Destroy()
+		end)
+	end)
+end
+
 -- ─── QUEUE-ALL1 01 A-1 하단 보스 바(아트 켬) ───
 local artBar = nil
 local layoutArt
@@ -404,6 +475,15 @@ local function refresh()
 		if V6ON and v6 then
 			local B = V6.bossBar
 			local guard = boss:GetAttribute("BossTransformGuard") == true
+			-- 2폼 카드 = 폼이 바뀌는 순간(체력 formAt 아래로 · 폭풍 군주만) - 변신 무적(v3 transformGuard)은 새 몸이 켜졌을 때만 있어 신호로 쓰지 않는다
+			local form2 = ratio < B.formAt
+			if form2 and not lastGuard and require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).boss then
+				local bid = boss:GetAttribute("BossRig")
+				if B.formBosses[bid] then
+					showForm2Card(bid, boss)
+				end
+			end
+			lastGuard = form2
 			a.fill.BackgroundColor3 = guard and Color3.fromHex(B.guardFill) or Color3.new(1, 1, 1)
 			v6.stripes.Visible = guard
 			local bossId = boss:GetAttribute("BossRig") -- 보스 데이터 id(MonsterSpawner)

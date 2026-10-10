@@ -391,7 +391,7 @@ local function startIntro(encounter, full)
 		member:SetAttribute("BossIntroLock", true)
 		PlayerState.setAnchorHold(member, "intro", true)
 		bossIntroCinema:FireClient(member, { model = model, displayName = encounter.data.displayName, bossId = encounter.data.id, members = ids,
-			seconds = seconds, full = full, untilServer = introEndServer })
+			seconds = seconds, full = full, untilServer = introEndServer, stage = encounter.stage }) -- UI-1 3단계: 진입 카드 위 줄 "스테이지 n"
 	end
 	task.delay(seconds, function()
 		for _, member in ipairs(realMembers) do
