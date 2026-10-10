@@ -232,8 +232,164 @@ function ItemCell.paint(cell, spec, applyGradeVisual)
 	if not v3 then
 		ItemCell.emblem(cell, spec.setZone)
 	end
-	local dot = ItemCell.newDot(cell, spec.isNew)
+	local dot
+	if require(ReplicatedStorage.Shared.data.UiV2Flags).bag then
+		dot = ItemCell.v3(cell, spec, holder) -- UI-1 4단계 칸 v3
+	else
+		dot = ItemCell.newDot(cell, spec.isNew)
+	end
 	return { gradeStroke = gradeStroke, glow = glow, newDot = dot }
+end
+
+-- UI-1 4단계 칸 v3(03 v3 §4 · §5): 위 가운데 = 아이템 레벨(1만 이상 "18.4K" · 카툰 숫자 + 외곽선) · 아래 띠 = 옵션 이름(줄임 없음 · 등급 밝은 색) ·
+--   오른쪽 아래 = 잠금(진한 판 + 금 테 #FFE7A3 + 자물쇠) · 위 테두리 밖 = NEW 노랑 알약(세션 NewItems · 이름 NewDot = 옛 점과 같은 끄기 경로) ·
+--   무기 = 실제 무기 그림(ui/weapon/weapon-<직업>-g<n>) 칸의 82% + 왼쪽 아래 "+N" · 방어구 그림 = 칸의 60% · 56 이하 칸 = Lv · 띠 · 잠금 · NEW 없음 · 칸 안 글자 = 글자 크기 설정과 무관(고정).
+local V3 = require(ReplicatedStorage.Shared.data.UiLayoutData).bag.v3
+local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
+local function compact(n)
+	if n >= 10000 then
+		return ("%.1fK"):format(n / 1000)
+	end
+	return tostring(n)
+end
+function ItemCell.v3(cell, spec, holder)
+	local C = V3.cell
+	local phone = Theme.isMobile
+	local px = math.max(cell.AbsoluteSize.X, cell.Size.X.Offset, 1)
+	local small = px > 1 and px <= C.smallFrom
+	local function fixed(name, text, size, color)
+		local l = Instance.new("TextLabel")
+		l.Name = name
+		l.BackgroundTransparency = 1
+		l.Font = Enum.Font.FredokaOne
+		l.TextSize = size
+		l.TextColor3 = color
+		l.TextStrokeTransparency = 0
+		l.TextStrokeColor3 = Color3.fromHex(C.bandBg)
+		l.Text = text
+		l.ZIndex = cell.ZIndex + 3
+		l.Parent = cell
+		return l
+	end
+	-- 그림 크기(무기 = 실제 무기 그림 82%)
+	if spec.part == "weapon" and spec.weaponClass then
+		local stem = V3.weaponIcon.classStem[spec.weaponClass]
+		local gi = table.find(ArmorData.gradeOrder, spec.gradeId) or 1
+		local img = stem and ArtImage.get(V3.weaponIcon.prefix .. stem .. "-g" .. gi)
+		if img then
+			for _, c in ipairs(holder:GetChildren()) do
+				c:Destroy()
+			end
+			local w = Instance.new("ImageLabel")
+			w.Name = "WeaponArt"
+			w.BackgroundTransparency = 1
+			w.ScaleType = Enum.ScaleType.Fit
+			w.Image = img
+			w.Size = UDim2.fromScale(1, 1)
+			w.Parent = holder
+			holder.Size = UDim2.fromScale(C.weaponIcon, C.weaponIcon)
+		end
+	elseif spec.gradeId then
+		holder.Size = UDim2.fromScale(C.armorIcon, C.armorIcon)
+	end
+	-- 옛 글자 자리 정리(같은 정보를 새 자리로)
+	local oldTop, oldLevel = cell:FindFirstChild("TopLeft"), cell:FindFirstChild("Level")
+	if oldLevel then
+		oldLevel.Visible = false
+	end
+	if oldTop then
+		oldTop.Visible = false
+	end
+	if not small and spec.level then
+		local lv = fixed("LevelV3", "Lv." .. compact(spec.level), phone and C.levelText.phone or C.levelText.pc, Color3.new(1, 1, 1))
+		lv.AnchorPoint = Vector2.new(0.5, 0)
+		lv.Position = UDim2.new(0.5, 0, 0, 2)
+		lv.Size = UDim2.new(0.6, 0, 0, (phone and C.levelText.phone or C.levelText.pc) + 2)
+	end
+	if spec.part == "weapon" and spec.topLeft and spec.topLeft.text then -- 무기 강화 "+N" = 왼쪽 아래
+		local plus = fixed("PlusV3", spec.topLeft.text, phone and 13 or 15, spec.topLeft.color or Color3.new(1, 1, 1))
+		plus.AnchorPoint = Vector2.new(0, 1)
+		plus.Position = UDim2.new(0, 4, 1, -2)
+		plus.Size = UDim2.new(0.5, 0, 0, 16)
+		plus.TextXAlignment = Enum.TextXAlignment.Left
+	elseif not small and spec.topLeft and spec.topLeft.text and spec.topLeft.text ~= "" then -- 옵션 이름 띠(줄임 없음)
+		local bh = phone and C.band.phone or C.band.pc
+		local band = Instance.new("Frame")
+		band.Name = "OptionBand"
+		band.AnchorPoint = Vector2.new(0, 1)
+		band.Position = UDim2.new(0, 0, 1, 0)
+		band.Size = UDim2.new(1, 0, 0, bh)
+		band.BackgroundColor3 = Color3.fromHex(C.bandBg)
+		band.BackgroundTransparency = C.bandBgTransparency
+		band.BorderSizePixel = 0
+		band.ZIndex = cell.ZIndex + 2
+		band.Parent = cell
+		local bt = Instance.new("TextLabel")
+		bt.Name = "Text"
+		bt.BackgroundTransparency = 1
+		bt.Size = UDim2.new(1, -4, 1, 0)
+		bt.Position = UDim2.fromOffset(2, 0)
+		bt.Font = Enum.Font.GothamBold
+		bt.TextScaled = true -- 줄임 없음(넘치면 글자만 작게)
+		bt.TextColor3 = spec.topLeft.color or Color3.new(1, 1, 1)
+		bt.Text = spec.topLeft.text
+		bt.ZIndex = cell.ZIndex + 3
+		bt.Parent = band
+		local lim = Instance.new("UITextSizeConstraint")
+		lim.MaxTextSize = phone and C.bandText.phone or C.bandText.pc
+		lim.MinTextSize = 8
+		lim.Parent = bt
+	end
+	local lock = cell:FindFirstChild("Lock")
+	if lock then
+		lock:Destroy()
+	end
+	if not small and spec.locked then
+		local ls = phone and C.lock.phone or C.lock.pc
+		local plate = Instance.new("Frame")
+		plate.Name = "Lock"
+		plate.AnchorPoint = Vector2.new(1, 1)
+		plate.Position = UDim2.new(1, -2, 1, -((phone and C.band.phone or C.band.pc) + 2))
+		plate.Size = UDim2.fromOffset(ls, ls)
+		plate.BackgroundColor3 = Color3.fromHex(C.bandBg)
+		plate.ZIndex = cell.ZIndex + 4
+		plate.Parent = cell
+		local pc = Instance.new("UICorner")
+		pc.CornerRadius = UDim.new(0, 6)
+		pc.Parent = plate
+		local ps = Instance.new("UIStroke")
+		ps.Color = Color3.fromHex(C.lockRim)
+		ps.Thickness = 2
+		ps.Parent = plate
+		ItemIcons.lock(plate, ls - 6, Color3.fromHex(C.lockRim))
+		for _, d in ipairs(plate:GetDescendants()) do
+			if d:IsA("GuiObject") then
+				d.ZIndex = plate.ZIndex + 1
+				if d.Parent == plate then
+					d.AnchorPoint = Vector2.new(0.5, 0.5)
+					d.Position = UDim2.fromScale(0.5, 0.5)
+				end
+			end
+		end
+	end
+	-- NEW 노랑 알약(위 테두리 밖 · 이름 NewDot = 본 뒤 끄는 옛 경로)
+	local pill = Instance.new("TextLabel")
+	pill.Name = "NewDot"
+	pill.AnchorPoint = Vector2.new(0.5, 0.5)
+	pill.Position = UDim2.new(0.5, 0, 0, 0)
+	pill.Size = UDim2.fromOffset(38, C.newPill)
+	pill.BackgroundColor3 = Color3.fromHex("FFC83D")
+	pill.TextColor3 = Color3.fromHex("3A2A12")
+	pill.Font = Enum.Font.FredokaOne
+	pill.TextSize = 13
+	pill.Text = "NEW"
+	pill.Visible = spec.isNew == true and not small
+	pill.ZIndex = cell.ZIndex + 5
+	pill.Parent = cell
+	local nc = Instance.new("UICorner")
+	nc.CornerRadius = UDim.new(1, 0)
+	nc.Parent = pill
+	return pill
 end
 
 return ItemCell

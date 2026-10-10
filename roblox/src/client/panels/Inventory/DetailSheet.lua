@@ -185,7 +185,24 @@ craftButton.Name = "CraftButton"
 craftButton.Text = Text.get("inv.act.craft")
 S.primordialActions = require(script.Parent.PrimordialActions).create(makeActionButton, setHint) -- D1: [각성](태초 · 초월 가방 · 착용 장비)
 local awakenButton = S.primordialActions.button()
-local ORDERED = { equipButton, awakenButton, inheritButton, dismantleButton, sellButton, rerollButton, craftButton }
+local compareButton = makeActionButton(2, 120, "plain") -- UI-1 4단계 나란히 비교(03 v3 §7)
+compareButton.Name = "CompareButton"
+compareButton.Text = Text.get("ui1.bag.compare")
+compareButton.Activated:Connect(function()
+	if S.selectedKind == "bag" and S.openCompareView then
+		S.openCompareView(S.selectedValue)
+	end
+end)
+local ORDERED = { equipButton, awakenButton, inheritButton, dismantleButton, sellButton, rerollButton, craftButton, compareButton }
+-- UI-1 4단계: 끼우면 전투력 ▲ +n%(초록) · ▼ −n%(빨강) · = 같음(회색) - 색 + 모양(서버 같은 함수 · 가방 정렬 · 바닥 ▲와 같은 값)
+function S.powerLine(pct)
+	if pct > 0.05 then
+		return { text = Text.get("ui1.bag.powerUp", { pct = ("%.1f"):format(pct) }), color = UIColors.success }
+	elseif pct < -0.05 then
+		return { text = Text.get("ui1.bag.powerDown", { pct = ("%.1f"):format(-pct) }), color = UIColors.danger }
+	end
+	return { text = Text.get("ui1.bag.powerSame"), color = UIColors.textTertiary }
+end
 
 -- ═══ 상세 갱신 ═══
 local function hideButtons()
@@ -216,6 +233,10 @@ local function refreshBag(item)
 	local equippedSame = S.equippedByPart()[item.part or "armor"]
 	local sellable = item.grade ~= "transcendent" -- Q4: 초월 = 판매 불가(서버가 막는다)
 	local lines = { { text = described.meta, color = UIColors.textPrimary }, Compare.baseLine(item, equippedSame) }
+	local pct = S.BAG_V3 and S.powerDeltas and S.powerDeltas[S.selectedValue]
+	if pct then
+		table.insert(lines, 2, S.powerLine(pct))
+	end
 	for _, line in ipairs(Compare.optionLines(item, equippedSame, classId, false)) do
 		table.insert(lines, line)
 	end
@@ -236,6 +257,7 @@ local function refreshBag(item)
 	if blockReason and blockReason ~= "busy" then
 		setHint(ItemActions.reasonText(blockReason), true)
 	end
+	compareButton.Visible = S.BAG_V3 == true
 	inheritButton.Visible = Inherit.isUpgrade(equippedSame, item)
 	setEnabled(inheritButton, true)
 	-- 분해: 영웅 이상 · 안 잠김 · 초월 아님(C5-7). 판매: 잠겨도 눌리게 둔다(눌렀을 때 "잠금을 풀어야" 이유 한 줄 - P3c E3) · 초월은 판매 불가.

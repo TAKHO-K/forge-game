@@ -99,6 +99,39 @@ sellRequest.OnServerEvent:Connect(function(player, action, arg, signature)
 		elseif why == "count_mismatch" then -- QUEUE-ALL9A 2-2: 같은 Remote로 결과를 돌려준다(클라가 안내 + 새 개수로 확인 창 다시)
 			sellRequest:FireClient(player, "sellGrades", false, why)
 		end
+	elseif action == "sellList" or action == "dismantleList" then -- UI-1 4단계(03 v3 §8 선택해서 정리): arg = { { index, signature } … }(최대 가방 칸) · 확인값 대조 · 큰 번호부터(앞 칸이 안 밀리게) · 잠금 · 판매 불가는 각 함수가 거른다
+		if type(arg) ~= "table" or #arg == 0 or #arg > 200 then
+			return
+		end
+		local Loot = require(ReplicatedStorage.Shared.Loot)
+		local list = {}
+		for _, e in ipairs(arg) do
+			if type(e) == "table" and type(e[1]) == "number" and type(e[2]) == "string" then
+				local i = math.floor(e[1])
+				local item = profile.inventory[i]
+				if item and Loot.itemSignature(item) == e[2] then
+					table.insert(list, i)
+				end
+			end
+		end
+		table.sort(list, function(a, b)
+			return a > b
+		end)
+		local done = 0
+		for _, i in ipairs(list) do
+			local ok
+			if action == "sellList" then
+				ok = PlayerProfile.sellItem(player, i)
+			else
+				ok = PlayerProfile.dismantleItem(player, i)
+			end
+			if ok then
+				done += 1
+			end
+		end
+		if done > 0 then
+			ImmediateSave.request(player)
+		end
 	elseif action == "sellBulk" then -- QUEUE-ALL8 G1: 옛 "기준 등급 이하" 일괄 판매(상한 전설) = 닫음 - 가방 UI가 sellGrades로 바뀌었다(전설 이상 일괄 판매 경로를 남기지 않는다)
 		return
 	elseif action == "dismantleBulk" then -- Q13: 등급 선택 일괄 분해(무료 · 잠금 · 초월 · 태초 보호 = Loot.isBulkDismantleTarget)

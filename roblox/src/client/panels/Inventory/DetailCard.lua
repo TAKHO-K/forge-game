@@ -351,6 +351,22 @@ function DetailCard.build(parent, S)
 			socket.plus.Visible = not gem and unlocked == true
 			socket.lock.Visible = not gem and unlocked ~= true
 		end
+		-- UI-1 4단계: 잠긴 홈 = 자물쇠 + "준비 중"(열기 방식 = 사용자 확인 대기 · 새 힘 · 비용 없음 - 규칙은 그대로)
+		if require(ReplicatedStorage.Shared.data.UiV2Flags).bag then
+			local anyLocked = false
+			for slot in ipairs(sockets) do
+				if not (state and state.slotUnlocked and state.slotUnlocked[slot]) then
+					anyLocked = true
+				end
+			end
+			local soon = gemRow:FindFirstChild("GemSoon") or label(gemRow, "GemSoon", "caption", "textTertiary")
+			soon.Text = Text.get("ui1.bag.gemSoon")
+			soon.AnchorPoint = Vector2.new(1, 0.5)
+			soon.Position = UDim2.new(1, -4, 0.5, 0)
+			soon.Size = UDim2.new(0, 80, 1, 0)
+			soon.TextXAlignment = Enum.TextXAlignment.Right
+			soon.Visible = anyLocked
+		end
 	end
 
 	local function paintLock(locked)

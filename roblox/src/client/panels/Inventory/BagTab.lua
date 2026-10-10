@@ -229,8 +229,21 @@ local function passesFilter(item)
 	if S.lockedOnly and not item.locked then
 		return false
 	end
+	if S.BAG_V3 then -- UI-1 4단계 필터 판: 같은 묶음 = 하나라도 맞으면 · 묶음끼리 = 모두
+		local F = S.filters
+		if next(F.grade) and not F.grade[item.grade] then
+			return false
+		end
+		if next(F.zone) and not F.zone[item.setZone or ""] then
+			return false
+		end
+		if next(F.option) and not (item.option and F.option[item.option.id]) then
+			return false
+		end
+	end
 	return true
 end
+S.bagPassesFilter = passesFilter
 
 local function makeCell(entry, order)
 	local item = entry.item
@@ -284,9 +297,39 @@ local function makeCell(entry, order)
 	end)
 
 	-- S20d: PC 한 번 클릭 = 상세 · 더블클릭 = 착용 · 우클릭 = 착용 / 탭 방식(폰)은 선택만 하고 상세의 [장착] 버튼이 착용한다. 착용 · 해제는 S.equipFromBag(ItemActions) 한 곳으로 간다.
+	if S.BAG_V3 and S.selectMode then -- UI-1 4단계 선택해서 정리: 오른쪽 위 원 · 잠금 = 흐림(고를 수 없음)
+		local V3 = require(ReplicatedStorage.Shared.data.UiLayoutData).bag.v3
+		local ArtImage = require(script.Parent.Parent.Parent.ui.ArtImage)
+		local check = Instance.new("ImageLabel")
+		check.Name = "SelectCheck"
+		check.BackgroundTransparency = 1
+		check.AnchorPoint = Vector2.new(1, 0)
+		check.Position = UDim2.new(1, -3, 0, 3)
+		check.Size = UDim2.fromOffset(V3.check.size, V3.check.size)
+		check.Image = ArtImage.get(S.selected[entry.index] and V3.check.on or V3.check.off) or ""
+		check.ZIndex = cell.ZIndex + 6
+		check.Parent = cell
+		if item.locked then
+			cell.BackgroundTransparency = 0.65
+			for _, d in ipairs(cell:GetDescendants()) do
+				if d:IsA("ImageLabel") and d ~= check then
+					d.ImageTransparency = math.max(d.ImageTransparency, 0.65)
+				end
+			end
+		end
+	end
 	cell.Activated:Connect(function()
 		if consumeTap() then
 			return -- 길게 눌러 비교를 본 손 뗌 - 선택으로 치지 않는다
+		end
+		if S.BAG_V3 and S.selectMode then
+			if item.locked then
+				S.selectShake(cell)
+				return
+			end
+			S.selected[entry.index] = (not S.selected[entry.index]) or nil
+			S.rebuildGrid()
+			return
 		end
 		if not S.tapMode() and isDoubleClick(entry.index) then
 			S.equipFromBag(entry.index)
@@ -342,6 +385,12 @@ local function rebuildGrid()
 
 	countLabel.Text = ("%d / %d"):format(#S.inventory, totalSlots)
 	refs.slotCount.Text = Text.get("inv.bag.count", { used = tostring(#S.inventory), total = tostring(totalSlots) })
+	if S.BAG_V3 and totalSlots and #S.inventory >= totalSlots then -- 03 v3 §8: 꽉 참 = 담담한 한 줄(회색 · 판매 권유 없음)
+		refs.slotCount.Text = Text.get("ui1.bag.full", { count = refs.slotCount.Text })
+	end
+	if S.refreshSelectBar then
+		S.refreshSelectBar()
+	end
 	local _, sellTotal = S.bulkSellEstimate()
 	refs.bulkEstimatePillLabel.Text = Text.get("gear.bag.bulkEstimate", { gold = NumberFormat.currency(sellTotal, Text.languageFor()) })
 	local names = {} -- QUEUE-ALL8 G1: 체크한 판매 등급(등급 순)
@@ -387,8 +436,15 @@ sortButton.Activated:Connect(function()
 	local currentIndex = table.find(S.SORT_MODES, S.sortMode) or 1
 	S.sortMode = S.SORT_MODES[currentIndex % #S.SORT_MODES + 1]
 	sortButton.Text = S.SORT_LABELS[S.sortMode]
+	if S.BAG_V3 then
+		require(script.Parent.Parent.Parent.ui.SettingSave)("bagSort", S.sortMode) -- UI-1 4단계: 고른 정렬 저장
+	end
 	S.rebuildGrid()
 end)
+if S.BAG_V3 then
+	sortButton.Text = S.SORT_LABELS[S.sortMode] or sortButton.Text
+	require(script.Parent.BagToolsV3).create(S, R, refs) -- UI-1 4단계: 정렬 방향 · 필터 판 · 선택해서 정리(03 v3 §6 · §8)
+end
 
 -- 배치: 정렬 · 자동 처리 · 일괄 판매 버튼 자리(PC 가운데 단 폭 400 이상 = 이 줄 · 아니면 헤더) · 잠긴 것만 칩(넓은 PC = 이 줄 · 아니면 아래 줄) · 열 수 · 격자 높이.
 function R.layoutBag(L)

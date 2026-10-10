@@ -480,6 +480,7 @@ local function makeSlot(part, order, equipped)
 			gradeId = gradeId,
 			part = "weapon",
 			iconKey = ItemIcons.keyFor("weapon", gradeId, nil, classId),
+			weaponClass = classId, -- UI-1 4단계: 칸 v3 = 실제 무기 그림(03 v3 §5)
 			iconColor = visual and GradeColor.text(gradeId) or UIColors.textPrimary, -- QUEUE-ALL9C 2-2
 			iconSize = 30,
 			topLeft = { text = ("+%d"):format(player:GetAttribute("WeaponLevel") or 0), color = UIColors.xp }, -- 무기만 강화(+N)가 있다

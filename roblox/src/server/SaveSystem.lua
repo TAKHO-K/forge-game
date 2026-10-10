@@ -324,7 +324,7 @@ local function defaultProfile()
 		leaderboardTainted = false,
 
 		-- 줍는 순간 자동 처리(G1-2, v36) - 계정 단위(bulkSellCutoffGrade와 같은 층). enabled = 켜짐 · maxGrade = 이 등급 이하(ArmorData.autoProcessGradeChoices 중 하나).
-		autoProcess = { enabled = false, maxGrade = "epic" },
+		autoProcess = { enabled = false, maxGrade = "normal" }, -- UI-1 4단계: 기본 = 가장 낮은 등급(일반)부터(사용자 10-10 · 옛 기본 epic)
 	}
 end
 

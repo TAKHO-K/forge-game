@@ -3,7 +3,7 @@
 --   B4 사운드: kind volume(0 ~ 1 숫자) = 카테고리별 음량(SoundData.categories가 settingKey로 가리킨다 · 클라 SoundHooks가 Attribute로 읽는다). 저장은 같은 settings 표(없는 키 = 기본값 - 이관 없음).
 --   reduceFlashes = 번개 · 태초 화면 섬광 끄기(관문 날씨 섬광 끔 · 피뢰침 방전은 흰 번쩍 대신 밝기만 · 태초 연출의 화면 밝아짐 없음 - 보스 경고 표시는 그대로).
 return {
-	order = { "cameraTopDown", "reduceFlashes", "screenShake", "dimOthersTrail", "autoStage", "volumeSfx", "volumeMusic", "volumeUi", "volumeBossCue", "transcendNotice", "fxLevel", "volumeAmbient", "muteSfx", "muteUi", "muteAmbient", "muteMusic", "windowPositions", "graphics", "language", "quietOthersSfx", "minimapOn", "minimapRotate", "minimapFar", "mapHintSeen", "hubIntroRank", "hubIntroBoard", "hubIntroChallenge", "hubIntroTailor", "bulkSellGrades", "sellHintSeen", "weekendBannerAt", "skipMenu", "autoProcessMode", "autoProcessHintSeen", "menuLoreSeen", "lastSeenNewsId", "textScale", "doubleTapDash" },
+	order = { "cameraTopDown", "reduceFlashes", "screenShake", "dimOthersTrail", "autoStage", "volumeSfx", "volumeMusic", "volumeUi", "volumeBossCue", "transcendNotice", "fxLevel", "volumeAmbient", "muteSfx", "muteUi", "muteAmbient", "muteMusic", "windowPositions", "graphics", "language", "quietOthersSfx", "minimapOn", "minimapRotate", "minimapFar", "mapHintSeen", "hubIntroRank", "hubIntroBoard", "hubIntroChallenge", "hubIntroTailor", "bulkSellGrades", "sellHintSeen", "weekendBannerAt", "skipMenu", "autoProcessMode", "autoProcessHintSeen", "menuLoreSeen", "lastSeenNewsId", "textScale", "doubleTapDash", "bagSort", "bagSortAsc" },
 	keys = {
 		cameraTopDown = { kind = "boolean", default = false, attrs = { "CameraTopDown" } },
 		reduceFlashes = { kind = "boolean", default = false, attrs = { "ReduceFlashes" } },
@@ -28,7 +28,10 @@ return {
 		autoProcessHintSeen = { kind = "boolean", default = false, attrs = { "AutoProcessHintSeen" } },
 		menuLoreSeen = { kind = "boolean", default = false, attrs = { "MenuLoreSeen" } }, -- QUEUE-UI UI-1 메인 메뉴 첫 실행 설정 문구 1회(01 spec - 계정 · 없는 키 = 기본값, 이관 없음)
 		lastSeenNewsId = { kind = "stamp", default = 0, attrs = { "LastSeenNewsId" } }, -- QUEUE-UI1F-1 소식 창을 열 때 본 가장 큰 소식 id(SocialRewardData.news[].id - 계정 · 없는 키 = 0 = 빨간 점, 이관 없음)
-		doubleTapDash = { kind = "boolean", default = true, attrs = { "SettingDoubleTapDash" } }, -- FINAL-1b 결정 3: W/A/D 두 번 = 짧은 대시(끄면 그 입력 무시 · S 두 번 백플립은 그대로 · 계정 · 없는 키 = 켬, 이관 없음)
+		doubleTapDash = { kind = "boolean", default = true, attrs = { "SettingDoubleTapDash" } },
+		-- UI-1 4단계(03 v3 §6): 가방 정렬(등급 · 부위 · 전투력 · 최신) · 낮은 것 먼저(기본 = 높은 것 먼저) - 계정 · 없는 키 = 기본값(이관 없음 · SAVE 버전 안 올림)
+		bagSort = { kind = "choice", default = "grade", options = { "grade", "part", "power", "newest" }, attrs = { "BagSort" } },
+		bagSortAsc = { kind = "boolean", default = false, attrs = { "BagSortAsc" } }, -- FINAL-1b 결정 3: W/A/D 두 번 = 짧은 대시(끄면 그 입력 무시 · S 두 번 백플립은 그대로 · 계정 · 없는 키 = 켬, 이관 없음)
 		textScale = { kind = "choice", default = "normal", options = { "normal", "large", "xlarge" }, attrs = { "UiTextScale" } }, -- QUEUE-UI2 UI2-2 글자 크기(배율 = UiTokens.textScaleSteps · 계정 · 없는 키 = 보통, 이관 없음)
 		weekendBannerAt = { kind = "stamp", default = 0, attrs = {} }, -- QUEUE-ALL9A 1-2 주말 패스 2배 배너를 본 창의 시작 시각(서버가 쓴다 · 없는 키 = 기본값 - 이관 없음)
 		bulkSellGrades = { kind = "choice", default = "normal,rare", options = { "normal", "rare", "epic", "normal,rare", "normal,epic", "rare,epic", "normal,rare,epic" }, attrs = { "BulkSellGrades" } },

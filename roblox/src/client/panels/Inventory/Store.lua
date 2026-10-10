@@ -45,8 +45,28 @@ end
 S.GEAR_ORDER, S.PART_ORDER_INDEX = GEAR_ORDER, PART_ORDER_INDEX
 
 S.sortMode = "grade" -- "grade" | "level" | "part" - 클라 전용 표시 순서, 서버 왕복 없음.
+-- UI-1 4단계(03 v3 §6): 스위치 UiV2Flags.bag = 정렬 4(등급 · 부위 · 전투력 · 최신) + 높은 것 / 낮은 것 먼저(설정 bagSort · bagSortAsc) ·
+--   전투력 = 서버 BagItemPower(PlayerProfile.combatPowerDeltaPct - 바닥 ▲ +%와 같은 함수) · 최신 = item.obtainedAt(옛 아이템 = 가방 순서)
+S.BAG_V3 = require(ReplicatedStorage.Shared.data.UiV2Flags).bag
+S.sortAsc = false
+S.powerDeltas = nil -- [가방 index] = 끼우면 전투력 몇 %
+S.filters = { grade = {}, zone = {}, option = {} } -- 필터 판(같은 묶음 = 또는 · 묶음끼리 = 그리고)
+S.selectMode, S.selected = false, {} -- 선택해서 정리
 S.SORT_MODES = { "grade", "level", "part" }
 S.SORT_LABELS = { grade = Text.get("gear.bag.sortGrade"), level = Text.get("gear.bag.sortLevel"), part = Text.get("gear.bag.sortPart") } -- QUEUE-ALL1 01 A-2 문구(등급 → 레벨 → 부위)
+if S.BAG_V3 then
+	S.SORT_MODES = require(ReplicatedStorage.Shared.data.UiLayoutData).bag.v3.sortModes
+	S.SORT_LABELS = { grade = Text.get("ui1.bag.sort.grade"), part = Text.get("ui1.bag.sort.part"), power = Text.get("ui1.bag.sort.power"), newest = Text.get("ui1.bag.sort.newest") }
+	local lp = game:GetService("Players").LocalPlayer
+	local function readSort()
+		local v = lp:GetAttribute("BagSort")
+		S.sortMode = (type(v) == "string" and S.SORT_LABELS[v]) and v or "grade"
+		S.sortAsc = lp:GetAttribute("BagSortAsc") == true
+	end
+	readSort()
+	lp:GetAttributeChangedSignal("BagSort"):Connect(readSort)
+	lp:GetAttributeChangedSignal("BagSortAsc"):Connect(readSort)
+end
 
 S.bulkSellDropdownOpen = false
 -- QUEUE-ALL8 G1: 등급별 일괄 판매 체크(설정 bulkSellGrades - Attribute BulkSellGrades · 쉼표 문자열) · 전설 이상은 고를 수 없다(ArmorData.bulkSellGrades)
@@ -211,6 +231,35 @@ local function sortedEntries()
 		table.insert(entries, { item = item, index = i })
 	end
 
+	if S.BAG_V3 then -- UI-1 4단계: 정렬 4 + 방향 · 같으면 다음 기준(등급 → 아이템 레벨 → 최신 / 부위 → 등급 / 전투력 → 등급)
+		local gi = {}
+		for i, id in ipairs(ArmorData.gradeOrder) do
+			gi[id] = i
+		end
+		local function newest(e)
+			return e.item.obtainedAt or e.index * 1e-6 -- 옛 아이템(얻은 시각 없음) = 가방 순서(뒤 = 최근)
+		end
+		local keys = {
+			grade = function(e) return { gi[e.item.grade] or 0, e.item.itemLevel or 0, newest(e) } end,
+			part = function(e) return { -(PART_ORDER_INDEX[e.item.part or "armor"] or 99), gi[e.item.grade] or 0 } end,
+			power = function(e) return { (S.powerDeltas and S.powerDeltas[e.index]) or -math.huge, gi[e.item.grade] or 0 } end,
+			newest = function(e) return { newest(e) } end,
+		}
+		local key = keys[S.sortMode] or keys.grade
+		table.sort(entries, function(a, b)
+			local ka, kb = key(a), key(b)
+			for i = 1, #ka do
+				if ka[i] ~= kb[i] then
+					if S.sortAsc then
+						return ka[i] < kb[i]
+					end
+					return ka[i] > kb[i]
+				end
+			end
+			return a.index < b.index
+		end)
+		return entries
+	end
 	if S.sortMode == "grade" then
 		table.sort(entries, function(a, b)
 			local ai, bi = 0, 0

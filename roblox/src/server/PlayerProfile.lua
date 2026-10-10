@@ -167,6 +167,31 @@ function PlayerProfile.getCombatPower(player)
 	return CombatFormula.offensePowerOf(atk, class.critRate + critRate, class.critDmg + critDmg)
 end
 
+-- UI-1 4단계(03 v3 MISSING 1): 장비 1개를 착용하면 전투력이 얼마가 되나 = 같은 함수(getCombatPower)를 그 부위만 바꿔 끼운 채 계산하고 바로 되돌린다(양보 없음 · 저장 안 건드림).
+--   가방 "전투력" 정렬 · 상세 비교 · 바닥 장비 ▲ +%가 이 값 하나를 쓴다. 반환 = 끼웠을 때 전투력(무기 · 부위 없는 아이템 = 지금 값)
+function PlayerProfile.combatPowerWith(player, item)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	local part = type(item) == "table" and item.part
+	if not classState or not part or part == "weapon" then
+		return PlayerProfile.getCombatPower(player)
+	end
+	local old = classState.equipment[part]
+	classState.equipment[part] = item
+	local ok, power = pcall(PlayerProfile.getCombatPower, player)
+	classState.equipment[part] = old
+	return ok and power or PlayerProfile.getCombatPower(player)
+end
+
+-- 같은 값의 비율(끼우면 몇 % 오르나 · 지금 0이면 0)
+function PlayerProfile.combatPowerDeltaPct(player, item)
+	local base = PlayerProfile.getCombatPower(player)
+	if not base or base <= 0 then
+		return 0
+	end
+	return (PlayerProfile.combatPowerWith(player, item) - base) / base * 100
+end
+
 -- MV1 태초 신발 = 2단 대시 충전 · 태초 장갑 = 붙잡기(DashServer · MovementServer가 읽는다).
 function PlayerProfile.getDashCharges(player)
 	return Loot.getShoesDashCharges(PlayerProfile.getEquipped(player, "shoes"))
@@ -1994,6 +2019,7 @@ function PlayerProfile.addArmorDrop(player, item, options)
 	if #profile.inventory >= PlayerProfile.inventoryCapacity(profile) and not (options and options.force) then
 		return false
 	end
+	item.obtainedAt = item.obtainedAt or os.time() -- UI-1 4단계: 얻은 시각(가방 정렬 "최신" · 옛 아이템 = 없음 → 가방 순서 · 저장 필드 추가만)
 	table.insert(profile.inventory, item)
 	InventorySync.push(player, profile)
 	return true

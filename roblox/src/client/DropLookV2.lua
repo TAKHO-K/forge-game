@@ -192,6 +192,11 @@ function DropLookV2.build(model, folder, grade, ground, color)
 		local g = ArmorData.grades[grade]
 		local partName = ItemVisualData.partDisplayNames[model:GetAttribute("DropPart") or "armor"] or ""
 		label.Text = ("%s%s (%s)"):format(zone and (Text.name(zone) .. " ") or "", Text.name(partName), g and Text.name(g.displayName) or grade)
+		-- UI-1 4단계(03 v3): 내가 끼우면 전투력 ▲ +n%(서버 PlayerProfile.combatPowerDeltaPct - 가방 "전투력" 정렬과 같은 값 · 오를 때만)
+		local pct = model:GetAttribute("PowerUpPct")
+		if require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).bag and type(pct) == "number" and pct > 0 and model:GetAttribute("PowerUpOwner") == game:GetService("Players").LocalPlayer.UserId then
+			label.Text = Text.get("ui1.bag.dropPowerUp", { name = label.Text, pct = ("%.1f"):format(pct) })
+		end
 		if st.rank >= rankOf(V.nameplateAlwaysFrom) then
 			gui.MaxDistance = V.nameplateFarStuds
 			gui.Size = UDim2.new(gui.Size.X.Scale * spec.nameScale, 0, gui.Size.Y.Scale * spec.nameScale, 0)

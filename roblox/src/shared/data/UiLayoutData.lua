@@ -203,5 +203,14 @@ return {
 			phone = { w = 784, h = 232, pad = 17, titleY = 6, titleH = 30, subH = 0, chipY = 44, chipH = 44, chipGap = 8, chipCols = 6, summaryH = 52, autoH = 0, buttonH = 48, buttonGap = 10 },
 		},
 		tabIcons = { gear = { part = "weapon" }, all = { ui = "bag" }, armor = { part = "armor" }, gloves = { part = "gloves" }, shoes = { part = "shoes" }, gem = { gem = "legendary" }, codex = { ui = "book" } },
+		-- UI-1 4단계(03 v3 §4 · §5 · §6): 칸 v3 · 무기 그림(ui/weapon/weapon-<직업>-g<등급 번호> · 칸의 82%) · 정렬 4 · 필터 · 선택 체크 그림
+		v3 = {
+			cell = { band = { pc = 20, phone = 18 }, bandText = { pc = 14, phone = 13 }, bandBg = "0E1120", bandBgTransparency = 0.18, lock = { pc = 24, phone = 20 }, lockRim = "FFE7A3",
+				levelText = { pc = 14, phone = 13 }, newPill = 18, armorIcon = 0.60, weaponIcon = 0.82, smallFrom = 56 },
+			weaponIcon = { prefix = "ui/weapon/weapon-", classStem = { greatsword = "gs", dualblade = "db", bow = "bow", healer = "staff" } },
+			sortModes = { "grade", "part", "power", "newest" },
+			check = { on = "ui/weapon/cell-check-on", off = "ui/weapon/cell-check-off", size = 26 },
+			gemLockedText = "ui1.bag.gemSoon", -- 보석 홈 열기 방식 = 사용자 확인 대기 → 잠긴 홈 = 자물쇠 + "곧 열려요"(지시 "준비 중" = 글자 검사 ALL8 A3 금지 문구라 같은 뜻으로 · 새 힘 · 비용 없음)
+		},
 	},
 }

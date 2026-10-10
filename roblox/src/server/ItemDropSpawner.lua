@@ -197,6 +197,13 @@ function ItemDropSpawner.spawn(item, deathPosition, owner)
 		model:SetAttribute("DropGrade", item.grade)
 		model:SetAttribute("DropPart", item.part or "armor")
 		model:SetAttribute("DropZone", ArtMeshKit.armorZone(item)) -- QUEUE-ALL1 P2 드랍 v2: 클라 이름표 "<세트> <부위> (<등급>)"
+		if owner and typeof(owner) == "Instance" and owner:IsA("Player") then -- UI-1 4단계: 주인이 끼우면 전투력 몇 %(가방 정렬과 같은 함수 · 이름표 ▲ +%)
+			local ok, pct = pcall(require(script.Parent.PlayerProfile).combatPowerDeltaPct, owner, item)
+			if ok and type(pct) == "number" then
+				model:SetAttribute("PowerUpPct", math.floor(pct * 10 + 0.5) / 10)
+				model:SetAttribute("PowerUpOwner", owner.UserId) -- 이 값은 주인 기준(다른 사람 이름표에는 안 붙임)
+			end
+		end
 		addPillar(model, groundPosition, item.grade, dropColor(item.grade))
 	end
 

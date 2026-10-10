@@ -57,6 +57,7 @@ ItemActions.attach(S, R) -- S20d: 착용 · 해제 입력의 유일한 통로(S.
 GearTab.create(S, R)
 BagTab.create(S, R)
 DetailSheet.create(S, R)
+require(script.Parent.panels.Inventory.CompareView).create(S, R) -- UI-1 4단계 나란히 비교
 BulkSell.create(S, R)
 CodexTab.create(S, R) -- A2-N4 §4-2 세트 도감(SetData.codex 스위치 뒤)
 R.codexEnabled = CodexTab.enabled
@@ -167,6 +168,24 @@ local function onStateChanged(state)
 	S.equippedGloves = state.gloves
 	S.equippedShoes = state.shoes
 	S.newItems.update() -- 서버 스냅샷만 센다(점검이 넣는 가짜 가방은 세지 않는다)
+	if S.BAG_V3 then -- UI-1 4단계: 가방 장비 1개 전투력 변화(서버 같은 함수) - 정렬 "전투력" · 상세 ▲ ▼ %
+		task.spawn(function()
+			local rf = ReplicatedStorage:FindFirstChild("BagItemPower")
+			local ok, res = pcall(function()
+				return rf and rf:InvokeServer()
+			end)
+			if ok and type(res) == "table" and type(res.deltas) == "table" then
+				S.powerDeltas = res.deltas
+				if S.isOpen then
+					if S.sortMode == "power" then
+						S.rebuildGrid()
+					else
+						S.refreshDetail()
+					end
+				end
+			end
+		end)
+	end
 	-- 칸 수는 서버가 알린 값(slots - 프로필이 아직 없을 때의 첫 응답에는 없다). 바뀌면 격자 높이가 칸 수에서 나오므로 배치를 다시 한다.
 	if state.bagPass ~= nil and state.bagPass ~= S.bagPass then -- QUEUE-UI2 UI2-5 확장 안내(패스 없을 때만)
 		S.bagPass = state.bagPass
