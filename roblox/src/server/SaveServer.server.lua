@@ -31,6 +31,13 @@ MonetizationService.start()
 require(script.Parent.Telemetry).start() -- Q15 T1 통계(몇 분마다 · 퇴장 때 전송 · Studio = 드라이런)
 
 local function loadForPlayer(player)
+	local leaveWaited, leaveDone = SaveCoordinator.waitForLeaveSave(player.UserId) -- SEC-FIX-1 2: 같은 서버 재접속 = 내 퇴장 저장이 끝난 뒤 읽는다(옛 = 먼저 읽어 그 접속 저장이 stale로 멈춤)
+	if leaveWaited > 0 then
+		print(("[forge-game] 재접속 퇴장 저장 대기: %.1f초 · 끝남=%s"):format(leaveWaited, tostring(leaveDone)))
+	end
+	if not player.Parent then
+		return
+	end
 	local profile, err, loadInfo = SaveSystem.loadProfile(player)
 	if not player.Parent then
 		-- QUEUE-ALL5 D②: 읽는(잠금 대기 최대 10초) 동안 나갔다 - PlayerRemoving(flush · clear)은 이미 지나갔으므로 여기서 init하면 프로필이 서버 수명 내내 남았다
@@ -67,6 +74,7 @@ Players.PlayerAdded:Connect(loadForPlayer)
 local leavingCount = 0 -- QUEUE-ALL4 C: 퇴장 처리 중인 사람 수(종료 저장이 이것까지 기다린다 - 마지막 사람이 나가며 서버가 닫힐 때 퇴장 저장이 잘리지 않게)
 Players.PlayerRemoving:Connect(function(player)
 	leavingCount += 1
+	SaveCoordinator.beginLeave(player.UserId) -- SEC-FIX-1 2: 같은 UserId의 새 로드가 이 저장을 기다린다
 	pcall(function()
 		require(script.Parent.Telemetry).onLeaving(player) -- Q15: 프로필을 지우기 전에 통계 전송
 	end)
@@ -75,6 +83,7 @@ Players.PlayerRemoving:Connect(function(player)
 	SaveSystem.markReleasing(player, false)
 	PlayerProfile.clear(player)
 	SaveSystem.forgetSlotSession(player) -- QUEUE-MENU2 B: 캐릭터 칸 세션
+	SaveCoordinator.endLeave(player.UserId)
 	leavingCount -= 1
 end)
 

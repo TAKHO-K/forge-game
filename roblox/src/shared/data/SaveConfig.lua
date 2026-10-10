@@ -100,6 +100,8 @@ return {
 	sessionLockFreshSeconds = 90,
 	sessionLockMaxWaitSeconds = 10, -- 로드를 최대 이만큼 미룬다(그 뒤엔 읽은 값으로 진행)
 	sessionLockPollSeconds = 2, -- 다시 읽는 간격(GetAsync 예산: 사람당 최대 5회)
+	-- SEC-FIX-1 2(AUDIT1 #15): 같은 서버로 다시 들어오면 그 사람의 퇴장 저장이 끝날 때까지 로드를 미루는 상한(초). 칸 저장 = 키 2개 × (시도 4 + 재시도 대기 1 + 3 + 6) ≈ 22초 + 여유.
+	leaveSaveWaitMaxSeconds = 30,
 
 	-- 저장/불러오기 재시도 횟수(첫 시도 이후 추가로 몇 번 더 시도하는지)와 시도 사이 대기(초).
 	-- 배열 길이 = 재시도 횟수와 같아야 한다(총 시도 = 1 + 재시도 횟수, 대기는 시도 사이에만

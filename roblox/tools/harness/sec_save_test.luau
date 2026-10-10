@@ -1,7 +1,7 @@
 -- SEC-FIX-1 1 · 2 저장 · 수령 재현 하네스(실제 SaveSystem · SlotSave · SaveCoordinator · ImmediateSave · SlotSwitch + 가짜 DataStore · 가상 시계 - 스캐폴드 = slot_save_test 앞부분 그대로).
--- 실행: LUAU=<luau.exe> EXTRA_SERVER=SaveSystem,SlotSave,SaveCoordinator,ImmediateSave,SlotSwitch ECON_RES=res_secsave.txt python build_run.py sec_save_test.luau
+-- 실행: LUAU=<luau.exe> EXTRA_SERVER=SaveSystem,SlotSave,SaveCoordinator,ImmediateSave,SlotSwitch,SaveServer.server ECON_RES=res_secsave.txt python build_run.py sec_save_test.luau
 -- 옛 코드 실패 확인 = ECON_SRC=<옛 src 스냅샷>으로 같은 명령(옛 = X가 나와야 재현).
--- 묶음: 1-a 칸 전환 중 자동저장 · 1-b 계정 키만 실패 · 1-c 새 캐릭터 첫 저장 순서 - 끝 줄 "[SECSAVE] 끝 n/m".
+-- 묶음: 1-a 칸 전환 중 자동저장 · 1-b 계정 키만 실패 · 1-c 새 캐릭터 첫 저장 순서 · 2 같은 서버 재접속(실제 SaveServer.server) - 끝 줄 "[SECSAVE] 끝 n/m".
 local pass, total = 0, 0
 local function check(tag, label, ok, detail)
 	total += 1
@@ -20,8 +20,13 @@ os = setmetatable({
 	time = function(t) if t then return realos.time(t) end return BASE_UNIX + math.floor(NOW) end,
 }, { __index = realos })
 local sleepers = {}
+HALT = false -- 2절: SaveServer 자동저장 루프(while true)를 끝에 멈춘다
 task.wait = function(s)
 	s = s or 0.03
+	if HALT then
+		coroutine.yield()
+		return s
+	end
 	local co = coroutine.running()
 	if not co or not coroutine.isyieldable() then
 		NOW += s
@@ -298,6 +303,69 @@ local function main()
 		acct = raw("Acct_703")
 		check("SECSAVE", "1-c 다시 저장 = 칸 + 캐릭터 키", okN2 == true and acct.slots[3] and raw("Char_703_" .. acct.slots[3].charId) ~= nil)
 	end
+
+	-- ═══ 2. 같은 서버 재접속(AUDIT1 #15) - 실제 SaveServer.server.lua(접속 로드 · 퇴장 저장 · 자동저장 배선)를 가짜 Players로 ═══
+	do
+		local added, removing, list = {}, {}, {}
+		local FakePlayers = {
+			PlayerAdded = { Connect = function(_, f) table.insert(added, f) end },
+			PlayerRemoving = { Connect = function(_, f) table.insert(removing, f) end },
+			GetPlayers = function() return table.clone(list) end,
+		}
+		local prevGS = game.GetService
+		game.GetService = function(self, svc)
+			if svc == "Players" then
+				return FakePlayers
+			end
+			return prevGS(self, svc)
+		end
+		game.BindToClose = function() end
+		local function stubStart() return { start = function() end, custom = function() end, onLeaving = function() end } end
+		for _, n in ipairs({ "AcquisitionAudit", "QuestService", "PetService", "CommunityGoalService", "WeeklyChallengeService", "CodexService", "SocialRewardService", "SettingsService", "MonetizationService", "Telemetry" }) do
+			LOADERS[n] = stubStart
+		end
+		local _ = MODS["SaveServer.server"] -- 스크립트 본문 실행(PlayerAdded · PlayerRemoving · 자동저장 루프 연결)
+		local function join(p)
+			table.insert(list, p)
+			for _, f in ipairs(added) do
+				task.spawn(f, p)
+			end
+		end
+		local function leave(p)
+			table.remove(list, table.find(list, p))
+			p.Parent = nil
+			for _, f in ipairs(removing) do
+				task.spawn(f, p)
+			end
+		end
+		seedLegacy(801)
+		local p1 = mkPlayer(801)
+		join(p1)
+		runUntilIdle(NOW + 5)
+		local prof1 = PROFILES[p1]
+		check("SECSAVE", "2 첫 접속 로드", prof1 ~= nil and prof1.gold == 5000, tostring(prof1 and prof1.gold))
+		NOW += 30
+		prof1.gold = 12345 -- 이 접속의 진행
+		DS.failKeys[STORE .. "/Acct_801"] = 1 -- 퇴장 저장 첫 시도 장애 → 1초 뒤 재시도(퇴장 저장이 길어짐)
+		leave(p1)
+		local p2 = mkPlayer(801) -- 같은 서버로 0.3초 뒤 다시 들어옴(새 Player 인스턴스 · 같은 UserId)
+		task.delay(0.3, join, p2)
+		runUntilIdle(NOW + 20)
+		local prof2 = PROFILES[p2]
+		check("SECSAVE", "2 재접속 로드 = 퇴장 저장 뒤 값(옛 = 퇴장 저장 전에 읽어 옛 골드)", prof2 ~= nil and prof2.gold == 12345, tostring(prof2 and prof2.gold))
+		if prof2 then
+			prof2.gold += 1
+		end
+		runUntilIdle(NOW + SaveConfig.autosaveIntervalSeconds + 5) -- 자동저장 한 주기
+		local _, ch = reloadRaw(801, 1)
+		check("SECSAVE", "2 재접속 뒤 자동저장 진행 저장(옛 = stale_session으로 그 접속 저장 중단)", not Coord.isSuspended(p2) and ch and prof2 and ch.data.gold == prof2.gold,
+			("중단 %s · 저장된 골드 %s"):format(tostring(Coord.isSuspended(p2)), tostring(ch and ch.data.gold)))
+		leave(p2)
+		runUntilIdle(NOW + 30)
+		local _, ch2 = reloadRaw(801, 1)
+		check("SECSAVE", "2 다시 나감 = 마지막 진행 저장", ch2 and prof2 and ch2.data.gold == prof2.gold, tostring(ch2 and ch2.data.gold))
+	end
+	HALT = true -- 자동저장 루프 멈춤(가상 시계가 끝나게)
 end
 
 task.spawn(function()

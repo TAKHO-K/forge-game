@@ -53,6 +53,26 @@ function SaveCoordinator.setSwitchLocked(player, on)
 	switchLocked[player] = on and true or nil
 end
 
+-- SEC-FIX-1 2(AUDIT1 #15): 같은 서버 재접속 - 퇴장 저장(옛 Player 인스턴스)이 아직 진행 중이면 새 로드가 그 저장보다 먼저 읽어(같은 서버 표식이라 세션 잠금 대기도 없음)
+--   옛 값으로 시작하고, 늦게 끝난 퇴장 저장이 savedAt을 올려 새 세션 저장이 그 접속 내내 stale_session으로 멈췄다.
+--   퇴장 저장을 UserId로 세고(saving은 Player 키라 새 인스턴스와 이어지지 않음) 로드가 그것이 끝날 때까지 기다린다(상한 SaveConfig.leaveSaveWaitMaxSeconds).
+local leavingByUserId = {}
+function SaveCoordinator.beginLeave(userId)
+	leavingByUserId[userId] = (leavingByUserId[userId] or 0) + 1
+end
+function SaveCoordinator.endLeave(userId)
+	local n = (leavingByUserId[userId] or 1) - 1
+	leavingByUserId[userId] = n > 0 and n or nil
+end
+-- 반환: 기다린 초(0 = 진행 중인 퇴장 저장 없음) · 상한 안에 끝났나
+function SaveCoordinator.waitForLeaveSave(userId)
+	local waited = 0
+	while leavingByUserId[userId] and waited < SaveConfig.leaveSaveWaitMaxSeconds do
+		waited += task.wait(0.1)
+	end
+	return waited, leavingByUserId[userId] == nil
+end
+
 -- QUEUE-ALL4 C 출시 감사: 진행 중인 saveForPlayer 수(종료 대기용) · 에러 실패 누계(관측) · 실패 안내 마지막 시각(사람별 간격).
 local activeSaves = 0
 local saveFailures = 0

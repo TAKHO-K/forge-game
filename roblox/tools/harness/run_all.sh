@@ -18,7 +18,7 @@ declare -A EXP=( # 기대 검사 수(끝 a/b의 b) · require_path는 최소값(
 	[bignum]=67 [bulk_sell]=11 [stat_sheet]=9 [all10]=57 [gear_v3]=10 [gem_home]=25 [monster_stats]=5 [dash_modes]=19 [boss_feel]=13
 	[menu_gate]=14 [menu_gate_src]=11 [hud_v5_src]=10 [ui1_static]=9 [ui1c_static]=13 [ui_v2]=77 [hud_layout]=18 [ui1_parts]=11 [codex_box]=35
 	[ember_view]=8 [hud_edit]=16 [pet_ui]=7 [quick_chat]=6 [ui_rules]=4 [window_layers]=7 [help_data]=6 [train_bundle]=5 [community_goal]=24 [require_path]=5542 [regrow_timing]=8
-	[sec_save]=9
+	[sec_save]=13
 )
 NALL=0; NBAD=0
 verdict() { # 이름 결과파일 종료코드 → 한 줄 출력
@@ -66,7 +66,7 @@ run save_lock res_lock.txt SaveSystem,SlotSave save_lock_test.luau
 run migrate_curve res_curve.txt SaveSystem,SlotSave migrate_curve_test.luau
 run id_quarantine res_quar.txt SaveSystem,SlotSave id_quarantine_test.luau
 run slot_save res_slot.txt SaveSystem,SlotSave,SkillCooldowns,MenuBlock slot_save_test.luau # QUEUE-MENU2 B 캐릭터 칸 저장(이관 · 분리 · 중복 · 상한 · 보관 · 두 서버 · 스위치 끔/켬 · 크기 · 새 계정)
-run sec_save res_secsave.txt SaveSystem,SlotSave,SaveCoordinator,ImmediateSave,SlotSwitch sec_save_test.luau # SEC-FIX-1 1 · 2 칸 전환 중 자동저장 · 계정 키 먼저 · 같은 서버 재접속(옛 = X · ECON_SRC로 옛 스냅샷 확인)
+run sec_save res_secsave.txt SaveSystem,SlotSave,SaveCoordinator,ImmediateSave,SlotSwitch,SaveServer.server sec_save_test.luau # SEC-FIX-1 1 · 2 칸 전환 중 자동저장 · 계정 키 먼저 · 같은 서버 재접속(옛 = X · ECON_SRC로 옛 스냅샷 확인)
 run monetize res_mon.txt "$(python deps.py MonetizationService,SaveSystem,OpsServer.server,InventorySync)" monetize_test.luau
 run dupe res_dupe.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem,MonetizationService)" dupe_test.luau
 run multiplayer res_multi.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem)" multiplayer_test.luau
