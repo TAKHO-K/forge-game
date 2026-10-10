@@ -117,7 +117,7 @@ local function row(t, order)
 	name.Position = UDim2.fromOffset(56, 4)
 	name.Size = UDim2.new(0.4, 0, 0, 22)
 	local now = t.level * (t.perLevel or 0) * 100
-	local nxt = (t.level + 1) * (t.perLevel or 0) * 100
+	local nxt = (t.level + (t.step or 1)) * (t.perLevel or 0) * 100 -- UI-1b 1-b 17: 한 번 누름 = 묶음(step 단계)
 	local atCap = t.level >= t.cap
 	local change = Theme.label(f, atCap and Text.get("training.valueCap", { now = ("%.2f"):format(now) })
 		or Text.get("training.value", { now = ("%.2f"):format(now), next = ("%.2f"):format(nxt) }), "body", atCap and "textSecondary" or "success")

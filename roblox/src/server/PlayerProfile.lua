@@ -11,6 +11,7 @@ local ArmorData = require(ReplicatedStorage.Shared.data.ArmorData)
 local SettingsData = require(ReplicatedStorage.Shared.data.SettingsData) -- QUEUE-N1004 A-1 자동 정리 방식 기본값
 local SetBonus = require(ReplicatedStorage.Shared.SetBonus) -- Q5 BR2 세트
 local Training = require(ReplicatedStorage.Shared.Training) -- Q6 G3 수련 · 직업 능력
+local TrainingData = require(ReplicatedStorage.Shared.data.TrainingData) -- UI-1b 1-b 17 묶음 %
 local All10 = require(ReplicatedStorage.Shared.All10) -- QUEUE-ALL10 초월 계승
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)
 local CharacterLevel = require(ReplicatedStorage.Shared.CharacterLevel)
@@ -2743,15 +2744,19 @@ function PlayerProfile.buyTraining(player, kind, id)
 	if level >= Training.capFor(def, best) then
 		return false, "cap"
 	end
-	local cost = Training.costFor(def, level, best)
+	local k = 1
+	if require(ReplicatedStorage.Shared.data.UiV2Flags).trainBundle then -- UI-1b 1-b 17: 묶음(서버가 계산 - 클라는 개수를 안 보냄) · 가격 = 합 · 한 번에 지불
+		k = Training.bundleLevels(def, level, Training.capFor(def, best), TrainingData.bundle[kind])
+	end
+	local cost = k == 1 and Training.costFor(def, level, best) or Training.bundleCost(def, level, k, best)
 	if not PlayerProfile.trySpendGold(player, cost) then
 		return false, "no_gold"
 	end
-	levels[def.id] = level + 1
+	levels[def.id] = level + k
 	syncMilestoneAttributes(player, profile)
 	PlayerProfile.refreshMaxHp(player) -- 리뷰 4: 체력 · 속도 수련은 그 자리에서 반영(equipGem과 같은 패턴)
 	PlayerProfile.refreshMovementSpeed(player)
-	return true, level + 1, cost
+	return true, level + k, cost
 end
 
 function PlayerProfile.getTrainingView(player)

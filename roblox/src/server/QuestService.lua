@@ -54,7 +54,13 @@ function QuestService.view(player)
 		local rows = {}
 		for _, def in ipairs(defs or {}) do
 			local level = tonumber(levels and levels[def.id]) or 0
-			table.insert(rows, { kind = kind, id = def.id, name = def.name, level = level, cap = Training.capFor(def, tv and tv.bestStage), maxLevel = def.maxLevel, cost = Training.costFor(def, level, tv and tv.bestStage), perLevel = def.perLevel }) -- QUEUE-ALL9B 2-4 maxLevel(현재 / 최대 표시 - 화면 ALL9C)
+			local cap = Training.capFor(def, tv and tv.bestStage)
+			local step, cost = 1, Training.costFor(def, level, tv and tv.bestStage)
+			if require(ReplicatedStorage.Shared.data.UiV2Flags).trainBundle then -- UI-1b 1-b 17: 화면 = 서버 구매와 같은 묶음(단계 수 · 합 가격)
+				step = math.max(1, Training.bundleLevels(def, level, cap, require(ReplicatedStorage.Shared.data.TrainingData).bundle[kind]))
+				cost = Training.bundleCost(def, level, step, tv and tv.bestStage)
+			end
+			table.insert(rows, { kind = kind, id = def.id, name = def.name, level = level, cap = cap, maxLevel = def.maxLevel, cost = cost, step = step, perLevel = def.perLevel }) -- QUEUE-ALL9B 2-4 maxLevel(현재 / 최대 표시 - 화면 ALL9C)
 		end
 		return rows
 	end

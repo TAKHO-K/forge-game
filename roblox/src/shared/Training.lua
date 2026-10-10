@@ -43,6 +43,25 @@ function Training.costFor(def, level, bestStage)
 	return GoldCost.cost(MonsterData.tier1.goldDrop * Training.killsFor(def, level), bestStage, Training.statDef(def.id) == def and "training" or "classAbility")
 end
 
+-- UI-1b 1-b 17: 한 번 누름 묶음 = target(%) 이상이 되는 최소 단계 수 · 상한(cap)까지 남은 만큼만(0 = 상한)
+function Training.bundleLevels(def, level, cap, target)
+	local left = math.max(0, (cap or 0) - (level or 0))
+	if left == 0 then
+		return 0
+	end
+	local k = math.max(1, math.ceil(target / def.perLevel - 1e-9))
+	return math.min(k, left)
+end
+
+-- 묶음 가격 = 묶인 단계 가격 합(단계 가격은 그대로 - 경제 영향 0)
+function Training.bundleCost(def, level, k, bestStage)
+	local sum = 0
+	for i = 0, k - 1 do
+		sum += Training.costFor(def, level + i, bestStage)
+	end
+	return sum
+end
+
 -- 합연산 몫: levels = { [id] = 단계 } · defs = 목록. bucket("attack" | "hp") 또는 axis(옵션 축 id) 하나로 모은다.
 local function sumFor(defs, levels, bucket, axis)
 	local sum = 0
