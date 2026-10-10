@@ -1700,7 +1700,7 @@ local function handleCommand(player, args)
 		print(("BOSSENTRY|spawned %s|hpBefore %.2f|dash1 %s|dashBeforeEntry %s|hpAfterEntry %.2f|dashAfterEntry %s|hpAttr %.2f"):format(tostring(spawned), before, tostring(first), tostring(blocked), after, tostring(dashAfter), (player:GetAttribute("Hp") or -1) / maxHp))
 		reply(player, ("보스 입장 확인: 체력 %.0f%% → %.0f%% · 대시 입장 전 %s → 입장 뒤 %s"):format(before * 100, after * 100, tostring(blocked), tostring(dashAfter)))
 	elseif sub == "ult" then
-		-- K1 궁극기:/gg ult fill(게이지 100) · /gg ult state · /gg ult forge(위조 요청 거부 검사 - 게이지 0 요청 · 활 먼 조준)
+		-- K1 궁극기: /gg ult fill(게이지 100) · /gg ult state · /gg ult forge(위조 요청 거부 검사 - 게이지 0 요청 · 활 먼 조준)
 		local Ultimate = require(script.Parent.UltimateService)
 		local debugCast = game:GetService("ServerStorage"):FindFirstChild("SkillCastDebug")
 		if args[2] == "fill" then
