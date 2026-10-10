@@ -13,13 +13,18 @@ function BossOrigin.entry(rigKey, skillId)
 	return t and t[skillId] or nil
 end
 
-function BossOrigin.point(rigKey, sizeScale, hpRatio, skillId, bossPos, aimAt, floorY)
+-- sideIndex(선택 · BOSS-NIGHT-3 1-④): 표에 sides가 있으면 그 부위(1 = 첫 부위 · 번갈아)의 자리 - 매머드 상아 쏘기 = 1발 왼 상아 · 2발 오른 상아
+function BossOrigin.point(rigKey, sizeScale, hpRatio, skillId, bossPos, aimAt, floorY, sideIndex)
 	local e = BossOrigin.entry(rigKey, skillId)
 	local rig = rigKey and BossRigSpec.rigs[rigKey]
 	if not (e and rig) then
 		return nil
 	end
-	local o = ((hpRatio or 1) <= 0.5 and e.after) or e.before or e.after
+	local src = e
+	if sideIndex and e.sides and #e.sides > 0 then
+		src = e.sides[(sideIndex - 1) % #e.sides + 1]
+	end
+	local o = ((hpRatio or 1) <= 0.5 and src.after) or src.before or src.after
 	if not o then
 		return nil
 	end

@@ -128,5 +128,17 @@
   "n": 2,
   "note": "BOSS-NIGHT-2 B 첫 측정(부메랑 던지는 순간 = 예고 끝)"
  },
- "_excluded": "BOSS-NIGHT-2 A: 매머드 slam · spike는 측정 방식(충격 뒤 0.7초 최저점 - 앞발이 늘 땅에 닿아 걷는 프레임을 잡음)을 바꿔 다시 넣음"
+ "_excluded": "BOSS-NIGHT-2 A: 매머드 slam · spike는 측정 방식(충격 뒤 0.7초 최저점 - 앞발이 늘 땅에 닿아 걷는 프레임을 잡음)을 바꿔 다시 넣음",
+ "frost_giant_v2/tuskShot#Tusk_L": {
+  "fwd": -3.23,
+  "right": -2.27,
+  "n": 7,
+  "note": "BOSS-NIGHT-3 1-④ 왼 상아(1발) Studio 실측 차(앞 -0.25 · 오른 -1.72 stud · 크기 2.5) × 14.70/11.14 + 부모 보정"
+ },
+ "frost_giant_v2/tuskShot#Tusk_R": {
+  "fwd": -5.37,
+  "right": 2.35,
+  "n": 7,
+  "note": "BOSS-NIGHT-3 1-④ 오른 상아(2발) Studio 실측 차(앞 -1.87 · 오른 +1.78 stud · 크기 2.5) × 14.70/11.14 + 부모 보정"
+ }
 }

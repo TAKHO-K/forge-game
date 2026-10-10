@@ -22,6 +22,7 @@ local BossMechanics = require(script.Parent.BossMechanics) -- BR1-3 아르마딜
 local PlayerStun = require(script.Parent.PlayerStun) -- BR1-4c c-11 눈덩이에서 튀어나온 뒤 기절
 local BossArenaMap = require(script.Parent.BossArenaMap) -- BR1-4c c-11 배출 자리(구조물 밖)
 local MovementConfig = require(ReplicatedStorage.Shared.data.MovementConfig)
+local BossOrigin = require(ReplicatedStorage.Shared.BossOrigin) -- BOSS-NIGHT-3 1-④ 부위마다 발생 지점 · 1-⑤ 빔 홀
 
 local BossHandlersBR1 = {}
 
@@ -93,7 +94,14 @@ BossHandlersBR1.sector = {
 	end,
 	start = function(c)
 		c.st.sectorVolley = 1
-		beginSectorVolley(c, firstSectorAngle(c))
+		local first = firstSectorAngle(c)
+		if c.skill.facing == "randomSide" and typeof(c.model) == "Instance" then
+			-- BOSS-NIGHT-3 1-③ 수호자 대지 가르기: 무작위 방향(대상 선의 왼쪽/오른쪽 반원)으로 보이는 몸을 먼저 돌려 그 쪽을 내려친다
+			--   (옛 = 몸은 대상을 봐 끌어내리는 손이 부채 반대쪽 = "몸 중심 예외") · 판정 · 서버 루트 그대로 · 스킬 끝에 풀림(BossPatterns.endSkill)
+			local r = math.rad(first)
+			c.model:SetAttribute("BossAimLockYaw", math.atan2(-math.cos(r), -math.sin(r)))
+		end
+		beginSectorVolley(c, first)
 	end,
 	step = function(c)
 		local st, skill = c.st, c.skill
@@ -241,6 +249,9 @@ local function launchProjectile(c, index, target)
 		return false -- BR1-2 아레나당 동시 투사체 상한(성능)
 	end
 	local po = st.projOrigin
+	if st.projOriginSides and #st.projOriginSides > 0 then
+		po = st.projOriginSides[(index - 1) % #st.projOriginSides + 1] or po
+	end
 	local origin = po and kit.xz(po) or kit.xz(c.position)
 	local y = skill.heightMode == "ground" and (st.floorY + skill.radiusStuds * 0.6) or (po and po.Y or (st.floorY + (skill.launchHeightStuds or 9)))
 	local position = Vector3.new(origin.X, y, origin.Z)
@@ -292,6 +303,15 @@ BossHandlersBR1.projectile = {
 		st.projLaunched = 0
 		st.projThrow = skill.onMiss and { left = 0, hit = false, skill = skill, data = c.data } or nil
 		st.projOrigin = kit.originOf(c) -- BOSS-NIGHT-2 3: 쏘는 부위(손 · 지팡이 · 홀 끝 · 입 · 꼬리 끝)에서 - 표에 없으면 보스 중심
+		-- BOSS-NIGHT-3 1-④: 표에 부위마다(sides) 자리가 있으면 발 번호대로 번갈아(매머드 상아 쏘기 = 1발 왼 · 2발 오른 상아 - 옛 = 두 상아 가운데 하나에서 2.9 어긋남)
+		st.projOriginSides = nil
+		local entry = BossOrigin.entry(c.model:GetAttribute("BossRigKey"), c.st.current)
+		if entry and entry.sides then
+			st.projOriginSides = {}
+			for i = 1, #entry.sides do
+				st.projOriginSides[i] = kit.originOf(c, nil, i)
+			end
+		end
 		st.projVolley = skill.lockOnFirstHit and { locked = false } or nil
 		local userIds = {}
 		for _, v in ipairs(st.projTargets) do
@@ -978,9 +998,21 @@ BossHandlersBR1.sweep = {
 		st.sweepInner = st.sweepGap and skill.gapInnerStuds or skill.innerStuds
 		st.beamLocks, st.beamImmune, st.beamDealt = {}, {}, {}
 		local startDeg = BossSkillMath.sweepAngleAt(skill, st.sweepCenterDeg, st.sweepDir, 0)
+		-- BOSS-NIGHT-3 1-⑤ 수정 여왕 에네르기파 = 홀 보석에서(옛 = 몸 중심): 발생 지점 표(ScepterGem)의 수평 자리를 빔 방향 기준 옆(lat) · 앞(fwd)으로 나눠 둔다 →
+		--   빔 = 중심에서 옆으로 lat만큼 비킨 평행선이 fwd부터 · 보이는 몸은 빔 각도를 따라 돈다(BossAimLockYaw · 클라 그림 = 같은 lat · fwd)
+		st.sweepLat, st.sweepFwd = 0, 0
+		local gem = BossOrigin.point(c.model:GetAttribute("BossRigKey"), c.data.sizeScale, MonsterState.getHpRatio(c.model), c.st.current,
+			c.position, c.position + Vector3.new(math.cos(math.rad(startDeg)), 0, math.sin(math.rad(startDeg))), st.floorY)
+		if gem then
+			local rel = kit.xz(gem) - st.sweepOrigin
+			local u = Vector3.new(math.cos(math.rad(startDeg)), 0, math.sin(math.rad(startDeg)))
+			local n = Vector3.new(-u.Z, 0, u.X)
+			st.sweepLat, st.sweepFwd = rel:Dot(n), math.max(rel:Dot(u), 0)
+		end
+		c.model:SetAttribute("BossAimLockYaw", math.atan2(-math.cos(math.rad(startDeg)), -math.sin(math.rad(startDeg))))
 		kit.send(st, "sweepTelegraph", {
 			center = Vector3.new(st.sweepOrigin.X, st.floorY, st.sweepOrigin.Z), angleDeg = st.sweepCenterDeg, startDeg = startDeg, sweepDeg = skill.sweepDeg, startLeadDeg = skill.startLeadDeg,
-			length = st.sweepLength, inner = st.sweepInner, gap = st.sweepGap, halfWidth = skill.halfWidthStuds, beamHeight = skill.beamHeightStuds,
+			length = st.sweepLength, inner = st.sweepInner, gap = st.sweepGap, halfWidth = skill.halfWidthStuds, beamHeight = skill.beamHeightStuds, lat = st.sweepLat, fwd = st.sweepFwd,
 			dirSign = st.sweepDir, seconds = skill.telegraphSeconds, sweepSeconds = skill.sweepSeconds, bossId = c.data.id, color = c.data.headColor,
 		})
 		kit.debugEvent("sweepStart", { at = c.now, gap = st.sweepGap, inner = st.sweepInner, length = st.sweepLength, dir = st.sweepDir, startDeg = startDeg })
@@ -1002,6 +1034,12 @@ BossHandlersBR1.sweep = {
 		local startDeg = BossSkillMath.sweepAngleAt(skill, st.sweepCenterDeg, st.sweepDir, 0)
 		local floor = Vector3.new(0, st.floorY, 0)
 		local maxSeconds = skill.pull.maxSeconds
+		if f < 1 and c.now >= (st.sweepYawAt or 0) and typeof(c.model) == "Instance" then -- 1-⑤ 보이는 몸 = 빔 각도(0.1초마다)
+			st.sweepYawAt = c.now + 0.1
+			local a = math.rad(BossSkillMath.sweepAngleAt(skill, st.sweepCenterDeg, st.sweepDir, t))
+			c.model:SetAttribute("BossAimLockYaw", math.atan2(-math.cos(a), -math.sin(a)))
+		end
+		local lat = st.sweepLat or 0
 		-- 새로 걸린 사람
 		if f < 1 then
 			for _, v in ipairs(kit.victims(st)) do
@@ -1010,9 +1048,12 @@ BossHandlersBR1.sweep = {
 					local rel = kit.xz(v.root.Position) - st.sweepOrigin
 					local r = rel.Magnitude
 					local feetAbove = v.feet.Y - st.floorY
-					if r >= st.sweepInner - 0.5 and r <= st.sweepLength and feetAbove <= skill.beamHeightStuds and Reach.sameLayer(v.groundFeet, floor) then
-						local half = math.deg(math.atan((skill.halfWidthStuds + 1) / math.max(r, 1)))
-						local o0 = ((math.deg(math.atan2(rel.Z, rel.X)) - startDeg) * st.sweepDir) % 360
+					-- 1-⑤: 옆으로 lat 비킨 평행 빔 - 빔 각 θ에서 이 사람에 닿는 조건 r·sin(φ − θ) = lat → θ = φ − asin(lat / r) · 빔 위 거리 s = √(r² − lat²) ≥ fwd
+					local along = math.sqrt(math.max(r * r - lat * lat, 0))
+					if r >= st.sweepInner - 0.5 and r > math.abs(lat) and along >= (st.sweepFwd or 0) - 0.5 and along <= st.sweepLength and feetAbove <= skill.beamHeightStuds and Reach.sameLayer(v.groundFeet, floor) then
+						local half = math.deg(math.atan((skill.halfWidthStuds + 1) / math.max(along, 1)))
+						local phi = math.deg(math.atan2(rel.Z, rel.X)) - math.deg(math.asin(math.clamp(lat / r, -1, 1)))
+						local o0 = ((phi - startDeg) * st.sweepDir) % 360
 						local hit = false
 						for k = 0, math.ceil(skill.sweepDeg / 360) do
 							local o = o0 + 360 * k
@@ -1090,14 +1131,16 @@ BossHandlersBR1.boomerang = {
 			end
 		end
 		local lines, payload = {}, {}
-		local sharedHit = skill.perMember and { out = {}, back = {} } or nil -- 인당 줄은 맞음 기록을 같이 쓴다: 붙어 선 두 사람의 줄이 겹쳐도 1인 가는 길 · 오는 길 1회씩(리뷰 2)
+		-- 맞음 기록 = 한 시전 전체가 같이 쓴다: 붙어 선 두 사람의 줄(인당 · 리뷰 2) · 분신 3줄(BOSS-NIGHT-3 1-① VERIFY-1 상-1 - 옛 = 줄마다 따로라 근접 유저가 3줄 × 가고 오며 최대 6타)이 겹쳐도
+		--   1인 가는 길 1회 · 오는 길 1회
+		local sharedHit = { out = {}, back = {} }
 		for _, base in ipairs(bases) do
 			for k = 0, (skill.directions or 1) - 1 do
 				local deg = base + skill.stepDeg * k
 				local a = math.rad(deg)
 				local dir = Vector3.new(math.cos(a), 0, math.sin(a))
 				local length = kit.clipToZone(origin, dir, zone, skill.arenaMarginStuds or 4)
-				table.insert(lines, { dir = dir, length = length, hit = sharedHit or { out = {}, back = {} } })
+				table.insert(lines, { dir = dir, length = length, hit = sharedHit })
 				table.insert(payload, { angleDeg = deg, length = length })
 			end
 		end

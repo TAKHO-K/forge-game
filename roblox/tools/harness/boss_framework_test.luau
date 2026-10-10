@@ -407,7 +407,7 @@ do
 		and b.cooldownSeconds == 3 and b.conditions[1].type == "targetBeyondFor" and b.conditions[1].studs == 30 and b.conditions[1].seconds == 1.5 and b.overrides[1].set.count == 3
 	check("V3 바나나(조건 30 stud · 1.5초 · 쿨 3 · 예비 0.45 · 110 stud/s · 리드 50% · 7% · 광폭 3갈래)", bOk == true, b and ("쿨 %d · 예비 %.2f · 속도 %d · 리드 %.0f%% · 최대 체력 %.0f%% · 광폭 %d갈래"):format(
 		b.cooldownSeconds, b.telegraphSeconds, b.speedStuds, b.leadFraction * 100, b.damage.fraction * 100, b.overrides[1].set.count) or "없음")
-	local lOk = l and l.reactive and l.telegraphSeconds == 1.1 and l.lockSeconds == 0.4 and l.flightSeconds == 0.8 and l.maxLeapStuds == 60 and math.abs(l.radiusStuds - (half + 12)) < 1e-6
+	local lOk = l and l.reactive and l.telegraphSeconds == 1.1 and l.lockSeconds == 0.4 and l.flightSeconds == 0.8 and l.maxLeapStuds == 60 and math.abs(l.radiusStuds - (half + 12 * d.skillRangeScale)) < 1e-6 -- BOSS-NIGHT-3 1-②: 반응 스킬도 이속 보정
 		and l.conditions[1].count == 2 and l.conditions[1].seconds == 12 and l.onHit[1].type == "launch"
 	-- 도약 회피: 착지 원은 준비 시작부터 보이고 대상을 따라온다 → 인지(perception)는 고정 전 표시 시간(준비 − 고정 0.6초) 안에 끝난다.
 	--   고정(끝 0.3초) + 비행 0.8 = 1.1초 안에 대상 자리(몸 끝)에서 원 밖으로 = (반경 − 몸 반폭 + 캐릭터 반폭) ÷ 걷기 × 여유 계수
@@ -504,14 +504,16 @@ do
 		and not inOrder("backKick") and g.reactiveOrder[1] == "backKick" and g.skills.backKick.reactive == true,
 		("일반 후보 %d개 · 반응 %s"):format(#g.skillOrder, table.concat(g.reactiveOrder, ",")))
 	local tw, bk, go, ts = g.skills.trunkWhip, g.skills.backKick, g.skills.gore, g.skills.tuskShot
-	check("매머드 앞 · 뒤 구역(반경 = 머리 앞 끝 / 엉덩이 끝 기준)", math.abs(tw.radiusStuds - (12 + front)) < 1e-6 and math.abs(tw.conditions[1].studs - (12 + front)) < 1e-6
-		and math.abs(bk.radiusStuds - (14 + rear)) < 1e-6 and math.abs(bk.conditions[1].studs - (20 + rear)) < 1e-6 and math.abs(go.arenaMarginStuds - (4 + front)) < 1e-6,
+	-- BOSS-NIGHT-3 1-②: 새 몸 스킬도 스테이지 곡선(이속 보정 × 장판 범위) - 반경 = 기본 × 배율 + 몸 앞 · 뒤 끝
+	local zs = d.skillRangeScale * MODS.BossSkillMath.curveRow(15).zoneRangeScale
+	check("매머드 앞 · 뒤 구역(반경 = 머리 앞 끝 / 엉덩이 끝 기준)", math.abs(tw.radiusStuds - (12 * zs + front)) < 1e-6 and math.abs(tw.conditions[1].studs - (12 + front)) < 1e-6 -- 조건 거리는 기본 스킬처럼 배율 밖
+		and math.abs(bk.radiusStuds - (14 * zs + rear)) < 1e-6 and math.abs(bk.conditions[1].studs - (20 + rear)) < 1e-6 and math.abs(go.arenaMarginStuds - (4 + front)) < 1e-6,
 		("앞 끝 %.1f · 엉덩이 끝 %.1f · 옆 %.1f stud · 코 채찍 r %.1f · 뒷발차기 r %.1f(조건 %.1f) · 돌진 벽 여유 %.1f"):format(front, rear, half, tw.radiusStuds, bk.radiusStuds, bk.conditions[1].studs, go.arenaMarginStuds))
 	check("매머드 상아 돌진 경로 반폭 = 몸 반폭 · 균열선", math.abs(go.pathHalfWidthStuds - half) < 1e-6 and go.markStyle == "crack", ("%.2f stud"):format(go.pathHalfWidthStuds))
 	check("매머드 바닥 표시 끔(근접) · 예비 +0.12", g.skills.slam.noFloor and g.skills.innerSmash.noFloor and g.skills.swipe.noFloor and tw.noFloor and bk.noFloor and not g.skills.stomp.noFloor
 		and math.abs(g.skills.slam.telegraphSeconds - (d.skills.slam.telegraphSeconds + 0.12)) < 1e-6 and g.basicNoFloor and g.innerRingHidden,
 		("빙결 강타 %.2f → %.2f · 코 채찍 %.2f · 발 구르기 바닥 표시 유지(점프로 넘기 - 큰 범위)"):format(d.skills.slam.telegraphSeconds, g.skills.slam.telegraphSeconds, tw.telegraphSeconds))
-	check("매머드 피해 계수 × 0.60(신규 · 반응 포함)", math.abs(g.skills.slam.damage.multiplier - d.skills.slam.damage.multiplier * 0.6) < 1e-6 and math.abs(ts.damage.multiplier - 1.8 * 0.6) < 1e-6
+	check("매머드 피해 계수 × 0.60(신규 · 반응 포함)", math.abs(g.skills.slam.damage.multiplier - d.skills.slam.damage.multiplier * 0.6) < 1e-6 and math.abs(ts.damage.multiplier - 1.8 * 0.6 * MODS.BossSkillMath.perPersonCount(2, MODS.BossSkillMath.curveRow(15)) / 2) < 1e-6 -- BOSS-NIGHT-3 1-②: 2발 유지 · 1 ~ 100단계 한 발 × 1/2
 		and math.abs(bk.damage.multiplier - 2.0 * 0.6) < 1e-6, ("빙결 강타 %.2f · 얼음 상아 %.2f · 뒷발차기 %.2f"):format(g.skills.slam.damage.multiplier, ts.damage.multiplier, bk.damage.multiplier))
 	local bad = {}
 	for id, s in pairs(g.skills) do

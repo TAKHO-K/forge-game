@@ -9,6 +9,7 @@ return {
 		tridentThrow = { kind = "launch", part = "TridentHead", contact = 1.01, tuned = 2, after = { 2.776, 3.622, -2.103 }, before = { 2.776, 3.622, -2.103 }, },
 	},
 	crystal_queen_v2 = {
+		energyBeam = { kind = "launch", part = "ScepterGem", contact = 2.51, after = { 2.218, 4.676, -0.271 }, before = { 2.218, 4.090, -0.271 }, },
 		magicMissiles = { kind = "launch", part = "ScepterGem", contact = 0.61, tuned = 35, after = { 2.041, 6.804, -0.355 }, before = { 2.041, 6.373, -0.355 }, },
 		shards = { kind = "launch", part = "Hand_L", contact = 1.01, tuned = 2, after = { -1.985, 5.716, -1.093 }, before = { -1.985, 5.399, -1.093 }, },
 	},
@@ -17,7 +18,7 @@ return {
 		snowball = { kind = "launch", part = "Trunk6", contact = 1.51, tuned = 4, after = { 0.009, 0.296, -1.916 }, before = { 0.009, 0.296, -1.916 }, },
 		spike = { kind = "ground", part = "Tusk_L,Tusk_R", contact = 1.51, tuned = 3, after = { -0.029, 0.546, -1.227 }, before = { -0.029, 0.546, -1.227 }, },
 		stomp = { kind = "ground", part = "Hand_R", contact = 1.81, tuned = 4, after = { 0.411, -0.033, -0.294 }, before = { 0.411, -0.033, -0.294 }, },
-		tuskShot = { kind = "launch", part = "Tusk_L,Tusk_R", contact = 1.41, tuned = 2, after = { -0.010, 1.199, -1.545 }, before = { -0.010, 1.199, -1.545 }, },
+		tuskShot = { kind = "launch", part = "Tusk_L,Tusk_R", contact = 1.41, tuned = 2, after = { -0.010, 1.199, -1.545 }, before = { -0.010, 1.199, -1.545 }, sides = { { part = "Tusk_L", after = { -0.537, 1.189, -1.476 }, before = { -0.537, 1.189, -1.476 }, }, { part = "Tusk_R", after = { 0.524, 1.209, -1.423 }, before = { 0.524, 1.209, -1.423 }, } }, },
 	},
 	scorpion_queen_v2 = {
 		claw = { kind = "ground", part = "Hand_R,Hand_L", contact = 1.51, tuned = 6, after = { 0.000, -0.647, -1.787 }, before = { 0.000, -0.647, -1.787 }, },

@@ -18,7 +18,9 @@ for line in io.open(sys.argv[1], encoding="utf-8"):
 TUNE = json.load(io.open(os.path.join(os.path.dirname(__file__), "boss_origin_tune.json"), encoding="utf-8"))
 KSCALE = json.load(io.open(os.path.join(os.path.dirname(__file__), "boss_origin_k.json"), encoding="utf-8"))
 for rig in rows:
-    for sid, e in rows[rig].items():
+    for sid, e in list(rows[rig].items()):
+        if "#" in sid:
+            continue
         # BOSS-NIGHT-2 A: "rig/skill@after" = 그 폼만의 보정(2폼 = 다른 부위로 때림 - 폭풍 주먹)
         for key, only in ((f"{rig}/{sid}", None), (f"{rig}/{sid}@before", "before"), (f"{rig}/{sid}@after", "after")):
             t = TUNE.get(key)
@@ -30,6 +32,21 @@ for rig in rows:
                     x, y, z = e[f]
                     e[f] = (x + t["right"] / k, y, z - t["fwd"] / k)
             e["tuned"] = e.get("tuned", 0) + t.get("n", 0)
+# BOSS-NIGHT-3 1-④: "스킬#부위" 줄 = 부모 스킬의 sides(순서 = 부위 목록 순서 · Studio 보정은 부모와 같은 몫)
+for rig in rows:
+    for sid in [s for s in rows[rig] if "#" in s]:
+        parent, part = sid.split("#", 1)
+        side = rows[rig].pop(sid)
+        p = rows[rig].get(parent)
+        if p:
+            tune = TUNE.get(f"{rig}/{sid}") or TUNE.get(f"{rig}/{parent}") # 부위마다 보정이 있으면 그것 · 없으면 부모 보정
+            if tune:
+                k = KSCALE[rig]
+                for f in ("before", "after"):
+                    if f in side:
+                        x, y, z = side[f]
+                        side[f] = (x + tune["right"] / k, y, z - tune["fwd"] / k)
+            p.setdefault("sides", []).append((part, side))
 out = ["-- BOSS-NIGHT-2 3 발생 지점 표(자동 생성 - tools/harness/boss_origin_dump.luau → boss_origin_gen.py · 손으로 고치지 말 것)",
        "-- [리그][스킬] = { kind = \"ground\"(그 부위 아래 바닥 - 파동 · 균열선 · 지면 투사체) | \"launch\"(부위 가운데 - 투사체), part = 부위, contact = 접촉 프레임(초 · 동작 시작부터),",
        "--   before / after = { x(오른쪽), y(지면 위), z(앞 = −) } 리그 단위 = 접촉 프레임의 보스 루트 기준 오프라인 FK + Studio 실측 보정(tuned = 표본 수 · boss_origin_tune.json) } · 월드 = × 크기(sizeScale × rig.scale) · 대상 쪽 방향으로 돌림(shared/BossOrigin)",
@@ -41,7 +58,14 @@ for rig in sorted(rows):
         e = rows[rig][sid]
         forms = " ".join(f"{f} = {{ {e[f][0]:.3f}, {e[f][1]:.3f}, {e[f][2]:.3f} }}," for f in ("after", "before") if f in e)
         tuned = f" tuned = {e['tuned']}," if e.get("tuned") else ""
-        out.append(f"\t\t{sid} = {{ kind = \"{e['kind']}\", part = \"{e['parts']}\", contact = {e['t']},{tuned} {forms} }},")
+        sides = ""
+        if e.get("sides"):
+            parts = []
+            for part, sd in e["sides"]:
+                sforms = " ".join(f"{f} = {{ {sd[f][0]:.3f}, {sd[f][1]:.3f}, {sd[f][2]:.3f} }}," for f in ("after", "before") if f in sd)
+                parts.append(f"{{ part = \"{part}\", {sforms} }}")
+            sides = " sides = { " + ", ".join(parts) + " },"
+        out.append(f"\t\t{sid} = {{ kind = \"{e['kind']}\", part = \"{e['parts']}\", contact = {e['t']},{tuned} {forms}{sides} }},")
     out.append("\t},")
 out.append("}")
 io.open(OUT, "w", encoding="utf-8", newline="\n").write("\n".join(out) + "\n")

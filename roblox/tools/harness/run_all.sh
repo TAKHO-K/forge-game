@@ -37,6 +37,7 @@ EXTRA_FILES=client/ArmorColors.lua,shared/MeshMeta/armor_wear.lua run gear_v3 re
 EXTRA_FILES=client/ItemIcons.lua run gem_home res_gemhome.txt "" gem_home_test.luau # QUEUE-ALL9E1 기능: 보석 탭 무기 키 · 보석 아이콘 한 소스 · 초월 이펙트 단계
 run monster_stats res_mstat.txt "" monster_stats_test.luau # QUEUE-N1004 C-4 몹 스탯 공용 함수 값 불변(골든 1,736값 · 31지점 · 오차 0)
 run dash_modes res_dash.txt "" dash_modes_test.luau # FINAL-1 3 MOVE-2 대시 모드(긴 · 짧은 · 기울기) · 두 번 연속 누름 · 거리 식
+run boss_feel res_feel.txt "$(python deps.py BossHandlersBR1)" boss_feel_test.luau # BOSS-NIGHT-3 보스 손맛 · 공정성(분신 줄 겹침 · 새 몸 스킬 곡선 · CC · 투사체 · 범위)
 run menu_gate res_menu.txt SlotSwitch,SlotSave menu_gate_test.luau # 메인 메뉴 버그(10-05): 테스트 플래그만 건너뜀 · 접속 미스폰 · 입장 스폰 · 메뉴 왕복
 printf "%-22s %s\n" menu_gate_src "$(python menu_gate_static.py 2>&1 | grep -a -E '끝 [0-9]+/[0-9]+' | tail -1)"
 printf "%-22s %s\n" hud_v5_src "$(python hud_v5_static.py 2>&1 | grep -a -E '끝 [0-9]+/[0-9]+' | tail -1)" # QUEUE-UI2 UI2-4 환생 진입 경로 · 메뉴 창 = PanelRegistry · 키 칩 · 빨강

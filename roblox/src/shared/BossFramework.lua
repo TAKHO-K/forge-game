@@ -6,6 +6,8 @@ local RunService = game:GetService("RunService")
 local Data = require(ReplicatedStorage.Shared.data.BossFrameworkData)
 local BossRigSpec = require(ReplicatedStorage.Shared.data.BossRigSpec)
 local BossSkeleton = require(ReplicatedStorage.Shared.BossSkeleton)
+local BossSkillMath = require(ReplicatedStorage.Shared.BossSkillMath) -- BOSS-NIGHT-3 1-② 새 몸 스킬 곡선
+local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 
 local BossFramework = {}
 
@@ -189,8 +191,36 @@ function BossFramework.applyV3(data, rigKey)
 			s.damage.multiplier *= out.bodyEdgeDamageScale
 		end
 	end
+	-- BOSS-NIGHT-3 1-②(VERIFY-1 하 · VERIFY-2 U2): 새 몸이 얹는 스킬(추가 · 반응 - 수정 미사일 · 바나나 · 검기 · 전류 구슬 · 얼음 상아 …)도 기본 스킬과 같은 곡선을 받는다
+	--   (옛 = BossRules.applyCurve 뒤에 얹혀 이속 보정 · 장판 범위 · 투사체 인당 개수 · 반경 · 전조 맞춤을 전부 건너뜀). keepCountByDamage = 개수는 그대로(보스 정체성 - 수정 미사일 5발)
+	--   대신 한 발 피해 × (곡선 개수 ÷ 기본 개수) → 합계가 곡선을 받은 것과 같다(1 ~ 100단계 5발 × 0.12 = 0.60 → 0.36).
+	local function withCurve(s)
+		if not out.curveStage then
+			return s
+		end
+		local row = BossSkillMath.curveRow(out.curveStage)
+		local projectile = s.primitive == "projectile"
+		local scale = (out.skillRangeScale or 1) * (projectile and 1 or row.zoneRangeScale)
+		s = BossSkillMath.scaleSkills({ x = s }, scale).x
+		s = table.clone(s)
+		if projectile then
+			local base = s.count or 1
+			local curved = BossSkillMath.perPersonCount(base, row)
+			if s.keepCountByDamage then
+				s.damage = table.clone(s.damage)
+				s.damage.multiplier *= curved / base
+			else
+				s.baseCount, s.count = base, curved
+			end
+			s.radiusStuds = (s.radiusStuds or 1) * row.projectileRadiusScale
+		end
+		if not s.reactive then -- 반응 스킬(도약 고정 · 비행 · 바나나 · 뒷발차기 …)은 V3에서 회피를 따로 설계 · 검증했다 - 일반 추가 스킬만 기본 스킬과 같은 전조 맞춤
+			BossSkillMath.fitTelegraphs(s, 8, WorldConfig.playerWalkSpeedStuds)
+		end
+		return s
+	end
 	for _, id in ipairs(addIds) do
-		local s = table.clone(cfg.addSkills[id])
+		local s = withCurve(table.clone(cfg.addSkills[id]))
 		fromReach(s)
 		skills[id] = s
 		if not table.find(order, id) then
@@ -225,7 +255,7 @@ function BossFramework.applyV3(data, rigKey)
 	end
 	local reactive = {}
 	for _, id in ipairs(cfg.reactiveOrder or {}) do
-		local s = cfg.skills[id] and table.clone(cfg.skills[id])
+		local s = cfg.skills[id] and withCurve(table.clone(cfg.skills[id]))
 		if s then
 			if s.radiusFromEdge then
 				s.radiusStuds += bodyHalf

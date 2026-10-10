@@ -106,6 +106,7 @@ D.v3 = {
 				targetRule = "target", leadSeconds = 0.6, leadFraction = 0.5, reflectable = true,
 				damage = { kind = "attack", multiplier = 1.8 }, damageLabel = "얼음 상아",
 				meshSlot = "FrostIceTusk",
+				keepCountByDamage = true, -- BOSS-NIGHT-3 1-②: 좌 · 우 상아 2발 = 모션 정체성 → 곡선은 한 발 피해 비례(1 ~ 100단계 × 1/2)
 			},
 			-- 코 채찍: 코를 옆으로 감았다가 휘두름(앞 140° 부채 · 반경 = 머리 앞 끝 + 12) · 번쩍 = 코 끝 3마디 · 맞으면 옆으로 밀림
 			trunkWhip = {
@@ -217,6 +218,7 @@ D.v3 = {
 				speedStuds = 50, turnRateDeg = 120, homingSeconds = 1.2, radiusStuds = 1.5, lifetimeSeconds = 3.5, heightMode = "air", launchHeightStuds = 14,
 				targetRule = "missileTarget", preferBeyondStuds = 12, reflectable = false,
 				lockOnFirstHit = { turnRateDeg = 900 }, passThrough = "dash",
+				keepCountByDamage = true, -- BOSS-NIGHT-3 1-②: 스테이지 곡선 = 5발 유지 · 한 발 피해 × (곡선 개수 ÷ 5)(1 ~ 100단계 합계 0.60 → 0.36 · BossFramework.applyV3 withCurve)
 				lastOnHit = { { type = "stun", seconds = 0.25 } },
 				aimMarkSeconds = 0.6,
 				damage = { kind = "attack", multiplier = 0.12 }, damageLabel = "마법 미사일",

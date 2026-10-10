@@ -94,7 +94,7 @@ end
 
 -- BOSS-NIGHT-2 3 발생 지점(shared/BossOrigin · data/BossOriginData = 접촉 프레임 오프라인 FK): 표에 있는 스킬이면 때리는 · 쏘는 부위 자리(아레나 밖이면 경계 안으로),
 --   없으면 nil(몸 중심 그대로 - 예외). 방향 = 보스 → 대상 · 크기 = sizeScale × rig.scale · 폼 = 체력 50%. 예고 · 판정 · 사건 자리 모두 이 값 하나를 쓴다.
-local function originOf(c, skillId)
+local function originOf(c, skillId, sideIndex) -- sideIndex = BOSS-NIGHT-3 1-④ 표의 sides(좌 · 우 상아)
 	-- BOSS-NIGHT-2 A: 대상이 없으면(강제 시전 · 대상 이탈) 마지막 조준 방향 - 옛 = 월드 −Z로 계산돼 보이는 몸(마지막 방향 그대로)과 8 ~ 16 stud 어긋났다
 	local aim = c.targetRoot and Vector3.new(c.targetRoot.Position.X - c.position.X, 0, c.targetRoot.Position.Z - c.position.Z)
 	if aim and aim.Magnitude > 0.5 then
@@ -103,7 +103,7 @@ local function originOf(c, skillId)
 		aim = c.st.lastAimDir * 10
 	end
 	local p = BossOrigin.point(c.model:GetAttribute("BossRigKey"), c.data.sizeScale, MonsterState.getHpRatio(c.model), skillId or c.st.current,
-		c.position, aim and (c.position + aim), c.st.floorY or c.position.Y)
+		c.position, aim and (c.position + aim), c.st.floorY or c.position.Y, sideIndex)
 	if not p then
 		return nil
 	end

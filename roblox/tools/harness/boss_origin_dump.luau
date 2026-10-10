@@ -8,10 +8,10 @@ local walk = MODS.WorldConfig.playerWalkSpeedStuds
 -- [보스] = { { 스킬, 종류, 부위(없으면 세트 flash) } } · 예외(표에 없음 = 몸 중심): 수호자 earthSplit(부채가 대상 좌/우 무작위 · 보이는 손이 반대쪽 - Studio 차 16 stud) · 전갈 stingJab(꼬리 끝이 몸 위 · 뒤)
 local LIST = {
 	section_guardian = { { "shockwave", "ground", { "Hand_L", "Hand_R" } }, { "heavy", "ground" }, { "cross", "ground" }, { "banana", "launch", { "Hand_R" } }, { "orbs", "launch" } },
-	frost_giant = { { "slam", "ground" }, { "stomp", "ground" }, { "spike", "ground" }, { "snowball", "launch" }, { "tuskShot", "launch" } },
+	frost_giant = { { "slam", "ground" }, { "stomp", "ground" }, { "spike", "ground" }, { "snowball", "launch" }, { "tuskShot", "launch", nil, true } }, -- BOSS-NIGHT-3 1-④: 상아 쏘기 = 좌 · 우 상아마다 따로(sides - 1발 왼쪽 · 2발 오른쪽 · 클립 "왼 · 오른 2발")
 	storm_lord = { { "thunderRing", "ground" }, { "discharge", "ground" }, { "boltSpear", "launch" }, { "stormOrbs", "launch", { "Gauntlet_R", "Gauntlet_L" } }, { "swordWave", "ground", { "StaffOrb" } }, { "tornado", "ground" } }, -- BOSS-NIGHT-2 A: 회오리 부위 = 폼별 flash(1폼 지팡이 보주 · 2폼 두 주먹 - 옛 고정 StaffOrb는 2폼에 숨긴 지팡이를 가리켜 13 stud 어긋남)
 	abyssal_lord = { { "tide", "ground", { "TridentHead" } }, { "bubbles", "launch" }, { "tridentThrow", "launch", { "TridentHead" } } },
-	crystal_queen = { { "magicMissiles", "launch", { "ScepterGem" } }, { "shards", "launch" } },
+	crystal_queen = { { "magicMissiles", "launch", { "ScepterGem" } }, { "shards", "launch" }, { "energyBeam", "launch", { "ScepterGem" } } }, -- BOSS-NIGHT-3 1-⑤ 에네르기파 = 홀 보석에서
 	scorpion_queen = { { "claw", "ground" } }, -- stingJab = 예외(접촉 때 꼬리 끝이 몸 위 · 뒤 - 몸 중심 유지)
 }
 for _, bossId in ipairs({ "section_guardian", "frost_giant", "storm_lord", "abyssal_lord", "crystal_queen", "scorpion_queen" }) do
@@ -64,6 +64,15 @@ for _, bossId in ipairs({ "section_guardian", "frost_giant", "storm_lord", "abys
 					if n > 0 then
 						local p = kind == "ground" and Vector3.new(sum.X / n, low + 1.5, sum.Z / n) or Vector3.new(sum.X / n, sum.Y / n + 1.5, sum.Z / n) -- 수평 = 부위 가운데(Studio 보이는 부위와 비교 · 여러 부위 = 평균)
 						print(("ORG\t%s\t%s\t%s\t%s\t%.3f\t%.3f\t%.3f\t%s\t%.2f"):format(rigId, sid, form, kind, p.X, p.Y, p.Z, table.concat(parts, ","), t))
+						if e[4] and kind == "launch" then -- BOSS-NIGHT-3 1-④ 부위마다(sides)
+							for _, part in ipairs(parts) do
+								-- 같은 접촉 프레임 자세(발마다 그 시각 자세로 재 본 판은 Studio에서 둘째 발이 3.4로 더 어긋남 - 클라 시선 돌리기 층) · 남는 차이 = boss_origin_tune.json "스킬#부위"
+								local cf = fr[part]
+								if cf then
+									print(("ORG\t%s\t%s#%s\t%s\t%s\t%.3f\t%.3f\t%.3f\t%s\t%.2f"):format(rigId, sid, part, form, kind, cf.Position.X, cf.Position.Y + 1.5, cf.Position.Z, part, t))
+								end
+							end
+						end
 					end
 				end
 			end

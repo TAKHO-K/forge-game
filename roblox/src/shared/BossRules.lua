@@ -322,6 +322,7 @@ function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMu
 		-- BR1-2: 이속 보정 → 난이도 곡선(장판 범위 · 개수 · 연쇄 · 투사체 인당 개수 · 반경 → 전조 맞춤 - BossSkillMath.applyCurve).
 		skills = (BossSkillMath.applyCurve(BossSkillMath.scaleSkills(boss.skills, BossRules.skillRangeScale(stage)), BossSkillMath.curveRow(stage), densityExtra or 0, WorldConfig.playerWalkSpeedStuds)),
 		curveTier = BossSkillMath.curveRow(stage).tier,
+		curveStage = stage, -- BOSS-NIGHT-3 1-②: 새 몸(applyV3)이 나중에 얹는 투사체 스킬도 같은 곡선 행을 쓴다
 		skillOrder = boss.skillOrder,
 		scheduler = BossRules.partyScheduler(boss.scheduler, partySize),
 		skillRangeScale = BossRules.skillRangeScale(stage),
