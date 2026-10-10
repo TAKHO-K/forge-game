@@ -739,7 +739,7 @@ function P3cVerify.runLive(player, env)
 					all += 1
 					allParts += d:IsA("BasePart") and 1 or 0
 				end
-				r.note(("B 성능: 보스전 장면(서리 거인) 워크스페이스 인스턴스 %d · 파트 %d(P2.5a 기준선 1,908 ~ 1,918 · 1,067 ~ 1,069 / P3a 2,004 · 1,139)"):format(all, allParts))
+				r.note(("B 성능: 보스전 장면(빙하 매머드) 워크스페이스 인스턴스 %d · 파트 %d(P2.5a 기준선 1,908 ~ 1,918 · 1,067 ~ 1,069 / P3a 2,004 · 1,139)"):format(all, allParts))
 			end
 			BossEncounter.despawnFor(player)
 		end

@@ -728,8 +728,8 @@ local SPECIES = {
 	{
 		-- BR1-2 첫 만남 전멸기 카드(그림 + 한 줄 - 처음 만난 보스만 · 보스 선택 창 "기믹 도움말")
 		intro = { title = "눈보라 포효", line = "포효가 울리면 얼음 기둥 뒤에 숨어라 - 기둥이 부서지면 옮겨 숨어라", icon = "❄", diagram = "pillar" },
-		-- BOSS-NIGHT-1: 표시 이름 교체(10-05 사용자 확정 · 옛 "서리 거인") - id · 데이터 그대로
-		id = "frost_giant", displayName = "빙하 엄니", bodyColor = frostBody, headColor = frostHead,
+		-- BOSS-NIGHT-1: 표시 이름 교체(10-05 사용자 확정 · 옛 "서리 거인") - id · 데이터 그대로 · UI-1c: "빙하 엄니" → "빙하 매머드"(사용자 확정 10-10 · en Glacier Mammoth)
+		id = "frost_giant", displayName = "빙하 매머드", bodyColor = frostBody, headColor = frostHead,
 		gate = { zone = "tier6", color = { 190, 240, 255 } },
 		-- 느린 거인: 크고(3.3) 느리고(6) 한 방이 무겁다(평타 1.5초에 ×1.5). 전역 쿨도 7초로 길다.
 		sizeScale = 3.3, bodyAspect = Vector3.new(0.85, 1.35, 0.85),

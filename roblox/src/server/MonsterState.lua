@@ -184,6 +184,11 @@ function MonsterState.resetBossHp(model)
 	local entry = monsters[model]
 	if entry and entry.data.isBoss then
 		entry.hp = entry.maxHp
+		for who in pairs(entry.contributions) do -- UI-1c 2단계: 기여 알약도 0부터
+			if typeof(who) == "Instance" then
+				who:SetAttribute("BossContributionPct", nil)
+			end
+		end
 		entry.contributions = {} -- 처음부터 다시 - 리셋 전 기여는 무효(HP가 복구됐으므로).
 		entry.resetGen = (entry.resetGen or 0) + 1 -- Q8: 튕김 때 맡긴 옛 판 기여도 무효
 	end
@@ -384,6 +389,10 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer, 
 		entry.hp -= damage
 		if attackerPlayer and entry.maxHp > 0 then
 			entry.contributions[attackerPlayer] = (entry.contributions[attackerPlayer] or 0) + damageBeforeGap * taken / entry.maxHp
+			if typeof(attackerPlayer) == "Instance" then -- UI-1c 2단계: 보스 바 아래 "내 기여 n%" 알약(화면 = 읽기만 · 판 번호가 같을 때만 표시)
+				attackerPlayer:SetAttribute("BossContributionPct", math.floor(math.min(1, entry.contributions[attackerPlayer]) * 100))
+				attackerPlayer:SetAttribute("BossContributionEnc", model:GetAttribute("BossEncounterId"))
+			end
 		end
 		return entry.hp <= 0, damage
 	end

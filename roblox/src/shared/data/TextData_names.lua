@@ -81,7 +81,7 @@ local en = {
 	["…아직 잠들어 있다."] = "...Still asleep.",
 
 	-- ═══ 보스(BossData) · 기믹 카드 ═══
-	["구간 수호자"] = "Section Guardian", ["서리 거인"] = "Frost Giant", ["빙하 엄니"] = "Glacier Tusk", ["심해 군주"] = "Abyssal Lord", ["수정 여왕"] = "Crystal Queen", ["전갈 여왕"] = "Scorpion Queen", ["폭풍 군주"] = "Storm Lord",
+	["구간 수호자"] = "Section Guardian", ["서리 거인"] = "Frost Giant", ["빙하 엄니"] = "Glacier Tusk", ["빙하 매머드"] = "Glacier Mammoth", ["심해 군주"] = "Abyssal Lord", ["수정 여왕"] = "Crystal Queen", ["전갈 여왕"] = "Scorpion Queen", ["폭풍 군주"] = "Storm Lord",
 	["지반 붕괴"] = "Ground Collapse", ["체력이 절반 아래면 땅이 조각조각 무너진다 - 금 간 조각 밖으로!"] = "Below half HP the floor breaks. Leave cracked tiles!",
 	["눈보라 포효"] = "Blizzard Roar", ["포효가 울리면 얼음 기둥 뒤에 숨어라 - 기둥이 부서지면 옮겨 숨어라"] = "On the roar, hide behind an ice pillar. Move if it breaks!",
 	["색 맞추기"] = "Color Match", ["머리 위 표시(●빨강 / ▲파랑)와 같은 색 발판에 서라 - 밟을 때마다 색이 바뀐다"] = "Stand on the tile matching your mark (● red / ▲ blue)!",

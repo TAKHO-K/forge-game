@@ -218,6 +218,10 @@ local TOPBAR_ON = require(game:GetService("ReplicatedStorage").Shared.data.UiV2F
 local TB = require(game:GetService("ReplicatedStorage").Shared.data.UiLayoutData).topbarBoss
 local topbarParts = nil
 local topbarRect = nil -- 판 화면 자리(알림 줄 · 상태 줄이 따라감)
+local function pillReserve() -- UI-1c 2단계: PC = 알약 줄 칸(늘 비워 둠) · 폰 = 0
+	local PP = not Theme.isMobile and TB.pill and TB.pill.pc
+	return PP and (PP.h + PP.gap) or 0
+end
 local function layoutTopbar(a)
 	local phone = Theme.isMobile
 	local P = phone and TB.phone or TB.pc
@@ -292,7 +296,56 @@ local function layoutTopbar(a)
 	v6.statusScale.Scale = 1
 	v6.statusHolder.Size = UDim2.fromOffset(P.status * 5, P.status)
 	v6.statusHolder.AnchorPoint = Vector2.new(0.5, 0)
-	v6.statusHolder.Position = UDim2.new(0.5, 0, 1, TB.statusGap)
+	v6.statusHolder.Position = UDim2.new(0.5, 0, 1, TB.statusGap + pillReserve())
+	if not topbarParts.pill and not phone and TB.pill.pc then -- UI-1c 2단계: 내 기여 알약(판 아래 가운데)
+		local PP = TB.pill.pc
+		local pill = Instance.new("Frame")
+		pill.Name = "ContribPill"
+		pill.AnchorPoint = Vector2.new(0.5, 0)
+		pill.Size = UDim2.fromOffset(PP.w, PP.h)
+		pill.BackgroundColor3 = Color3.fromHex(TB.pill.bg)
+		pill.BackgroundTransparency = TB.pill.bgT
+		pill.Visible = false
+		local pc = Instance.new("UICorner")
+		pc.CornerRadius = UDim.new(1, 0)
+		pc.Parent = pill
+		local ps = Instance.new("UIStroke")
+		ps.Color = Color3.fromHex(TB.pill.stroke)
+		ps.Thickness = TB.pill.strokeW
+		ps.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		ps.Parent = pill
+		local t = Instance.new("TextLabel")
+		t.Name = "Text"
+		t.BackgroundTransparency = 1
+		t.Size = UDim2.fromScale(1, 1)
+		t.Font = Enum.Font.GothamBold
+		t.TextSize = PP.text
+		t.RichText = true
+		t.TextColor3 = Color3.new(1, 1, 1)
+		t.Parent = pill
+		pill.Parent = a.root.Parent
+		topbarParts.pill = pill
+	end
+	if topbarParts.pill then -- 알약 = 판 아래 · 상단 바(58) 밖(보스 바만 예외)
+		local top = math.max(y + P.h + TB.statusGap, inset.Max.Y + TB.below)
+		topbarParts.pillExtra = math.floor(top - (y + P.h + TB.statusGap))
+		topbarParts.pill.Position = UDim2.fromOffset(math.floor(x + w / 2), math.floor(top))
+		v6.statusHolder.Position = UDim2.new(0.5, 0, 1, TB.statusGap + pillReserve() + topbarParts.pillExtra)
+	end
+end
+
+-- 내 기여 알약 = 서버 BossContributionPct(판 번호 BossContributionEnc = 내 BossEncounterId일 때만) · 첫 타격 전 · 다른 판 값 = 숨김
+local function updatePill(on)
+	local pill = topbarParts and topbarParts.pill
+	if not pill then
+		return
+	end
+	local pct = player:GetAttribute("BossContributionPct")
+	local show = on and not Theme.isMobile and pct ~= nil and player:GetAttribute("BossContributionEnc") == player:GetAttribute("BossEncounterId")
+	pill.Visible = show
+	if show then
+		pill.Text.Text = Text.get("ui1c.boss.contrib", { pct = tostring(pct) })
+	end
 end
 
 -- 보스 초상(판 왼쪽 원) = 보스가 바뀔 때만 다시
@@ -420,7 +473,7 @@ local function moveNotices(on)
 		lane.Position = UDim2.new(0.5, 0, 0, math.floor(r[2] - insetY))
 		if TOPBAR_ON and topbarRect then -- UI-1b: 판 → 상태 아이콘 줄 → 알림(그 아래)
 			local P = Theme.isMobile and TB.phone or TB.pc
-			lane.Position = UDim2.new(0.5, 0, 0, math.floor(topbarRect.y + topbarRect.h + TB.statusGap + P.status + TB.noticeGap - insetY))
+			lane.Position = UDim2.new(0.5, 0, 0, math.floor(topbarRect.y + topbarRect.h + TB.statusGap + pillReserve() + (topbarParts and topbarParts.pillExtra or 0) + P.status + TB.noticeGap - insetY))
 		end
 	elseif not on and tcSaved then
 		if tcSaved.lane.Parent then
@@ -550,6 +603,7 @@ local function hide()
 	end
 	shiftOthers(false)
 	chatSmall(false)
+	updatePill(false)
 end
 
 local function refresh()
@@ -618,6 +672,9 @@ local function refresh()
 				end
 			end
 			v6.statusRow.update(list)
+		end
+		if TOPBAR_ON then
+			updatePill(true)
 		end
 		a.root.Visible = true
 		a.startedAt = a.startedAt or os.clock()

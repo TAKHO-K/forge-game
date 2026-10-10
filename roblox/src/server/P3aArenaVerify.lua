@@ -315,7 +315,7 @@ function P3aArenaVerify.runLiveC(player, env)
 				parts += 1
 			end
 		end
-		r.check(("보스전 장면(서리 거인 · 테마 맵) 워크스페이스 인스턴스 %d · 파트 %d(P2.5a 기준선 1,908 ~ 1,918 · 1,067 ~ 1,069 - 사용자 지시로 기준선 초과 허용, 보고)"):format(total, parts), model ~= nil)
+		r.check(("보스전 장면(빙하 매머드 · 테마 맵) 워크스페이스 인스턴스 %d · 파트 %d(P2.5a 기준선 1,908 ~ 1,918 · 1,067 ~ 1,069 - 사용자 지시로 기준선 초과 허용, 보고)"):format(total, parts), model ~= nil)
 		BossEncounter.despawnFor(player)
 	end)
 

@@ -48,3 +48,12 @@ UI-1 끝. 다음 = 사용자: rojo serve 다시 켜고 Connect · 보고서 11�
 | F7 실제 검사 · 보고 | 완료 | dcb5ed8d · (보고 커밋) | 8가지 겹침 0 · 보고서 `docs/phase/UI-1b-report.md` · Studio 테스트 속성 지움 |
 
 UI-1b 끝. 다음 = 사용자: 보고서 5절 결정(F6 환생 무료권 · 능력 묶음 % · "7일 출석" 해석) · UI-1c.
+
+## UI-1c (지시 = `claude-design-handoff\CC-UI-1c-prompt.md` · 기준 `08_other-screens\v9-more` · I 묶음)
+
+| 단계 | 상태 | 커밋 | 메모 |
+|---|---|---|---|
+| 1 공통 | 확인(코드 0) | - | 글자 3단 · [?] · 재화 칩 · HUD 칩 묶음 = UI-1b(2c557bba · 6b37eed3 · a5d2df24)에 이미 있음 · 저장값 textScale = 같은 키(보통 → 보통) |
+| 2 보스 바 | 완료 | (이 커밋) | 내 기여 알약 = 서버 MonsterState Attribute BossContributionPct + 판 번호 BossContributionEnc(PC만 · 폰 숨김 · 알약 줄 칸 늘 비움) · BREAK = 데이터 없음 → 안 그림 · 매머드 = "빙하 매머드"/Glacier Mammoth(BossData 한 곳) · ui1c_static 6 · 실제 타격 = 100%(혼자 처치) 확인 · 캡처 docs/design/ui1c/2 |
+
+다음 시작 = 3단계 명예의 전당(새 저장소 = 역대 개인 · 역대 직업 · 시즌 파티 보스 처치 수 · 게시판 Part = 데이터 크기로 새로 세움 - hub_hall 메시엔 게시판 파트 없음).

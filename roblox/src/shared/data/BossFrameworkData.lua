@@ -98,7 +98,7 @@ D.v3 = {
 		marks = { color = LAVENDER, crackColor = Color3.fromRGB(160, 90, 255), transparency = 0.6, crackTransparency = 0.25, crackWidth = 0.35 },
 		bodyCharges = { gore = true }, -- 돌진 경로 반폭 = 몸 가장자리 반폭 · 균열선
 		lockFacing = true, -- 스킬 시작 순간 대상 쪽으로 몸 방향 고정(스킬 동안 안 돎 → 등 뒤가 생긴다 - 뒷발차기) · 스킬 끝 = 다시 대상을 봄
-		displayNameNote = "빙하 엄니", -- 표시 이름 = BossData displayName(전 몸 공통 - 사용자 확정)
+		displayNameNote = "빙하 매머드", -- 표시 이름 = BossData displayName(전 몸 공통 - 사용자 확정)
 		removeSkills = { "spear" }, -- 얼음 창 → 얼음 상아 발사(tuskShot)
 		addSkills = {
 			-- 얼음 상아 발사: 머리 숙임 → 상아에 얼음이 자람(1.4초) → 얼음 상아 복제 2발(왼 → 오른 0.4초 간격 · 자기 축 회전) · 상아 본체는 그대로

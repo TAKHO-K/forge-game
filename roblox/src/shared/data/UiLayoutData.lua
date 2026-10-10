@@ -349,6 +349,9 @@ return {
 		phone = { w = 430, h = 34, portrait = 24, name = 14, bar = 10, pct = 14, nameW = 104, formW = 46, pctW = 44, pad = 6, status = 24 },
 		minW = 360, margin = 12, below = 4, statusGap = 4, noticeGap = 8,
 		bg = "0E1120", bgT = 0.18, stroke = "3A4466", strokeW = 2, corner = 12,
+		-- UI-1c 2단계: 바 바로 아래 알약 줄(PC만 · 폰 = 숨김 - 기여는 결과 창) · BREAK = 게이지 데이터 없음 → 안 그림 · 내 기여 = 서버 Attribute BossContributionPct(판 번호가 같을 때만)
+		--   PC는 알약 줄 칸을 늘 비워 둠(알약이 첫 타격 뒤에 나타나도 상태 줄 · 알림 줄이 안 움직이게)
+		pill = { pc = { h = 32, w = 150, text = 16, gap = 6 }, phone = nil, bg = "0E1120", bgT = 0.18, stroke = "3A4466", strokeW = 2 },
 	},
 	-- UI-1b 0절(VERIFY-5 상3) 실제 화면 겹침 검사: 표 사각형이 아니라 실제 GUI 인스턴스의 AbsolutePosition · AbsoluteSize로 잰다(hud/HudRealCheck · shared/HudRealRules).
 	--   path = PlayerGui 기준 · each = 보이는 직속 자식마다 한 칸(메뉴 버튼 · 칩) · allow = 겹쳐도 되는 짝(설계상 겹침 - 이유 적기)
