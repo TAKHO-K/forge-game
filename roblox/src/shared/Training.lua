@@ -26,6 +26,9 @@ end
 
 -- 계정 최고 스테이지가 허락하는 단계 상한(스테이지 연동). ability면 def.maxLevel과 둘 중 작은 쪽.
 function Training.capFor(def, bestStage)
+	if def and def.startStage then -- PROG-2B-1 4: 치명 수련 = startStage부터 stagesPerLevel칸마다 1단계
+		return math.clamp(math.floor(((bestStage or 0) - def.startStage) / def.stagesPerLevel), 0, def.maxLevel)
+	end
 	local cap = math.floor(math.max(0, bestStage or 0) / (def and def.stagesPerLevel or TrainingData.stagesPerLevel)) -- QUEUE-ALL9B 2: 항목별 스테이지 간격(수련 = 20)
 	if def and def.maxLevel then
 		local evolution = Training.statDef(def.id) ~= def and All10.evolutionCapBonus(bestStage) or 0 -- QUEUE-ALL10 2-5(D4): 직업 고유 능력만 5,000 · 7,500 · 10,000에서 상한 +10씩(공용 수련 1 ~ 50은 그대로 · 스위치 끔 = 0)
@@ -50,6 +53,9 @@ function Training.killsFor(def, level)
 end
 
 function Training.costFor(def, level, bestStage)
+	if def.priceOffset then -- PROG-2B-1 4(C4): 치명 수련 n단계 = 공격 수련 (priceOffset + n)단계 가격 × 가치 비
+		return math.floor(Training.costFor(Training.statDef("attack"), (level or 0) + def.priceOffset, bestStage) * (def.priceScale or 1))
+	end
 	return GoldCost.cost(MonsterData.tier1.goldDrop * Training.killsFor(def, level), bestStage, Training.statDef(def.id) == def and "training" or "classAbility")
 end
 
@@ -82,6 +88,23 @@ local function sumFor(defs, levels, bucket, axis)
 		end
 	end
 	return sum
+end
+
+-- PROG-2B-1 4: 치명 수련 몫(계정 공용 수련 단계 표) → 치명 확률 +, 치명 피해 +(상한 밖)
+function Training.critValues(training)
+	local rate, dmg = 0, 0
+	for _, def in ipairs(TrainingData.stats) do
+		local level = type(training) == "table" and tonumber(training[def.id]) or 0
+		level = level and level == level and math.min(level, def.maxLevel) or 0 -- 저장값은 상한으로 안 자른다(SaveSystem.sanitizeAll10) - 계산 때만
+		if def.critAxis and level > 0 then
+			if def.critAxis == "rate" then
+				rate += def.perLevel * level
+			else
+				dmg += def.perLevel * level
+			end
+		end
+	end
+	return rate, dmg
 end
 
 -- 영구 버킷 몫(공격 · 체력): 공용 수련 + 그 직업 능력

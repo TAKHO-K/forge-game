@@ -13,6 +13,7 @@ local ProjectileConfig = require(ReplicatedStorage.Shared.data.ProjectileConfig)
 local PrimordialData = require(ReplicatedStorage.Shared.data.PrimordialData)
 local SkillData = require(ReplicatedStorage.Shared.data.SkillData) -- C3-2 강궁(heavyShot - 관통)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
+local ClassData = require(ReplicatedStorage.Shared.data.ClassData) -- PROG-2B-1 4 버프 치명 넘침(직업 기본 치명)
 local AimPicker = require(ReplicatedStorage.Shared.AimPicker)
 local AttackZone = require(script.Parent.AttackZone) -- SEC-FIX-1 5: 구역 · 보스전 판정 한 곳(옛 ZoneBounds 직접 = 보스는 항상 통과)
 local MonsterState = require(script.Parent.MonsterState)
@@ -238,7 +239,10 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 	-- C5-7b 광폭: 전투 중 공속 +10%(FrenzyAttackBonus - 신발 % 합에 더한다 → 상한 ×2.5 · 최소 간격 · 넘는 몫 피해 환산 규칙 그대로 · 클라 예측과 같은 합).
 	local speedBonus = PlayerProfile.getSpeedPercentBonus(player) + (player:GetAttribute("FrenzyAttackBonus") or 0)
 	local interval, swingScale, swingHits = PlayerCombat.getAttackTempo(classId, speedBonus, buffSpeedMultiplier)
-	swingScale *= PlayerCombat.getFrenzyOverflowDamageScale(PlayerProfile.getSpeedPercentBonus(player), player:GetAttribute("FrenzyAttackBonus")) -- 상한에 막힌 광폭 몫 = 피해
+	-- PROG-2B-1 4(넘침 원칙 한 함수): 상한에 막힌 광폭 몫 = 같은 기대 피해 → 위력 버킷 남은 자리 안에서 한 타 배율(PlayerCombat.overflowHitScale) - 상시 넘침(치명 · 공속)은 이미 위력 몫 안
+	local overflowInfo = PlayerProfile.getOverflowInfo(player)
+	local frenzyScale, frenzyUsed = PlayerCombat.overflowHitScale(PlayerCombat.getFrenzyOverflowLost(PlayerProfile.getSpeedPercentBonus(player), player:GetAttribute("FrenzyAttackBonus")), overflowInfo.apb, overflowInfo.room)
+	swingScale *= frenzyScale
 	if last and now - last < interval - CombatConfig.attackTempo.serverGraceSeconds then
 		return -- 쿨다운이 안 지났다 - 조용히 무시
 	end
@@ -411,6 +415,11 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 	local isGuaranteedCritActive = BuffState.get(player, "guaranteedCrit") ~= nil
 	local forceCrit, guaranteedCritDmgBonus = PlayerCombat.resolveGuaranteedCrit(classId, isGuaranteedCritActive, critRateBonus)
 	local critDmgBonus = guaranteedCritDmgBonus + optionCritDmg
+	-- PROG-2B-1 4(C8 · 넘침 원칙): 버프 치명(백스텝 · 표식)이 100%를 넘긴 몫 = 같은 기대 피해 → 위력 버킷 남은 자리 안(광폭이 쓴 자리 뒤) · 확정 치명 넘침은 옛 규칙(피해 +0.4) 그대로
+	if not forceCrit and guaranteedCritDmgBonus == 0 then
+		local buffOver = math.max(0, ClassData.classes[classId].critRate + critRateBonus - 1)
+		base *= PlayerCombat.overflowHitScale(PlayerCombat.overCritLost(buffOver, ClassData.classes[classId].critDmg + critDmgBonus), overflowInfo.apb, overflowInfo.room - frenzyUsed)
+	end
 
 	local damage, isCrit = PlayerCombat.calcDamage(base, classId, critRateBonus, forceCrit, critDmgBonus)
 	-- 힐러 버프(24-3, PRD 20.64) - SkillServer.strikeTarget과 같은 지점(calcDamage 직후,

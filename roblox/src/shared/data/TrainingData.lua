@@ -26,6 +26,12 @@ return {
 		{ id = "attack", name = "공격 수련", bucket = "attack", perLevel = 0.01, maxLevel = 50, stagesPerLevel = 20, priceBands = { { fromLevel = 1, kills = 40, growth = 1.04 }, { fromLevel = 26, kills = 400, growth = 1.04 } } },
 		{ id = "hp", name = "체력 수련", bucket = "hp", perLevel = 0.01, maxLevel = 50, stagesPerLevel = 20, priceBands = { { fromLevel = 1, kills = 40, growth = 1.04 }, { fromLevel = 26, kills = 400, growth = 1.04 } } },
 		{ id = "defense", name = "방어 수련", axis = "defensePercent", perLevel = 0.005, maxLevel = 50, stagesPerLevel = 20, priceBands = { { fromLevel = 1, kills = 40, growth = 1.04 }, { fromLevel = 26, kills = 400, growth = 1.04 } } },
+		-- PROG-2B-1 4(CRIT-TRAIN-1 C2 · C3 · C4 - 사용자 확정): 치명 수련 2종(공용 수련 묶음 · 계정 공유 = profile.training.crit_rate · crit_dmg - SAVE v79).
+		--   critAxis = "rate"(치명 확률 합 - 레벨 · 환생 · 옵션과 같은 줄 · 100% 넘침 = 같은 기대 피해 → 위력) | "dmg"(치명 피해 추가분 - 장비 · 보석 상한 +2.2 밖).
+		--   열림 = 계정 최고 startStage부터 stagesPerLevel칸마다 1단계(Training.capFor) · 가격 = 공격 수련 (priceOffset + 단계) 가격 × priceScale(가치 비 - 같은 힘 = 같은 값 · Training.costFor).
+		--   확률 25단계 = 2,000 → 5,000("치명 채우기" 구간 · 100% = 약 3,920 ~ 5,000) · 피해 50단계 = 5,000 → 10,000. 몹 HP · 권장 = 상한까지 산다고 보고 곱함(shared/ReferenceBuild).
+		{ id = "crit_rate", name = "치명타 확률 수련", critAxis = "rate", perLevel = 0.01, maxLevel = 25, startStage = 2000, stagesPerLevel = 120, priceOffset = 25, priceScale = 1.0 },
+		{ id = "crit_dmg", name = "치명타 피해 수련", critAxis = "dmg", perLevel = 0.02, maxLevel = 50, startStage = 5000, stagesPerLevel = 100, priceOffset = 25, priceScale = 1.2 },
 	},
 	-- 직업 고유 능력: 직업 DPS 최저 대비 ≤ 1.32 유지(K1 규칙) - 네 직업 모두 공격 · 체력 버킷은 같은 값, 직업 축만 다르다(속도 축은 상한 작게).
 	classAbilities = {

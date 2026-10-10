@@ -18,7 +18,7 @@ declare -A EXP=( # 기대 검사 수(끝 a/b의 b) · require_path는 최소값(
 	[bignum]=71 [bulk_sell]=11 [stat_sheet]=9 [all10]=57 [gear_v3]=10 [gem_home]=25 [monster_stats]=5 [dash_modes]=19 [boss_feel]=13
 	[menu_gate]=14 [menu_gate_src]=11 [hud_v5_src]=10 [ui1_static]=9 [ui1c_static]=13 [ui_v2]=77 [hud_layout]=18 [ui1_parts]=11 [codex_box]=35
 	[ember_view]=8 [hud_edit]=16 [pet_ui]=7 [quick_chat]=6 [ui_rules]=4 [window_layers]=7 [help_data]=6 [train_bundle]=5 [community_goal]=24 [require_path]=5542 [regrow_timing]=8
-	[sec_save]=15 [sec_shop]=14 [sec_secret]=9 [sec_zone]=11 [sec_move]=8 [sec_econ]=7 [sec_log]=4 [sec_text]=3 [sec_textkey]=2 [sec_enhance]=3 [sec_gem]=8 [gold_curve]=26 [ref_build]=12
+	[sec_save]=15 [sec_shop]=14 [sec_secret]=9 [sec_zone]=11 [sec_move]=8 [sec_econ]=7 [sec_log]=4 [sec_text]=3 [sec_textkey]=2 [sec_enhance]=3 [sec_gem]=8 [gold_curve]=26 [ref_build]=12 [crit_train]=18
 )
 NALL=0; NBAD=0
 verdict() { # 이름 결과파일 종료코드 → 한 줄 출력
@@ -64,6 +64,7 @@ run security_launch res_sec.txt "$(python deps.py SocialRewardService,CodexServi
 run save_launch res_launch.txt SaveSystem,SlotSave,SaveCoordinator,ImmediateSave,LiveStoreConfig save_launch_test.luau
 run save_lock res_lock.txt SaveSystem,SlotSave save_lock_test.luau
 run migrate_curve res_curve.txt SaveSystem,SlotSave migrate_curve_test.luau
+run crit_train res_crit.txt SaveSystem,SlotSave crit_train_test.luau # PROG-2B-1 4 치명 곡선 · 치명 수련 · 넘침 원칙(치명 · 공속 · 버프 · 광폭) · 시뮬 같은 함수 · 몹 기준 함수 치명 비 · v79
 run gold_curve res_goldc.txt SaveSystem,SlotSave gold_curve_test.luau # PROG-2B-1 2 골드 곡선 C · 보스 첫 처치 마리분 · 시즌 패스 · 견습 · 보너스 합 · 2^53 · v78 환산
 run id_quarantine res_quar.txt SaveSystem,SlotSave id_quarantine_test.luau
 run slot_save res_slot.txt SaveSystem,SlotSave,SkillCooldowns,MenuBlock,LiveStoreConfig slot_save_test.luau # QUEUE-MENU2 B 캐릭터 칸 저장(이관 · 분리 · 중복 · 상한 · 보관 · 두 서버 · 스위치 끔/켬 · 크기 · 새 계정)

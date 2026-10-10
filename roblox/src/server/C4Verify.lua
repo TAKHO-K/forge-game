@@ -43,11 +43,13 @@ function V.runPure()
 		check(("활 환생 5 직후(레벨 1 · 옵션 0) = %.2f(목표 약 0.5 - 보석 몫 전)"):format(bow.critRate + r5), bow.critRate + r5 >= 0.4 and bow.critRate + r5 <= 0.55)
 		local r500, over500 = PlayerCombat.resolveCrit("bow", 500, 5, 0.12)
 		local raw = bow.critRate + PlayerCombat.getLevelCritBonus(500) + PlayerCombat.getRebirthCritBonus(5) + 0.12
-		check(("활 레벨 500 · 환생 5 · 옵션 0.12 = 합 %.3f → 확률 %.3f(≤ 1) · 초과 %.3f → 위력 +%.4f"):format(raw, bow.critRate + r500, raw - 1, over500),
-			math.abs(bow.critRate + r500 - math.min(raw, 1)) < 1e-9 and math.abs(over500 - math.max(raw - 1, 0) * CombatConfig.overCrit.attackPercentPerCrit) < 1e-9)
+		check(("활 레벨 500 · 환생 5 · 옵션 0.12 = 합 %.3f → 확률 %.3f(≤ 1) · 넘친 확률 %.3f"):format(raw, bow.critRate + r500, over500),
+			math.abs(bow.critRate + r500 - math.min(raw, 1)) < 1e-9 and math.abs(over500 - math.max(raw - 1, 0)) < 1e-9) -- PROG-2B-1 4: 둘째 값 = 넘친 확률(전환은 attackPercentWithOverflow)
 		local _, over110 = PlayerCombat.resolveCrit("bow", 1, 0, 1.1 - bow.critRate - PlayerCombat.getLevelCritBonus(1))
-		local _, over130 = PlayerCombat.resolveCrit("bow", 1, 0, 1.3 - bow.critRate - PlayerCombat.getLevelCritBonus(1))
-		check(("오버치명 110%% → 위력 +%.3f · 130%% → +%.3f(비례 %.2f)"):format(over110, over130, CombatConfig.overCrit.attackPercentPerCrit), math.abs(over110 - 0.1 * CombatConfig.overCrit.attackPercentPerCrit) < 1e-9 and math.abs(over130 - 0.3 * CombatConfig.overCrit.attackPercentPerCrit) < 1e-9)
+		local m = bow.critDmg
+		local conv110 = select(2, PlayerCombat.attackPercentWithOverflow(0, 0.5, over110, m, 0))
+		check(("넘침 110%% → 같은 기대 피해: 위력 +%.4f = 0.1 × (m − 1)/m × (1 + 0.5)(m %.2f)"):format(conv110, m), math.abs(conv110 - 0.1 * (m - 1) / m * 1.5) < 1e-9
+			and math.abs((1.5 + conv110) / 1.5 - (1 + 0.1 * (m - 1) / m)) < 1e-9)
 		local cap = OptionData.options.attackPercent.cap
 		check(("위력 버킷 상한: 옵션 %.2f + 전환 0.5 → %.2f(상한 %.2f)"):format(cap - 0.1, PlayerCombat.capAttackPercentOption(cap - 0.1, 0.5), cap), PlayerCombat.capAttackPercentOption(cap - 0.1, 0.5) == cap)
 		local curveOk, prev = true, -1
@@ -61,8 +63,9 @@ function V.runPure()
 		local L = BalanceSim.buildLoadout({ classId = "bow", level = 500, weaponLevel = 20, weaponGrade = 5, rebirth = 5,
 			gems = { { grade = "primordial", itemLevel = 2000, option = { id = "crit", roll = 1, roll2 = 1 } }, false, false, false, false } })
 		local optRate = select(1, require(ReplicatedStorage.Shared.Option).critBonus({ { grade = "primordial", itemLevel = 2000, option = { id = "crit", roll = 1, roll2 = 1 } } }, "bow"))
-		local expectRate, expectOver = PlayerCombat.resolveCrit("bow", 500, 5, optRate)
-		check(("BalanceSim 대표 치명 = 게임 함수(%.3f · 전환 %.4f)"):format(L.critRate, L.overCritAttackPercent or -1), math.abs(L.critRate - (bow.critRate + expectRate)) < 1e-9 and math.abs((L.overCritAttackPercent or 0) - expectOver) < 1e-9)
+		local expectRate, expectOverRate = PlayerCombat.resolveCrit("bow", 500, 5, optRate)
+		local expectOver = expectOverRate > 0 and (L.overCritAttackPercent or 0) > 0 or expectOverRate == 0 -- PROG-2B-1 4: 전환 값은 위력 · 공속에 따라(같은 기대 피해) - 있으면 양수
+		check(("BalanceSim 대표 치명 = 게임 함수(%.3f · 전환 %.4f)"):format(L.critRate, L.overCritAttackPercent or -1), math.abs(L.critRate - (bow.critRate + expectRate)) < 1e-9 and expectOver)
 	end)
 
 	section("잡몹 HP 구간 배율", function()

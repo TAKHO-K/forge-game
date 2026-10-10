@@ -21,6 +21,20 @@ local function critNote(item)
 	return item and item.option and item.option.id == "crit" and Text.get("item.critOverflowNote") or nil
 end
 
+-- PROG-2B-1 4(C9 · 숨은 죽은 옵션 금지): 공속 칸(신발 · 신속 옵션)이고 지금 공속이 상한(×2.5)에 닿았으면 "상한 도달 · 위력으로 전환 +n%"(n = 서버 Attribute SpeedOverflowPower - 클라만).
+local function speedNote(item)
+	if not item or not (item.part == "shoes" or (item.option and item.option.id == "speedPercent")) then
+		return nil
+	end
+	local RunService = game:GetService("RunService")
+	local player = RunService:IsClient() and game:GetService("Players").LocalPlayer
+	local conv = player and player:GetAttribute("SpeedOverflowPower")
+	if type(conv) ~= "number" or conv <= 0 then
+		return nil
+	end
+	return Text.get("item.speedOverflowNote", { n = ("%.1f"):format(conv * 100) })
+end
+
 -- C5-7b: 초월이면 부위 고정 특수 옵션 한 줄(치명 안내가 있으면 그 아래 줄로).
 local function specialNote(item)
 	if not item or item.grade ~= TranscendentData.gradeId then
@@ -114,7 +128,7 @@ function ItemDescribe.item(item, classId)
 		options = optionLines(item, classId),
 		note = (function()
 			local lines = {}
-			for _, line in ipairs({ critNote(item) or false, specialNote(item) or false }) do
+			for _, line in ipairs({ critNote(item) or false, speedNote(item) or false, specialNote(item) or false }) do
 				if line then
 					table.insert(lines, line)
 				end
@@ -144,7 +158,7 @@ function ItemDescribe.gem(gem, classId)
 	else
 		title = Text.get("desc.item.gemTitle", { grade = gradeName(gem.grade), option = optionName(gem.option.id), level = ("%d"):format(gem.itemLevel or 0) })
 	end
-	return { title = title, gradeId = gem.grade, meta = Text.get("desc.item.gemMeta"), options = optionLines(gem, classId), note = critNote(gem) }
+	return { title = title, gradeId = gem.grade, meta = Text.get("desc.item.gemMeta"), options = optionLines(gem, classId), note = critNote(gem) or speedNote(gem) }
 end
 
 -- 무기(등급 · 강화 단계). 무기는 옵션이 없다(20.67 [1]).

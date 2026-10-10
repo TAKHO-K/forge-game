@@ -107,7 +107,7 @@ local function row(t, order)
 	f.LayoutOrder = order
 	f.BackgroundColor3 = Theme.color("slot")
 	f.BackgroundTransparency = 0.35
-	f.Size = UDim2.new(1, -6, 0, ROW_H)
+	f.Size = UDim2.new(1, -6, 0, t.goal and ROW_H + 18 or ROW_H) -- PROG-2B-1 4: 치명 수련 목표 한 줄만큼
 	f.Parent = built.scroll
 	Theme.corner(f, 10)
 	-- 작은 그림(보상 · 수련 아이콘 - 없으면 이름 첫 글자)
@@ -124,6 +124,12 @@ local function row(t, order)
 	change.Name = "Change"
 	change.Position = UDim2.fromOffset(56, 28)
 	change.Size = UDim2.new(0.5, 0, 0, 22)
+	if t.goal then -- PROG-2B-1 4: "치명타 확률 100%까지 n단계" · "스테이지 n에서 열림"(정보만 - 압박 문구 없음)
+		local goal = Theme.label(f, Text.get(t.goal.key, t.goal.args), "caption", "textSecondary")
+		goal.Name = "Goal"
+		goal.Position = UDim2.fromOffset(56, 52)
+		goal.Size = UDim2.new(1, -230, 0, 18)
+	end
 	local ok = affordable(t)
 	local b = Button.build({ parent = f, kind = ok and "primary" or "secondary", width = 150, height = 44,
 		text = atCap and Text.get("quests.trainCap") or Text.get("training.button", { cost = NumberFormat.currency(t.cost, Text.languageFor()) }),

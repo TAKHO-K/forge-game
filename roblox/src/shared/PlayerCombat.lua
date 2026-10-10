@@ -265,20 +265,56 @@ function PlayerCombat.getRebirthCritBonus(rebirthCount)
 end
 
 -- C4-2 · C4-3 치명 확률 출처 합(버프 제외 - 게임 PlayerProfile · EconSim BalanceSim이 같은 함수).
---   반환: (직업 기본에 더할 치명 확률 - 직업 + 이 값 ≤ 1로 자름, 100% 초과분이 바뀐 공격력 %).
---   optionCritRate = 장비 · 보석 치명 옵션 합(Option.critBonus - 옵션 상한 안).
-function PlayerCombat.resolveCrit(classId, level, rebirthCount, optionCritRate)
+--   반환: (직업 기본에 더할 치명 확률 - 직업 + 이 값 ≤ 1로 자름, 100% 넘친 확률(0 ~ · PROG-2B-1: 전환 전 원래 몫 - 전환은 attackPercentWithOverflow)).
+--   optionCritRate = 장비 · 보석 치명 옵션 합(Option.critBonus - 옵션 상한 안) · trainingCritRate = 치명타 확률 수련 몫(PROG-2B-1 C2 - 레벨 · 환생 · 옵션과 같은 줄).
+function PlayerCombat.resolveCrit(classId, level, rebirthCount, optionCritRate, trainingCritRate)
 	local class = ClassData.classes[classId]
 	local base = class and class.critRate or 0
-	local bonus = PlayerCombat.getLevelCritBonus(level) + PlayerCombat.getRebirthCritBonus(rebirthCount) + (optionCritRate or 0)
+	local bonus = PlayerCombat.getLevelCritBonus(level) + PlayerCombat.getRebirthCritBonus(rebirthCount) + (optionCritRate or 0) + (trainingCritRate or 0)
 	local over = math.max(base + bonus - 1, 0)
-	local rule = CombatConfig.overCrit
-	return bonus - over, over * (rule and rule.attackPercentPerCrit or 0)
+	return bonus - over, over
 end
 
--- C4-3 위력 버킷 합: 장비 · 보석 위력 옵션(상한 안) + 오버치명 전환분 → 같은 옵션 상한(OptionData.options.attackPercent.cap)으로 자른다.
+-- C4-3 위력 버킷 합: 장비 · 보석 위력 옵션(상한 안) + 넘침 전환분 → 같은 옵션 상한(OptionData.options.attackPercent.cap)으로 자른다.
 function PlayerCombat.capAttackPercentOption(optionAttackPercent, overCritAttackPercent)
 	return math.min((optionAttackPercent or 0) + (overCritAttackPercent or 0), OptionData.options.attackPercent.cap)
+end
+
+-- ── PROG-2B-1 4 넘침 원칙(정본 · 사용자 확정): 상한에 막힌 몫은 버리지 않고 **같은 기대 피해**로 위력 버킷(합 · 옵션 위력 상한 2.55 안)에 넣는다 ──
+--   lost = 막혀서 못 받은 피해 배율(1 = 없음) → 위력 버킷에 더할 값 = (lost − 1) × (1 + 지금 위력 몫). 출처마다 lost만 다르다:
+--   치명 확률 100% 초과 o(직업 배율 m) = 1 + o(m − 1)/m · 공속 ×2.5 초과(신발 · 옵션 · 광폭) = 원래 공속 ÷ 상한 · 버프 치명(백스텝 · 표식)이 넘친 몫 = 치명과 같은 식.
+--   치명 피해 상한(+2.2) 넘침 = 전환 없음(C6).
+function PlayerCombat.overflowToPower(lost, attackPercentBonus)
+	return math.max(0, (lost or 1) - 1) * (1 + (attackPercentBonus or 0))
+end
+
+function PlayerCombat.overCritLost(over, critMult)
+	if not over or over <= 0 or not critMult or critMult <= 1 then
+		return 1
+	end
+	return 1 + over * (critMult - 1) / critMult
+end
+
+-- 장비 · 보석 공속(+ 광폭)의 원래 배율 ÷ 상한(×2.5) - 넘지 않으면 1
+function PlayerCombat.speedOverflowLost(speedPercentBonus)
+	return math.max(1, (1 + (speedPercentBonus or 0)) / CombatConfig.attackSpeedMaxMultiplier)
+end
+
+-- 위력 몫 전체(장갑 + 옵션 위력 버킷 + 넘침 전환 - 상한 2.55 안). 게임 PlayerProfile.getAttackPercentBonus · BalanceSim이 같은 함수.
+--   반환: 위력 몫, 넘침 전환으로 실제 들어간 몫(상한에 잘린 뒤 - 화면 "→ 위력 +m%")
+function PlayerCombat.attackPercentWithOverflow(glovesPercent, optionAttackPercent, overCrit, critMult, speedPercentBonus)
+	local cap = OptionData.options.attackPercent.cap
+	local baseOption = math.min(optionAttackPercent or 0, cap)
+	local base = (glovesPercent or 0) + baseOption
+	local conv = PlayerCombat.overflowToPower(PlayerCombat.overCritLost(overCrit, critMult) * PlayerCombat.speedOverflowLost(speedPercentBonus), base)
+	local option = PlayerCombat.capAttackPercentOption(optionAttackPercent, conv)
+	return (glovesPercent or 0) + option, option - baseOption
+end
+
+-- 한 타 넘침(전투 중에만 생기는 몫 - 버프 치명 · 광폭): 위력 버킷 남은 자리(room = 상한 − 지금 옵션 버킷) 안에서 같은 기대 피해 → 한 타 피해 배율. 반환: 배율, 쓴 자리
+function PlayerCombat.overflowHitScale(lost, attackPercentBonus, room)
+	local add = math.min(PlayerCombat.overflowToPower(lost, attackPercentBonus), math.max(0, room or 0))
+	return (1 + (attackPercentBonus or 0) + add) / (1 + (attackPercentBonus or 0)), add
 end
 
 -- C3 전 쿨다운식 = 이제 "DPS 기준"(한 초에 넣는 피해를 정하는 가상 간격). 실제 입력 간격은 아래 getAttackTempo.
@@ -307,17 +343,17 @@ function PlayerCombat.getAttackTempo(classId, speedPercentBonus, buffSpeedMultip
 	return interval, interval / PlayerCombat.getAttackCooldown(classId, speedPercentBonus, buffSpeedMultiplier) * power / hits, hits
 end
 
--- C5-7b 광폭 보정(묶음 A-2): 광폭 공속(frenzyBonus)은 신발 % 합에 더해 상한(attackSpeedMaxMultiplier)을 따른다 - 상한에 막혀 버려진 광폭 몫만
---   C3 초과분 → 피해 환산과 같은 1:1 비율(초당 피해 ∝ 공속)로 한 타 피해 배율로 돌려준다. 광폭 몫만 보므로 신발 초과분은 여전히 버려진다(곱셈 우회 없음).
-function PlayerCombat.getFrenzyOverflowDamageScale(speedPercentBonus, frenzyBonus)
+-- C5-7b 광폭 보정(묶음 A-2): 광폭 공속(frenzyBonus)은 신발 % 합에 더해 상한(attackSpeedMaxMultiplier)을 따른다 - 상한에 막혀 버려진 광폭 몫만 돌려준다.
+--   PROG-2B-1 4(C9 · 넘침 원칙 한 함수): 신발 · 옵션 초과분은 이제 위력 버킷(attackPercentWithOverflow - 상시)이 받으므로, 여기는 광폭이 더한 몫의 막힌 배율(lost)만 돌려준다
+--   = max(원래 + 광폭, 상한) ÷ max(원래, 상한). 한 타 배율은 호출부가 overflowHitScale(같은 위력 버킷 상한)로 바꾼다.
+function PlayerCombat.getFrenzyOverflowLost(speedPercentBonus, frenzyBonus)
 	frenzyBonus = frenzyBonus or 0
 	if frenzyBonus <= 0 then
 		return 1
 	end
-	local raw = 1 + (speedPercentBonus or 0) + frenzyBonus
-	local capped = PlayerCombat.getSpeedMultiplier((speedPercentBonus or 0) + frenzyBonus)
-	local wasted = math.min(frenzyBonus, math.max(0, raw - capped))
-	return (capped + wasted) / capped
+	local cap = CombatConfig.attackSpeedMaxMultiplier
+	local raw0 = 1 + (speedPercentBonus or 0)
+	return math.max(raw0 + frenzyBonus, cap) / math.max(raw0, cap)
 end
 
 -- C3-2 모션 재생 배율(MotionTiming.scale): 기본 간격 ÷ 실제 간격(1 ~ 1.36 · 강궁 = 1).

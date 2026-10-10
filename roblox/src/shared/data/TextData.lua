@@ -221,7 +221,13 @@ local TextData = {
 		["help.less"] = "접기 ▲",
 
 		-- C4-3 치명 옵션 툴팁 한 줄(오버치명 전환 - CombatConfig.overCrit)
-		["item.critOverflowNote"] = "치명타 확률 100% 초과분은 공격력으로 바뀜",
+		["item.critOverflowNote"] = "치명타 확률 100%를 넘은 몫은 같은 기대 피해만큼 위력으로 바뀜", -- PROG-2B-1 4(넘침 원칙)
+		["item.speedOverflowNote"] = "공격 속도 상한 도달 · 위력으로 전환 +{n}%", -- PROG-2B-1 4(C9 - 숨은 죽은 옵션 금지)
+		["stat.note.overCrit"] = "넘침 +{n}% → 위력 +{m}%", -- PROG-2B-1 4 능력치 표 치명타 확률 줄
+		["stat.note.overSpeed"] = "상한 도달 · 위력으로 전환 +{m}%", -- PROG-2B-1 4 능력치 표 공격 속도 줄
+		["training.critToFull"] = "치명타 확률 100%까지 {n}단계", -- PROG-2B-1 4 수련 창 목표 한 줄
+		["training.critFull"] = "치명타 확률 100% 도달 · 넘친 몫은 위력으로", -- PROG-2B-1 4
+		["training.opensAt"] = "스테이지 {stage}에서 열림", -- PROG-2B-1 4 치명 수련(아직 안 열림)
 		-- C5-7b 초월 특수 옵션 툴팁 한 줄(TranscendentData - 숫자는 ItemDescribe가 넘긴다)
 		["transcendent.special.phantom"] = "환영: 기본 공격 {chance}% 확률로 환영 추가타 · 3번째마다 강공격",
 		["transcendent.special.frenzy"] = "광폭: 전투 중 이동 속도 · 공격 속도 +{speed}% · 대시 쿨타임 −{dash}%",

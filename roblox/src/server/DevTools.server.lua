@@ -1876,7 +1876,8 @@ local function handleCommand(player, args)
 		local T = require(script.Parent.TranscendentService)
 		T.syncFrenzy(player)
 		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-		local overflow = require(ReplicatedStorage.Shared.PlayerCombat).getFrenzyOverflowDamageScale(PlayerProfile.getSpeedPercentBonus(player), player:GetAttribute("FrenzyAttackBonus")) -- 묶음 A-2: 상한에 막힌 광폭 몫 = 한 타 피해
+		local PC, info = require(ReplicatedStorage.Shared.PlayerCombat), PlayerProfile.getOverflowInfo(player)
+		local overflow = PC.overflowHitScale(PC.getFrenzyOverflowLost(PlayerProfile.getSpeedPercentBonus(player), player:GetAttribute("FrenzyAttackBonus")), info.apb, info.room) -- 묶음 A-2 · PROG-2B-1 4: 상한에 막힌 광폭 몫 = 같은 기대 피해(위력 버킷 남은 자리 안)
 		print(("C5FRENZY|active %s|walk %.2f|speedBonus %.3f|frenzyAtk %s|dashScale %.2f|overflowDmg %.3f"):format(tostring(T.frenzyActive(player)), humanoid and humanoid.WalkSpeed or -1, PlayerProfile.getSpeedPercentBonus(player), tostring(player:GetAttribute("FrenzyAttackBonus")), T.dashCooldownScale(player), overflow))
 		reply(player, ("광폭 %s · 걷기 %.2f · 대시 쿨 ×%.2f · 상한 초과 피해 ×%.3f"):format(T.frenzyActive(player) and "발동" or "꺼짐", humanoid and humanoid.WalkSpeed or -1, T.dashCooldownScale(player), overflow))
 	elseif sub == "c5" and args[2] == "soar" then

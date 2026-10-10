@@ -75,7 +75,9 @@ do
 	local Training, TrainingData, GoldCost, MonsterData = MODS.Training, MODS.TrainingData, MODS.GoldCost, MODS.MonsterData
 	local ok, rows = true, {}
 	for _, def in ipairs(TrainingData.stats) do
-		ok = ok and def.maxLevel == 50 and Training.capFor(def, 1000) == 50 and Training.capFor(def, 999) == 49 and Training.capFor(def, 99999) == 50
+		if not def.critAxis then -- PROG-2B-1 4: 치명 수련(startStage 열림)은 crit_train 하네스
+			ok = ok and def.maxLevel == 50 and Training.capFor(def, 1000) == 50 and Training.capFor(def, 999) == 49 and Training.capFor(def, 99999) == 50
+		end
 	end
 	check("2-1 공용 수련 최대 50단계 · 상한 = 최고 스테이지 ÷ 20(1,000 = 50)", ok)
 	local atk = Training.statDef("attack")

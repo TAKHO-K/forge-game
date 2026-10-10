@@ -99,7 +99,7 @@ local ok, err = pcall(function()
 	end
 	local a = SaveSystem.migrate(v77(8500, 1e9))
 	local wantA = math.floor(1e9 * IS.getGoldMultiplier(8500) / 1.001 ^ 8499)
-	check("7-1 계정 최고 8,500: 보유 × M_새 ÷ M_옛 · 기록 { from · to · stage } · 버전 78", a.version == 78 and a.gold == wantA and a.goldCurveRescale and a.goldCurveRescale.from == 1e9
+	check("7-1 계정 최고 8,500: 보유 × M_새 ÷ M_옛 · 기록 { from · to · stage } · 버전 78 이상", a.version >= 78 and a.gold == wantA and a.goldCurveRescale and a.goldCurveRescale.from == 1e9
 		and a.goldCurveRescale.to == wantA and a.goldCurveRescale.stage == 8500, ("%s → %s"):format(tostring(1e9), tostring(a.gold)))
 	local b = SaveSystem.migrate(v77(700, 54321))
 	check("7-2 계정 최고 1,000 이하 = 숫자 그대로(배율 1)", b.gold == 54321 and b.goldCurveRescale.to == 54321)
@@ -108,7 +108,7 @@ local ok, err = pcall(function()
 	local c = SaveSystem.migrate(c0)
 	check("7-3 기록이 있으면 다시 환산 안 함(멱등)", c.gold == 1e9)
 	local n = SaveSystem.migrate({})
-	check("7-4 새 계정(migrate({})) = 환산 기록 없음 · 버전 78", n.goldCurveRescale == nil and n.version == 78)
+	check("7-4 새 계정(migrate({})) = 환산 기록 없음 · 버전 78 이상", n.goldCurveRescale == nil and n.version >= 78)
 	local d = SaveSystem.migrate(v77(99999999, 1e6))
 	check("7-5 손상된 큰 스테이지 = 하드 상한(25,300)으로 환산", d.goldCurveRescale.stage == ISC.hardMaxStage)
 end)

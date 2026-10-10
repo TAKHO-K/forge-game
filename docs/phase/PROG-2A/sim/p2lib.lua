@@ -393,4 +393,35 @@ PROG2.report = function(run)
 		table.insert(t, ("%d:%.4g"):format(s, Mg(s)))
 	end
 	print("X_MG|" .. table.concat(t, " "))
+	-- PROG-2B-1 7: 치명 100% 첫 도달 · 안정(그 뒤 계속 100%) · 스테이지별 몹 타수(사냥 몹 · 치명 기대값 · ±5% 창 중앙값)
+	local EconSim, PlayerCombat = M.EconSim, M.PlayerCombat
+	local tt, first, stable = run.tutorialSeconds or 0, nil, nil
+	local hitsAt = {}
+	for _, c in ipairs(run.chunks) do
+		tt += c.seconds + c.bossSeconds
+		local L = c.loadout
+		if L and L.critRate then
+			if L.critRate >= 1 - 1e-9 then
+				first = first or { c.reach, tt / 3600 }
+				stable = stable or { c.reach, tt / 3600 }
+			else
+				stable = nil
+			end
+			local hp = EconSim.effectiveMonsterHp(L, EconSim.tierData(c.tier).hp, c.stage)
+			local _, hitScale = PlayerCombat.getAttackTempo(L.classId, L.speedPercentBonus, 1)
+			table.insert(hitsAt, { c.reach, hp / (L.atk * hitScale * L.critMultAvg), L.critRate, L.critDmg })
+		end
+	end
+	print(("X_CRIT|first %s|stable %s"):format(first and ("s%d %.1fh"):format(first[1], first[2]) or "-", stable and ("s%d %.1fh"):format(stable[1], stable[2]) or "-"))
+	local hs = {}
+	for _, s in ipairs({ 1000, 2000, 3000, 5000, 8500, 15000, 25300 }) do
+		local v = {}
+		for _, h in ipairs(hitsAt) do
+			if h[1] >= s * 0.95 and h[1] <= s * 1.05 then table.insert(v, h) end
+		end
+		table.sort(v, function(a, b) return a[2] < b[2] end)
+		local mid = v[math.max(1, math.ceil(#v / 2))]
+		table.insert(hs, mid and ("%d:%.2f타 · %.0f%% · ×%.2f"):format(s, mid[2], mid[3] * 100, mid[4]) or ("%d:-"):format(s))
+	end
+	print("X_HITS|" .. table.concat(hs, " | "))
 end

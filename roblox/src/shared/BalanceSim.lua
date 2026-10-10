@@ -112,20 +112,22 @@ end
 -- 여기서 새 공식을 만들지 않고 PlayerProfile과 같은 지점에 합류시킨다).
 -- permanentMultiplier · permanentHpMultiplier(P2.5b D - 선택, 기본 1) = 환생 후 레벨 마일스톤 영구 배율 - 게임과 같이 공격력(PlayerCombat.getAttack) · 최대체력에 곱한다
 -- (최대체력 몫은 MilestoneData.stat = "survival"일 때만 1이 아니다 - 호출부가 Milestone.maxHpMultiplier로 넘긴다).
-local function buildLoadoutCore(classId, level, weaponLevel, weaponGrade, armorItem, glovesItem, shoesItem, gems, permanentMultiplier, permanentHpMultiplier, rebirthCount, weaponTranscend)
+local function buildLoadoutCore(classId, level, weaponLevel, weaponGrade, armorItem, glovesItem, shoesItem, gems, permanentMultiplier, permanentHpMultiplier, rebirthCount, weaponTranscend, critTraining)
 	local class = ClassData.classes[classId]
 	assert(class, "알 수 없는 classId: " .. tostring(classId))
 
 	local weapon = { id = WeaponData.starterId, level = weaponLevel or 0, grade = weaponGrade or 0, transcend = weaponTranscend } -- QUEUE-ALL10: 초월 무기 칸(PlayerCombat이 등급 · 강화 줄에 얹는다 - 게임과 같은 함수)
 	local gemBonus = gemBonusesFor(classId, armorItem, glovesItem, shoesItem, gems)
-	-- C4-2 · C4-3: 치명 확률 = 직업 + 레벨 곡선 + 환생 보상 + 옵션(100%에서 자름) · 넘친 몫 = 위력 버킷(게임 PlayerProfile과 같은 함수 PlayerCombat.resolveCrit)
-	local critRateBonus, overCritAttack = PlayerCombat.resolveCrit(classId, level, rebirthCount, gemBonus.critRate)
-	local attackPercentBonus = Loot.getGlovesAttackPercent(glovesItem) + PlayerCombat.capAttackPercentOption(gemBonus.attackPercent, overCritAttack)
+	-- C4-2 · C4-3: 치명 확률 = 직업 + 레벨 곡선 + 환생 보상 + 옵션 + 수련(100%에서 자름) · 넘친 몫 = 위력 버킷(게임 PlayerProfile과 같은 함수 PlayerCombat.resolveCrit)
+	-- PROG-2B-1 4: critTraining = { rate, dmg }(치명 수련 몫 - Training.critValues) · 넘침(치명 · 공속 ×2.5 초과) = 같은 기대 피해 → 위력 버킷(PlayerCombat.attackPercentWithOverflow)
+	local trainRate, trainDmg = critTraining and critTraining.rate or 0, critTraining and critTraining.dmg or 0
+	local critRateBonus, overCrit = PlayerCombat.resolveCrit(classId, level, rebirthCount, gemBonus.critRate, trainRate)
 	local speedPercentBonus = Loot.getShoesSpeedPercent(shoesItem) + gemBonus.speedPercent
 	local armorBonus = Loot.getArmorDefense(armorItem)
 	local maxHpBonus = Loot.getMaxHpBonus(armorItem)
-	-- D1-2: 태초 장갑 치명 피해 + C4-2 치명 옵션 피해(PlayerProfile.getCritBonus와 같은 합 · 같은 상한).
-	local critDmg = class.critDmg + math.min(Loot.getGlovesCritDmgBonus(glovesItem) + gemBonus.critDmg, CombatConfig.critDmgBonusCap)
+	-- D1-2: 태초 장갑 치명 피해 + C4-2 치명 옵션 피해(PlayerProfile.getCritBonus와 같은 합 · 같은 상한) + 수련(상한 밖).
+	local critDmg = class.critDmg + math.min(Loot.getGlovesCritDmgBonus(glovesItem) + gemBonus.critDmg, CombatConfig.critDmgBonusCap) + trainDmg
+	local attackPercentBonus, overCritAttack = PlayerCombat.attackPercentWithOverflow(Loot.getGlovesAttackPercent(glovesItem), gemBonus.attackPercent, overCrit, critDmg, speedPercentBonus)
 
 	-- C5-1 딜 부위 itemLevel(지수 몫 - PlayerCombat.getAttack 7번째 인자 · 뒤처짐 신호 = 최고값)
 	local dealItemLevels = { gloves = glovesItem and glovesItem.itemLevel or 0, shoes = shoesItem and shoesItem.itemLevel or 0 }
@@ -164,7 +166,7 @@ function BalanceSim.buildLoadout(spec)
 	return buildLoadoutCore(
 		spec.classId, spec.level, spec.weaponLevel, spec.weaponGrade,
 		buildItem("armor", gear.armor), buildItem("gloves", gear.gloves), buildItem("shoes", gear.shoes),
-		spec.gems, spec.permanentMultiplier, spec.permanentHpMultiplier, spec.rebirth, spec.weaponTranscend
+		spec.gems, spec.permanentMultiplier, spec.permanentHpMultiplier, spec.rebirth, spec.weaponTranscend, spec.critTraining
 	)
 end
 

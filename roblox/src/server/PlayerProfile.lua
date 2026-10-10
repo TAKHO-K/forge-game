@@ -20,6 +20,7 @@ local TranscendentData = require(ReplicatedStorage.Shared.data.TranscendentData)
 local ComebackData = require(ReplicatedStorage.Shared.data.ComebackData) -- C5-5
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData) -- C2 전투력(직업 치명)
+local OptionData = require(ReplicatedStorage.Shared.data.OptionData) -- PROG-2B-1 4 위력 버킷 상한(넘침 남은 자리)
 local CombatFormula = require(ReplicatedStorage.Shared.CombatFormula) -- C2 전투력
 local JumpMath = require(ReplicatedStorage.Shared.JumpMath) -- G2a: 걷기 배율 상한
 local GemData = require(ReplicatedStorage.Shared.data.GemData)
@@ -139,21 +140,41 @@ function PlayerProfile.getCritBonus(player)
 	end
 	local optionRate, critDmg = Option.critBonus(buildOptionSources(classState), profile.classId, SetBonus.extraValues(classState.equipment, "crit"))
 	optionRate = PlayerProfile.debugOptionCritRate[player] or optionRate -- C4 검증(/gg c4 overcrit - Studio 전용)
-	-- C4-2 · C4-3: 레벨 곡선 + 환생 보상 + 옵션 → 직업 기본과 합쳐 100%에서 자름(넘친 몫은 getAttackPercentBonus가 위력으로)
-	local critRate = PlayerCombat.resolveCrit(profile.classId, CharacterLevel.getLevelFromExp(classState.characterExp), classState.rebirthCount, optionRate)
-	return critRate, math.min(critDmg + Loot.getGlovesCritDmgBonus(classState.equipment.gloves), CombatConfig.critDmgBonusCap)
+	local trainRate, trainDmg = Training.critValues(profile.training) -- PROG-2B-1 4: 치명 수련(확률 = 같은 줄 · 피해 = 상한 +2.2 밖)
+	-- C4-2 · C4-3: 레벨 곡선 + 환생 보상 + 옵션 + 수련 → 직업 기본과 합쳐 100%에서 자름(넘친 몫은 getAttackPercentBonus가 위력으로)
+	local critRate = PlayerCombat.resolveCrit(profile.classId, CharacterLevel.getLevelFromExp(classState.characterExp), classState.rebirthCount, optionRate, trainRate)
+	return critRate, math.min(critDmg + Loot.getGlovesCritDmgBonus(classState.equipment.gloves), CombatConfig.critDmgBonusCap) + trainDmg
 end
 
--- C4-3 오버치명 전환분(치명 확률 100% 초과 몫 → 공격력 % - 위력 버킷 상한은 getAttackPercentBonus가 자른다).
-function PlayerProfile.getOverCritAttackPercent(player)
+-- PROG-2B-1 4: 넘침 정보(능력치 표 · 수련 창 · 툴팁 · 한 타 넘침 자리가 같은 값). 반환 표:
+--   overCrit = 100% 넘친 치명 확률 · rawCrit = 자르기 전 치명 확률 합(직업 포함) · critConv / speedConv = 치명 / 공속 넘침이 위력에 실제로 들어간 몫(상한 안 · 치명 먼저)
+--   speedRaw = 자르기 전 공속 배율 · apb = 위력 몫 전체 · room = 위력 버킷 남은 자리(상한 − 옵션 버킷)
+function PlayerProfile.getOverflowInfo(player)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
 	if not classState then
-		return 0
+		return { overCrit = 0, rawCrit = 0, critConv = 0, speedConv = 0, speedRaw = 1, apb = 0, room = 0 }
 	end
+	local class = ClassData.classes[profile.classId]
 	local optionRate = PlayerProfile.debugOptionCritRate[player] or Option.critBonus(buildOptionSources(classState), profile.classId, SetBonus.extraValues(classState.equipment, "crit"))
-	local _, over = PlayerCombat.resolveCrit(profile.classId, CharacterLevel.getLevelFromExp(classState.characterExp), classState.rebirthCount, optionRate)
-	return over
+	local trainRate = Training.critValues(profile.training)
+	local level = CharacterLevel.getLevelFromExp(classState.characterExp)
+	local bonus, over = PlayerCombat.resolveCrit(profile.classId, level, classState.rebirthCount, optionRate, trainRate)
+	local _, critDmg = PlayerProfile.getCritBonus(player)
+	local m = class.critDmg + critDmg
+	local gloves = Loot.getGlovesAttackPercent(PlayerProfile.getEquipped(player, "gloves"))
+	local option = PlayerProfile.getOptionBonus(player, "attackPercent")
+	local speed = PlayerProfile.getSpeedPercentBonus(player)
+	local apb, conv = PlayerCombat.attackPercentWithOverflow(gloves, option, over, m, speed)
+	local _, critOnly = PlayerCombat.attackPercentWithOverflow(gloves, option, over, m, 0)
+	return { overCrit = over, rawCrit = class.critRate + bonus + over, critConv = critOnly, speedConv = conv - critOnly, speedRaw = 1 + speed, apb = apb,
+		room = OptionData.options.attackPercent.cap - (apb - gloves), critMult = m }
+end
+
+-- 넘침이 위력에 들어간 몫 전체(치명 + 공속 - 능력치 표 공격력 줄 "기본" 몫)
+function PlayerProfile.getOverCritAttackPercent(player)
+	local info = PlayerProfile.getOverflowInfo(player)
+	return info.critConv + info.speedConv
 end
 
 -- C2 전투력(한 대 기대 피해 = 공격력 × 치명 기대 - shared/CombatFormula). 공격력은 AttackServer와 같은 인자(무기 · 레벨 · 위력 · 최종 피해 · 마일스톤) · 치명 = 직업 + 옵션(버프 제외).
@@ -1910,8 +1931,7 @@ end
 -- 넘기는 단일 배율 자리다(PlayerCombat.lua 주석 "attackPercentBonus" 참고, 둘 다 같은
 -- 자리를 공유한다 - 보석 전용 곱셈 지점을 새로 만들지 않는다).
 function PlayerProfile.getAttackPercentBonus(player)
-	local glovesBonus = Loot.getGlovesAttackPercent(PlayerProfile.getEquipped(player, "gloves"))
-	return glovesBonus + PlayerCombat.capAttackPercentOption(PlayerProfile.getOptionBonus(player, "attackPercent"), PlayerProfile.getOverCritAttackPercent(player)) -- C4-3 오버치명 전환분 = 같은 위력 버킷 · 같은 상한
+	return PlayerProfile.getOverflowInfo(player).apb -- C4-3 · PROG-2B-1 4: 장갑 + 옵션 위력 + 넘침 전환(치명 · 공속 = 같은 기대 피해 · 같은 상한) - PlayerCombat.attackPercentWithOverflow
 end
 
 -- 장비 3부위 옵션 + 보석 5개의 defensePercent 옵션 합(26-2, PRD 20.67 [14] 3단계) -
@@ -2220,11 +2240,12 @@ end
 function STAT_BUILDERS.attackSpeed(player, profile, classState)
 	local shoes = Loot.getShoesSpeedPercent(classState.equipment.shoes)
 	local opt = optionParts(profile, classState, "speedPercent")
+	local info = PlayerProfile.getOverflowInfo(player)
 	return PlayerCombat.getSpeedMultiplier(shoes + opt.total), {
 		{ source = "gear", kind = "add", value = shoes + opt.gear },
 		{ source = "gem", kind = "add", value = opt.gem },
 		{ source = "training", kind = "add", value = opt.training },
-	}
+	}, info.speedRaw > CombatConfig.attackSpeedMaxMultiplier and { key = "stat.note.overSpeed", args = { m = ("%.1f"):format(info.speedConv * 100) } } or nil -- PROG-2B-1 4(C9): 상한 도달 · 위력으로 전환
 end
 function STAT_BUILDERS.moveSpeed(player, profile, classState)
 	local _, parts = STAT_BUILDERS.attackSpeed(player, profile, classState)
@@ -2248,26 +2269,34 @@ end
 function STAT_BUILDERS.critRate(player, profile, classState, level)
 	local class = ClassData.classes[profile.classId]
 	local critRate = PlayerProfile.getCritBonus(player)
+	local total = class.critRate + critRate
 	local base = class.critRate + PlayerCombat.getLevelCritBonus(level) + PlayerCombat.getRebirthCritBonus(classState.rebirthCount)
+	local trainRate = Training.critValues(profile.training) -- PROG-2B-1 4: 치명타 확률 수련(출처 = 수련)
 	local c = critSplit(profile, classState, level)
-	local optShown = math.max(0, class.critRate + critRate - base) -- 100%에서 자른 뒤 남은 옵션 몫
+	local baseShown = math.min(base, total)
+	local trainShown = math.min(trainRate, total - baseShown)
+	local optShown = math.max(0, total - baseShown - trainShown) -- 100%에서 자른 뒤 남은 옵션 몫
 	local scale = c.rate > 0 and optShown / c.rate or 0
-	return class.critRate + critRate, {
-		{ source = "base", kind = "add", value = math.min(base, class.critRate + critRate) },
+	local info = PlayerProfile.getOverflowInfo(player)
+	return total, {
+		{ source = "base", kind = "add", value = baseShown },
 		{ source = "gear", kind = "add", value = c.gearRate * scale },
+		{ source = "training", kind = "add", value = trainShown },
 		{ source = "gem", kind = "add", value = c.gemRate * scale },
-	}
+	}, info.overCrit > 0 and { key = "stat.note.overCrit", args = { n = ("%.1f"):format(info.overCrit * 100), m = ("%.1f"):format(info.critConv * 100) } } or nil -- PROG-2B-1 4: "100%(넘침 +n% → 위력 +m%)"
 end
 function STAT_BUILDERS.critDmg(player, profile, classState, level)
 	local class = ClassData.classes[profile.classId]
 	local _, critDmg = PlayerProfile.getCritBonus(player)
+	local _, trainDmg = Training.critValues(profile.training) -- PROG-2B-1 4: 치명타 피해 수련(상한 +2.2 밖)
 	local c = critSplit(profile, classState, level)
 	local glovesBonus = Loot.getGlovesCritDmgBonus(classState.equipment.gloves)
 	local raw = c.dmg + glovesBonus
-	local scale = raw > 0 and critDmg / raw or 0
+	local scale = raw > 0 and (critDmg - trainDmg) / raw or 0
 	return class.critDmg + critDmg, {
 		{ source = "base", kind = "add", value = class.critDmg },
 		{ source = "gear", kind = "add", value = (c.gearDmg + glovesBonus) * scale },
+		{ source = "training", kind = "add", value = trainDmg },
 		{ source = "gem", kind = "add", value = c.gemDmg * scale },
 	}
 end
@@ -2322,7 +2351,7 @@ function PlayerProfile.getStatSheet(player)
 	for _, row in ipairs(StatSheetData.rows) do
 		local builder = STAT_BUILDERS[row.id]
 		if builder then
-			local total, parts = builder(player, profile, classState, level)
+			local total, parts, note = builder(player, profile, classState, level)
 			local kept = {}
 			for _, p in ipairs(parts) do
 				local value = Sanitize.number(p.value, 0)
@@ -2330,7 +2359,7 @@ function PlayerProfile.getStatSheet(player)
 					table.insert(kept, { source = p.source, kind = p.kind, value = value })
 				end
 			end
-			table.insert(rows, { id = row.id, total = Sanitize.number(total, 0), parts = kept })
+			table.insert(rows, { id = row.id, total = Sanitize.number(total, 0), parts = kept, note = note }) -- PROG-2B-1 4: note = { key, args }(넘침 한 줄)
 		end
 	end
 	return { rows = rows }

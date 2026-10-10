@@ -61,7 +61,16 @@ function QuestService.view(player)
 				step = math.max(1, Training.bundleLevels(def, level, cap, require(ReplicatedStorage.Shared.data.TrainingData).bundle[kind]))
 				cost = Training.bundleCost(def, level, step, tv and tv.bestStage)
 			end
-			table.insert(rows, { kind = kind, id = def.id, name = def.name, level = level, cap = cap, maxLevel = def.maxLevel, cost = cost, step = step, perLevel = def.perLevel }) -- QUEUE-ALL9B 2-4 maxLevel(현재 / 최대 표시 - 화면 ALL9C)
+			-- PROG-2B-1 4: 치명 수련 목표 한 줄(아직 안 열림 = 열리는 스테이지 · 확률 = "100%까지 n단계" · 도달 = 넘침 안내)
+			local goal
+			if def.startStage and level == 0 and cap == 0 then
+				goal = { key = "training.opensAt", args = { stage = tostring(def.startStage) } }
+			elseif def.critAxis == "rate" then
+				local raw = PlayerProfile.getOverflowInfo(player).rawCrit
+				local need = math.max(0, math.ceil((1 - raw) / def.perLevel - 1e-9))
+				goal = need > 0 and { key = "training.critToFull", args = { n = tostring(need) } } or { key = "training.critFull" }
+			end
+			table.insert(rows, { kind = kind, id = def.id, name = def.name, level = level, cap = cap, maxLevel = def.maxLevel, cost = cost, step = step, perLevel = def.perLevel, goal = goal }) -- QUEUE-ALL9B 2-4 maxLevel(현재 / 최대 표시 - 화면 ALL9C)
 		end
 		return rows
 	end

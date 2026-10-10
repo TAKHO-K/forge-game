@@ -147,6 +147,12 @@ function CharacterPanel.buildDetail(list, order)
 		value.Position = UDim2.new(0.55, 0, 0, 0)
 		value.Size = UDim2.new(0.45, 0, 1, 0)
 		value.TextXAlignment = Enum.TextXAlignment.Right
+		local note = Theme.label(f, "", "caption", "success") -- PROG-2B-1 4: 넘침 한 줄("넘침 +n% → 위력 +m%" · "상한 도달 · 위력으로 전환 +m%") - 항상 보임
+		note.Name = "Note"
+		note.LayoutOrder = 1
+		note.TextXAlignment = Enum.TextXAlignment.Right
+		note.Size = UDim2.new(1, 0, 0, 16)
+		note.Visible = false
 		local parts = Theme.label(f, "", "caption", "textSecondary")
 		parts.Name = "Parts"
 		parts.LayoutOrder = 2
@@ -154,7 +160,7 @@ function CharacterPanel.buildDetail(list, order)
 		parts.Size = UDim2.new(1, 0, 0, 0)
 		parts.AutomaticSize = Enum.AutomaticSize.Y
 		parts.Visible = false
-		local entry = { value = value, parts = parts, format = row.format, pinned = false }
+		local entry = { value = value, parts = parts, note = note, format = row.format, pinned = false }
 		f.MouseEnter:Connect(function()
 			if UserInputService:GetLastInputType() == Enum.UserInputType.MouseMovement then
 				parts.Visible = parts.Text ~= ""
@@ -194,6 +200,8 @@ function CharacterPanel.renderDetail()
 			if entry then
 				entry.value.Text = totalText(entry.format, row.total)
 				entry.parts.Text = CharacterPanel.partsText(row.parts)
+				entry.note.Text = type(row.note) == "table" and Text.get(row.note.key, row.note.args) or ""
+				entry.note.Visible = entry.note.Text ~= ""
 			end
 		end
 	end)

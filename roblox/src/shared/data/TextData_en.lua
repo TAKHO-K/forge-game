@@ -216,7 +216,13 @@ return {
 	["help.less"] = "Less ▲",
 
 	-- C4-3 치명 옵션 툴팁 한 줄(오버치명 전환 - CombatConfig.overCrit)
-	["item.critOverflowNote"] = "Critical Hit Chance over 100% turns into Attack",
+	["item.critOverflowNote"] = "Critical Hit Chance over 100% turns into Power (same expected damage)",
+	["item.speedOverflowNote"] = "Attack Speed cap reached · converted to Power +{n}%",
+	["stat.note.overCrit"] = "Overflow +{n}% → Power +{m}%",
+	["stat.note.overSpeed"] = "Cap reached · converted to Power +{m}%",
+	["training.critToFull"] = "{n} levels to 100% Critical Hit Chance",
+	["training.critFull"] = "100% Critical Hit Chance · overflow turns into Power",
+	["training.opensAt"] = "Opens at Stage {stage}",
 	-- C5-7b 초월 특수 옵션 툴팁 한 줄(TranscendentData - 숫자는 ItemDescribe가 넘긴다)
 	["transcendent.special.phantom"] = "Phantom: {chance}% chance of an extra phantom hit · Every 3rd is a heavy hit",
 	["transcendent.special.frenzy"] = "Frenzy: In combat, move · attack speed +{speed}% · Dash cooldown −{dash}%",

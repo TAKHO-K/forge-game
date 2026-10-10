@@ -303,7 +303,7 @@ local function defaultProfile()
 		-- M1-3(v41): 알 가방(부화 · 펫은 펫 단계) - { { zone = 구역 키, grade = "normal" | "good" | "rare", species = { 후보 id 2 }, nest = 둥지 id, at = unix 초 } } · 상한 NestData.eggCap.
 		eggs = {},
 		audit = { lambda = 0, primordialRolls = 0, playSeconds = 0 }, -- S1(v44): 획득 감사(AcquisitionAudit)
-		training = { attack = 0, hp = 0, defense = 0, advanced = 50, guard = 0 }, -- QUEUE-10h Q6(v50): 공용 수련 단계(계정 - TrainingData.stats) · QUEUE-ALL10(v70) advanced = 고급 수련 단계(50 = 아직 없음 ~ 100) · guard = 방어 수련(0 ~ 30) - 효과는 초월 무기 직업에만
+		training = { attack = 0, hp = 0, defense = 0, advanced = 50, guard = 0, crit_rate = 0, crit_dmg = 0 }, -- PROG-2B-1 4(v79): crit_rate · crit_dmg = 치명 수련(0 ~ 25 · 0 ~ 50) / QUEUE-10h Q6(v50): 공용 수련 단계(계정 - TrainingData.stats) · QUEUE-ALL10(v70) advanced = 고급 수련 단계(50 = 아직 없음 ~ 100) · guard = 방어 수련(0 ~ 30) - 효과는 초월 무기 직업에만
 		-- QUEUE-ALL10(v70): 초월 보석(계정 귀속 · 기본 잠금 · 판매/분해 불가) - list = { { id = "TG<n>", grade = "transcendent", itemLevel, option = { id, roll }, locked = true, socket = nil | { classId, slot }, at, source } } · seq = 번호
 		--   무기 칸(weapon.gems[slot])에는 사본(transcendGemId = id)이 들어간다 - 진실 = 이 목록(추출 = 칸 비움 + socket = nil · 100% 보존).
 		transcendGems = { list = {}, seq = 0 },
@@ -404,6 +404,8 @@ function SaveSystem.sanitizeAll10(data)
 	if type(data.training) == "table" then
 		data.training.advanced = int(data.training.advanced, A.advancedTraining.fromLevel - 1, A.advancedTraining.fromLevel - 1)
 		data.training.guard = int(data.training.guard, 0, 0)
+		data.training.crit_rate = int(data.training.crit_rate, 0, 0) -- PROG-2B-1 4(v79): 치명 수련 단계(빈 값 · NaN = 0 · 최대는 계산 때 Training.critValues가 자름 - 위 규칙)
+		data.training.crit_dmg = int(data.training.crit_dmg, 0, 0)
 	end
 	if type(data.transcendGems) ~= "table" then
 		if data.transcendGems ~= nil then
@@ -1621,6 +1623,14 @@ local function migrate(data)
 			data.gold = to
 		end
 		data.version = 78
+	end
+	if data.version < 79 then
+		-- PROG-2B-1 4(CRIT-TRAIN-1 C2 · C3): 치명 수련 단계 training.crit_rate · crit_dmg - 옛 계정 = 0(추가만 · 값 정리 = sanitizeAll10 매 로드)
+		if type(data.training) == "table" then
+			data.training.crit_rate = data.training.crit_rate or 0
+			data.training.crit_dmg = data.training.crit_dmg or 0
+		end
+		data.version = 79
 	end
 
 	data.savedAt = data.savedAt or 0

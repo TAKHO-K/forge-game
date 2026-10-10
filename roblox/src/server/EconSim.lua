@@ -617,6 +617,10 @@ local function loadoutFor(state)
 		weaponTranscend = state.transcend, -- QUEUE-ALL10 초월 무기(등급 × 1.25 · 강화 줄 × (1 + 초월 강화))
 		permanentHpMultiplier = Milestone.maxHpMultiplier(state.milestoneLevel) + (EconSimConfig.modelTraining and Training.bucketBonus(state.training, state.abilities, state.classId, "hp") or 0),
 		rebirth = state.rebirth, -- C4-2 환생 보상 치명
+		critTraining = EconSimConfig.modelTraining and (function() -- PROG-2B-1 4 치명 수련(게임 PlayerProfile.getCritBonus와 같은 Training.critValues)
+			local rate, dmg = Training.critValues(state.training)
+			return { rate = rate, dmg = dmg }
+		end)() or nil,
 	})
 end
 local loadoutBase = loadoutFor

@@ -17,6 +17,10 @@ task.spawn(function()
 				end
 			end
 			pcall(TranscendentService.syncAura, player) -- C5-7 보스전 흑금 오라(TranscendentParts) · C5-7b 환영 표시 · 광폭 만료
+			local okOver, info = pcall(PlayerProfile.getOverflowInfo, player) -- PROG-2B-1 4: 공속 상한 넘침이 위력에 들어간 몫(장비 툴팁 "상한 도달 · 위력으로 전환 +n%")
+			if okOver and type(info) == "table" and player:GetAttribute("SpeedOverflowPower") ~= info.speedConv then
+				player:SetAttribute("SpeedOverflowPower", info.speedConv)
+			end
 			local okLevel, best = pcall(PlayerProfile.getDealItemLevelBest, player) -- C5-1 뒤처짐 신호(MonsterState가 읽는다)
 			if okLevel and player:GetAttribute("DealItemLevel") ~= best then
 				player:SetAttribute("DealItemLevel", best)
