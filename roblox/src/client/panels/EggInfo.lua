@@ -15,6 +15,9 @@ local Button = require(script.Parent.Parent.ui.kit.Button)
 local Pet = require(ReplicatedStorage.Shared.Pet)
 local PetData = require(ReplicatedStorage.Shared.data.PetData)
 
+local REST = require(ReplicatedStorage.Shared.data.UiV2Flags).rest -- UI-1 7c(H v1 · v1.1): 확률 = 막대 + 숫자 4칸 · 펫 잠금 · 놓아주기 2단계 · 알 없음 = 할 일
+local HU = require(ReplicatedStorage.Shared.data.UiLayoutData).petUi.v1
+local Toast = require(script.Parent.Parent.ui.kit.Toast)
 local petView = nil -- 서버 PetService.view(PetSync)
 local petRequest = ReplicatedStorage:WaitForChild("PetRequest", 10)
 local petSync = ReplicatedStorage:WaitForChild("PetSync", 10)
@@ -151,10 +154,17 @@ local function petSection()
 	end
 	line(Text.get("pet.listHeader", { n = #petView.pets, cap = petView.petCap, auto = petView.autoPickup and Text.get("pet.autoOn") or Text.get("pet.autoOff", { level = tostring(petView.unlocks.autoPickup) }) }), "body", "textPrimary", "PetHeader")
 	for _, p in ipairs(petView.pets) do
-		petRow(("%s · %s"):format(Text.name(p.name), Text.name(EggData.hatchGradeNames[p.grade] or p.grade)), Text.name(PetData.bodyNames[p.body] or p.body),
-			p.equipped and Text.get("pet.unequip") or Text.get("pet.equip"), function()
-				petRequest:FireServer("equip", (not p.equipped) and p.index or nil)
-			end, "Pet" .. p.index)
+		if REST then
+			EggInfoPanel.petRowV7(p)
+		else
+			petRow(("%s · %s"):format(Text.name(p.name), Text.name(EggData.hatchGradeNames[p.grade] or p.grade)), Text.name(PetData.bodyNames[p.body] or p.body),
+				p.equipped and Text.get("pet.unequip") or Text.get("pet.equip"), function()
+					petRequest:FireServer("equip", (not p.equipped) and p.index or nil)
+				end, "Pet" .. p.index)
+		end
+	end
+	if REST and #petView.pets == 0 then
+		line(Text.get("ui1.pet.noPet"), "caption", "textSecondary", "NoPet")
 	end
 	line(Text.get("pet.levelHeader", { level = petView.hatchLevel, count = petView.hatchCount }), "body", "textPrimary", "HatchLevel")
 	for level, row in ipairs(PetData.levels) do
@@ -167,8 +177,90 @@ local function petSection()
 	end
 end
 
+-- UI-1 7c 확률 표(H §1-1 · v1.1 §1): 줄 = 알 등급 · 쌓인 막대(등급색) + 숫자 4칸(등급색 · 일반 = 밝은 회색) · 값 = 지금 부화 레벨의 Pet.hatchTable(서버 굴림과 같은 함수 · 합 100 = 하네스 pet_ui)
+local function fmtPct(v)
+	return (math.abs(v - math.floor(v + 0.5)) < 1e-6) and ("%d%%"):format(math.floor(v + 0.5)) or ("%.1f%%"):format(v)
+end
+local function hatchTableV7()
+	local phone = Theme.isMobile
+	line(Text.get("egg.hatchHeader"), "body", "textPrimary", "HatchHeader")
+	line(Text.get("ui1.pet.oddsNote"), "caption", "textSecondary", "OddsNote")
+	order += 1
+	local legend = Instance.new("Frame") -- 범례 = 색 네모 + 등급 이름
+	legend.Name = "OddsLegend"
+	legend.LayoutOrder = order
+	legend.BackgroundTransparency = 1
+	legend.Size = UDim2.new(1, 0, 0, 20)
+	legend.Parent = built.scroll
+	local ll = Instance.new("UIListLayout")
+	ll.FillDirection = Enum.FillDirection.Horizontal
+	ll.Padding = UDim.new(0, 10)
+	ll.VerticalAlignment = Enum.VerticalAlignment.Center
+	ll.SortOrder = Enum.SortOrder.LayoutOrder
+	ll.Parent = legend
+	for i, g in ipairs(EggData.hatchGrades) do
+		local sq = Instance.new("Frame")
+		sq.BackgroundColor3 = Color3.fromHex(HU.gradeColors[g])
+		sq.Size = UDim2.fromOffset(12, 12)
+		sq.LayoutOrder = i * 2
+		sq.Parent = legend
+		local t = Theme.label(legend, Text.name(EggData.hatchGradeNames[g]), "caption", "textSecondary")
+		t.AutomaticSize = Enum.AutomaticSize.X
+		t.Size = UDim2.fromOffset(0, 20)
+		t.LayoutOrder = i * 2 + 1
+	end
+	local level = petView and petView.hatchLevel or 1
+	local nameW, numW = phone and HU.phone.nameW or HU.pc.nameW, phone and HU.phone.numW or HU.pc.numW
+	for _, eggGrade in ipairs(EggData.gradeOrder) do
+		local t = Pet.hatchTable(eggGrade, level)
+		order += 1
+		local row = Instance.new("Frame")
+		row.Name = "OddsRow_" .. eggGrade
+		row.LayoutOrder = order
+		row.BackgroundTransparency = 1
+		row.Size = UDim2.new(1, 0, 0, phone and HU.phone.rowH or HU.pc.rowH)
+		row.Parent = built.scroll
+		local n = Theme.label(row, Text.name(EggData.gradeNames[eggGrade]), "caption", "textPrimary")
+		n.Font = Enum.Font.GothamBold
+		n.Size = UDim2.new(0, nameW, 1, 0)
+		local bar = Instance.new("Frame")
+		bar.Name = "Bar"
+		bar.BackgroundColor3 = Theme.color("slot")
+		bar.AnchorPoint = Vector2.new(0, 0.5)
+		bar.Position = UDim2.new(0, nameW, 0.5, 0)
+		bar.Size = UDim2.new(1, -(nameW + numW * 4 + 6), 0, phone and HU.phone.barH or HU.pc.barH)
+		bar.ClipsDescendants = true
+		bar.Parent = row
+		local x = 0
+		for _, g in ipairs(EggData.hatchGrades) do
+			local seg = Instance.new("Frame")
+			seg.Name = "Seg_" .. g
+			seg.BorderSizePixel = 0
+			seg.BackgroundColor3 = Color3.fromHex(HU.gradeColors[g])
+			seg.Position = UDim2.fromScale(x / 100, 0)
+			seg.Size = UDim2.fromScale((t[g] or 0) / 100, 1)
+			seg.Parent = bar
+			x += t[g] or 0
+		end
+		for i, g in ipairs(EggData.hatchGrades) do -- 숫자 열(폰도 네 등급 전부 - 작은 값도 읽힘)
+			local num = Theme.label(row, fmtPct(t[g] or 0), "caption", "textPrimary")
+			num.Name = "Num_" .. g
+			num.Font = Enum.Font.GothamBold
+			num.TextXAlignment = Enum.TextXAlignment.Right
+			num.TextColor3 = Color3.fromHex(g == "common" and HU.commonText or HU.gradeColors[g])
+			num.AnchorPoint = Vector2.new(1, 0)
+			num.Position = UDim2.new(1, -(4 - i) * numW, 0, 0)
+			num.Size = UDim2.new(0, numW, 1, 0)
+		end
+	end
+	line(Text.get("ui1.pet.rules"), "caption", "textSecondary", "HatchRules")
+end
+
 -- 부화 결과 확률 표: 열 = 알 등급(보통 · 좋은 · 희귀) · 줄 = 결과 등급(일반 · 희귀 · 영웅 · 전설 - 표시 이름 = EggData.hatchGradeNames)
 local function hatchTable()
+	if REST then
+		return hatchTableV7()
+	end
 	line(Text.get("egg.hatchHeader"), "body", "textPrimary", "HatchHeader")
 	order += 1
 	local grid = Instance.new("Frame")
@@ -215,7 +307,24 @@ local function render()
 	local pad = Instance.new("UIPadding")
 	pad.PaddingLeft, pad.PaddingRight, pad.PaddingTop, pad.PaddingBottom = UDim.new(0, PAD), UDim.new(0, PAD + 4), UDim.new(0, PAD), UDim.new(0, PAD)
 	pad.Parent = built.scroll
-	if #NestState.eggs == 0 then
+	if #NestState.eggs == 0 and REST then -- UI-1 7c 빈 상태 = 할 일 3 + [지도에서 둥지 보기]
+		line(Text.get("ui1.pet.noEggTitle"), "body", "textPrimary", "Empty")
+		for i = 1, 3 do
+			line(("%d. %s"):format(i, Text.get("ui1.pet.noEggTodo" .. i)), "caption", "textSecondary", "Todo" .. i)
+		end
+		order += 1
+		local holder = Instance.new("Frame")
+		holder.Name = "NestMapRow"
+		holder.LayoutOrder = order
+		holder.BackgroundTransparency = 1
+		holder.Size = UDim2.new(1, 0, 0, 48)
+		holder.Parent = built.scroll
+		local b = Button.build({ parent = holder, kind = "secondary", text = Text.get("ui1.pet.nestMap"), width = 220, height = 44, onActivated = function()
+			UIManager.close(EggInfoPanel.id)
+			UIManager.openLazy("worldMap")
+		end })
+		b.root.Name = "NestMapButton"
+	elseif #NestState.eggs == 0 then
 		line(Text.get("egg.empty"), "body", "textSecondary", "Empty")
 	else
 		for i = #NestState.eggs, 1, -1 do
@@ -267,6 +376,107 @@ function EggInfoPanel.toggle()
 	end
 	render()
 	UIManager.switchTo(EggInfoPanel.id)
+end
+
+-- UI-1 7c 펫 줄(H v1.1 §2): [잠금 56] [놓아주기](보조 · 데리고 다님 · 잠금 = 흐림 + 이유 · 누르면 같은 이유 토스트) [데리고 다니기](노랑)
+local confirmBox = nil
+local function releaseConfirm(p)
+	if confirmBox then
+		confirmBox:Destroy()
+	end
+	local f = Instance.new("Frame")
+	f.Name = "ReleaseConfirm"
+	f.BackgroundColor3 = Color3.fromHex(HU.confirm.bg)
+	f.Size = UDim2.fromScale(1, 1)
+	f.ZIndex = 50
+	f.Active = true
+	f.Parent = built.panel.content
+	confirmBox = f
+	local st = Instance.new("UIStroke")
+	st.Color = Color3.fromHex(HU.confirm.stroke)
+	st.Thickness = 3
+	st.Parent = f
+	local title = Theme.label(f, "", "header", "textPrimary")
+	title.Position, title.Size = UDim2.fromOffset(PAD, PAD), UDim2.new(1, -PAD * 2, 0, 30)
+	local card = Theme.label(f, ("%s · %s"):format(Text.name(p.name), Text.name(EggData.hatchGradeNames[p.grade] or p.grade)), "body", "textPrimary")
+	card.Position, card.Size = UDim2.fromOffset(PAD, PAD + 40), UDim2.new(1, -PAD * 2, 0, 24)
+	card.TextColor3 = Color3.fromHex(HU.gradeColors[p.grade] or "FFFFFF")
+	local warn = Theme.label(f, "▼ " .. Text.get("ui1.pet.releaseWarn"), "caption", "textSecondary")
+	warn.Position, warn.Size = UDim2.fromOffset(PAD, PAD + 70), UDim2.new(1, -PAD * 2, 0, 20)
+	warn.TextColor3 = Color3.fromHex(HU.confirm.warn)
+	local step = 1
+	local go
+	local function show()
+		title.Text = Text.get(step == 1 and "ui1.pet.release1" or "ui1.pet.release2")
+		warn.Visible = step == 2
+		go.setText(Text.get(step == 1 and "ui1.set.next" or "ui1.pet.release"))
+	end
+	Button.build({ parent = f, kind = "buy", name = "Cancel", text = Text.get("ui1.set.cancel"), width = 150, height = 44, position = UDim2.new(1, -PAD - 310, 1, -PAD - 44), onActivated = function()
+		f:Destroy()
+		confirmBox = nil
+	end })
+	go = Button.build({ parent = f, kind = "secondary", name = "Go", text = "", width = 150, height = 44, position = UDim2.new(1, -PAD - 150, 1, -PAD - 44), onActivated = function()
+		if step == 1 then
+			step = 2
+			show()
+		else
+			petRequest:FireServer("release", { index = p.index, at = p.at })
+			Toast.push("TC", { text = Text.get("ui1.pet.released", { name = Text.name(p.name) }), colorName = "textPrimary" })
+			f:Destroy()
+			confirmBox = nil
+		end
+	end })
+	for _, d in ipairs(f:GetDescendants()) do
+		if d:IsA("GuiObject") then
+			d.ZIndex = 51
+		end
+	end
+	show()
+end
+function EggInfoPanel.petRowV7(p)
+	order += 1
+	local frame = Instance.new("Frame")
+	frame.Name = "Pet" .. p.index
+	frame.LayoutOrder = order
+	frame.Size = UDim2.new(1, 0, 0, HU.petRowH)
+	frame.BackgroundColor3 = Theme.color("slot")
+	frame.BackgroundTransparency = 0.4
+	frame.Parent = built.scroll
+	Theme.corner(frame, 6)
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = p.equipped and Color3.fromHex("FFC83D") or Color3.fromHex(HU.gradeColors[p.grade] or "3A4466")
+	stroke.Thickness = p.equipped and 3 or 1.5
+	stroke.Parent = frame
+	local a = Theme.label(frame, ("%s · %s"):format(Text.name(p.name), Text.name(EggData.hatchGradeNames[p.grade] or p.grade)), "body", "textPrimary")
+	a.Position, a.Size = UDim2.fromOffset(10, 4), UDim2.new(1, -20, 0, 20)
+	local reason = p.equipped and Text.get("ui1.pet.whyEquipped") or (p.locked and Text.get("ui1.pet.whyLocked") or nil)
+	local sub = Theme.label(frame, reason or Text.name(PetData.bodyNames[p.body] or p.body), "caption", "textSecondary")
+	sub.Name = "Reason"
+	sub.TextWrapped = true
+	sub.Position, sub.Size = UDim2.fromOffset(10, 26), UDim2.new(1, -20, 0, 18)
+	local by = HU.petRowH - 50
+	local lock = Button.build({ parent = frame, kind = "secondary", name = "LockButton", text = Text.get(p.locked and "ui1.pet.unlock" or "ui1.pet.lock"), width = 96, height = 44, position = UDim2.fromOffset(8, by), onActivated = function()
+		petRequest:FireServer("lock", { index = p.index, at = p.at, on = not p.locked })
+	end })
+	lock.root.Name = "LockButton"
+	local rel = Button.build({ parent = frame, kind = "secondary", name = "ReleaseButton", text = Text.get("ui1.pet.release"), width = 120, height = 44, position = UDim2.fromOffset(112, by), onActivated = function()
+		if reason then
+			Toast.push("TC", { text = reason, colorName = "textPrimary" })
+			return
+		end
+		releaseConfirm(p)
+	end })
+	if reason then -- 흐림(눌리면 같은 이유 토스트 - setEnabled(false)면 안 눌려서 색만 흐리게)
+		rel.root.BackgroundTransparency = 0.6
+		rel.root.TextTransparency = 0.5
+	end
+	local eq = Button.build({ parent = frame, kind = "buy", name = "EquipButton", text = p.equipped and Text.get("ui1.pet.equipping") or Text.get("pet.equip"), width = 150, height = 44,
+		position = UDim2.new(1, -8, 0, by), anchorPoint = Vector2.new(1, 0), onActivated = function()
+			if not p.equipped then
+				petRequest:FireServer("equip", p.index)
+			end
+		end })
+	eq.setEnabled(not p.equipped)
 end
 
 function EggInfoPanel.debugRefs()

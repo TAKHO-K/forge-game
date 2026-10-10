@@ -3,6 +3,7 @@
 --   내 아바타 복제(Character:Clone - 겉모습 그대로)를 ViewportFrame 안 WorldModel에 세우고 끌어서 돌려 본다.
 --   구성품 칩 = 그 치장이 주는 칸마다 하나씩 켜고 끄기: 글라이더 = 실제 글라이더 모양(GlideView.buildOnto) · 테마 = 칸마다 정지 모양(대시 = 뒤 빛줄기 · 점프 = 발밑 고리 ·
 --   활강 = 머리 위 빛줄 · 발자국 = 바닥 자국 - 테마 색 ArtV1CosmeticData). ViewportFrame은 입자 · 트레일을 그리지 않아 움직이는 효과는 [직접 보기](내 캐릭터에 잠깐 입혀 보기 - 옛 미리보기)로 본다.
+local REST = require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).rest -- UI-1 7c 상점 04 v2: [구매] = 노랑 1개(로벅스) · 토큰 = 보조
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -328,12 +329,12 @@ local function fillInfo(env, key)
 	else
 		local tokens = (view.productTokens or {})[key]
 		if tokens then -- 토큰가(토큰 불가 = 버튼 없음)
-			addButton("BuyTokens", { kind = "primary", currency = "token", amount = tokens, enabled = (view.shards or 0) >= tokens and not env.busy(), onActivated = function()
+			addButton("BuyTokens", { kind = REST and "secondary" or "primary", currency = "token", amount = tokens, enabled = (view.shards or 0) >= tokens and not env.busy(), onActivated = function()
 				env.send("buyShards", kind, entry.id)
 			end })
 		end
 		local spec = env.robuxSpec(key, { title = card.title, body = card.slotText })
-		addButton("BuyRobux", { kind = "primary", currency = spec.currency, amount = spec.amount, text = spec.text, enabled = spec.enabled, onActivated = spec.onActivated })
+		addButton("BuyRobux", { kind = REST and "buy" or "primary", currency = spec.currency, amount = spec.amount, text = spec.text, enabled = spec.enabled, onActivated = spec.onActivated })
 		local note = line(Text.get("shop.refund.note"), "caption", "textSecondary", "RefundNote", 3) -- 환불 문구 ①
 		note.TextYAlignment = Enum.TextYAlignment.Top
 	end

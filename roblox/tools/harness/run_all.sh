@@ -41,12 +41,15 @@ run boss_feel res_feel.txt "$(python deps.py BossHandlersBR1,PlayerCC)" boss_fee
 run menu_gate res_menu.txt SlotSwitch,SlotSave menu_gate_test.luau # 메인 메뉴 버그(10-05): 테스트 플래그만 건너뜀 · 접속 미스폰 · 입장 스폰 · 메뉴 왕복
 printf "%-22s %s\n" menu_gate_src "$(python menu_gate_static.py 2>&1 | grep -a -E '끝 [0-9]+/[0-9]+' | tail -1)"
 printf "%-22s %s\n" hud_v5_src "$(python hud_v5_static.py 2>&1 | grep -a -E '끝 [0-9]+/[0-9]+' | tail -1)" # QUEUE-UI2 UI2-4 환생 진입 경로 · 메뉴 창 = PanelRegistry · 키 칩 · 빨강
+printf "%-22s %s\n" ui1_static "$(PYTHONIOENCODING=utf-8 python ui1_static.py 2>&1 | grep -a -E '끝 [0-9]+/[0-9]+' | tail -1)" # UI-1 7c 전투력 = 한 함수(HUD · 캐릭터 · 관문 · 가방)
 EXTRA_FILES=first/MenuArtFit.lua,first/MenuBootData.lua run ui_v2 res_uiv2.txt SlotSave ui_v2_test.luau # QUEUE-UI UI-0 토큰 · 좌표 표 · 아이콘 표 · 배율 · 신직업 = 데이터 추가만
 run hud_layout res_hudlayout.txt "" hud_layout_test.luau # UI-1 0단계 02 v6 배치: 해상도 7 × 평상시 · 보스전 · 화면 밖 · 상단 바 · 터치 44 · 접기 · 폰 전투 버튼(겹침 = 목록)
 run ui1_parts res_ui1parts.txt "" ui1_parts_test.luau # UI-1 1단계 A 부품: 상태 아이콘 39 · 그림 기록 · ko/en 짝 · 색 3개 · 잡힘 종류
 run codex_box res_codexbox.txt SecretNestData codex_box_test.luau # UI-1 5단계 도감 진행 상자 10 = 옛 점수판 29단계 총량 · 두 번 안 받음 · 토큰 600 + 140
 run ember_view res_ember.txt "" ember_view_test.luau # UI-1 6단계 불씨 칸 = spec 표(+24 = 17칸) · 가득까지 n번 · 하락 = 칸만 다시 나눔
 run hud_edit res_hudedit.txt "" hud_edit_test.luau # UI-1 7b HUD 편집 배치 = 서버와 같은 검사(화면 밖 · 상단 바 · 로블록스 버튼 · id 화이트리스트) · 요소 8
+run pet_ui res_petui.txt "" pet_ui_test.luau # UI-1 7c 알 확률 합 100(알 × 부화 레벨) · 펫 놓아주기 판정(데리고 다님 · 잠금 거절)
+run quick_chat res_qchat.txt "" quick_chat_test.luau # UI-1 7c 파티 빠른 말(번호만 · 같은 말 3번 연속 = 5초 쉬기)
 run ui_rules res_ui.txt "" ui_rules_test.luau # QUEUE-ALL9C 블록 1 화면 규칙(순위 상위 약 n% 등 순수 함수)
 run community_goal res_goal.txt "" community_goal_test.luau # QUEUE-ALL7 B5 합동 목표 00 · ±25% · 문턱 순서
 run boss_motion res_motion.txt "" boss_motion_test.luau motion_prelude.luau

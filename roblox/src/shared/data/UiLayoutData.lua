@@ -298,4 +298,19 @@ return {
 	},
 	-- UI-1 7b단계 설정 새 줄(06 v3): "새로" 알약 = 출시 판 숨김(스위치)
 	settings = { v7 = { showNewPill = false } },
+	-- UI-1 7c 상점 04 v2: 노랑 [구매](화면마다 1개) · 창 상한 1600 × 880(디자인 시스템 큰 창)
+	shop = { v2 = { buy = { fill = "FFC83D", text = "2A1E00" }, maxW = 1600, maxH = 880 } },
+	-- UI-1 7c 알 · 펫(08 v8-rest §1 · v1.1): 확률 막대 · 숫자 열 · 펫 줄 · 놓아주기 확인
+	petUi = {
+		v1 = {
+			gradeColors = { common = "9299A1", uncommon = "2478D4", rare = "7545C6", epic = "D87828" }, commonText = "C3C7CB",
+			pc = { nameW = 92, numW = 54, rowH = 30, barH = 18 }, phone = { nameW = 62, numW = 40, rowH = 28, barH = 16 },
+			petRowH = 102,
+			confirm = { bg = "161A2B", stroke = "3A4466", warn = "FF8A8A" },
+		},
+	},
+	-- UI-1 7c 캐릭터 창(08 v8-rest §2): 왼쪽 판 = 아바타 뷰 + 칭호 카드(+ 직업 이름)
+	character = { v1 = { avatarBottom = 120, titleCardH = 70 } },
+	-- UI-1 7c 파티 창 빠른 말 줄(F v2.1 · H §5): 말 8 + 이모트 4 = 한 격자
+	quickChat = { v1 = { height = 112, cellW = 106, cellH = 44 } },
 }

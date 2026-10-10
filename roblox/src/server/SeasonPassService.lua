@@ -59,7 +59,8 @@ function SeasonPassService.weekendBanner(player)
 	task.spawn(function()
 		local notice = ReplicatedStorage:WaitForChild("SystemNotice", 10)
 		if notice and player.Parent then
-			notice:FireClient(player, require(ReplicatedStorage.Shared.Text).getFor(player, "season.weekendBanner", { hours = tostring(hours) }))
+			local noCountdown = require(ReplicatedStorage.Shared.data.UiV2Flags).rest -- UI-1 7c: 남은 시간 없는 문구(압박 금지)
+			notice:FireClient(player, require(ReplicatedStorage.Shared.Text).getFor(player, noCountdown and "ui1.season.weekendBanner" or "season.weekendBanner", { hours = tostring(hours) }))
 		end
 	end)
 	print(("[ALL9A] 주말 패스 2배 배너: %s - 창 %d · 남은 %d시간"):format(player.Name, startAt, hours))

@@ -51,7 +51,9 @@ function RecommendTab.render(ctx, env)
 	if #keys > 0 then
 		ctx.section(Text.get("shop.weekly.title"), "WeeklyTitle")
 		local left = math.max(0, nextSwap - unixNow)
-		ctx.line(Text.get("shop.weekly.next", { d = tostring(math.floor(left / 86400)), h = tostring(math.floor(left % 86400 / 3600)) }), "textSecondary", 1, "WeeklyNext")
+		if not require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).rest then -- UI-1 7c 04 v2: 이번 주 추천 = 카운트다운 없음(압박 문구 금지)
+			ctx.line(Text.get("shop.weekly.next", { d = tostring(math.floor(left / 86400)), h = tostring(math.floor(left % 86400 / 3600)) }), "textSecondary", 1, "WeeklyNext")
+		end
 		local specs = {}
 		for _, key in ipairs(keys) do
 			table.insert(specs, Catalog.productCard(env, key))

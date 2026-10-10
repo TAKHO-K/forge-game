@@ -5,6 +5,7 @@
 --   결과 = ShopResult(action, ok, why - QUEUE-B1 결정 10): 실패는 이유 한 줄 · 성공은 요청 뒤 오는 ShopSync 표를 요청 전과 비교한 문구(pendingCheck).
 --   배치 = Layout.compute(화면, 터치) 순수 함수 - 폰(폭 < 720 또는 높이 < 400)은 메뉴바 오른쪽부터 화면 끝까지 · 버튼 · 탭 44. 화면 크기 · 터치 판정이 바뀌면 다시 짓는다.
 --   R.debugForceScreen(Vector2)으로 가상 화면을 강제해 폰 배치를 PC 창에서 실제 인스턴스로 잴 수 있다(장비창과 같은 방식 - 자체 점검 · 스크린샷용).
+local REST = require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).rest -- UI-1 7c 상점 04 v2: [구매] = 노랑 1개(로벅스) · 토큰 = 보조
 local Players = game:GetService("Players")
 local GuiService = game:GetService("GuiService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
@@ -234,7 +235,7 @@ local function robuxButton(productKey, name, info)
 		return { name = name, text = Text.get("shop.notReady"), enabled = false, width = ROBUX_WIDTH }
 	end
 	local price = PriceCache.get("product", product.productId, product.robux) -- QUEUE-ALL9C 1-6 지역 가격(없으면 데이터 값)
-	return { name = name, currency = "robux", amount = price, kind = "primary", width = ROBUX_WIDTH, enabled = not busy(),
+	return { name = name, currency = "robux", amount = price, kind = REST and "buy" or "primary", width = ROBUX_WIDTH, enabled = not busy(),
 		onActivated = function()
 			confirmRobux(info, price, function()
 				send("buyRobux", productKey)

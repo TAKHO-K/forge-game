@@ -10,6 +10,10 @@ local Layout = {}
 --   폭 75% · 높이 80%(최소 720 × 480 · 최대 1200 × 760 · 그래도 화면 - 여백 안) · 그 영역 정중앙(AnchorPoint 0.5, 0.5). 폰 = 거의 전체 화면(메뉴바 오른쪽 ~ 끝 · 여백 4).
 Layout.minWidth, Layout.minHeight = 720, 480
 Layout.maxWidth, Layout.maxHeight = 1200, 760 -- Panel.create maxSize로 넘긴다
+if require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).rest then -- UI-1 7c 04 v2: 디자인 시스템 큰 창 1600 × 880(예외 없음)
+	local S = require(game:GetService("ReplicatedStorage").Shared.data.UiLayoutData).shop.v2
+	Layout.maxWidth, Layout.maxHeight = S.maxW, S.maxH
+end
 Layout.areaW, Layout.areaH = 0.75, 0.8
 Layout.hudTop = 60 -- 위 재화 줄(Studio 실측 HUD 위 끝 약 60)
 Layout.hudBottom = 116 -- 아래 HP 바 · 스킬 줄 · 경험치 줄(Studio 실측 화면 아래에서 113)

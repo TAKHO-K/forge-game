@@ -10,6 +10,27 @@ function Pet.newState()
 	return { list = {}, equipped = nil, hatchCount = 0, hatching = {} }
 end
 
+-- UI-1 7c(H v1.1 §2): 놓아주기 판정 = 데리고 다니지 않고(equipped ≠ 그 번호) · 잠그지 않은(locked ≠ true) 펫만. 반환 = true | false, 이유("none" · "equipped" · "locked")
+function Pet.canRelease(state, index)
+	local p = type(state) == "table" and type(state.list) == "table" and type(index) == "number" and state.list[index]
+	if not p then
+		return false, "none"
+	elseif state.equipped == index then
+		return false, "equipped"
+	elseif p.locked == true then
+		return false, "locked"
+	end
+	return true
+end
+
+-- 놓아준 뒤 데리고 다니는 번호 맞추기(목록에서 빠진 번호보다 뒤면 한 칸 앞으로)
+function Pet.removeAt(state, index)
+	table.remove(state.list, index)
+	if state.equipped and state.equipped > index then
+		state.equipped -= 1
+	end
+end
+
 -- 부화 레벨(1부터) = 누적 부화 수가 넘은 마지막 단계
 function Pet.levelOf(hatchCount)
 	local level = 1

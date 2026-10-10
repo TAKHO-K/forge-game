@@ -354,7 +354,8 @@ function MonetizationService.view(player)
 		-- QUEUE-ALL9C 1-6 스타터 팩: 노출 = 아직 안 샀고 (첫 보스 처치 또는 상점 두 번째 방문) · 가방 칸 = 서버 capacity와 같은 함수(지금 칸 · 출처)
 		starter = {
 			owned = s.purchases.bagSources.starter == true,
-			visible = s.purchases.bagSources.starter ~= true and ((PlayerProfile.getAccountBestBossCleared(player) or 0) > 0 or (s.purchases.shopViews or 0) >= 2),
+			-- UI-1 7c(04 v2 #9 · 지시): 첫 구역 보스 처치 **그리고** 상점을 한 번 연 뒤(다음에 열 때 = 연 횟수 2 이상) - 옛 = 둘 중 하나
+			visible = s.purchases.bagSources.starter ~= true and (PlayerProfile.getAccountBestBossCleared(player) or 0) > 0 and (s.purchases.shopViews or 0) >= 2,
 		},
 		bag = { slots = require(script.Parent.InventorySync).capacity(PlayerProfile.getProfile(player)), max = require(script.Parent.InventorySync).maxCapacity(PlayerProfile.getProfile(player)), -- QUEUE-ALL10 0-4 마일스톤 칸은 상한 밖
 			pass = s.gamepasses.bagExpand == true, starter = s.purchases.bagSources.starter == true,

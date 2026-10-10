@@ -9904,6 +9904,34 @@
   "status": "Approved",
   "imageId": 129274403210371
  },
+ "ui/party/emote-heart.png": {
+  "sha256": "9500c34ed6b115fbf748455a10a4650636be947a6fb30303adfe3fd0b79a2315",
+  "assetType": "Decal",
+  "assetId": 89267681521789,
+  "status": "Approved",
+  "imageId": 98236254258367
+ },
+ "ui/party/emote-laugh.png": {
+  "sha256": "1fba9773f14d1b0198947d88653b4d5ba5dcc93b933fbd05f16fc25ae8e4e060",
+  "assetType": "Decal",
+  "assetId": 120549283983156,
+  "status": "Approved",
+  "imageId": 120080007525714
+ },
+ "ui/party/emote-thumb.png": {
+  "sha256": "3d180daf7bbb7faf1ab0fb8ad624f6e1a891cacc81dfd75637a2d4b8c6038e8e",
+  "assetType": "Decal",
+  "assetId": 103538565770036,
+  "status": "Approved",
+  "imageId": 73220218451237
+ },
+ "ui/party/emote-wave.png": {
+  "sha256": "f1e49e5c75e39243660abf03b2b80f8e7ed22acc9a316629ba6e06d7bfcbcbe3",
+  "assetType": "Decal",
+  "assetId": 109348926422317,
+  "status": "Approved",
+  "imageId": 136736411616590
+ },
  "ui/weapon/cell-check-off.png": {
   "sha256": "96b203e5bee62f613fcce0bce67e50b771f24108ece149653e923d0393212508",
   "assetType": "Decal",

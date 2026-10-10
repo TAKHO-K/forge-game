@@ -14,6 +14,7 @@ local Toast = require(script.Parent.Parent.ui.kit.Toast)
 local ArtImage = require(script.Parent.Parent.ui.ArtImage)
 local UIManager = require(script.Parent.Parent.UIManager)
 
+local REST = require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).rest -- UI-1 7c 수련(H §3): 게이지 · 다음 해금 한 줄
 local TrainingPanel = {}
 TrainingPanel.id = "training"
 
@@ -131,6 +132,27 @@ local function row(t, order)
 		end })
 	b.root.Name = "TrainButton"
 	b.setEnabled(not atCap)
+	if REST then -- UI-1 7c(H §3): A 게이지(노랑 · 다 올리면 금) + "Lv a / b"
+		local gauge = Instance.new("Frame")
+		gauge.Name = "Gauge"
+		gauge.BackgroundColor3 = Color3.fromRGB(26, 31, 51)
+		gauge.Position = UDim2.new(0.4, 66, 0, 12) -- 이름 오른쪽(수치 글자와 안 겹침)
+		gauge.Size = UDim2.new(0.6, -66 - 166 - 74, 0, 8)
+		gauge.Parent = f
+		Theme.corner(gauge, 4)
+		local fill = Instance.new("Frame")
+		fill.BorderSizePixel = 0
+		fill.BackgroundColor3 = Color3.fromHex(atCap and "FFD45A" or "FFC83D")
+		fill.Size = UDim2.fromScale(math.clamp(t.level / math.max(t.cap, 1), 0, 1), 1)
+		fill.Parent = gauge
+		Theme.corner(fill, 4)
+		local lv = Theme.label(f, Text.get("ui1.train.level", { a = tostring(t.level), b = tostring(t.cap) }), "caption", "textSecondary")
+		lv.Name = "LevelText"
+		lv.TextXAlignment = Enum.TextXAlignment.Right
+		lv.AnchorPoint = Vector2.new(1, 0)
+		lv.Position = UDim2.new(1, -166, 0, 8)
+		lv.Size = UDim2.fromOffset(66, 16)
+	end
 end
 
 -- QUEUE-ALL10 2-7 고급 수련(51 ~ 100) · 방어 수련: 같은 창 아래 줄 · 초월 무기가 없으면 잠금 안내(★스테이지만으로 열리지 않는다) · 결과 = 서버(TranscendRequest)
@@ -217,6 +239,14 @@ function TrainingPanel.render()
 		end
 	end
 	local n = 0
+	if REST and transView and transView.enabled and not transView.transcend then -- UI-1 7c "다음 해금" 한 줄(맨 위 · 자물쇠 + 노랑 · 해금 조건 = 서버 view)
+		local next = Theme.label(built.scroll, Text.get("ui1.train.nextUnlock", { what = Text.get("training.adv.name"), how = Text.get("training.adv.locked") }), "body", "textPrimary")
+		next.Name = "NextUnlock"
+		next.TextColor3 = Color3.fromHex("FFC83D")
+		next.TextWrapped = true
+		next.LayoutOrder = 0
+		next.Size = UDim2.new(1, -6, 0, 28)
+	end
 	for i, t in ipairs(rowsOf(view)) do
 		row(t, i)
 		n = i

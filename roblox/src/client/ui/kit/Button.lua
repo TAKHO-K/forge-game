@@ -10,7 +10,8 @@ local Theme = require(script.Parent.Theme)
 local Button = {}
 
 Button.minWidth = 88
-Button.kinds = { primary = true, secondary = true, danger = true, claim = true } -- QUEUE-ALL3 Q1 · Q3: claim = 받기(초록 · 굵게)
+Button.kinds = { primary = true, secondary = true, danger = true, claim = true, buy = true } -- QUEUE-ALL3 Q1 · Q3: claim = 받기(초록 · 굵게) · UI-1 7c: buy = 상점 노랑 [구매](04 v2 - 화면마다 1개)
+local BUY = require(game:GetService("ReplicatedStorage").Shared.data.UiLayoutData).shop.v2.buy
 
 -- 종류 · 시각 상태 → 색. 눌림은 종류와 무관하게 emberDim(지시서). 비활성은 lockedBg + lockedIcon.
 local function look(kind, visual)
@@ -25,6 +26,8 @@ local function look(kind, visual)
 		return { fill = colors.ember, fillTransparency = 0, text = colors.textOnAccent, stroke = colors.ember, strokeTransparency = 1 } -- QUEUE-ALL10 0-6 주 버튼 글자 대비
 	elseif kind == "claim" then
 		return { fill = colors.success, fillTransparency = 0, text = colors.textOnAccent, stroke = colors.success, strokeTransparency = 1 }
+	elseif kind == "buy" then
+		return { fill = Color3.fromHex(BUY.fill), fillTransparency = 0, text = Color3.fromHex(BUY.text), stroke = Color3.fromHex(BUY.fill), strokeTransparency = 1 }
 	elseif kind == "danger" then
 		return { fill = colors.slot, fillTransparency = colors.slotTransparency, text = colors.textPrimary, stroke = colors.danger, strokeTransparency = 0 }
 	end

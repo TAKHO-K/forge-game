@@ -237,7 +237,8 @@ function SeasonTab.render(ctx, env, opts)
 	if season.weekend and season.weekend.active then -- QUEUE-ALL9A 1-2: 남은 시간 = 서버 시각(GetServerTimeNow) 기준 - 클라 시계 · 시간대 안 씀
 		local left = math.max(0, (season.weekend.endsAt or 0) - workspace:GetServerTimeNow())
 		local time = Text.get("season.weekendTime", { h = tostring(math.floor(left / 3600)), m = tostring(math.floor(left % 3600 / 60)) })
-		ctx.line(Text.get("season.weekendOn", { time = time }), "gold", 1, "WeekendBoost")
+		local REST = require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).rest -- UI-1 7c 04 v2: "주말 진행 2배" 칩만(남은 시간 카운트다운 X)
+		ctx.line(REST and Text.get("ui1.season.weekendOn") or Text.get("season.weekendOn", { time = time }), "gold", 1, "WeekendBoost")
 	end
 	SeasonTab.finalPreview(ctx, season) -- QUEUE-ALL9B 4-7 최종 보상 미리보기 · 주 4일 · 가치 약 ×N
 	if season.premium then

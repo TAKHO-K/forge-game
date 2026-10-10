@@ -15,6 +15,8 @@ local Theme = require(script.Parent.Parent.ui.kit.Theme)
 local ArtImage = require(script.Parent.Parent.ui.ArtImage)
 local UIManager = require(script.Parent.Parent.UIManager)
 
+local REST = require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).rest -- UI-1 7c 캐릭터(H §2): 아바타 뷰 · 칭호 → 도감
+local CH = require(game:GetService("ReplicatedStorage").Shared.data.UiLayoutData).character.v1
 local CharacterPanel = {}
 CharacterPanel.id = "character"
 
@@ -24,7 +26,7 @@ local ROW_H = 30
 -- 능력치 줄: { 글자 키, Attribute, 형식 }
 local ROWS = {
 	{ "character.level", "CharacterLevel", "int" },
-	{ "character.power", "CombatPower", "big" },
+	{ "character.power", "CombatPower", "power" }, -- UI-1 7c: HUD 칩과 같은 표시(CombatFormula.display - 옛 "big" = 1 차이)
 	{ "character.maxHp", "MaxHp", "big" },
 	{ "character.weapon", "WeaponLevel", "plus" },
 	{ "character.rebirth", "RebirthCount", "int" },
@@ -48,7 +50,10 @@ end
 
 local function format(kind, v)
 	v = v or 0
-	if kind == "big" then
+	if kind == "power" then
+		local CF = require(game:GetService("ReplicatedStorage").Shared.CombatFormula)
+		return NumberFormat.format(CF.display and CF.display(v) or v)
+	elseif kind == "big" then
 		return NumberFormat.format(v)
 	elseif kind == "plus" then
 		return "+" .. tostring(math.floor(v))
@@ -375,6 +380,88 @@ local function renderCos()
 	end
 end
 
+-- UI-1 7c 아바타 뷰: 지금 캐릭터를 복제해 ViewportFrame(WorldModel) 안에 세운다(창을 열 때마다 새로 - 장비 · 꾸미기 바뀐 모습)
+function CharacterPanel.renderAvatar()
+	local left = built.left
+	local old = left:FindFirstChild("AvatarView")
+	if old then
+		old:Destroy()
+	end
+	local char = player.Character
+	if not char then
+		return
+	end
+	local vp = Instance.new("ViewportFrame")
+	vp.Name = "AvatarView"
+	vp.BackgroundTransparency = 1
+	vp.Position = UDim2.fromOffset(8, 8)
+	vp.Size = UDim2.new(1, -16, 1, -(CH.avatarBottom))
+	vp.Ambient = Color3.fromRGB(200, 200, 210)
+	vp.LightColor = Color3.fromRGB(255, 250, 240)
+	vp.Parent = left
+	local world = Instance.new("WorldModel")
+	world.Parent = vp
+	local was = char.Archivable
+	char.Archivable = true
+	local ok, copy = pcall(function()
+		return char:Clone()
+	end)
+	char.Archivable = was
+	if not ok or not copy then
+		return
+	end
+	for _, d in ipairs(copy:GetDescendants()) do
+		if d:IsA("Script") or d:IsA("LocalScript") or d:IsA("BillboardGui") or d:IsA("ProximityPrompt") or d:IsA("Sound") then
+			d:Destroy()
+		elseif d:IsA("BasePart") then
+			d.Anchored = true
+		end
+	end
+	local root = copy:FindFirstChild("HumanoidRootPart")
+	if root then
+		copy:PivotTo(CFrame.new(0, 0, 0)) -- 앞(-Z)을 보게 · 카메라 = -Z 쪽
+	end
+	copy.Parent = world
+	local cf, size = copy:GetBoundingBox()
+	local cam = Instance.new("Camera")
+	cam.FieldOfView = 30
+	local dist = math.max(size.Y, size.X) / (2 * math.tan(math.rad(15))) * 1.05
+	cam.CFrame = CFrame.lookAt(cf.Position + Vector3.new(0, size.Y * 0.05, -dist), cf.Position)
+	cam.Parent = vp
+	vp.CurrentCamera = cam
+end
+
+-- UI-1 7c 칭호 카드: 지금 칭호(도감에서 고른 것 - SelectedTitle) + [도감 › 칭호]
+function CharacterPanel.renderTitle()
+	local left = built.left
+	local card = left:FindFirstChild("TitleCard")
+	if not card then
+		card = Instance.new("Frame")
+		card.Name = "TitleCard"
+		card.BackgroundTransparency = 1
+		card.AnchorPoint = Vector2.new(0, 1)
+		card.Position = UDim2.new(0, 8, 1, -34)
+		card.Size = UDim2.new(1, -16, 0, CH.titleCardH)
+		card.Parent = left
+		local t = Theme.label(card, "", "caption", "textPrimary")
+		t.Name = "TitleName"
+		t.TextWrapped = true
+		t.Size = UDim2.new(1, 0, 0, 20)
+		local b = Button.build({ parent = card, kind = "secondary", name = "CodexTitles", text = Text.get("ui1.char.toTitles"), width = 170, height = 44, position = UDim2.new(0, 0, 1, 0), anchorPoint = Vector2.new(0, 1), onActivated = function()
+			local Codex = require(script.Parent.Codex)
+			UIManager.close(CharacterPanel.id)
+			if Codex.open() then
+				Codex.setTab("title")
+			end
+		end })
+		b.root.Size = UDim2.new(1, 0, 0, 44)
+	end
+	local id = player:GetAttribute("SelectedTitle")
+	local TitleData = require(game:GetService("ReplicatedStorage").Shared.data.TitleData)
+	local def = type(id) == "string" and TitleData.titles[id]
+	card.TitleName.Text = Text.get("ui1.char.title", { name = def and Text.name(def.name) or Text.get("ui1.char.noTitle") })
+end
+
 function CharacterPanel.render()
 	if not built then
 		return
@@ -390,7 +477,10 @@ function CharacterPanel.render()
 	built.className.Text = class and Text.get("class.name." .. classId) or "-"
 	local art = built.left:FindFirstChild("Art")
 	local path = classId and ("icons/codex/class_" .. classId) or ""
-	if not art or art:GetAttribute("Path") ~= path then
+	if REST then -- UI-1 7c(H §2): 캐릭터 그림 = 실제 아바타(ViewportFrame) · 칭호 카드 + [도감 › 칭호](정본 = 도감 칭호 탭)
+		CharacterPanel.renderAvatar()
+		CharacterPanel.renderTitle()
+	elseif not art or art:GetAttribute("Path") ~= path then
 		if art then
 			art:Destroy()
 		end

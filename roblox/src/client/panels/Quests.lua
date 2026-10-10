@@ -22,6 +22,8 @@ local Toast = require(script.Parent.Parent.ui.kit.Toast)
 local RewardIcons = require(script.Parent.Parent.ui.RewardIcons)
 local UIManager = require(script.Parent.Parent.UIManager)
 
+local QuestData = require(game:GetService("ReplicatedStorage").Shared.data.QuestData)
+local REST = require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).rest -- UI-1 7c 퀘스트(H §4): 오늘의 목표 줄 [길 안내] · 받기 빨간 점
 local QuestsPanel = {}
 QuestsPanel.id = "quests"
 
@@ -125,7 +127,7 @@ local function claimButton(parent, enabled, claimed, onPress, name)
 end
 
 -- 줄 하나: 이름 + 진행 게이지(n/목표) + 보상 그림 + [받기]
-local function questRow(name, n, target, reward, claimed, onClaim, rowName)
+local function questRow(name, n, target, reward, claimed, onClaim, rowName, guide)
 	local f = Instance.new("Frame")
 	f.Name = rowName or ("Row" .. order)
 	f.LayoutOrder = nextOrder()
@@ -149,7 +151,28 @@ local function questRow(name, n, target, reward, claimed, onClaim, rowName)
 	local count = label(f, ("%d/%d"):format(n, target), "caption", "textSecondary")
 	count.Position, count.Size = UDim2.new(1, -330, 0, 28), UDim2.fromOffset(60, 22)
 	RewardIcons.row(f, reward, 26, { frameSize = UDim2.fromOffset(130, 30), position = UDim2.new(1, -270, 0.5, -15) })
-	claimButton(f, n >= target and not claimed, claimed, onClaim)
+	if REST and guide and n < target and not claimed then -- UI-1 7c(H §4): 아직 = [길 안내](보조 · 지도 길 안내와 같은 함수)
+		local g = Button.build({ parent = f, kind = "secondary", width = 128, height = claimHeight(), text = Text.get("quests.guide"),
+			position = UDim2.new(1, -8, 0.5, 0), anchorPoint = Vector2.new(1, 0.5), onActivated = function()
+				if require(script.Parent.Parent.QuestGuide).go(guide, false) then
+					UIManager.close(QuestsPanel.id)
+				end
+			end })
+		g.root.Name = "GuideButton"
+		return f
+	end
+	local cb = claimButton(f, n >= target and not claimed, claimed, onClaim)
+	if REST and n >= target and not claimed then -- 끝남 = [받기] + 빨간 점 12
+		local dot = Instance.new("Frame")
+		dot.Name = "ClaimDot"
+		dot.BackgroundColor3 = Color3.fromRGB(235, 60, 60)
+		dot.AnchorPoint = Vector2.new(0.5, 0.5)
+		dot.Position = UDim2.new(1, -2, 0, 2)
+		dot.Size = UDim2.fromOffset(12, 12)
+		dot.ZIndex = 5
+		dot.Parent = cb.root
+		Theme.corner(dot, 6)
+	end
 	return f
 end
 
@@ -305,7 +328,7 @@ local function renderRows(rows)
 		return a.i < b.i
 	end)
 	for _, r in ipairs(rows) do
-		questRow(r.name, r.n, r.target, r.reward, r.claimed, r.onClaim, r.rowName)
+		questRow(r.name, r.n, r.target, r.reward, r.claimed, r.onClaim, r.rowName, r.guide)
 	end
 end
 
@@ -318,7 +341,13 @@ local function renderDaily()
 		send("claim", "login")
 	end } }
 	for _, q in ipairs(view.daily or {}) do
-		table.insert(rows, { name = q.name, n = q.n, target = q.target, reward = q.reward, claimed = q.claimed, rowName = "Daily_" .. q.id, onClaim = function()
+		local ev = nil
+		for _, d in ipairs(QuestData.dailyPool) do
+			if d.id == q.id then
+				ev = d.event
+			end
+		end
+		table.insert(rows, { name = q.name, n = q.n, target = q.target, reward = q.reward, claimed = q.claimed, rowName = "Daily_" .. q.id, guide = ev and QuestData.dailyGuide and QuestData.dailyGuide[ev], onClaim = function()
 			send("claim", "daily", q.id)
 		end })
 	end

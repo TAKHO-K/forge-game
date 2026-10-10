@@ -14,12 +14,14 @@ local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
 local Text = require(ReplicatedStorage.Shared.Text)
 local UIManager = require(script.Parent.Parent.UIManager)
+local Button = require(script.Parent.Parent.ui.kit.Button) -- UI-1 7c 빈 상태 [구역 선택 열기]
 local Panel = require(script.Parent.Parent.ui.kit.Panel)
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
 local Toast = require(script.Parent.Parent.ui.kit.Toast)
 local ScreenMap = require(script.Parent.Parent.ui.ScreenMap)
 local Inspect = require(script.Parent.Inspect)
 
+local REST = require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).rest -- UI-1 7c 순위(H §6 · v1.1 §3)
 local Leaderboard = {}
 
 Leaderboard.id = "leaderboard"
@@ -572,6 +574,25 @@ local function render()
 		refs.emptyLabel.Size = UDim2.new(1, -8, 0, Theme.textSize("body") * 3)
 		refs.emptyLabel.Visible = #entries == 0
 		refs.emptyLabel.Text = Text.get(board and "ui.rank.empty" or "ui.rank.loading")
+		if REST then -- UI-1 7c(H §6): 빈 상태 = "스테이지를 깨면 여기에 이름이 올라가요" + [구역 선택 열기](보조)
+			if board and #entries == 0 then
+				refs.emptyLabel.Text = Text.get("ui.rank.empty") .. "\n" .. Text.get("ui1.rank.emptySub")
+			end
+			local open = refs.list:FindFirstChild("OpenStageSelect")
+			if not open then
+				local b = Button.build({ parent = refs.list, kind = "secondary", name = "OpenStageSelect", text = Text.get("ui1.rank.openStage"), width = 200, height = 44,
+					position = UDim2.new(0, 4, 0, Theme.textSize("body") * 3 + 12), onActivated = function()
+						UIManager.close(Leaderboard.id)
+						UIManager.openLazy("stageSelect")
+					end })
+				open = b.root
+				open.Name = "OpenStageSelect"
+			end
+			open.Visible = board ~= nil and #entries == 0
+		end
+		if #entries == 0 and REST and board then
+			y = Theme.textSize("body") * 3 + 64
+		end
 		if #entries == 0 then
 			y = Theme.textSize("body") * 3 + 8
 		end
@@ -595,7 +616,8 @@ local function render()
 			else
 				nameText = nameOf(board.names, entry.userId)
 			end
-			row.name.Text = nameText
+			local classId = REST and boardId:match("^class:(.+)$") -- UI-1 7c(H v1.1 §3): 직업 = 직업 이름(무기 이름 X) · 줄 데이터에 직업이 있는 직업별 탭만
+			row.name.Text = classId and (nameText .. " · " .. Text.get("class.name." .. classId)) or nameText
 			row.name.TextColor3 = isMine and UIColors.ember or UIColors.textPrimary
 			row.stroke.Color = isMine and UIColors.ember or (UIColors.rankMedal[entry.rank] or UIColors.rim)
 			row.stroke.Transparency = (isMine or UIColors.rankMedal[entry.rank]) and 0 or UIColors.rimTransparency

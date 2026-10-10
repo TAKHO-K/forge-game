@@ -34,7 +34,8 @@ function PetService.view(player)
 	local level = PlayerProfile.getCharacterLevel(player) or 1
 	local pets = {}
 	for i, p in ipairs(state.list) do
-		table.insert(pets, { index = i, species = p.species, name = EggData.species[p.species] or p.species, body = Pet.bodyOf(p.species), grade = p.grade, zone = p.zone, equipped = state.equipped == i })
+		table.insert(pets, { index = i, species = p.species, name = EggData.species[p.species] or p.species, body = Pet.bodyOf(p.species), grade = p.grade, zone = p.zone, equipped = state.equipped == i,
+			locked = p.locked == true, at = p.at }) -- UI-1 7c 잠금 · 놓아주기 대조용 at
 	end
 	local hatching = {}
 	for i, h in ipairs(state.hatching) do
@@ -123,6 +124,38 @@ function PetService.equip(player, index)
 	return true
 end
 
+-- UI-1 7c 펫 잠금(H v1.1 · 저장 필드 pets.list[n].locked - 추가만): at = 클라가 본 그 펫의 얻은 시각(번호가 밀린 연타 대조)
+function PetService.setLocked(player, index, at, on)
+	local state = PlayerProfile.getPetState(player)
+	local p = state and type(index) == "number" and state.list[index]
+	if not p or (at ~= nil and p.at ~= at) then
+		return false
+	end
+	p.locked = on == true or nil
+	require(script.Parent.ImmediateSave).request(player)
+	push(player)
+	return true
+end
+
+-- UI-1 7c 펫 놓아주기: 서버 판정 = Pet.canRelease(데리고 다니지 않음 · 잠그지 않음) - 클라 버튼만 막지 않는다
+function PetService.release(player, index, at)
+	local state = PlayerProfile.getPetState(player)
+	local p = state and type(index) == "number" and state.list[index]
+	if not p or (at ~= nil and p.at ~= at) then
+		return false, "none"
+	end
+	local ok, why = Pet.canRelease(state, index)
+	if not ok then
+		return false, why
+	end
+	Pet.removeAt(state, index)
+	print(("[UI-1 7c] 펫 놓아주기: %s → %s(%s)"):format(player.Name, tostring(p.species), tostring(p.grade)))
+	applyAttributes(player, state)
+	require(script.Parent.ImmediateSave).request(player)
+	push(player)
+	return true
+end
+
 -- 자동 줍기 반경(ItemDropServer) - 0 = 평소 줍기만
 function PetService.pickupRange(player)
 	local state = PlayerProfile.getPetState(player)
@@ -156,7 +189,7 @@ function PetService.start()
 	syncRemote = ReplicatedStorage:FindFirstChild("PetSync") or Instance.new("RemoteEvent")
 	syncRemote.Name = "PetSync"
 	syncRemote.Parent = ReplicatedStorage
-	local ACTIONS = { view = true, hatch = true, claim = true, equip = true }
+	local ACTIONS = { view = true, hatch = true, claim = true, equip = true, lock = true, release = true }
 	remote.OnServerEvent:Connect(function(player, action, a, b)
 		if type(action) ~= "string" or not ACTIONS[action] then -- 리뷰: 허용 동작만 제한 키로(표가 커지지 않게)
 			return
@@ -176,6 +209,10 @@ function PetService.start()
 			PetService.claim(player, math.floor(a))
 		elseif action == "equip" and (a == nil or type(a) == "number") then
 			PetService.equip(player, a and math.floor(a) or nil)
+		elseif action == "lock" and type(a) == "table" and type(a.index) == "number" then -- UI-1 7c { index, at, on }
+			PetService.setLocked(player, math.floor(a.index), type(a.at) == "number" and a.at or nil, a.on == true)
+		elseif action == "release" and type(a) == "table" and type(a.index) == "number" then -- UI-1 7c { index, at }
+			PetService.release(player, math.floor(a.index), type(a.at) == "number" and a.at or nil)
 		end
 	end)
 	Players.PlayerRemoving:Connect(function(player)

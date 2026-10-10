@@ -24,6 +24,8 @@ local Theme = require(script.Parent.Parent.ui.kit.Theme)
 local Tabs = require(script.Parent.Parent.ui.kit.Tabs)
 local PartyBoard = require(script.Parent.PartyBoard) -- QUEUE-ALL9C 1-4: 모집 게시판 = 파티창 [파티 찾기] 탭 안(옛 독립 창)
 
+local REST = require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).rest -- UI-1 7c 파티 빠른 말
+local QCL = require(game:GetService("ReplicatedStorage").Shared.data.UiLayoutData).quickChat.v1
 local Party = {}
 
 Party.id = "party"
@@ -121,6 +123,58 @@ local function build()
 	scroll.AutomaticCanvasSize = Enum.AutomaticSize.None
 	scroll.CanvasSize = UDim2.new(0, BODY_WIDTH, 0, BODY_HEIGHT)
 	scroll.Parent = panel.content
+	if REST then -- UI-1 7c(H §5 · F v2.1): 아래 = 빠른 말 8 + 이모트 4(자유 입력 없음 · 받는 사람 = 같은 파티)
+		local QC = require(ReplicatedStorage.Shared.data.QuickChatData)
+		local ArtImage = require(script.Parent.Parent.ui.ArtImage)
+		local qcH = QCL.height
+		scroll.Size = UDim2.new(1, 0, 1, -tabTop - qcH)
+		local strip = Instance.new("Frame")
+		strip.Name = "QuickChat"
+		strip.BackgroundColor3 = Color3.fromHex("1B2133")
+		strip.AnchorPoint = Vector2.new(0, 1)
+		strip.Position = UDim2.new(0, 8, 1, -6)
+		strip.Size = UDim2.new(1, -16, 0, qcH - 10)
+		strip.Parent = panel.content
+		Theme.corner(strip, 12)
+		local grid = Instance.new("UIGridLayout")
+		grid.CellSize = UDim2.fromOffset(QCL.cellW, QCL.cellH)
+		grid.CellPadding = UDim2.fromOffset(6, 6)
+		grid.SortOrder = Enum.SortOrder.LayoutOrder
+		grid.Parent = strip
+		local pad = Instance.new("UIPadding")
+		pad.PaddingLeft, pad.PaddingTop = UDim.new(0, 8), UDim.new(0, 8)
+		pad.Parent = strip
+		local remote = ReplicatedStorage:WaitForChild("QuickChat")
+		for i, key in ipairs(QC.phrases) do
+			local b = Instance.new("TextButton")
+			b.Name = "Phrase" .. i
+			b.LayoutOrder = i
+			b.Text = Text.get(key)
+			b.Font = Enum.Font.GothamBold
+			b.TextSize = 14
+			b.TextColor3 = Color3.new(1, 1, 1)
+			b.BackgroundColor3 = Color3.fromHex("2B3350")
+			b.AutoButtonColor = true
+			b.Parent = strip
+			Theme.corner(b, 10)
+			b.Activated:Connect(function()
+				remote:FireServer("phrase", i)
+			end)
+		end
+		for i, e in ipairs(QC.emotes) do
+			local b = Instance.new("ImageButton")
+			b.Name = "Emote_" .. e.id
+			b.LayoutOrder = 100 + i
+			b.Image = ArtImage.get(e.image) or ""
+			b.ScaleType = Enum.ScaleType.Fit
+			b.BackgroundColor3 = Color3.fromHex("2B3350")
+			b.Parent = strip
+			Theme.corner(b, 10)
+			b.Activated:Connect(function()
+				remote:FireServer("emote", i)
+			end)
+		end
+	end
 
 	local partyBody = Instance.new("Frame")
 	partyBody.Name = "PartyBody"

@@ -13,6 +13,8 @@ return {
 		{ id = "d_egg", event = "egg", target = 1, name = "둥지에서 알 {n}개 줍기", reward = { gold = 80, passExp = 20 } },
 		{ id = "d_train", event = "train", target = 1, name = "수련 · 직업 능력 {n}번 올리기", reward = { gold = 60, passExp = 20 } },
 	},
+	-- UI-1 7c(H §4): 오늘의 목표 줄 [길 안내] 목적지 = 이벤트 → QuestGuide 목적지(main guide와 같은 이름) · 없는 이벤트(보석 · 수련 = 창) = 버튼 없음
+	dailyGuide = { kill = "hunt", bossClear = "gate", enhance = "forge", egg = "hunt" },
 	weekly = {
 		{ id = "w_kill", event = "kill", target = 3000, name = "몬스터 {n}마리 처치", reward = { gold = 900, passExp = 100 } },
 		{ id = "w_boss", event = "bossClear", target = 15, name = "보스 {n}번 처치", reward = { gold = 900, enhanceStone = 20, passExp = 100 } },
