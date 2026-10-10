@@ -120,7 +120,7 @@ local function opsSection(r, player)
 	local noRevoke = hook:Invoke(player, "/ops revoke confirm 000000")
 	r.check(("초월 회수 없는 확인 번호 = 실행 안 함: %s"):format(tostring(noRevoke)), tostring(noRevoke):find("no_pending", 1, true) ~= nil)
 	-- 내보내기 메시지: 이 서버도 같은 토픽을 듣는다(없는 사람 = 내보내기 0) - 로그 줄로 수신 확인
-	local cfg = require(ReplicatedStorage.Shared.data.SecurityOpsConfig).rollback
+	local cfg = require(script.Parent.SecurityOpsConfig).rollback
 	local topic = cfg.kickTopic .. (require(ReplicatedStorage.Shared.data.DevToolsConfig).verifyArmed and "_verify" or "")
 	local got = false
 	local conn = LogService.MessageOut:Connect(function(message)

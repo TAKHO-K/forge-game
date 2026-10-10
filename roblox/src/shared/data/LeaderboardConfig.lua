@@ -59,8 +59,5 @@ return {
 		maxBuffSpeedMultiplier = 2.5,
 	},
 
-	-- 기록 제외 계정(라이브의 개발 · 운영 계정 UserId). Studio는 수동 Play면 전부 제외 · 검증 모드면 _verify 저장소로만 쓴다(Leaderboard.writeMode).
-	-- P3d G-g(사용자 결정 "라이브 제외 = 개발 계정"): 11595243049 = Studio 로그의 개발 계정 프로필 키(Player_11595243049) - 사용자 확인 요청(결정 필요).
-	-- 제외는 라이브(writeMode "live")에서만 건다(Leaderboard.eligibility).
-	excludedUserIds = { 11595243049 },
+	-- 기록 제외 계정 = server/OpsConfig.leaderboardExcludedUserIds로 옮김(SEC-FIX-1 4b - 클라에 운영 계정 UserId가 보였다 · 옛 자리 안 남김).
 }

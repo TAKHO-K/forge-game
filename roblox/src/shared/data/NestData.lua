@@ -128,10 +128,7 @@ return {
 	-- 하루 경계 = 한국 자정(UTC + 9) · 순환형 = 날짜마다 후보 5곳 중 1곳(구역 키 해시 + 날짜 - 이웃 날은 다른 곳)
 	dayOffsetSeconds = 9 * 3600,
 	rotateCandidates = 5,
-	-- 줍기 서버 검증(M1-2c 위치 기록 + 둥지 전용 궤적): ① 최근 presentSeconds 동안의 서버 표본(발사 허가 위치 기록)이 전부 둥지 반경 radius · 높이 dyMin ~ dyMax 안이고 minSamples장 이상
-	--   ② 둥지 전용 궤적(trailHz로 trailSeconds 보관 - 발사 허가 기록은 0.6초뿐이라 "순간이동 → 0.6초 기다림"이 뚫렸다: M1-3 리뷰)에 초속 maxSpeedStuds를 넘는 이동이 없다(순간이동 · 속도 핵 차단 -
-	--   걷기 상한 24 · 대시 53 · 나무 점프대 약 120보다 넉넉히).
-	pickup = { radius = 9, promptDistance = 8, presentSeconds = 0.25, minSamples = 3, dyMin = -4, dyMax = 8, trailSeconds = 3, trailHz = 10, maxSpeedStuds = 160, requestGapSeconds = 0.5 },
+	-- 줍기 서버 검증 기준(pickup) = server/NestPickupData로 옮김(SEC-FIX-1 4b - 클라가 순간이동 속도를 기준 바로 아래로 맞출 수 있었다 · 클라 사용 0).
 	-- 서버 주기: 번개 문 · 순환 확인(doorPollSeconds · refreshSeconds) · 열린 번개 문 투명도
 	server = { doorPollSeconds = 0.25, refreshSeconds = 30, doorOpenTransparency = 0.85 },
 	-- 줍기 연출(클라): 알이 떠오르는 높이 · 시간(보통 / 처음 찾은 비밀 둥지) · 빛 · 알림 지연

@@ -140,7 +140,7 @@ function EnhanceService.handleRequest(player, useDropTicket, useResetTicket)
 		outcome.blockedBy and (", 방지 옵션이 " .. outcome.blockedBy .. " 막음") or "", (useDrop or useReset) and " · 방지 켬" or ""))
 
 	-- 30-0 S08: 새 단계가 announceFromLevel(20) 이상인 **성공**은 같은 서버 전원에게 알린다(채팅 시스템 메시지는 클라 EnhanceAnnounceClient가 만든다). 실패 · 방지권 · 19강 이하 성공은 없다.
-	if outcome.result == "success" and outcome.level >= require(ReplicatedStorage.Shared.data.SecurityOpsConfig).trail.enhanceFromLevel then
+	if outcome.result == "success" and outcome.level >= require(script.Parent.SecurityOpsConfig).trail.enhanceFromLevel then
 		require(script.Parent.AuditTrail).note(player, "enhance", ("+%d 성공"):format(outcome.level)) -- QUEUE-ALL6 F3 감사
 	end
 	if outcome.result == "success" and outcome.level >= EnhanceConfig.announceFromLevel and enhanceAnnounce then

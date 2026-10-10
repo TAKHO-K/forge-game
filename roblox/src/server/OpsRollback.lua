@@ -273,11 +273,11 @@ end
 
 -- 순수: 차단 인자 → BanAsync 설정 | nil, 이유
 function OpsRollback.banConfig(userId, durationKey, reason)
-	local seconds = require(game:GetService("ReplicatedStorage").Shared.data.SecurityOpsConfig).ban.durations[tostring(durationKey)]
+	local seconds = require(script.Parent.SecurityOpsConfig).ban.durations[tostring(durationKey)]
 	if not userId or userId <= 0 or not seconds then
 		return nil, "bad_args"
 	end
-	reason = require(script.Parent.AuditTrail).clip(reason, require(game:GetService("ReplicatedStorage").Shared.data.SecurityOpsConfig).ban.maxReasonChars) -- QUEUE-ALL6R: 글자 수로 자른다(옛 바이트 자르기 = 한글 사유가 끊겨 UTF-8이 깨졌다 - 감사 기록과 같은 버그)
+	reason = require(script.Parent.AuditTrail).clip(reason, require(script.Parent.SecurityOpsConfig).ban.maxReasonChars) -- QUEUE-ALL6R: 글자 수로 자른다(옛 바이트 자르기 = 한글 사유가 끊겨 UTF-8이 깨졌다 - 감사 기록과 같은 버그)
 	if reason == "" then
 		return nil, "need_reason"
 	end
@@ -287,7 +287,7 @@ end
 -- QUEUE-ALL6R 결정 8 순수(입구 주입 - 하네스 OPS가 가짜 저장 · 시계로 부른다): 저장을 다른 서버가 쥐고 있으면 내보내기를 한 번 부탁하고 놓을 때까지 기다린다.
 -- io = { read(userId) → raw, held(raw) → bool, publish(userId), wait(초) } · 반환: true(이제 덮어도 된다) | false, "still_held"
 function OpsRollback.awaitRelease(userId, io)
-	local cfg = require(game:GetService("ReplicatedStorage").Shared.data.SecurityOpsConfig).rollback
+	local cfg = require(script.Parent.SecurityOpsConfig).rollback
 	if not io.held(io.read(userId)) then
 		return true
 	end

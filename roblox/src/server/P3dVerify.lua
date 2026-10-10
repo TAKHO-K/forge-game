@@ -710,7 +710,7 @@ function P3dVerify.runLive(player, env)
 		local info = SkillStats.info(player)
 		local ok, why = Leaderboard.eligibility(player)
 		r.check(("F2 치유사 둘이 걸어도 배율 %.4f(기대 %.4f - 중첩 없음) · F3 툴팁 소스 SkillStats.healerBuff %.4f · G-g 제외 목록 %s(개발 계정 %d 포함 %s) · 검증 모드 기록 가능 %s(%s)"):format(multiplier, 1 + b,
-			info and info.healerBuff or -1, table.concat(LeaderboardConfig.excludedUserIds, ","), player.UserId, tostring(table.find(LeaderboardConfig.excludedUserIds, player.UserId) ~= nil), tostring(ok), tostring(why)),
+			info and info.healerBuff or -1, table.concat(require(script.Parent.OpsConfig).leaderboardExcludedUserIds, ","), player.UserId, tostring(table.find(require(script.Parent.OpsConfig).leaderboardExcludedUserIds, player.UserId) ~= nil), tostring(ok), tostring(why)),
 			near(multiplier, 1 + b) and info and near(info.healerBuff, b) and (ok or why ~= "excluded"))
 	end)
 

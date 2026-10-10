@@ -2,7 +2,7 @@
 --   ① 최초(levels): DataStore UpdateAsync 선점 - 키 하나(launchEpoch:단계)에 처음 쓴 사람만 남는다(두 서버가 동시에 올려도 UpdateAsync가 한쪽을 다시 돌려 진 쪽은 이미 있는 값을 본다).
 --      이긴 사람 = 칭호 · 감사 기록 · 전 서버 배너(MessagingService - best-effort · 원본은 DataStore) · 명예의 전당 "초월 강화" 줄(HallOfFame이 원본을 5분마다 다시 읽는다).
 --   ② 그 밖 localFromLevel 이상 성공 = 같은 서버 알림(최초면 ①이 대신한다).
---   Studio = 시험 키 · 시험 토픽(실제 기록을 안 올린다) · 개발 계정(LeaderboardConfig.excludedUserIds) = 최초 대상 아님(같은 서버 알림만).
+--   Studio = 시험 키 · 시험 토픽(실제 기록을 안 올린다) · 개발 계정(require(script.Parent.OpsConfig).leaderboardExcludedUserIds) = 최초 대상 아님(같은 서버 알림만).
 local DataStoreService = game:GetService("DataStoreService")
 local MessagingService = game:GetService("MessagingService")
 local Players = game:GetService("Players")
@@ -11,7 +11,6 @@ local RunService = game:GetService("RunService")
 
 local All10Data = require(ReplicatedStorage.Shared.data.All10Data)
 local PrimordialData = require(ReplicatedStorage.Shared.data.PrimordialData)
-local LeaderboardConfig = require(ReplicatedStorage.Shared.data.LeaderboardConfig)
 local Text = require(ReplicatedStorage.Shared.Text)
 
 local TranscendFirsts = {}
@@ -44,7 +43,7 @@ function TranscendFirsts.isFirstLevel(level)
 end
 
 function TranscendFirsts.excluded(userId)
-	return table.find(LeaderboardConfig.excludedUserIds or {}, userId) ~= nil
+	return table.find(require(script.Parent.OpsConfig).leaderboardExcludedUserIds, userId) ~= nil
 end
 
 -- 선점 시도: 반환 = 이겼나(★이번 호출이 실제로 썼을 때만 - 리뷰: 같은 사람이 다른 직업으로 같은 단계에 또 닿아도 다시 "최초"가 되지 않게), 지금 기록.

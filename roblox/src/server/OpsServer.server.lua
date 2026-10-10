@@ -7,7 +7,7 @@
 --   /ops review <userId>                  검토 대기 목록(최근)
 --   /ops gift <userId> <cosmeticTheme|gliderSkin|sparkleShard> <id|개수> [메모]   선물함에 치장 · 치장 재화 넣기(QUEUE-B1 B2 - 치장만 · 이 서버에 없으면 다음 접속 때)
 --   /ops stats [all]                       알파 통계(C1 끌어오기 계측 - 이 서버 메모리 · all = 서버 종료 때 저장된 요약 합 - S1 후속 0-5)
---   QUEUE-ALL6 F(절차 = docs/phase/security-runbook.md · 기준값 = shared/data/SecurityOpsConfig):
+--   QUEUE-ALL6 F(절차 = docs/phase/security-runbook.md · 기준값 = server/SecurityOpsConfig(SEC-FIX-1 4b - 옛 shared/data · 클라 복제 안 됨)):
 --   /ops inspect <userId>                   프로필 요약 · 최근 의심 기록 · 감사 기록
 --   /ops rollback <userId> <버전|UTC 시각>   미리보기 + 확인 번호 → /ops rollback confirm <번호> = 실행(접속 중이면 내보냄 · 다른 서버가 저장을 쥐고 있으면 MessagingService로 그 서버에서 내보내고 놓을 때까지 대기 · 지금 저장본 백업 · 그 사람만)
 --   /ops revoke <userId> t<번호>            가짜 초월 회수 미리보기 + 확인 번호 → /ops revoke confirm <번호> = 실행(아이템 삭제 · 세계 번호 결번 · 초월자 칭호 · 도감 초월 줄 - QUEUE-ALL6R)
@@ -92,7 +92,7 @@ function handlers.release(args)
 	require(script.Parent.ImmediateSave).request(target)
 	return "released"
 end
-local SecurityOps = require(ReplicatedStorage.Shared.data.SecurityOpsConfig)
+local SecurityOps = require(script.Parent.SecurityOpsConfig)
 local AuditTrail = require(script.Parent.AuditTrail)
 local OpsRollback = require(script.Parent.OpsRollback)
 

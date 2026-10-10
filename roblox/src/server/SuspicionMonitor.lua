@@ -5,7 +5,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local C = require(ReplicatedStorage.Shared.data.SecurityOpsConfig)
+local C = require(script.Parent.SecurityOpsConfig)
 local D = C.detect
 
 local SuspicionMonitor = {}
@@ -38,7 +38,7 @@ function SuspicionMonitor.noteGold(player, amount)
 	end
 	local per = SuspicionMonitor.goldPerKill(player)
 	st(player).gold += amount / per
-	if amount / per >= require(ReplicatedStorage.Shared.data.SecurityOpsConfig).trail.bigGoldKillEq then
+	if amount / per >= require(script.Parent.SecurityOpsConfig).trail.bigGoldKillEq then
 		require(script.Parent.AuditTrail).note(player, "bigGold", ("%.0f(잡몹 %.0f마리 몫)"):format(amount, amount / per))
 	end
 end

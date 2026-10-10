@@ -17,7 +17,7 @@ local ImmediateSave = require(script.Parent.ImmediateSave)
 
 local NestServer = {}
 local SALT = 918273 -- 서버 전용(등급 · 후보 뽑기 씨앗 - 클라에 없다)
-local P = NestData.pickup
+local P = require(script.Parent.NestPickupData) -- SEC-FIX-1 4b: 줍기 기준 = 서버 전용
 local specById = {}
 for _, spec in ipairs(NestData.nests) do
 	specById[spec.id] = spec

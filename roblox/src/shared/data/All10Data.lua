@@ -45,7 +45,7 @@ return {
 	},
 
 	-- QUEUE-ALL9E1 0-5(P3-5): 초월 강화 최초 달성 - levels 각 단계 "전 서버 최초 1명" = 전 서버 배너 + 명예의 전당 "초월 강화" 줄 + 칭호(titleIds).
-	--   판정 = DataStore UpdateAsync 선점(키 = launchEpoch .. ":" .. 단계 · 먼저 쓴 사람만) · Studio = 시험 키(PrimordialData.testKeyPrefix) · 개발 계정 제외(LeaderboardConfig.excludedUserIds).
+	--   판정 = DataStore UpdateAsync 선점(키 = launchEpoch .. ":" .. 단계 · 먼저 쓴 사람만) · Studio = 시험 키(PrimordialData.testKeyPrefix) · 개발 계정 제외(server/OpsConfig.leaderboardExcludedUserIds).
 	--   launchEpoch = 출시 때 바꾼다(그 전 기록 = 시험 기록과 분리). 그 밖 localFromLevel 이상 성공 = 같은 서버 알림.
 	transcendFirsts = {
 		levels = { 10, 15, 20 },

@@ -18,7 +18,7 @@ declare -A EXP=( # 기대 검사 수(끝 a/b의 b) · require_path는 최소값(
 	[bignum]=67 [bulk_sell]=11 [stat_sheet]=9 [all10]=57 [gear_v3]=10 [gem_home]=25 [monster_stats]=5 [dash_modes]=19 [boss_feel]=13
 	[menu_gate]=14 [menu_gate_src]=11 [hud_v5_src]=10 [ui1_static]=9 [ui1c_static]=13 [ui_v2]=77 [hud_layout]=18 [ui1_parts]=11 [codex_box]=35
 	[ember_view]=8 [hud_edit]=16 [pet_ui]=7 [quick_chat]=6 [ui_rules]=4 [window_layers]=7 [help_data]=6 [train_bundle]=5 [community_goal]=24 [require_path]=5542 [regrow_timing]=8
-	[sec_save]=13 [sec_shop]=6 [sec_secret]=6
+	[sec_save]=13 [sec_shop]=6 [sec_secret]=9
 )
 NALL=0; NBAD=0
 verdict() { # 이름 결과파일 종료코드 → 한 줄 출력
@@ -74,7 +74,7 @@ run multiplayer res_multi.txt "$(python deps.py PlayerProfile,PetService,QuestSe
 run attack res_attack.txt "$ATTACK" attack_test.luau
 run request_gate res_gate.txt "$ATTACK,RequestGate" request_gate_test.luau
 run mesh_import res_mesh.txt "" mesh_import_test.luau
-run ops_security res_ops.txt OpsRollback,SuspicionMonitor,AuditTrail ops_security_test.luau # QUEUE-ALL6 F 되돌리기 · 차단 · 탐지 · 감사
+run ops_security res_ops.txt OpsRollback,SuspicionMonitor,AuditTrail,SecurityOpsConfig ops_security_test.luau # QUEUE-ALL6 F 되돌리기 · 차단 · 탐지 · 감사
 run season_pass res_season.txt "" season_pass_test.luau # QUEUE-ALL9A 1-5 패스 패턴 6종 × 8주 · 주말 경계
 run economy_all9b res_all9b.txt SecretNestData economy_all9b_test.luau # QUEUE-ALL9B 판매가 · 수련 · 토큰 · 패스 가치 · 출석판
 run enhance_g res_g.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem,EnhanceService,EnhancePolicy,ImmediateSave)" enhance_g_test.luau # QUEUE-ALL9B G 강화 최상위 · 초기화 바닥 · 방지 옵션 · 방지권 환산

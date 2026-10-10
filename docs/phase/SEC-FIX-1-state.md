@@ -12,7 +12,7 @@
 | 1 | 칸 전환 중 자동저장 · 받음 표시와 보상 같은 저장 단위 | 끝 | c75bea32 | `sec_save_test` 1-a · 1-b · 1-c: 옛 5/9 → 새 9/9 |
 | 2 | 같은 서버 재접속 저장 멈춤(AUDIT1 #15) | 끝 | 1bd638ec | `sec_save_test` 2: 옛(c75bea32) 10/13 → 새 13/13 |
 | 3 | 결제 applyReward 에러 시 잠금 안 풀림 | 끝 | 71d0eae9 | `sec_shop_test` 3: 옛 1/6 → 새 6/6 |
-| 4a | 교환 코드 표 → 서버 전용 | 끝 | (이 커밋) | `sec_secret_static` 옛 2/6 → 새 6/6 · `security_launch` +2(게시판 공개분만) |
+| 4a | 교환 코드 표 → 서버 전용 | 끝 | c631de4f | `sec_secret_static` 옛 2/6 → 새 6/6 · `security_launch` +2(게시판 공개분만) |
 
 ## 1. 칸 전환 중 자동저장 끼어듦
 
@@ -47,3 +47,24 @@
   - 검사 = 서버 `SocialRewardService.find`만. 게시판 = 새 RemoteFunction `BoardCodes`(RequestGate.invoke) → `SocialRewardService.boardCodes` = hidden · inactive · 만료 뺀 줄의 코드 · 설명 키 · 기한만(보상 · 목표 수 안 보냄). `client/UpdateBoard`는 처음 그릴 때 한 번 받음.
 - 하네스: `sec_secret_static.py`(복제 폴더 shared · client · first에 코드 문자열 · 코드 표 모양 · 클라 직접 읽기 · 서버 설정 사본 0) 옛 2/6 → 새 6/6 · `security_launch_test` +2(게시판 공개분만 · 만료 빠짐).
 - 운영 절차 바뀜: 좋아요 목표 달성 = `server/SocialCodeData.lua`의 그 줄 inactive · hidden 지우기(옛 = shared 파일).
+
+### 4b. 다른 비밀 후보 전수 표(조사 범위 = src/shared · src/client · src/first 전체 · 웹훅 · URL · API 키 · 토큰 = 0건)
+
+| # | 어디(옛) | 무엇 | 클라 사용 | 위험 | 처리 → 어디로 |
+|---|---|---|---|---|---|
+| 1 | shared/data/SocialRewardData.codes | 교환 코드 4개(숨김 1 · 안 연 단계 2) | 게시판 | 높음 | **옮김** → server/SocialCodeData(4a) |
+| 2 | shared/data/SecurityOpsConfig(파일 통째) | 치트 탐지 기준값 · 차단 규칙 · 감사 저장소 이름 | 없음 | 중(기준 바로 아래로 맞춰 탐지 회피) | **옮김** → server/SecurityOpsConfig(git mv · 옛 자리 안 남김) |
+| 3 | shared/data/LeaderboardConfig.excludedUserIds | 운영(개발) 계정 UserId 1개 | 없음 | 중(운영 계정 노출 - 권한 판정은 서버 OpsConfig) | **옮김** → server/OpsConfig.leaderboardExcludedUserIds(쓰는 곳 3: Leaderboard · TranscendFirsts · P3dVerify) |
+| 4 | shared/data/NestData.pickup | 둥지 줍기 서버 검증 기준(반경 · 표본 · 최대 속도) | 없음 | 중 · 하(순간이동 속도를 기준 아래로) | **옮김** → server/NestPickupData(NestServer) |
+| 5 | shared/data/LeaderboardConfig.antiCheat | 리더보드 이론 최대 DPS 계수 | 없음 | 하 · 중 | **안 옮김(이유)**: shared/LeaderboardRules(순수 함수 · 하네스가 씀)가 읽는다 - shared 모듈은 서버 경로를 require할 수 없다. 계수를 알아도 "이론 최대보다 빠른 기록"만 막는 상한이라 아래로 맞춰도 정상 기록 범위다 |
+| 6 | shared/data/MonetizationData(공개 단계 2 상품 9 · 제안 묶음 1 · 출시일 자리값) | 미공개 상품 가격 · 구성 | 상점 · 추천 · 미리보기 | 하(스포일러 - 구매는 서버 isReleased가 막음) | **결정 필요**: 상품 줄을 서버로 빼려면 상점 UI가 서버 목록을 받게 바꿔야 함. 치장 자체(이름 · 모양)는 CosmeticSlotData에 이미 공개 · 패스 보상으로 화면에도 나옴 → 숨기는 이득이 가격 · 묶음 구성뿐 |
+| 7 | server/SecretNestData + shared/data/NestData 합치기 | 비밀 둥지 C 40곳 좌표 | 없음(클라는 A · B만) | 처리됨 | 그대로(이미 서버) |
+| 8 | shared/data/CosmeticSlotData · SeasonPassData | 시즌 1 패스 · 출석판 전용 치장 · 할로윈 | 상점 · 캐릭터 · 출석판 | 하(현재 시즌 · 화면에 보임) | 그대로. 다음 시즌 표는 공지 전까지 서버 쪽에 둘 것(운영 규칙) |
+| 9 | shared/data/TitleData 히든 칭호 1 | 이름 · 조건 문구 | 이름표 · 캐릭터 | 하(업적 스포일러 · 서버가 ???로 가림) | 그대로 |
+| 10 | ClassData 출시 예정 직업 · BossData `enabled = false` 등 꺼진 기능 | 설계 · 연출 | 일부러 Coming Soon 표시 | 하 | 그대로 |
+| 11 | DataStore · 토픽 이름 약 25개(SaveConfig · AuditConfig · …) | 저장소 이름 | SlotSaveData만 | 하(클라는 DataStore · MessagingService 접근 불가) | 그대로(이름을 알아도 접근 수단 없음) - 라이브 이름은 11번 항목 |
+| 12 | DropTableData · EggData · RareMonsterConfig | 확률 | 확률 공개 창 | 없음(공개 의도) | 그대로 |
+| 13 | shared/Quest.lua 일일 퀘스트 시드 = 날짜 | 다음 날 퀘스트 계산 가능 | 간접 | 하 | 그대로 |
+
+- 하네스 `sec_secret_static.py` +3: 탐지 기준 모듈 = 서버 · 운영 계정 UserId(OpsConfig에서 읽음)가 복제 폴더 0 · 줍기 기준 = 서버. 옛 1/9 → 새 9/9.
+- **사용자 확인 필요(되돌릴 수 없는 것)**: 옛 버전(코드 표가 shared에 있던 버전)이 라이브로 배포된 적이 있으면 숨김 · 안 연 코드 3개는 이미 알려졌다고 보고 이름을 바꾸는 게 맞다. 저장소가 공개라면 git 이력(커밋 메시지 포함)에도 남아 있다 - 이름 교체만이 해결.

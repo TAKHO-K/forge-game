@@ -1,3 +1,4 @@
+-- SEC-FIX-1 4b: 서버 전용으로 옮김(옛 = shared/data/SecurityOpsConfig - ReplicatedStorage라 변조 클라가 탐지 기준값을 읽고 그 바로 아래로 맞출 수 있었다 · 클라 사용 0 · 옛 자리 안 남김).
 -- QUEUE-ALL6 F 보안 운영 기준값(한 곳): 탐지(의심 기록) · 감사 기록 · 되돌리기 · 차단. 자동 처벌 없음 - 기록만(docs/phase/security-runbook.md).
 --   의심 기록 = AcquisitionAudit.flag(검토 대기 저장소 AuditReview_v1 - 기존 입구 재사용) · 오탐을 줄이게 기준을 넉넉히(합법 최대의 약 2배 이상).
 return {

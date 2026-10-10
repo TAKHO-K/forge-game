@@ -251,7 +251,7 @@ local function opsSection(r, player)
 	-- 탐지: 창 값을 기준 위로 넣고 마감 → 의심 기록
 	local SM = require(script.Parent.SuspicionMonitor)
 	local s = SM.stateOf(player)
-	s.hits = require(ReplicatedStorage.Shared.data.SecurityOpsConfig).detect.hitsPerMin + 1
+	s.hits = require(script.Parent.SecurityOpsConfig).detect.hitsPerMin + 1
 	s.flaggedAt.suspect_hits = nil
 	local window, flagged = SM.closeWindow(player, os.clock())
 	r.check(("탐지: 명중 %d/분 → 기록 %s(처벌 없음 · 접속 유지 %s)"):format(window.hits, table.concat(flagged, ","), tostring(player.Parent ~= nil)), table.find(flagged, "suspect_hits") ~= nil and player.Parent ~= nil)

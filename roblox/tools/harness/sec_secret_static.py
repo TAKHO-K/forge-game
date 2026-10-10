@@ -54,7 +54,15 @@ check("복제 폴더에 코드 표 모양(code = \"…\") 0", not table_in_repli
 client_uses = [os.path.relpath(p, SRC) for sub in ("client", "first") for p in files(sub) if re.search(r"\bSD\.codes\b|SocialRewardData\.codes\b", read(p))]
 check("클라가 코드 표를 직접 읽지 않음(게시판 = 서버 BoardCodes)", not client_uses, " · ".join(client_uses))
 # 서버 전용 설정 모듈(OpsConfig · SocialCodeData)이 shared에 사본으로 생기지 않았나
-dup = [n for n in ("OpsConfig.lua", "SocialCodeData.lua") for sub in REPLICATED for p in files(sub) if os.path.basename(p) == n]
+dup = [n for n in ("OpsConfig.lua", "SocialCodeData.lua", "SecurityOpsConfig.lua", "NestPickupData.lua") for sub in REPLICATED for p in files(sub) if os.path.basename(p) == n]
 check("서버 전용 설정 모듈 사본이 복제 폴더에 없음", not dup, " · ".join(dup))
+# 4b: 탐지 기준값(SecurityOpsConfig) · 운영 계정 UserId · 둥지 줍기 기준 = 서버 전용
+check("4b 탐지 기준값 모듈 = 서버(server/SecurityOpsConfig)", os.path.exists(os.path.join(SRC, "server", "SecurityOpsConfig.lua")) and not os.path.exists(os.path.join(SRC, "shared", "data", "SecurityOpsConfig.lua")))
+ops = read(os.path.join(SRC, "server", "OpsConfig.lua")) if os.path.exists(os.path.join(SRC, "server", "OpsConfig.lua")) else ""
+op_ids = set(re.findall(r"\b(\d{6,12})\b", ops))
+id_leaks = sorted({os.path.relpath(p, SRC).replace("\\", "/") for sub in REPLICATED for p in files(sub) for i in op_ids if re.search(r"(?<!\d)" + i + r"(?!\d)", read(p))})
+check("4b 운영 계정 UserId가 복제 폴더에 없음", bool(op_ids) and not id_leaks, "계정 %d개 · %s" % (len(op_ids), " · ".join(id_leaks)))
+nest = read(os.path.join(SRC, "shared", "data", "NestData.lua"))
+check("4b 둥지 줍기 검증 기준(maxSpeedStuds) = 서버(server/NestPickupData)", "maxSpeedStuds" not in nest and os.path.exists(os.path.join(SRC, "server", "NestPickupData.lua")))
 print("[SECRET] 끝 %d/%d" % (passed, total))
 sys.exit(0 if passed == total else 1)

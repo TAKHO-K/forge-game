@@ -6,7 +6,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
-local C = require(ReplicatedStorage.Shared.data.SecurityOpsConfig).trail
+local C = require(script.Parent.SecurityOpsConfig).trail
 local DevToolsConfig = require(ReplicatedStorage.Shared.data.DevToolsConfig)
 
 local AuditTrail = {}
