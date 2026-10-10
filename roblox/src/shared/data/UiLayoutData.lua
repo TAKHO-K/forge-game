@@ -324,6 +324,8 @@ return {
 		phone = { w = 330, pad = 12, head = 34, rowPad = 7 },
 		bg = "161A2B", bgT = 0.04, stroke = "8FD8FF", strokeW = 3, ringW = 3, line = "2A3352", corner = 14, gap = 10, displayOrder = 190, -- = layers.tip(HUD 편집 180 위 · 확인 창 200 아래)
 	},
+	-- UI-1b 2절 5(8단계 결함 2): 도감 진행 상자 줄 - 폰 = 머리 글자 위 줄 · 막대 전체 폭 · 상자 크기 = 막대 폭 ÷ 10(최대 box · 간격 gap) - 옛 = 머리 150 옆 남은 83px에 30 × 10이 겹쳐 쌓임(Play 실측)
+	codexBoxRow = { box = 30, gap = 2, phoneHeadH = 22, phoneBarH = 8 },
 	-- UI-1b 1-b 10: ScreenGui 층(DisplayOrder) 표 하나(shared/WindowLayers) · 창(window)은 HUD 메뉴 위 · 나중에 연 창이 위(대역 안 +1) · 설명 창 · 확인 창은 그 위
 	layers = { station = 10, stationMax = 89, hudMenu = 90, window = 100, windowMax = 169, tip = 190, overlay = 200, overlayMax = 239 },
 	-- UI-1b 1절 3(I v1 0-2): 창 제목 옆 [?] = 원 36(폰 28) · 하늘 테 · 처음 1번 작은 점(client/ui/v2/HelpButton)

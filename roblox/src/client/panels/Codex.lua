@@ -467,6 +467,21 @@ local function build()
 			Theme.corner(dot, 5)
 			boxes[n] = b
 		end
+		if Theme.isMobile then -- UI-1b 2절 5: 폰 = 머리 위 줄 · 막대 전체 폭 · 상자 = 막대 폭 ÷ 10
+			local R = require(ReplicatedStorage.Shared.data.UiLayoutData).codexBoxRow
+			head.Size = UDim2.new(1, 0, 0, R.phoneHeadH)
+			bar.Position = UDim2.new(0, 0, 1, -6)
+			bar.Size = UDim2.new(1, -4, 0, R.phoneBarH)
+			local function fitBoxes()
+				local s = math.clamp(math.floor(bar.AbsoluteSize.X / CodexData.boxes.count) - R.gap, 12, R.box)
+				for n, b in ipairs(boxes) do
+					b.Size = UDim2.fromOffset(s, s)
+					b.Position = UDim2.new((n - 0.5) / CodexData.boxes.count, 0, 0, -2) -- 칸 가운데(끝 상자가 막대 밖으로 반 나가지 않게)
+				end
+			end
+			bar:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitBoxes)
+			fitBoxes()
+		end
 		local pop = Instance.new("Frame")
 		pop.Name = "BoxPopup"
 		pop.BackgroundColor3 = Color3.fromHex("161A2B")
