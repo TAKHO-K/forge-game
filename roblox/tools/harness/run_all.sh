@@ -18,7 +18,7 @@ declare -A EXP=( # 기대 검사 수(끝 a/b의 b) · require_path는 최소값(
 	[bignum]=67 [bulk_sell]=11 [stat_sheet]=9 [all10]=57 [gear_v3]=10 [gem_home]=25 [monster_stats]=5 [dash_modes]=19 [boss_feel]=13
 	[menu_gate]=14 [menu_gate_src]=11 [hud_v5_src]=10 [ui1_static]=9 [ui1c_static]=13 [ui_v2]=77 [hud_layout]=18 [ui1_parts]=11 [codex_box]=35
 	[ember_view]=8 [hud_edit]=16 [pet_ui]=7 [quick_chat]=6 [ui_rules]=4 [window_layers]=7 [help_data]=6 [train_bundle]=5 [community_goal]=24 [require_path]=5542 [regrow_timing]=8
-	[sec_save]=13 [sec_shop]=6 [sec_secret]=9 [sec_zone]=11 [sec_move]=8
+	[sec_save]=13 [sec_shop]=6 [sec_secret]=9 [sec_zone]=11 [sec_move]=8 [sec_econ]=7
 )
 NALL=0; NBAD=0
 verdict() { # 이름 결과파일 종료코드 → 한 줄 출력
@@ -82,6 +82,7 @@ run economy_all9b res_all9b.txt SecretNestData economy_all9b_test.luau # QUEUE-A
 run enhance_g res_g.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem,EnhanceService,EnhancePolicy,ImmediateSave)" enhance_g_test.luau # QUEUE-ALL9B G 강화 최상위 · 초기화 바닥 · 방지 옵션 · 방지권 환산
 run bignum res_big.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem)" bignum_test.luau # QUEUE-ALL9B 큰 숫자 · ALL9C 0-2: 2^53 정밀도 4건 = "알려진 문제"(이름 고정 - 통과 수에서 빠짐)
 run bulk_sell res_bulk.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem,MonetizationService,InventorySync)" bulk_sell_test.luau # QUEUE-ALL9C 1-9 등급 체크 일괄 판매 75칸
+run sec_econ res_sececon.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem,MonetizationService,InventorySync)" sec_econ_test.luau # SEC-FIX-1 7 보석 판매가 차익(보석 레벨 기준) · 재련 경로 · 일괄 분해 개수 대조(옛 = X)
 run stat_sheet res_sheet.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem)" stat_sheet_test.luau # QUEUE-ALL9C 1-2 상세 능력치 합계 = 전투 값 · 줄/출처 = StatSheetData
 run all10 res_all10.txt "$(python deps.py TranscendService,TranscendFirsts,PlayerProfile,PetService,QuestService,SaveSystem,BaseLayer)" all10_test.luau # QUEUE-ALL10 초월 계승(스위치 끔 = 지금 게임 · 저장 v70 · 계승 · 초월 강화 · 수련 · 보석 · 몹 곡선)
 EXTRA_FILES=client/ArmorColors.lua,shared/MeshMeta/armor_wear.lua run gear_v3 res_gear.txt "" gear_v3_test.luau # QUEUE-ALL9E1 1-1 장비 v3 48조합 예약 색 · 문 부품 · 무기 색 · 메시 메타 60 + 문장 6 · 1인 MeshPart ≤ 24

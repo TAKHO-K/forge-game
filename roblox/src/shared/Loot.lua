@@ -403,7 +403,7 @@ function Loot.getSellPrice(item)
 	--   (같은 골드 = 한 번에 파는 편의 · 분해는 가루 · 장착이 필요할 때). 고대 · 태초 상한(sellCapKills)은 이 바닥보다 높으면 그대로.
 	if ArmorData.sellFloorGemSell and gradeIndexOf(item.grade) and gradeIndexOf(item.grade) >= ArmorData.dismantleMinGradeIndex then
 		local GemCraft = require(ReplicatedStorage.Shared.GemCraft)
-		price = math.max(price, GemCraft.sellPrice({ grade = item.grade, itemLevel = item.itemLevel or item.dropStage or 1 }, item.dropStage or 1))
+		price = math.max(price, GemCraft.sellPrice(Loot.dismantleReward(item))) -- SEC-FIX-1 7: 바닥 = 분해해서 나올 그 보석의 판매가(같은 레벨 기준 - 분해 → 판매가 바로 팔기를 넘지 않음)
 	end
 	return price
 end

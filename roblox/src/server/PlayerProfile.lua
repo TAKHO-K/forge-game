@@ -1279,11 +1279,24 @@ function PlayerProfile.dismantleItem(player, index)
 end
 
 -- QUEUE-10h Q13 등급 선택 일괄 분해(무료 · 대상 = Loot.isBulkDismantleTarget - 잠금 · 초월 · 태초 보호). 한 개 분해(dismantleItem)와 같은 결과(같은 등급 · 레벨 · 옵션의 보석). 반환 = 분해 개수
-function PlayerProfile.dismantleItemsUpTo(player, gradeId)
+-- SEC-FIX-1 7(AUDIT1 #10): expectedCount = 확인 창이 보여 준 개수 - 서버가 다시 센 수와 다르면 아무것도 안 하고 0, "count_mismatch"(판매 sellItemsByGrades와 같은 규칙 ·
+--   옛 = 기준 등급만 받아 창이 떠 있는 동안 주운 영웅까지 분해했다 - 되돌릴 수 없음). nil = 대조 안 함(서버 내부 호출 · 하네스 옛 경로).
+function PlayerProfile.dismantleItemsUpTo(player, gradeId, expectedCount)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)
 	if not classState or type(gradeId) ~= "string" then
 		return 0
+	end
+	if expectedCount ~= nil then
+		local count = 0
+		for _, item in ipairs(profile.inventory) do
+			if Loot.isBulkDismantleTarget(item, gradeId) then
+				count += 1
+			end
+		end
+		if count ~= expectedCount then
+			return 0, "count_mismatch"
+		end
 	end
 	local remaining, n = {}, 0
 	for _, item in ipairs(profile.inventory) do
@@ -1344,7 +1357,7 @@ function PlayerProfile.dismantleGem(player, index)
 	return true, dust
 end
 
--- P3c E4: 보석 판매 - 가방의 보석 1개 → 골드(GemCraft.sellPrice · 계정 최고 스테이지). 홈에 낀 보석은 대상이 아니다(분해와 같다). 반환: 성공, 판매가 | 이유.
+-- P3c E4: 보석 판매 - 가방의 보석 1개 → 골드(GemCraft.sellPrice · 보석 레벨 기준 · 상한 계정 최고 스테이지 - SEC-FIX-1 7). 홈에 낀 보석은 대상이 아니다(분해와 같다). 반환: 성공, 판매가 | 이유.
 function PlayerProfile.sellGem(player, index)
 	local profile = profiles[player]
 	local classState = profile and activeClassState(profile)

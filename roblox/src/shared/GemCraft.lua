@@ -96,13 +96,24 @@ function GemCraft.refinedGem(target, fodder)
 	return gem
 end
 
--- P3c E4 보석 판매가(골드). stage = 계정 최고 스테이지. = GoldCost("refine", tier1 골드 × 가루 × 재련의 골드/가루 비 × sellFractionOfDust) - 분해 가루 가치보다 낮다.
-function GemCraft.sellPrice(gem, stage)
+-- SEC-FIX-1 7(AUDIT1 #7 · #8): 판매가 스테이지 = 보석 자신의 레벨(itemLevel ≈ 주운 스테이지 척도) - stageCap(계정 최고 스테이지 등)을 넘지 않게.
+--   옛 = 계정 최고 스테이지 그대로 → 고스테이지 계정이 저스테이지에서 영웅을 모아 분해 · 판매하면 높은 스테이지 값(차익) · 바로 팔기(주운 스테이지)보다 비쌌다.
+function GemCraft.sellStage(gem, stageCap)
+	local s = math.max(1, math.floor(tonumber(gem.itemLevel) or 1))
+	if stageCap then
+		s = math.min(s, math.max(1, math.floor(stageCap)))
+	end
+	return s
+end
+
+-- P3c E4 보석 판매가(골드). = GoldCost("refine", tier1 골드 × 가루 × 재련의 골드/가루 비 × sellFractionOfDust, 판매 스테이지) - 분해 가루 가치보다 낮다.
+--   stageCap = 계정 최고 스테이지(위 sellStage - 옛 인자 자리 그대로 · 이제 상한).
+function GemCraft.sellPrice(gem, stageCap)
 	local dust = GemData.dust
 	local grade = dust.refineGoldKills[gem.grade] and gem.grade or "epic"
 	local killsPerDust = dust.refineGoldKills[grade] / dust.refineDust[grade]
 	local kills = GemCraft.dustYield(gem) * killsPerDust * dust.sellFractionOfDust
-	return math.max(GoldCost.cost(MonsterData.tier1.goldDrop * kills, stage, "refine"), 1)
+	return math.max(GoldCost.cost(MonsterData.tier1.goldDrop * kills, GemCraft.sellStage(gem, stageCap), "refine"), 1)
 end
 
 -- 같은 보석의 분해 가루를 골드로 친 값(판매가와 비교 - 검증 · 보고용).

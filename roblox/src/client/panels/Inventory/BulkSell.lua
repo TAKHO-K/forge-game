@@ -169,11 +169,13 @@ local function dismantleCount()
 	end
 	return n, byGrade, gold
 end
+local pendingDismantleCount = 0 -- SEC-FIX-1 7: 확인 창이 보여 준 분해 개수(누른 순간 다시 세지 않는다 - 판매 pendingCount와 같은 이유)
 confirmDismantle.Activated:Connect(function()
 	confirmOverlay.Visible = false
-	if dismantleCount() > 0 then
-		sellRequest:FireServer("dismantleBulk", S.sellCheckedTop()) -- QUEUE-ALL8 G1: 기준 = 체크한 가장 높은 등급
+	if pendingDismantleCount > 0 then
+		sellRequest:FireServer("dismantleBulk", S.sellCheckedTop(), pendingDismantleCount) -- QUEUE-ALL8 G1: 기준 = 체크한 가장 높은 등급 · SEC-FIX-1 7: + 보여 준 개수(서버가 다시 세서 다르면 안 함)
 	end
+	pendingDismantleCount = 0
 end)
 
 confirmNo.Activated:Connect(function()
@@ -201,6 +203,7 @@ local function openConfirm()
 	pendingKey, pendingCount = S.sellCheckedKey(), count
 	confirmText.Text = Text.get("gear.bulk.confirm", { count = ("%d"):format(count), gold = NumberFormat.currency(total, Text.languageFor()) })
 	local nd, byGrade, dismantleGold = dismantleCount()
+	pendingDismantleCount = nd
 	confirmDismantle.Text = Text.get("gear.bulk.dismantle", { count = ("%d"):format(nd) }) -- Q13: 영웅 이상만 보석으로(태초 · 초월 제외)
 	local parts = {}
 	for _, id in ipairs(ArmorData.gradeOrder) do
@@ -227,7 +230,7 @@ end)
 
 -- QUEUE-ALL9A 2-2: 서버가 개수가 달라 거부하면(확인 창이 떠 있는 동안 가방이 바뀜) 안내 + 새 개수로 확인 창 다시
 sellRequest.OnClientEvent:Connect(function(action, ok, why)
-	if action == "sellGrades" and not ok and why == "count_mismatch" then
+	if (action == "sellGrades" or action == "dismantleBulk") and not ok and why == "count_mismatch" then -- SEC-FIX-1 7: 분해도 같은 안내
 		Toast.push("TC", { text = Text.get("gear.bulk.changed"), grade = "notice", seconds = 4 })
 		;(R.openSalvageV2 or openConfirm)()
 	end
@@ -754,7 +757,7 @@ if require(script.Parent.Layout).lookV2 then
 	dismantleV2.Activated:Connect(function()
 		if shown.dismantle > 0 then
 			closeV2()
-			sellRequest:FireServer("dismantleBulk", S.sellCheckedTop())
+			sellRequest:FireServer("dismantleBulk", S.sellCheckedTop(), shown.dismantle) -- SEC-FIX-1 7: 보여 준 개수
 		end
 	end)
 	player:GetAttributeChangedSignal("BulkSellGrades"):Connect(function()

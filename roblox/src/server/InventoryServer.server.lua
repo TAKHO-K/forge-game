@@ -141,13 +141,15 @@ sellRequest.OnServerEvent:Connect(function(player, action, arg, signature)
 	elseif action == "sellBulk" then -- QUEUE-ALL8 G1: 옛 "기준 등급 이하" 일괄 판매(상한 전설) = 닫음 - 가방 UI가 sellGrades로 바뀌었다(전설 이상 일괄 판매 경로를 남기지 않는다)
 		return
 	elseif action == "dismantleBulk" then -- Q13: 등급 선택 일괄 분해(무료 · 잠금 · 초월 · 태초 보호 = Loot.isBulkDismantleTarget)
-		if type(arg) ~= "string" then
+		if type(arg) ~= "string" or type(signature) ~= "number" then -- SEC-FIX-1 7: 확인 창 개수(signature 자리) 필수 - 판매(sellGrades)와 같은 모양
 			return
 		end
-		local n = PlayerProfile.dismantleItemsUpTo(player, arg)
+		local n, why = PlayerProfile.dismantleItemsUpTo(player, arg, math.floor(signature))
 		if n > 0 then
 			print(("[Q13] 일괄 분해: %s ~%s → 보석 %d개"):format(player.Name, arg, n))
 			ImmediateSave.request(player)
+		elseif why == "count_mismatch" then
+			sellRequest:FireClient(player, "dismantleBulk", false, why) -- 클라 = 안내 + 새 개수로 확인 창 다시(판매와 같은 길)
 		end
 	else
 		return
