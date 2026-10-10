@@ -43,6 +43,7 @@ local player = Players.LocalPlayer
 local built -- 지은 패널의 refs 표 하나(아래 build) - 없으면 아직 안 지었다
 local dismissed = false -- X · Backspace로 닫았다: 강화대에서 벗어났다 돌아올 때까지 다시 열지 않는다
 local suppressDismiss = false -- 다시 짓는 동안의 닫힘은 사용자가 닫은 것이 아니다
+local remoteOpen = false -- SEC-FIX-1 13: 가방 무기 상세 [강화]로 연 창(강화대에서 멀어도 열어 둔다 · 닫으면 끝 · 보스전이 시작되면 닫음)
 
 -- 도움말 문구(PRD 20.72 [1-8]) - 숫자는 확률표 · EnhanceConfig에서 끼운다.
 local function helpText()
@@ -78,6 +79,8 @@ local function resultLine(data)
 		return Text.get("forge.enhance.result.reset", { level = ("%d"):format(level) }), "danger" -- QUEUE-ALL9B G1: 도착 단계는 시도 단계마다 다르다(서버가 보낸 level)
 	elseif result == "max" then
 		return Text.get("forge.enhance.result.max"), "textPrimary"
+	elseif result == "boss_fight" then
+		return Text.get("forge.enhance.result.bossFight"), "textPrimary" -- SEC-FIX-1 13: 서버 거절(보스전 중)
 	elseif result == "insufficient_gold" then
 		return Text.get("forge.err.noGold"), "danger"
 	elseif result == "insufficient_material" then
@@ -243,6 +246,7 @@ local function onOpen()
 end
 
 local function onClose()
+	remoteOpen = false
 	if built then
 		built.rebirth.hideOverlay()
 	end
@@ -488,7 +492,17 @@ local function ensureBuilt()
 end
 
 -- 강화대 근접 열림 · 닫힘 - 걸어서 들어오면 열고 벗어나면 닫는다(window가 열려 있으면 UIManager가 열지 않는다).
+local function remoteHold()
+	if remoteOpen and player:GetAttribute("BossEncounterId") ~= nil and built and UIManager.isOpen(EnhancePanel.id) then
+		UIManager.close(EnhancePanel.id) -- 보스전 시작 = 상세에서 연 강화 창 닫음(서버도 거절)
+	end
+	return remoteOpen
+end
+
 local function stepV4()
+	if remoteHold() then
+		return
+	end
 	if not Controller.isNear() then
 		StationV4.dismissed = false
 		StationV4.close()
@@ -506,6 +520,9 @@ end
 local function step()
 	if V4 then
 		return stepV4()
+	end
+	if remoteHold() then
+		return
 	end
 	if not Controller.isNear() then
 		dismissed = false
@@ -526,6 +543,19 @@ StationV4.setInfo(function()
 	ensureBuilt()
 	UIManager.open(EnhancePanel.id)
 end)
+
+-- SEC-FIX-1 13(05 spec 결정 #12): 가방 무기 상세 [강화] = 강화 창(큰 창)을 어디서든 연다(가방 = window라 먼저 닫힌다 - UIManager.switchTo). 보스전 중 = 안 엶(false, "boss").
+function EnhancePanel.openFromDetail()
+	if player:GetAttribute("BossEncounterId") ~= nil then
+		return false, "boss"
+	end
+	ensureBuilt()
+	remoteOpen = true
+	if not UIManager.isOpen(EnhancePanel.id) then
+		UIManager.switchTo(EnhancePanel.id)
+	end
+	return UIManager.isOpen(EnhancePanel.id)
+end
 
 function EnhancePanel.start()
 	RunService.Heartbeat:Connect(step)

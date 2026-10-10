@@ -10,7 +10,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)
 local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMaterialData)
-local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)
 local Enhance = require(ReplicatedStorage.Shared.Enhance)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 local EnhancePolicy = require(script.Parent.EnhancePolicy)
@@ -39,11 +38,6 @@ function EnhanceService.init(resultEvent, announceEvent)
 	enhanceAnnounce = announceEvent
 end
 
-local function isNearStation(rootPart)
-	local stationPosition = WorldConfig.huntingGround.center + WorldConfig.enhance.stationOffset
-	return (rootPart.Position - stationPosition).Magnitude <= WorldConfig.enhance.interactionRangeStuds
-end
-
 local function send(player, payload)
 	if enhanceResult then
 		enhanceResult:FireClient(player, payload)
@@ -68,10 +62,10 @@ function EnhanceService.handleRequest(player, useDropTicket, useResetTicket)
 	end
 	lastRequestTick[player] = now
 
-	local character = player.Character
-	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-	if not rootPart or not isNearStation(rootPart) then
-		return nil -- 강화대 밖 - 공격 헛스윙과 같은 취급으로 조용히 무시
+	-- SEC-FIX-1 13(05 spec 결정 #12 - 강화 창 = 대장간 NPC + 가방 장비 상세 [강화]): 옛 = 강화대 근처에서만(밖 = 조용히 무시). 이제 어디서든 - 골드 · 확률 · 불씨가 전부 서버 판정이라
+	--   위치 이득이 없다. 보스전 중(입장 ~ 잔류 끝 = 직업 전환 금지와 같은 기준)만 거절한다.
+	if require(script.Parent.BossEncounter).classChangeBlocked(player) then
+		return send(player, { result = "boss_fight", level = (PlayerProfile.getWeapon(player) or {}).level })
 	end
 
 	local weapon = PlayerProfile.getWeapon(player)

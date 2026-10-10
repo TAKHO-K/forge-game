@@ -194,6 +194,7 @@ return {
 		["forge.enhance.result.downGauge"] = "실패 - {drop}강 하락 (+{level}) · 불씨 +{gain}",
 		["forge.enhance.result.reset"] = "{level}강에서 다시 시작합니다. 불씨는 유지됩니다",
 		["forge.enhance.result.max"] = "이미 최대 강화 단계입니다",
+		["forge.enhance.result.bossFight"] = "보스전이 끝나면 강화할 수 있습니다", -- SEC-FIX-1 13: 서버 거절(보스전 중)
 		["forge.enhance.result.noMaterial"] = "{name}이 부족합니다 ({need}개 필요 · 보유 {have}개)",
 		["forge.enhance.title.max"] = "{grade} 등급 · +{level} (최대)",
 		["forge.enhance.title.next"] = "{grade} 등급 · +{level} → +{next} · 최대 +{max}",
@@ -426,6 +427,7 @@ return {
 		["forge.enhance.result.downGauge"] = "Failed - down {drop} (+{level}) · Ember +{gain}",
 		["forge.enhance.result.reset"] = "Restart from +{level}. Ember is kept",
 		["forge.enhance.result.max"] = "Already at max Enhance level",
+		["forge.enhance.result.bossFight"] = "You can enhance after the boss fight",
 		["forge.enhance.result.noMaterial"] = "Not enough {name} (need {need}, have {have})",
 		["forge.enhance.title.max"] = "{grade} · +{level} (Max)",
 		["forge.enhance.title.next"] = "{grade} · +{level} → +{next} · Max +{max}",

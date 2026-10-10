@@ -78,6 +78,8 @@ return {
 		["ui1c.gear.pinned"] = "고정됨 · 바깥 누르면 닫힘",
 		["ui1c.gear.close"] = "닫기",
 		["ui1c.gear.gemHome"] = "보석 홈",
+		["ui1c.gear.enhance"] = "강화", -- SEC-FIX-1 13(05 spec 결정 #12): 무기 상세 [강화] = 강화 창을 어디서든
+		["ui1c.gear.enhanceBoss"] = "보스전이 끝나면 강화할 수 있어요",
 		["ui1c.gear.gem.effect"] = "효과",
 		["ui1c.gear.gem.slot"] = "홈",
 		["ui1c.gear.gem.slotLine"] = "{slot}번 홈 · {grade}까지 들어감",
@@ -158,6 +160,8 @@ return {
 		["ui1c.gear.pinned"] = "Pinned · click outside to close",
 		["ui1c.gear.close"] = "Close",
 		["ui1c.gear.gemHome"] = "Gem sockets",
+		["ui1c.gear.enhance"] = "Enhance",
+		["ui1c.gear.enhanceBoss"] = "You can enhance after the boss fight",
 		["ui1c.gear.gem.effect"] = "Effect",
 		["ui1c.gear.gem.slot"] = "Socket",
 		["ui1c.gear.gem.slotLine"] = "Socket {slot} · fits up to {grade}",

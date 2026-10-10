@@ -14,6 +14,7 @@ local DetailCard = require(script.Parent.DetailCard)
 local ItemConfirm = require(script.Parent.ItemConfirm)
 local Compare = require(script.Parent.Compare)
 local Hint = require(script.Parent.Parent.GemWorkshop.Hint)
+local Toast = require(script.Parent.Parent.Parent.ui.kit.Toast) -- SEC-FIX-1 13: [강화] 보스전 중 이유
 
 -- P2.5b A: [계승](착용 중인 같은 부위보다 기본 효과가 좋은 가방 장비일 때만). 규칙 = shared/Inherit · 창 = panels/Inherit.
 local Inherit = require(ReplicatedStorage.Shared.Inherit)
@@ -201,7 +202,21 @@ gemHomeButton.Text = Text.get("ui1c.gear.gemHome")
 gemHomeButton.Activated:Connect(function()
 	R.selectTab("보석")
 end)
-local ORDERED = { equipButton, awakenButton, inheritButton, dismantleButton, sellButton, rerollButton, craftButton, compareButton, gemHomeButton }
+-- SEC-FIX-1 13(05 spec 결정 #12): 무기 상세 [강화] = 강화 창을 어디서든(대장간 NPC와 같은 창) · 보스전 중 = 꺼짐 + 이유 한 줄
+local enhanceButton = makeActionButton(10, 120, "gold")
+enhanceButton.Name = "EnhanceButton"
+enhanceButton.Text = Text.get("ui1c.gear.enhance")
+enhanceButton.Activated:Connect(function()
+	if not (S.selectedKind == "equip" and S.selectedValue == "weapon") then
+		return
+	end
+	if player:GetAttribute("BossEncounterId") ~= nil then
+		Toast.push("TC", { text = Text.get("ui1c.gear.enhanceBoss"), colorName = "textPrimary", seconds = 3 })
+		return
+	end
+	require(script.Parent.Parent.Enhance).openFromDetail()
+end)
+local ORDERED = { enhanceButton, equipButton, awakenButton, inheritButton, dismantleButton, sellButton, rerollButton, craftButton, compareButton, gemHomeButton }
 -- UI-1 4단계: 끼우면 전투력 ▲ +n%(초록) · ▼ −n%(빨강) · = 같음(회색) - 색 + 모양(서버 같은 함수 · 가방 정렬 · 바닥 ▲와 같은 값)
 function S.powerLine(pct)
 	if pct > 0.05 then
@@ -333,6 +348,12 @@ local function refreshDetailBody()
 			lines = { { text = Text.get("gear.detail.weaponMeta", { meta = described.meta }), color = UIColors.textPrimary } }, gems = true,
 		})
 		gemHomeButton.Visible = PIN == true
+		enhanceButton.Visible = true -- SEC-FIX-1 13
+		local inBoss = player:GetAttribute("BossEncounterId") ~= nil
+		setEnabled(enhanceButton, not inBoss)
+		if inBoss then
+			setHint(Text.get("ui1c.gear.enhanceBoss"))
+		end
 	elseif S.selectedKind == "gemSlot" and type(S.selectedValue) == "number" and gemState and Gem.isFilled(gemState.gems, S.selectedValue) then
 		local gem = gemState.gems[S.selectedValue]
 		card.set({

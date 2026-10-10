@@ -17,7 +17,8 @@
 | 9 | 로그 단계 스위치(#12) | 끝 | a5f18f61 | `sec_log_static` 옛 0/4 → 새 4/4 |
 | 10 | 압박 문구 2건 · 할로윈 기간 한정 | 끝 | d70066ae | `sec_text_static` 옛 0/3 → 새 3/3 |
 | 11 | 다른 작업으로 넘길 목록 · 라이브 저장소 이름 자리 | 끝 | 205fe778 | `sec_save_test` 11: 옛 13/15 → 새 15/15 |
-| 12 | 보고서 중 18건 대응 표 · #18 없는 키 수집 | 끝 | (이 커밋) | `sec_textkey_test` 옛 1/2 → 새 2/2 |
+| 12 | 보고서 중 18건 대응 표 · #18 없는 키 수집 | 끝 | 0cdb1561 | `sec_textkey_test` 옛 1/2 → 새 2/2 |
+| 13 | 장비 상세 [강화](UI-1c 후속) | 끝(하네스) · Studio 확인은 14와 함께 | (이 커밋) | `sec_enhance_test` 옛 1/3 → 새 3/3 |
 | 2 | 같은 서버 재접속 저장 멈춤(AUDIT1 #15) | 끝 | 1bd638ec | `sec_save_test` 2: 옛(c75bea32) 10/13 → 새 13/13 |
 | 3 | 결제 applyReward 에러 시 잠금 안 풀림 | 끝 | 71d0eae9 | `sec_shop_test` 3: 옛 1/6 → 새 6/6 |
 | 4a | 교환 코드 표 → 서버 전용 | 끝 | c631de4f | `sec_secret_static` 옛 2/6 → 새 6/6 · `security_launch` +2(게시판 공개분만) |
@@ -170,3 +171,10 @@
 
 - 하네스 `sec_textkey_test`(실제 shared/Text): 없는 키 = 키 문자열 그대로 · 수집 · 경고 1번 - 옛 1/2 → 새 2/2.
 - 보고서 "하"(2절)는 이번 범위 밖(지시 = 18건). 그중 가까운 것 메모: 빈도 제한 없는 입구 3(BossGiveUp · BossLingerChoice · TutorialChallengeBossRequest) · DashRequest NaN tilt(자기 손해) - 다음 묶음 후보.
+
+## 13. 장비 상세 [강화](UI-1c 후속 · 05 spec 결정 #12)
+
+- 서버(`EnhanceService.handleRequest`): 옛 = 강화대 근처가 아니면 조용히 무시. 이제 **어디서든**(강화 = 골드 · 확률 · 불씨 전부 서버 판정 - 위치 이득 없음) · **보스전 중만 거절** `boss_fight`(기준 = `BossEncounter.classChangeBlocked` - 입장 ~ 잔류 끝 · 직업 전환 금지와 같음 · 골드 · 단계 그대로). 쓰지 않게 된 `isNearStation` · WorldConfig require 제거(이 변경이 만든 고아).
+- 클라: 가방 **무기 상세**(`DetailSheet` - 고정 창 · 옛 판 공통)에 [강화](맨 앞 · 노랑 테) → `EnhancePanel.openFromDetail()` = 큰 강화 창을 어디서든(가방 window는 `UIManager.switchTo`로 먼저 닫힘) · 창이 강화대에서 멀어도 안 닫힘(`remoteOpen` - 닫으면 끝 · 보스전이 시작되면 닫음). 보스전 중 = 버튼 꺼짐 + 이유 한 줄 "보스전이 끝나면 강화할 수 있어요"(누르면 같은 토스트) · 서버 거절 결과 줄 = "보스전이 끝나면 강화할 수 있습니다"(강화 결과 줄 = 합쇼체 규칙 · check_textdata).
+- 하네스 `sec_enhance_test`(실제 EnhanceService): 강화대 밖 = 강화됨 · 비용 차감(옛 = nil) / 보스전 = boss_fight · 그대로(옛 = nil) / 강화대 옆 = 그대로.
+- 남은 확인: 화면(버튼 자리 · 창 열림 · 보스전 잠김)은 Studio Play로(14와 함께 - 아래 Play 절).
