@@ -24,6 +24,7 @@
 | B2 부위 자르기 | 끝 | `roblox/tools/blender/art_pilot_cut.py`(실행 1.1초) → `roblox/art/pilot/art_pilot_1/rock_boar_b2.{fbx,blend,meta.json}` · 12부위 1,516 삼각형(예산 1,500) |
 | 업로드 | 끝 | `roblox/tools/opencloud/pilot_upload.py`(결과 = `roblox/art/pilot/art_pilot_1/pilot-asset-ids.json` · 게임 `asset-ids.json` · `ArtAssetIds.lua` 안 건드림) · 5개 모두 Approved |
 | 애니 변환 | 끝 | `roblox/tools/blender/art_pilot_anim.py` → `*.anim.json`(프레임별 뼈 월드 변화량 - Studio에서 KeyframeSequence 임시 등록으로 재생 예정) |
+| B1-라이트 준비 | 끝 | 같은 리깅 멧돼지(boar_b1 모델 재사용) + 색 1장 1024(`b1_lite/rock_boar_b1lite_albedo_1024.png` · 노멀 · 금속 · 거칠기 없음). 공정 비교용으로 B1 원본 노멀 2K · 금속 4K · 거칠기 4K도 업로드(B1 = 4장) |
 | Studio 넣기 · 재생 · 성능 | **대기** | PROG-2B-1(Studio 사용 7단계) 끝난 뒤 · `Workspace._ArtPilot` 하나 · 끝나면 제거 · 그동안 저장/퍼블리시 금지 · 스크립트 `roblox/tools/art_pilot/01_load.luau` |
 
 ### B2 부위 자르기 결과 (rock_boar · Meshy 3,111 → 1,516)
@@ -77,3 +78,22 @@
 | 어깨 붙는 점 | ±0.972, 0.598 | HipHeight 2.192 | 전체 4.001 × 5.183 × 1.161 |
 
 → Claude Design 방어구 그림의 가정값 **UpperTorso 2 × 1.6 × 1 · LowerTorso 2 × 0.4 × 1은 표 1과 정확히 같음 = 다시 찍을 필요 없음.** 표 2(아바타 기본)와는 윗몸통 높이 +6% · 폭 −3% 차이(맞춤 껍데기가 몸 맞춤 Layered 방식이면 흡수됨).
+
+## 성능 비교 계획 (Studio 허락 뒤)
+
+4종 = **B1**(스킨 메시 + 텍스처 4장) · **B1-라이트**(같은 스킨 메시 + 색 1장 1024) · **B2**(부위 12 · 단색 · Motor6D) · **지금 몬스터**(`monsters/rock_boar` 10부위 · 단색). 같은 조건 = 30 · 120마리 · 렌더 품질 1 · 같은 자리 · 같은 카메라 · Studio 창 초점(초점 없으면 15 ~ 26fps로 떨어짐 - 메모리 opencloud 함정).
+- 움직임: B1 · B1-라이트 = Animator + 걷기 KeyframeSequence 임시 등록 · B2 · 지금 = Motor6D.Transform 사인 걷기(지금 게임과 같은 방식 - `MonsterRigAnimator`).
+- 잴 것: fps(RenderStepped 6초 평균 · p95 프레임) · `Stats:GetMemoryUsageMbForTag`(GraphicsTexture · GraphicsMeshParts · Animation) · 전체 메모리.
+- 한계: 실제 폰이 아니라 PC Studio 품질 1 대용값. 비율(4종 사이 차이)로 판단.
+- 확인할 것: **Roblox 텍스처 상한**. 영어 문서는 1024 × 1024 상한, 번역 문서는 4096이라 서로 다름 → 업로드한 2K · 4K가 실제 몇 픽셀로 쓰이는지 GraphicsTexture 메모리 차이로 확인([texture specifications](https://create.roblox.com/docs/art/modeling/texture-specifications)). 1024 상한이면 B1 ↔ B1-라이트 차이 = 장 수(4 ↔ 1)뿐.
+
+## 실서비스 애니 업로드 경로 (조사만 · 업로드 안 함)
+
+| 길 | 사람 손 | 근거 · 위험 |
+|---|---|---|
+| ① Open Cloud Assets API · assetType **Animation** · `.rbxm/.rbxmx`(KeyframeSequence 1개) | 0 | 공식 지원 형식 표에 Animation = .rbxm · .rbxmx([usage guide](https://create.roblox.com/docs/cloud/guides/usage-assets)) · 2025 확장 공지([DevForum](https://devforum.roblox.com/t/open-cloud-upload-support-for-more-asset-types/4022082)). **FBX 애니는 Animation으로 못 올림**(FBX = Model만). 경고: "Studio 밖에서 고친 rbxm은 안 올라가거나 동작 안 할 수 있음" · 제3자 도구(asphalt)는 애니 업로드에 쿠키 인증을 요구한다고 적어 **API 키만으로 되는지 미확인** → 키 권한(asset:write)으로 시험 1회 필요 |
+| ② Studio에서 KeyframeSequence를 스크립트로 만들고(임시 재생과 같은 것) → 사람이 탐색기에서 우클릭 **Save to File** → `.rbxm` → ① 업로드 | 애니당 2(우클릭 · 저장 대화상자) | "Studio가 만든 rbxm"이라 ①의 경고를 피함 · KeyframeSequence는 Studio 안에서 만들어져 뼈 이름 · 축이 이미 Roblox 기준 |
+| ③ Python으로 KeyframeSequence `.rbxmx`(XML) 직접 생성 → ① | 0 | Pose CFrame 값은 Studio에서 한 번 덤프 필요 · ①의 "밖에서 만든 파일" 경고에 해당 → 시험 필요 |
+| ④ Studio Animation Editor: 리그 선택 → Animation Editor → … → Import → From FBX Animation → 파일 → … → Publish to Roblox → 소유자(게임 소유자 계정) → Submit | 애니당 약 7 | 가장 확실(공식 화면 경로) · 리그(AnimationController/Humanoid 붙은 모델)가 Workspace에 있어야 함 |
+
+추천: 실서비스 = ②(사람 2단계 · 확실) → ① 시험이 통과하면 ③로 0단계 자동화. 펫 25 · 몬스터 12 × 애니 3 ~ 4개면 ④는 약 250 ~ 350번 클릭이라 피함.

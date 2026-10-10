@@ -38,5 +38,37 @@
   "bytes": 4249938,
   "assetId": 86038080068377,
   "status": "Approved"
+ },
+ "boar_b1lite_tex": {
+  "file": "rock_boar_b1lite_albedo_1024.png",
+  "sha256": "03eb84f97cee69cc3af4f6f867cd3ce4ddca6b1c60a3f3bad1f77e95975e80e7",
+  "assetType": "Decal",
+  "bytes": 1069277,
+  "assetId": 126794682860224,
+  "status": "Approved"
+ },
+ "boar_b1_normal": {
+  "file": "Meshy_AI_Stone_Boar_quadruped_texture_0_normal.png",
+  "sha256": "1e3ef1d03ce3845034fb197a80f22dde22855d51b8bf21f6b4f7efa5b64b7088",
+  "assetType": "Decal",
+  "bytes": 3135602,
+  "assetId": 82479877166810,
+  "status": "Approved"
+ },
+ "boar_b1_metal": {
+  "file": "Meshy_AI_Stone_Boar_quadruped_texture_0_metallic.png",
+  "sha256": "55593bd0b1d32449bac0106eba604c295be388f45a96f5d2f4df10f4d70e4bf2",
+  "assetType": "Decal",
+  "bytes": 1166121,
+  "assetId": 73119419199524,
+  "status": "Approved"
+ },
+ "boar_b1_rough": {
+  "file": "Meshy_AI_Stone_Boar_quadruped_texture_0_roughness.png",
+  "sha256": "132af043de314586fd2e80d8c28e26fd5fb0fe8b8587a9d714d6c92c18e5eab7",
+  "assetType": "Decal",
+  "bytes": 1786838,
+  "assetId": 103756253382880,
+  "status": "Approved"
  }
 }
