@@ -234,6 +234,9 @@ local function relayout()
 	built.tabRow.CanvasSize = UDim2.fromOffset(#Info.tabs * (tw + 4), 0)
 	built.claimAll.root.Size = UDim2.fromOffset(ALL_W, S.claimH)
 	local tokenH = phone and 44 or 30 -- QUEUE-ALL9C 1-11 토큰 진행 줄(폰 = 버튼 44)
+	if Info.V2 then
+		tokenH = phone and 48 or 56 -- UI-1 5단계: 진행 줄(막대 + 상자 10)
+	end
 	local tokenY = PAD + S.claimH + 6
 	-- QUEUE-ALL9C 2-6: 낮은 폰(본문이 칸 2줄보다 낮음) = 토큰 줄을 오른쪽 상세 칸 위로 옮겨 칸 목록 높이를 돌려준다(작은 폰 389에서 칸이 1줄만 보이던 것)
 	local stacked = phone and (H - (tokenY + tokenH + 6) - PAD) < 2 * (70 + 8) + 40
@@ -417,6 +420,101 @@ local function build()
 		end })
 	built = { panel = panel, top = top, tabRow = tabRow, tabButtons = tabButtons, claimAll = all, gridArea = gridArea,
 		tokenBar = tokenBar, tokenGauge = tokenGauge, tokenNeed = tokenNeed, tokenWhere = tokenWhere }
+	if Info.V2 then -- UI-1 5단계(08 v4-codex §5): 진행 줄 = "전체 진행 n / 362칸 · p%" + 막대 + 상자 10개(10%마다 · 60% · 70% = 토큰 상자) · 상자 = 누르면 보상 창(토글)
+		tokenGauge.root.Visible = false
+		tokenNeed.Visible = false
+		tokenWhere.root.Visible = false
+		local row = Instance.new("Frame")
+		row.Name = "ProgressV2"
+		row.BackgroundTransparency = 1
+		row.Size = UDim2.fromScale(1, 1)
+		row.Parent = tokenBar
+		local head = Theme.label(row, "", "caption", "textPrimary")
+		head.Name = "Head"
+		head.Size = UDim2.new(0, 150, 1, 0)
+		head.TextWrapped = true
+		local bar = Instance.new("Frame")
+		bar.Name = "Bar"
+		bar.BackgroundColor3 = Color3.fromRGB(26, 31, 51)
+		bar.AnchorPoint = Vector2.new(0, 1)
+		bar.Position = UDim2.new(0, 160, 1, -6)
+		bar.Size = UDim2.new(1, -176, 0, 10)
+		bar.Parent = row
+		Theme.corner(bar, 5)
+		local fill = Instance.new("Frame")
+		fill.Name = "Fill"
+		fill.BackgroundColor3 = Color3.fromHex("FFC83D")
+		fill.Size = UDim2.fromScale(0, 1)
+		fill.Parent = bar
+		Theme.corner(fill, 5)
+		local boxes = {}
+		for n = 1, CodexData.boxes.count do
+			local b = Instance.new("ImageButton")
+			b.Name = "Box" .. n
+			b.BackgroundTransparency = 1
+			b.AnchorPoint = Vector2.new(0.5, 1)
+			b.Position = UDim2.new(n / CodexData.boxes.count, 0, 0, -2)
+			b.Size = UDim2.fromOffset(30, 30)
+			b.Parent = bar
+			local dot = Instance.new("Frame")
+			dot.Name = "Dot"
+			dot.AnchorPoint = Vector2.new(1, 0)
+			dot.Position = UDim2.new(1, 2, 0, -2)
+			dot.Size = UDim2.fromOffset(10, 10)
+			dot.BackgroundColor3 = Color3.fromRGB(235, 60, 60)
+			dot.Visible = false
+			dot.Parent = b
+			Theme.corner(dot, 5)
+			boxes[n] = b
+		end
+		local pop = Instance.new("Frame")
+		pop.Name = "BoxPopup"
+		pop.BackgroundColor3 = Color3.fromHex("161A2B")
+		pop.Size = UDim2.fromOffset(260, 120)
+		pop.Visible = false
+		pop.ZIndex = 20
+		pop.Parent = panel.content
+		Theme.corner(pop, 10)
+		local pst = Instance.new("UIStroke")
+		pst.Color = Color3.fromHex("3A4466")
+		pst.Parent = pop
+		local popText = Theme.label(pop, "", "caption", "textPrimary")
+		popText.Position, popText.Size = UDim2.fromOffset(10, 6), UDim2.new(1, -20, 0, 64)
+		popText.TextWrapped = true
+		popText.TextYAlignment = Enum.TextYAlignment.Top
+		popText.ZIndex = 21
+		local popClaim = Button.build({ parent = pop, kind = "claim", text = Text.get("codex.v2.claim"), width = 120, height = 40,
+			position = UDim2.new(1, -10, 1, -8), anchorPoint = Vector2.new(1, 1), onActivated = function()
+				if built.boxOpen then
+					S.send("claim", "box:" .. built.boxOpen)
+					pop.Visible = false
+					built.boxOpen = nil
+				end
+			end })
+		popClaim.root.ZIndex = 21
+		local function lift(node, z) -- 창 = ZIndex 전체 모드: 진행 줄 · 상자 · 보상 창을 창 바탕 위로(깊이만큼 +1)
+			if node:IsA("GuiObject") then
+				node.ZIndex = z
+			end
+			for _, c in ipairs(node:GetChildren()) do
+				lift(c, z + 1)
+			end
+		end
+		lift(row, 6)
+		lift(pop, 30)
+		built.boxRow = { head = head, fill = fill, boxes = boxes, pop = pop, popText = popText, popClaim = popClaim }
+		for n, b in ipairs(boxes) do
+			b.Activated:Connect(function()
+				if built.boxOpen == n then -- 같은 상자 다시 = 닫힘(토글)
+					pop.Visible = false
+					built.boxOpen = nil
+					return
+				end
+				built.boxOpen = n
+				CodexPanel.renderTokens()
+			end)
+		end
+	end
 	built.detail = Detail.build(panel.content, S)
 	relayout()
 	panel.content:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
@@ -462,6 +560,45 @@ end
 -- QUEUE-ALL9C 1-11 토큰 진행(상점 "다음 499급"과 같은 식 · 지갑 = SparkleShard)
 function CodexPanel.renderTokens()
 	if not built then
+		return
+	end
+	if Info.V2 and built.boxRow then -- UI-1 5단계 진행 상자
+		local view = S.view
+		local B = built.boxRow
+		if not view or not view.boxes then
+			return
+		end
+		local p = view.total > 0 and view.score / view.total or 0
+		B.head.Text = Text.get("ui1.codex.progress", { have = tostring(view.score), total = tostring(view.total), pct = ("%d"):format(math.floor(p * 100)) })
+		B.fill.Size = UDim2.fromScale(math.clamp(p, 0, 1), 1)
+		for n, box in ipairs(view.boxes) do
+			local b = B.boxes[n]
+			local token = (box.sparkleShard or 0) > 0
+			local state = box.claimed and "open" or (box.done and "ready" or "locked")
+			b.Image = ArtImage.get(("ui/codex/codex-box-%s-%s"):format(token and "token" or "normal", state)) or ""
+			b.Dot.Visible = box.done and not box.claimed
+		end
+		local n = built.boxOpen
+		local box = n and view.boxes[n]
+		B.pop.Visible = box ~= nil
+		if box then
+			local parts = {}
+			if (box.gold or 0) > 0 then
+				table.insert(parts, Text.get("ui1.codex.boxGold", { n = NumberFormat.commas(math.floor(box.gold)) }))
+			end
+			if (box.enhanceStone or 0) > 0 then
+				table.insert(parts, Text.get("ui1.codex.boxStone", { n = tostring(box.enhanceStone) }))
+			end
+			if (box.sparkleShard or 0) > 0 then
+				table.insert(parts, Text.get("ui1.codex.boxToken", { n = tostring(box.sparkleShard) }))
+			end
+			local state = box.claimed and Text.get("ui1.codex.boxClaimed") or (box.done and "" or Text.get("ui1.codex.boxLocked", { pct = tostring(n * 10), now = ("%d"):format(math.floor(p * 100)) }))
+			B.popText.Text = Text.get("ui1.codex.boxTitle", { pct = tostring(n * 10) }) .. "\n" .. table.concat(parts, " · ") .. (state ~= "" and ("\n" .. state) or "")
+			B.popClaim.root.Visible = box.done and not box.claimed
+			local bAbs, cAbs = B.boxes[n].AbsolutePosition, built.panel.content.AbsolutePosition
+			local x = math.clamp(bAbs.X - cAbs.X - 130, 4, math.max(4, built.panel.content.AbsoluteSize.X - 264))
+			B.pop.Position = UDim2.fromOffset(x, bAbs.Y - cAbs.Y + 42)
+		end
 		return
 	end
 	local have = Players.LocalPlayer:GetAttribute("SparkleShard") or 0

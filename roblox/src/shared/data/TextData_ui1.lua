@@ -67,6 +67,11 @@ return {
 		["ui1.bag.compare"] = "나란히 비교", ["ui1.bag.compareTitle"] = "나란히 비교", ["ui1.bag.compareSelected"] = "고른 것", ["ui1.bag.compareEquipped"] = "착용 중",
 		["ui1.bag.compareChanges"] = "바뀌는 것", ["ui1.bag.compareNone"] = "비교할 장비 없음", ["ui1.bag.close"] = "닫기", ["ui1.bag.equipThis"] = "이것으로 장착",
 		["ui1.bag.dropPowerUp"] = "{name} ▲ +{pct}%", ["ui1.bag.gemSoon"] = "곧 열려요",
+		-- 5단계 도감(08 v4-codex)
+		["ui1.codex.progress"] = "전체 진행 {have} / {total}칸 · {pct}%", ["ui1.codex.boxTitle"] = "{pct}% 상자",
+		["ui1.codex.boxGold"] = "골드 {n}", ["ui1.codex.boxStone"] = "강화석 {n}", ["ui1.codex.boxToken"] = "꾸미기 토큰 {n}",
+		["ui1.codex.boxClaimed"] = "받음", ["ui1.codex.boxLocked"] = "전체 {pct}%가 되면 열려요 · 지금 {now}%",
+		["ui1.codex.hintRebirth"] = "환생 {n}회", ["ui1.codex.hintTranscend"] = "초월 도전",
 		-- 2단계 다음 목표 카드
 		["ui1.nextGoal.title"] = "다음 목표", ["ui1.nextGoal.guide"] = "길 안내",
 		["ui1.exp.percent"] = "경험치 {percent}%",
@@ -133,6 +138,10 @@ return {
 		["ui1.status.more"] = "+{n}",
 		["ui1.boss.form1"] = "Form 1", ["ui1.boss.form2"] = "Form 2",
 		["ui1.nextGoal.title"] = "Next Goal", ["ui1.nextGoal.guide"] = "Guide",
+		["ui1.codex.progress"] = "Total {have} / {total} · {pct}%", ["ui1.codex.boxTitle"] = "{pct}% chest",
+		["ui1.codex.boxGold"] = "Gold {n}", ["ui1.codex.boxStone"] = "Enhance Stone {n}", ["ui1.codex.boxToken"] = "Cosmetic Token {n}",
+		["ui1.codex.boxClaimed"] = "Claimed", ["ui1.codex.boxLocked"] = "Opens at {pct}% · now {now}%",
+		["ui1.codex.hintRebirth"] = "Rebirth {n}", ["ui1.codex.hintTranscend"] = "Transcend",
 		["ui1.bag.sort.grade"] = "By grade", ["ui1.bag.sort.part"] = "By part", ["ui1.bag.sort.power"] = "By power", ["ui1.bag.sort.newest"] = "Newest",
 		["ui1.bag.sortDesc"] = "High first", ["ui1.bag.sortAsc"] = "Low first", ["ui1.bag.filter"] = "Filter", ["ui1.bag.filterOn"] = "Filter {n}",
 		["ui1.bag.filter.grade"] = "Grade", ["ui1.bag.filter.zone"] = "Set (zone)", ["ui1.bag.filter.option"] = "Option",

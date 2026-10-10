@@ -159,6 +159,12 @@ local function lineHead(S, parent, lineId, l, y)
 	f.Parent = parent
 	local icon = ArtImage.label(f, "icons/reward/title", UDim2.fromOffset(24, 24), "")
 	icon.Name = "Icon"
+	local bossId = Info.V2 and l.tab == "boss" and lineId:match("^boss:(.+)$")
+	if bossId then -- UI-1 5단계: 보스 줄 머리 = 3단계 보스 초상(원)
+		icon.Visible = false
+		local p = require(script.Parent.Parent.Parent.ui.v2.BossPortrait).make(f, bossId, 24)
+		p.Name = "Portrait"
+	end
 	local t = label(f, Text.get("codex.v2.lineTitle", { name = l.titleName and CodexRules.titleText(l.titleId, l.titleName) or l.titleId }), "body", l.done and Theme.colors.gold or Theme.colors.textPrimary,
 		UDim2.fromOffset(30, 0), UDim2.new(1, -60, 1, 0), Enum.TextXAlignment.Left)
 	t.Name = "Title"
@@ -169,7 +175,166 @@ local function lineHead(S, parent, lineId, l, y)
 	return y + 30
 end
 
+-- UI-1 5단계 무기 탭(08 v4-codex §2-1 · §4): 줄 = 무기 4 · 칸 8(일반 ~ 초월 · 세로 그림 5 : 9 = codex_<무기>_g<n>_color / _silhouette) ·
+--   획득 = 등급 테 + 컬러 + 별 3(★1 얻음 · ★2 +10 · ★3 +20 · 보상 없음) · 미획득 = 밝은 남색 + 실루엣 + 얻는 곳 한마디 · 줄 머리 = 무기 아이콘 + 이름 + n / 8 + ★ n / 24
+local WEAPON_STEM = { greatsword = "gs", dualblade = "db", bow = "bow", healer = "staff" }
+local WEAPON_ICON = { greatsword = "atk-sword", dualblade = "atk-dagger", bow = "atk-bow", healer = "atk-staff" }
+local function renderClassV2(S, scroll)
+	local view = S.view
+	local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
+	local GradeColor = require(ReplicatedStorage.Shared.GradeColor)
+	local UiKit = require(script.Parent.Parent.Parent.ui.v2.UiKit)
+	local headW = (S.phone or S.gridW < 700) and 64 or 124
+	local cw = math.clamp(math.floor((S.gridW - PAD * 2 - headW - 7 * GAP - 6) / 8), 24, 80) -- 8칸이 늘 한 줄에(가로 스크롤 없음 · 08 v4 §2-2)
+	local ch = math.max(math.floor(cw * 9 / 5), 64)
+	local y = 4
+	for _, classId in ipairs(ClassData.order) do
+		local stem = WEAPON_STEM[classId]
+		local got, stars = 0, 0
+		local starRec = view.stars and view.stars[classId] or {}
+		local head = Instance.new("Frame")
+		head.Name = "ClassHead_" .. classId
+		head.BackgroundTransparency = 1
+		head.Position = UDim2.fromOffset(PAD, y)
+		head.Size = UDim2.fromOffset(headW, ch)
+		head.Parent = scroll
+		if WEAPON_ICON[classId] and UiKit.hasIcon(WEAPON_ICON[classId]) then
+			local ic = UiKit.icon(head, WEAPON_ICON[classId], headW < 100 and 22 or 34)
+			ic.Position = UDim2.fromOffset(0, 0)
+		end
+		local cellsInRow = {}
+		for g = 0, 7 do
+			local id = g == 7 and ("cls:%s:t"):format(classId) or ("cls:%s:%d"):format(classId, g)
+			local cv = view.cells[id]
+			local done = cv and cv.done
+			if done then
+				got += 1
+				stars += math.clamp(tonumber(starRec[tostring(g)]) or 1, 1, 3)
+			end
+			table.insert(cellsInRow, { id = id, cv = cv, g = g })
+		end
+		local compact = headW < 100
+		local nm = label(head, Text.get("class.name." .. classId), compact and "caption" or "body", Theme.colors.textPrimary, UDim2.fromOffset(0, compact and 24 or 38), UDim2.new(1, 0, 0, compact and 16 or 22), Enum.TextXAlignment.Left)
+		nm.Name = "Name"
+		label(head, ("%d / 8"):format(got), "caption", got >= 7 and Theme.colors.gold or Theme.colors.textSecondary, UDim2.fromOffset(0, compact and 42 or 62), UDim2.new(1, 0, 0, compact and 14 or 18), Enum.TextXAlignment.Left).Name = "Count"
+		label(head, ("★ %d / 24"):format(stars), "caption", Theme.colors.textSecondary, UDim2.fromOffset(0, compact and 58 or 82), UDim2.new(1, 0, 0, compact and 14 or 18), Enum.TextXAlignment.Left).Name = "Stars"
+		for i, e in ipairs(cellsInRow) do
+			local x = PAD + headW + (i - 1) * (cw + GAP)
+			local done = e.cv and e.cv.done
+			local gradeId = ArmorData.gradeOrder[e.g + 1]
+			local b = Instance.new("TextButton")
+			b.Name = "Cell"
+			b.Text = ""
+			b.AutoButtonColor = false
+			b.Position = UDim2.fromOffset(x, y)
+			b.Size = UDim2.fromOffset(cw, ch)
+			b.BackgroundColor3 = done and Color3.fromRGB(26, 31, 51) or Color3.fromHex("4A5274")
+			b.ClipsDescendants = true
+			b:SetAttribute("CodexCell", e.id)
+			b:SetAttribute("CodexState", done and (e.cv.claimed and "done" or "claim") or "idle")
+			b.Parent = scroll
+			Theme.corner(b, 10)
+			local st = Instance.new("UIStroke")
+			st.Thickness = 2
+			st.Color = done and GradeColor.border(gradeId) or Color3.fromHex("5A6280")
+			st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+			st.Parent = b
+			if not done then
+				local gr = Instance.new("UIGradient")
+				gr.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromHex("6A7398")), ColorSequenceKeypoint.new(0.5, Color3.fromHex("4A5274")), ColorSequenceKeypoint.new(1, Color3.fromHex("343B58")) })
+				gr.Rotation = 90
+				gr.Parent = b
+			end
+			local img = Instance.new("ImageLabel")
+			img.Name = "Pic"
+			img.BackgroundTransparency = 1
+			img.Size = UDim2.fromScale(1, 1)
+			img.ScaleType = Enum.ScaleType.Stretch
+			img.Image = ArtImage.get(("ui/codex/codex_%s_g%d_%s"):format(stem or "gs", e.g + 1, done and "color" or "silhouette")) or ""
+			img.ImageTransparency = done and 0 or 0.1
+			img.Parent = b
+			local band = Instance.new("Frame")
+			band.Name = "Band"
+			band.BackgroundColor3 = Color3.fromHex("0E1120")
+			band.BackgroundTransparency = 0.2
+			band.BorderSizePixel = 0
+			band.AnchorPoint = Vector2.new(0, 1)
+			band.Position = UDim2.fromScale(0, 1)
+			band.Size = UDim2.new(1, 0, 0, S.phone and 16 or 18)
+			band.Parent = b
+			if done then
+				local n = math.clamp(tonumber(starRec[tostring(e.g)]) or 1, 1, 3)
+				for k = 1, 3 do
+					local s = Instance.new("ImageLabel")
+					s.BackgroundTransparency = 1
+					s.Image = ArtImage.get(k <= n and "ui/codex/codex-star-on" or "ui/codex/codex-star-off") or ""
+					s.Size = UDim2.fromOffset(S.phone and 11 or 13, S.phone and 11 or 13)
+					s.AnchorPoint = Vector2.new(0.5, 0.5)
+					s.Position = UDim2.new(0.5, (k - 2) * (S.phone and 13 or 16), 0.5, 0)
+					s.Parent = band
+				end
+				if e.g >= 1 then -- 희귀 이상 = 모서리 장식(등급 밝은 색)
+					for r, pos in ipairs({ { 0, 0 }, { 1, 0 }, { 1, 1 }, { 0, 1 } }) do
+						local c = Instance.new("ImageLabel")
+						c.BackgroundTransparency = 1
+						c.Image = ArtImage.get("ui/codex/codex-corner") or ""
+						c.ImageColor3 = GradeColor.border(gradeId)
+						c.Size = UDim2.fromOffset(S.phone and 11 or 14, S.phone and 11 or 14)
+						c.AnchorPoint = Vector2.new(pos[1], pos[2])
+						c.Position = UDim2.fromScale(pos[1], pos[2])
+						c.Rotation = (r - 1) * 90
+						c.Parent = b
+					end
+				end
+				if not e.cv.claimed then -- 받을 보상 = 왼쪽 위 반짝 + 오른쪽 위 빨간 점
+					local sp = Instance.new("ImageLabel")
+					sp.BackgroundTransparency = 1
+					sp.Image = ArtImage.get("ui/codex/codex-sparkle") or ""
+					sp.Size = UDim2.fromOffset(22, 22)
+					sp.Parent = b
+					local dot = Instance.new("Frame")
+					dot.AnchorPoint = Vector2.new(1, 0)
+					dot.Position = UDim2.new(1, -3, 0, 3)
+					dot.Size = UDim2.fromOffset(12, 12)
+					dot.BackgroundColor3 = Color3.fromRGB(235, 60, 60)
+					dot.Parent = b
+					Theme.corner(dot, 6)
+				end
+			else
+				local hint = label(band, Text.get(e.g == 7 and "ui1.codex.hintTranscend" or "ui1.codex.hintRebirth", { n = tostring(e.g) }), "caption", Theme.colors.textSecondary, UDim2.fromScale(0, 0), UDim2.fromScale(1, 1))
+				hint.TextScaled = true
+				local lim = Instance.new("UITextSizeConstraint")
+				lim.MaxTextSize = S.phone and 11 or 12
+				lim.Parent = hint
+			end
+			b.Activated:Connect(function()
+				S.select({ kind = "cell", id = e.id })
+			end)
+		end
+		if got >= 7 then -- 줄 완성(일반 ~ 태초 7칸) = 금 테 · 초월 칸 = 따로 왕관
+			local line = Instance.new("Frame")
+			line.Name = "LineDone"
+			line.BackgroundColor3 = Color3.fromHex("FFC83D")
+			line.BackgroundTransparency = 0.8
+			line.Position = UDim2.fromOffset(PAD - 4, y - 4)
+			line.Size = UDim2.fromOffset(headW + 8 * (cw + GAP) + 4, ch + 8)
+			line.ZIndex = 0
+			line.Parent = scroll
+			Theme.corner(line, 12)
+			local st = Instance.new("UIStroke")
+			st.Color = Color3.fromHex("FFD45A")
+			st.Thickness = 2
+			st.Parent = line
+		end
+		y += ch + GAP + 10
+	end
+	scroll.CanvasSize = UDim2.fromOffset(0, y + 8)
+end
+
 local function renderLines(S, scroll, tabId)
+	if tabId == "class" and Info.V2 then
+		return renderClassV2(S, scroll)
+	end
 	local ids = {}
 	for id, l in pairs(S.view.lines) do
 		if l.tab == tabId then

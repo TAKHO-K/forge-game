@@ -66,6 +66,7 @@ function CodexRules.titleText(titleId, name)
 end
 
 -- 칸 · 줄 만들기. nestsByZone = { [구역] = { 둥지 id, ... } }(서버만 안다 - 클라에는 칸 id만 간다)
+local CODEX_V2 = require(ReplicatedStorage.Shared.data.UiV2Flags).codex
 function CodexRules.build(nestsByZone)
 	local cells, lines, byId = {}, {}, {}
 	local function line(id, tab, titleKind, titleKey)
@@ -126,7 +127,8 @@ function CodexRules.build(nestsByZone)
 		if CodexData.class.transcendCell then -- FINAL-1b 결정 6: 초월 칸(8번째)
 			local tg = CodexData.class.grades -- 7 = transcendent
 			cell({ id = ("cls:%s:t"):format(classId), tab = "class", kind = "class", classId = classId, weaponGrade = tg, transcend = true, need = 1,
-				label = ("%s · 무기 %s"):format(ClassData.classes[classId].displayName, ArmorData.grades[ArmorData.gradeOrder[tg + 1]].displayName) }, cl)
+				label = ("%s · 무기 %s"):format(ClassData.classes[classId].displayName, ArmorData.grades[ArmorData.gradeOrder[tg + 1]].displayName) },
+				not CODEX_V2 and cl or nil) -- UI-1 5단계(D 도감 v2): 줄 칭호 = 일반 ~ 태초 7칸 완성 · 초월 칸 = 따로 "초월 완성" 왕관(줄 토큰 ⌈7 × 0.5⌉ = 4로 같음)
 		end
 	end
 	local total = 0
@@ -197,6 +199,64 @@ function CodexRules.reward(c, stage, goldPerKill)
 		r.goldKills = nil
 	end
 	return r
+end
+
+-- UI-1 5단계 진행 상자: 옛 점수판 29단계 합(goldKills · enhanceStone)
+function CodexRules.boardTotals()
+	local t = { goldKills = 0, enhanceStone = 0 }
+	for _, th in ipairs(CodexData.board) do
+		local r = CodexData.boardReward(th)
+		t.goldKills += r.goldKills or 0
+		t.enhanceStone += r.enhanceStone or 0
+	end
+	return t
+end
+
+-- 상자 n(1 ~ 10)의 보상 몫: 합 ÷ 10(내림) · 나머지 = 마지막 상자 · 토큰 = tokensAt
+function CodexRules.boxShare(n)
+	local total, count = CodexRules.boardTotals(), CodexData.boxes.count
+	local r = {}
+	for k, v in pairs(total) do
+		local each = math.floor(v / count)
+		r[k] = each + (n == count and (v - each * count) or 0)
+	end
+	r.sparkleShard = CodexData.boxes.tokensAt[n]
+	return r
+end
+
+-- 상자 n까지 몫의 누적(골드 몫 · 강화석)
+function CodexRules.boxCumulative(n)
+	local c = { goldKills = 0, enhanceStone = 0 }
+	for i = 1, n do
+		local s = CodexRules.boxShare(i)
+		c.goldKills += s.goldKills
+		c.enhanceStone += s.enhanceStone
+	end
+	return c
+end
+
+-- 이미 받은 점수판 몫(boardClaimed 키 = 점수) → 상자 n을 받을 때 실제로 줄 몫 = max(0, 누적(n) − 받은 몫) − max(0, 누적(n − 1) − 받은 몫) · 토큰은 새 몫이라 그대로
+function CodexRules.boxPay(n, boardClaimed)
+	local paid = { goldKills = 0, enhanceStone = 0 }
+	for key, yes in pairs(boardClaimed or {}) do
+		if yes then
+			local r = CodexData.boardReward(tonumber(key) or 0)
+			paid.goldKills += r.goldKills or 0
+			paid.enhanceStone += r.enhanceStone or 0
+		end
+	end
+	local now, before = CodexRules.boxCumulative(n), CodexRules.boxCumulative(n - 1)
+	local out = {}
+	for k in pairs(paid) do
+		out[k] = math.max(0, now[k] - paid[k]) - math.max(0, before[k] - paid[k])
+	end
+	out.sparkleShard = CodexData.boxes.tokensAt[n]
+	return out
+end
+
+-- 상자 n이 열리는 점수(전체 점수 칸 × n × 10% · 올림)
+function CodexRules.boxThreshold(n, totalScore)
+	return math.ceil(totalScore * n / CodexData.boxes.count)
 end
 
 -- QUEUE-ALL9B 3-6 · 3-7: 이 도감에서 얻을 수 있는 토큰 합(칸 + 줄 완성). 도감 업데이트 소식 "토큰 +n" = totalTokens(새) - totalTokens(옛).

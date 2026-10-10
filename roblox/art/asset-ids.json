@@ -7587,6 +7587,545 @@
   "status": "Approved",
   "imageId": 138329550071587
  },
+ "ui/codex/codex-box-normal-locked.png": {
+  "sha256": "803cfda5cb33b145e28911a99700b9affdb55f45551372abed40e461a0ab6a4d",
+  "assetType": "Decal",
+  "assetId": 128931408977155,
+  "status": "Approved",
+  "imageId": 103789984347984
+ },
+ "ui/codex/codex-box-normal-open.png": {
+  "sha256": "f3a385a391bdcc28122aacfb3c6614fd8e86433bcd3980a62292a705e18af39c",
+  "assetType": "Decal",
+  "assetId": 95617263212968,
+  "status": "Approved",
+  "imageId": 109580690118955
+ },
+ "ui/codex/codex-box-normal-ready.png": {
+  "sha256": "4c526b273a4cb1cbea323fc8365da33401f910e9bfbb4cf329b7437e2785edf9",
+  "assetType": "Decal",
+  "assetId": 71251922303145,
+  "status": "Approved",
+  "imageId": 88485043668626
+ },
+ "ui/codex/codex-box-token-locked.png": {
+  "sha256": "5c56f5ad0f8ee42a1643de19d92a54dc10d089ec57913fb1400189baf0237e40",
+  "assetType": "Decal",
+  "assetId": 74669736675964,
+  "status": "Approved",
+  "imageId": 105005897015060
+ },
+ "ui/codex/codex-box-token-open.png": {
+  "sha256": "444d7f6db43669cd6eb194fc01c146450b4c131278811c9542e61473472190cd",
+  "assetType": "Decal",
+  "assetId": 82942046188504,
+  "status": "Approved",
+  "imageId": 125183514922221
+ },
+ "ui/codex/codex-box-token-ready.png": {
+  "sha256": "f2c3f0b367ffb2c06e84b062fd62f1877e9f4704863f21bc3bba3535a814d72c",
+  "assetType": "Decal",
+  "assetId": 115834020525323,
+  "status": "Approved",
+  "imageId": 118417340018350
+ },
+ "ui/codex/codex-corner.png": {
+  "sha256": "eee6657b10127ed2a26901eb107cf0f3ba64974323a8fcf22cfcde1468a45dfa",
+  "assetType": "Decal",
+  "assetId": 122269508221606,
+  "status": "Approved",
+  "imageId": 133257210859730
+ },
+ "ui/codex/codex-glow-soft.png": {
+  "sha256": "0ff280d7e8e02c1e9625543ca94b6f04516a0e9bf9e2bc25f3acd080a5463b4f",
+  "assetType": "Decal",
+  "assetId": 95570710239588,
+  "status": "Approved",
+  "imageId": 72700920158189
+ },
+ "ui/codex/codex-reveal-edge.png": {
+  "sha256": "6ee31860b238f216f7fa628478a2f89217203fe04e2f43393e595033cfc20467",
+  "assetType": "Decal",
+  "assetId": 85540485728765,
+  "status": "Approved",
+  "imageId": 79800606127045
+ },
+ "ui/codex/codex-sparkle.png": {
+  "sha256": "ae25b8f619fe8c26d1e5ca68b3a26b46d39481e46eb6c6fcad68e59ae17a415b",
+  "assetType": "Decal",
+  "assetId": 110072323745048,
+  "status": "Approved",
+  "imageId": 75161580715564
+ },
+ "ui/codex/codex-star-off.png": {
+  "sha256": "64bea9578eeb8a4bb964acec43d24c7c281970b58a471abbfc55268c9013c572",
+  "assetType": "Decal",
+  "assetId": 97244770249612,
+  "status": "Approved",
+  "imageId": 75971823859678
+ },
+ "ui/codex/codex-star-on.png": {
+  "sha256": "7872f4b62bd4020e9efb89739d55deb3079a68a2de8f5ba2faee822a8d5308c0",
+  "assetType": "Decal",
+  "assetId": 94562035216484,
+  "status": "Approved",
+  "imageId": 123167606359164
+ },
+ "ui/codex/codex-tab-crown.png": {
+  "sha256": "22a9e75f4b758a2dddd248455f74f99816e65806b77030054450b8f9b9393ce7",
+  "assetType": "Decal",
+  "assetId": 79477989277466,
+  "status": "Approved",
+  "imageId": 86128373685442
+ },
+ "ui/codex/codex_bow_g1_color.png": {
+  "sha256": "01cd36b1ddceecfdc5c4747fee9aee09e544b4701f9fcbf902caa1571042ff18",
+  "assetType": "Decal",
+  "assetId": 81745015354307,
+  "status": "Approved",
+  "imageId": 109593789579545
+ },
+ "ui/codex/codex_bow_g1_silhouette.png": {
+  "sha256": "15e5a37e8c40b828ae69cedb3ec26fcd97226b23e0c9c71852594fda29931f8e",
+  "assetType": "Decal",
+  "assetId": 128489234285630,
+  "status": "Approved",
+  "imageId": 134045945068827
+ },
+ "ui/codex/codex_bow_g2_color.png": {
+  "sha256": "f27c5838510009400b0c6292612bc11de10e5ac28e333bde8f727278e7032d86",
+  "assetType": "Decal",
+  "assetId": 97181593394076,
+  "status": "Approved",
+  "imageId": 114973160101363
+ },
+ "ui/codex/codex_bow_g2_silhouette.png": {
+  "sha256": "e5030d5ca714c96ddf8a5ec569f4d1b9f9177a950ddbb4c39aec79f3a027f887",
+  "assetType": "Decal",
+  "assetId": 125110793339473,
+  "status": "Approved",
+  "imageId": 117223634565062
+ },
+ "ui/codex/codex_bow_g3_color.png": {
+  "sha256": "2cc5cc85d0feebfd9c7b0869763d36c4792ae41d4f4469694882306011e14118",
+  "assetType": "Decal",
+  "assetId": 101150751148790,
+  "status": "Approved",
+  "imageId": 122054477951924
+ },
+ "ui/codex/codex_bow_g3_silhouette.png": {
+  "sha256": "bc98dec64a18a3fc93fcbf89b369160617d0ec059a1e6c1e24656c236a9e0e5e",
+  "assetType": "Decal",
+  "assetId": 74391347234634,
+  "status": "Approved",
+  "imageId": 83329976516420
+ },
+ "ui/codex/codex_bow_g4_color.png": {
+  "sha256": "83f78d9cf8e65ce2a288cb75175fd32c424685532f26f02d33e0d1d35fa2a241",
+  "assetType": "Decal",
+  "assetId": 81043035194106,
+  "status": "Approved",
+  "imageId": 101313939054941
+ },
+ "ui/codex/codex_bow_g4_silhouette.png": {
+  "sha256": "a152466de38ec6047d8ceb93957e78cf4a314b244528caaad0d517c77424c2f0",
+  "assetType": "Decal",
+  "assetId": 117180443179710,
+  "status": "Approved",
+  "imageId": 103820113433242
+ },
+ "ui/codex/codex_bow_g5_color.png": {
+  "sha256": "26a71d87d8220b9955e7ad3fe839f81a62cc4e3f309d6a15ac6e588c40d2a58f",
+  "assetType": "Decal",
+  "assetId": 108237672192646,
+  "status": "Approved",
+  "imageId": 100590775493142
+ },
+ "ui/codex/codex_bow_g5_silhouette.png": {
+  "sha256": "9d3fe5d49be93f23b72b3df5a871890cff3868b1cdcfd5ac073e5832f18579f5",
+  "assetType": "Decal",
+  "assetId": 87940828818198,
+  "status": "Approved",
+  "imageId": 98521297020423
+ },
+ "ui/codex/codex_bow_g6_color.png": {
+  "sha256": "877d393a1b973c41970d2b5e5472e9313304583658d8a4dedc3676186c10ea61",
+  "assetType": "Decal",
+  "assetId": 135109117746910,
+  "status": "Approved",
+  "imageId": 115223814528056
+ },
+ "ui/codex/codex_bow_g6_silhouette.png": {
+  "sha256": "2890752533326fd093efd6426fcffd7bc0657fa4a6582384b596a569fa682a80",
+  "assetType": "Decal",
+  "assetId": 137288298936581,
+  "status": "Approved",
+  "imageId": 114687293109618
+ },
+ "ui/codex/codex_bow_g7_color.png": {
+  "sha256": "3ffdfe1f7f6a4a56085043002795d3461f663aa7eb58125a01f177f3bc8265a1",
+  "assetType": "Decal",
+  "assetId": 107919200979575,
+  "status": "Approved",
+  "imageId": 113691970022307
+ },
+ "ui/codex/codex_bow_g7_silhouette.png": {
+  "sha256": "0974760b9311c540d03fbdecce9e088de0fb0659d6b6ca5eeedcf399e406787e",
+  "assetType": "Decal",
+  "assetId": 81309735961261,
+  "status": "Approved",
+  "imageId": 106954865732390
+ },
+ "ui/codex/codex_bow_g8_color.png": {
+  "sha256": "643c1aa4d1feee519130c26dec453d54016285485436a9414e371fc200b803ad",
+  "assetType": "Decal",
+  "assetId": 121279564064187,
+  "status": "Approved",
+  "imageId": 87845450412060
+ },
+ "ui/codex/codex_bow_g8_silhouette.png": {
+  "sha256": "a9e879d51791fa67214c5ee852e1526ee51aefe5e56a9a939e72a6c9844e165f",
+  "assetType": "Decal",
+  "assetId": 100136305737634,
+  "status": "Approved",
+  "imageId": 128516489475183
+ },
+ "ui/codex/codex_db_g1_color.png": {
+  "sha256": "84ed988a960b96f1aa5327eb833dc31a4e7e303762d8bfeb332846932a79a788",
+  "assetType": "Decal",
+  "assetId": 123718371954025,
+  "status": "Approved",
+  "imageId": 95994333139621
+ },
+ "ui/codex/codex_db_g1_silhouette.png": {
+  "sha256": "51df815ef853fe3efe76fe92a084fdf288ec49e7399becdfac5c6acd8c6ee2e0",
+  "assetType": "Decal",
+  "assetId": 122904945964250,
+  "status": "Approved",
+  "imageId": 79309679074579
+ },
+ "ui/codex/codex_db_g2_color.png": {
+  "sha256": "c8f71b1eff014cce4e777a89f5b3457ad5709118f5ffcbb29e0c4696e632fb64",
+  "assetType": "Decal",
+  "assetId": 83276595905674,
+  "status": "Approved",
+  "imageId": 97369133049234
+ },
+ "ui/codex/codex_db_g2_silhouette.png": {
+  "sha256": "4b54dfec395201460979ccfcbfdcd30afdffbf9ae9517e4950994e33c8c4dcd0",
+  "assetType": "Decal",
+  "assetId": 79952179440686,
+  "status": "Approved",
+  "imageId": 97519323042667
+ },
+ "ui/codex/codex_db_g3_color.png": {
+  "sha256": "a085a2b505e4434b8b80d4a303753d1a53c823d7920e823323be169c1c1e3083",
+  "assetType": "Decal",
+  "assetId": 85234631384741,
+  "status": "Approved",
+  "imageId": 125599685630599
+ },
+ "ui/codex/codex_db_g3_silhouette.png": {
+  "sha256": "118afa41dfdc35eba7ee7acb692ceec3a600688550ed2788b763575733a9db41",
+  "assetType": "Decal",
+  "assetId": 118314444726431,
+  "status": "Approved",
+  "imageId": 81094844373113
+ },
+ "ui/codex/codex_db_g4_color.png": {
+  "sha256": "ab9d69ad77a4a7debd48ef4b19e0a06d413aa1e04635fa7e9afac5e21edcf45e",
+  "assetType": "Decal",
+  "assetId": 95095542339581,
+  "status": "Approved",
+  "imageId": 127023779368983
+ },
+ "ui/codex/codex_db_g4_silhouette.png": {
+  "sha256": "515598625b0ecb5bd27c6fb32a1da7697b0937ed09b41c672621a1f6a176c10b",
+  "assetType": "Decal",
+  "assetId": 82989371208641,
+  "status": "Approved",
+  "imageId": 94228768402240
+ },
+ "ui/codex/codex_db_g5_color.png": {
+  "sha256": "d188b0ed9e5a463a864336bd142f2c3181247e8ea7cb21a492048675115179d1",
+  "assetType": "Decal",
+  "assetId": 103235385890445,
+  "status": "Approved",
+  "imageId": 106056983689418
+ },
+ "ui/codex/codex_db_g5_silhouette.png": {
+  "sha256": "cec802be5a344fc27f6191eefc1915f1d48c360028cfbb8514703803ab0365dd",
+  "assetType": "Decal",
+  "assetId": 81632250998969,
+  "status": "Approved",
+  "imageId": 129093756678797
+ },
+ "ui/codex/codex_db_g6_color.png": {
+  "sha256": "75243e10f0c605045b522cd6d3e7490ad03920968da2a9c084a03daf0825633f",
+  "assetType": "Decal",
+  "assetId": 92576681822229,
+  "status": "Approved",
+  "imageId": 125916715015440
+ },
+ "ui/codex/codex_db_g6_silhouette.png": {
+  "sha256": "d1ad902f1a0fde8e2aa2744d9cf557a971e65c84c5ee39c06c8b37fbbee8fc73",
+  "assetType": "Decal",
+  "assetId": 80641240401675,
+  "status": "Approved",
+  "imageId": 92069064226476
+ },
+ "ui/codex/codex_db_g7_color.png": {
+  "sha256": "5b24c577eb6c31752cc9fe17d27072d6a8f7d7a68deaf1caaf725628e2d6efc0",
+  "assetType": "Decal",
+  "assetId": 75584718253168,
+  "status": "Approved",
+  "imageId": 102575139086262
+ },
+ "ui/codex/codex_db_g7_silhouette.png": {
+  "sha256": "ae0dea27aa3ee2521d2edcd80c81caf3f8de7b9045b0cfc489f52031e9108940",
+  "assetType": "Decal",
+  "assetId": 109792456477420,
+  "status": "Approved",
+  "imageId": 105047670859056
+ },
+ "ui/codex/codex_db_g8_color.png": {
+  "sha256": "797f4ba111540af0315b7352dd01c1f66af52eb5713254e6274f53222722d99c",
+  "assetType": "Decal",
+  "assetId": 78025580815158,
+  "status": "Approved",
+  "imageId": 71426259655494
+ },
+ "ui/codex/codex_db_g8_silhouette.png": {
+  "sha256": "8126494a741ca6e8ef0b372e46edbd9f38f94709a63921bb680c534d439e7ed2",
+  "assetType": "Decal",
+  "assetId": 85655041873848,
+  "status": "Approved",
+  "imageId": 97372375847949
+ },
+ "ui/codex/codex_gs_g1_color.png": {
+  "sha256": "62fe85313e3d592ca3fc206082a3a9ac05baa82daa1397f3591d691a1bc42af2",
+  "assetType": "Decal",
+  "assetId": 76154374745738,
+  "status": "Approved",
+  "imageId": 115899626947972
+ },
+ "ui/codex/codex_gs_g1_silhouette.png": {
+  "sha256": "7c445e95413740a65a37021380825ea71db51145af500b8b480abea50614c7de",
+  "assetType": "Decal",
+  "assetId": 124180994974725,
+  "status": "Approved",
+  "imageId": 93608249344592
+ },
+ "ui/codex/codex_gs_g2_color.png": {
+  "sha256": "718624593d06aed8c5bdaa328e99e2781d5c1c8c742ca2eda8723e9a06af662c",
+  "assetType": "Decal",
+  "assetId": 88737054218479,
+  "status": "Approved",
+  "imageId": 102189245925033
+ },
+ "ui/codex/codex_gs_g2_silhouette.png": {
+  "sha256": "02ea08fadb28efe052563ad3e35a3ae6061c66d93ab9341831f57ceedc1dda27",
+  "assetType": "Decal",
+  "assetId": 140384879403137,
+  "status": "Approved",
+  "imageId": 128345680459758
+ },
+ "ui/codex/codex_gs_g3_color.png": {
+  "sha256": "2822e999ed48611e97201c39a34a80eefa4e28f653b788f2d86b9bfb593ae658",
+  "assetType": "Decal",
+  "assetId": 72277796782854,
+  "status": "Approved",
+  "imageId": 131873530156665
+ },
+ "ui/codex/codex_gs_g3_silhouette.png": {
+  "sha256": "882350bbdc8ae7631d5e40b08ae5dcc6a2ea42c8ce38960e6819b124836ab17b",
+  "assetType": "Decal",
+  "assetId": 78578509318912,
+  "status": "Approved",
+  "imageId": 97916466974806
+ },
+ "ui/codex/codex_gs_g4_color.png": {
+  "sha256": "3d052e8eae646dffbb19d67fde43556714798938054b9526d8e88933f30ed0fc",
+  "assetType": "Decal",
+  "assetId": 100617234236933,
+  "status": "Approved",
+  "imageId": 107894492519978
+ },
+ "ui/codex/codex_gs_g4_silhouette.png": {
+  "sha256": "2569e25f9a67d8e2c1325db9871504e86c3826eab3d00c20ab24d40a0a602fa9",
+  "assetType": "Decal",
+  "assetId": 109669476035778,
+  "status": "Approved",
+  "imageId": 105753203276826
+ },
+ "ui/codex/codex_gs_g5_color.png": {
+  "sha256": "e34ae843c5733a244eeee943dc5b748601b1ea50420300f89ab6f16dae741b35",
+  "assetType": "Decal",
+  "assetId": 120924835994338,
+  "status": "Approved",
+  "imageId": 138599566695627
+ },
+ "ui/codex/codex_gs_g5_silhouette.png": {
+  "sha256": "bcf55b5f7e52d5bfc1ec1131c50fac3e6bc93d08bbe0d11f0b4eb65e461e6e6d",
+  "assetType": "Decal",
+  "assetId": 132563742484754,
+  "status": "Approved",
+  "imageId": 84850919814010
+ },
+ "ui/codex/codex_gs_g6_color.png": {
+  "sha256": "f262e81660c3084930731ffffdf2db7dadd3ce38e64b4498679397e89132e45f",
+  "assetType": "Decal",
+  "assetId": 108000836661839,
+  "status": "Approved",
+  "imageId": 70502109671423
+ },
+ "ui/codex/codex_gs_g6_silhouette.png": {
+  "sha256": "3892ce8ff83cb65b28a05d3e4d3f03c97abb5203cb78e33fb092bb7b718c06b8",
+  "assetType": "Decal",
+  "assetId": 106823595849505,
+  "status": "Approved",
+  "imageId": 86623208886078
+ },
+ "ui/codex/codex_gs_g7_color.png": {
+  "sha256": "c0862f7604d7ab71a60635d5cf00e117b49842a68b5746496db2024c143b8227",
+  "assetType": "Decal",
+  "assetId": 106600797296196,
+  "status": "Approved",
+  "imageId": 74457004001107
+ },
+ "ui/codex/codex_gs_g7_silhouette.png": {
+  "sha256": "ebdf79c73c32adf70eb888c675cc5973d43fd77c96e0ccb11fb48631eb277620",
+  "assetType": "Decal",
+  "assetId": 94034802056182,
+  "status": "Approved",
+  "imageId": 91337644369215
+ },
+ "ui/codex/codex_gs_g8_color.png": {
+  "sha256": "034f22abc3f582c7ee2641eb4d5b79280d2a37a9de229514de234108651f652b",
+  "assetType": "Decal",
+  "assetId": 116147648524388,
+  "status": "Approved",
+  "imageId": 107347904787062
+ },
+ "ui/codex/codex_gs_g8_silhouette.png": {
+  "sha256": "f42578d2607fe102a1b16aa6eccceab59238a2d885ca3d2fe844cd6f6c56d3fa",
+  "assetType": "Decal",
+  "assetId": 84379457667339,
+  "status": "Approved",
+  "imageId": 131579225179119
+ },
+ "ui/codex/codex_staff_g1_color.png": {
+  "sha256": "0621793b7dce0c08ddabc101cda77c9285c63a838c2bbf90c6816dac492768d9",
+  "assetType": "Decal",
+  "assetId": 94534801664167,
+  "status": "Approved",
+  "imageId": 86971681657208
+ },
+ "ui/codex/codex_staff_g1_silhouette.png": {
+  "sha256": "182fa86063bd42cd3cf70f7384176858b49e1b7ccf6cb2c8fd083914873eb49b",
+  "assetType": "Decal",
+  "assetId": 86573979622780,
+  "status": "Approved",
+  "imageId": 77124310928594
+ },
+ "ui/codex/codex_staff_g2_color.png": {
+  "sha256": "241fae6910bdb05ce7ddc67d768b6455398f5081e2c141bf73c39668ac68da38",
+  "assetType": "Decal",
+  "assetId": 89270437645015,
+  "status": "Approved",
+  "imageId": 88614102029850
+ },
+ "ui/codex/codex_staff_g2_silhouette.png": {
+  "sha256": "46186aeeec74712e39d301f878970c0fbb53fd43c80e142841a0e8e52e92cfc2",
+  "assetType": "Decal",
+  "assetId": 108775399481628,
+  "status": "Approved",
+  "imageId": 125382972861701
+ },
+ "ui/codex/codex_staff_g3_color.png": {
+  "sha256": "55da8e208e649dc00a66e1218af7b482fd00294d53e3ec10d947fc8946651c27",
+  "assetType": "Decal",
+  "assetId": 82702561101519,
+  "status": "Approved",
+  "imageId": 79465660951037
+ },
+ "ui/codex/codex_staff_g3_silhouette.png": {
+  "sha256": "004d25bdfe56b277418d1ba0932b8217e2c6709ccf6d07e21f3381701af8a1ac",
+  "assetType": "Decal",
+  "assetId": 70509356734067,
+  "status": "Approved",
+  "imageId": 129680796269919
+ },
+ "ui/codex/codex_staff_g4_color.png": {
+  "sha256": "9cea1a67d7b34c140ccd1bc29dfcdcb1f4224ed0a05c5e6fc6bd1eaa76f1a061",
+  "assetType": "Decal",
+  "assetId": 74377498352011,
+  "status": "Approved",
+  "imageId": 92272123717177
+ },
+ "ui/codex/codex_staff_g4_silhouette.png": {
+  "sha256": "a898f3faa0626f3acf6727e67ca409124822896bfadf6bc636df5f718d58ad9e",
+  "assetType": "Decal",
+  "assetId": 93483518961299,
+  "status": "Approved",
+  "imageId": 103303856768005
+ },
+ "ui/codex/codex_staff_g5_color.png": {
+  "sha256": "bbd09716578f5b9cf442960474cee3a882138f4d4a6b9098279b8607a39120c0",
+  "assetType": "Decal",
+  "assetId": 129490990768907,
+  "status": "Approved",
+  "imageId": 131163695810114
+ },
+ "ui/codex/codex_staff_g5_silhouette.png": {
+  "sha256": "d1eeb4b13a962ffcb6227dce3dc1be557595767efa7b78366d50044a147b980a",
+  "assetType": "Decal",
+  "assetId": 78683647002020,
+  "status": "Approved",
+  "imageId": 77859148328076
+ },
+ "ui/codex/codex_staff_g6_color.png": {
+  "sha256": "26785be0e4973c00b4c590b398c7d4aa72e309be717d4f65afe63507065064c4",
+  "assetType": "Decal",
+  "assetId": 82933229035359,
+  "status": "Approved",
+  "imageId": 75036873738412
+ },
+ "ui/codex/codex_staff_g6_silhouette.png": {
+  "sha256": "26a19c7af03849ce6b80b1d7dbf2e8d86b6d887ad630c7c357243ae61f2adaa0",
+  "assetType": "Decal",
+  "assetId": 138114596420578,
+  "status": "Approved",
+  "imageId": 106103669234559
+ },
+ "ui/codex/codex_staff_g7_color.png": {
+  "sha256": "0a0d09f5f2465466a93bc226c4e33fb88929535938b1031e5e8de1de385e3e1c",
+  "assetType": "Decal",
+  "assetId": 92953281185479,
+  "status": "Approved",
+  "imageId": 119015797874307
+ },
+ "ui/codex/codex_staff_g7_silhouette.png": {
+  "sha256": "54d564dc422a2f897e18cce705de4442051702d8677bc4004c63bc555ee8facf",
+  "assetType": "Decal",
+  "assetId": 97207408679347,
+  "status": "Approved",
+  "imageId": 104669044548141
+ },
+ "ui/codex/codex_staff_g8_color.png": {
+  "sha256": "3c7ca62ab058fa6227beae45e16315be026b41637e53570ca7584cdc0d87512f",
+  "assetType": "Decal",
+  "assetId": 83643806059512,
+  "status": "Approved",
+  "imageId": 91961956608571
+ },
+ "ui/codex/codex_staff_g8_silhouette.png": {
+  "sha256": "b49099068cfddb093e8c2d52e8b0a41b3939475b8eaee75a60a69a29979a7722",
+  "assetType": "Decal",
+  "assetId": 106438758111950,
+  "status": "Approved",
+  "imageId": 97094422929957
+ },
  "ui/ds/banner-icon-golden.png": {
   "sha256": "f3233a94a440c87ff86c5423b1b604a129c01f7c2c7330aaa23d0fb864e8ccef",
   "assetType": "Decal",

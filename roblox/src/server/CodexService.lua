@@ -41,6 +41,8 @@ end
 local BUILT = CodexRules.build(nestsByZone)
 CodexService.built = BUILT
 
+local BOX_ON = require(ReplicatedStorage.Shared.data.UiV2Flags).codex -- UI-1 5단계 진행 상자(끄면 옛 점수판)
+
 local function goldPerKill(stage)
 	return InfiniteStage.getGoldReward(MonsterData.tier1.goldDrop, stage)
 end
@@ -124,7 +126,19 @@ local function viewOf(player, r)
 	for i in ipairs(hiddenIds) do
 		table.insert(owned, { id = "hidden" .. i, hidden = true }) -- 리뷰: 진짜 id는 보내지 않는다(이름 · 조건 추측 방지)
 	end
-	return { cells = cells, lines = lines, board = board, score = score, total = BUILT.totalScore, trans = r.trans, titles = owned, selected = r.title }
+	local boxes = nil
+	if BOX_ON then -- UI-1 5단계 진행 상자 10개
+		r.boxDone = type(r.boxDone) == "table" and r.boxDone or {}
+		r.boxClaimed = type(r.boxClaimed) == "table" and r.boxClaimed or {}
+		boxes = {}
+		for n = 1, CodexData.boxes.count do
+			local pay = CodexRules.boxPay(n, r.boardClaimed)
+			local stage = r.boxDone[tostring(n)] or PlayerProfile.getAccountBestStage(player)
+			table.insert(boxes, { n = n, threshold = CodexRules.boxThreshold(n, BUILT.totalScore), done = r.boxDone[tostring(n)] ~= nil, claimed = r.boxClaimed[tostring(n)] == true,
+				gold = (pay.goldKills or 0) * goldPerKill(stage), enhanceStone = pay.enhanceStone, sparkleShard = pay.sparkleShard })
+		end
+	end
+	return { cells = cells, lines = lines, board = board, score = score, total = BUILT.totalScore, trans = r.trans, titles = owned, selected = r.title, boxes = boxes, stars = r.stars }
 end
 
 function refresh(player)
@@ -172,6 +186,15 @@ function refresh(player)
 			changed = true
 		end
 	end
+	if BOX_ON then -- UI-1 5단계: 상자 열림 = 전체 점수 칸의 10%마다(그때 계정 최고 스테이지로 골드 고정 - 점수판과 같은 규칙)
+		r.boxDone = type(r.boxDone) == "table" and r.boxDone or {}
+		for n = 1, CodexData.boxes.count do
+			if score >= CodexRules.boxThreshold(n, BUILT.totalScore) and not r.boxDone[tostring(n)] then
+				r.boxDone[tostring(n)] = stage
+				changed = true
+			end
+		end
+	end
 	local claimable = false
 	for id in pairs(r.done) do
 		if not r.claimed[id] and cellMine(player, r, id) then
@@ -179,9 +202,18 @@ function refresh(player)
 			break
 		end
 	end
-	for key in pairs(r.boardDone) do
-		if not r.boardClaimed[key] then
-			claimable = true
+	if BOX_ON then
+		r.boxClaimed = type(r.boxClaimed) == "table" and r.boxClaimed or {}
+		for key in pairs(r.boxDone or {}) do
+			if not r.boxClaimed[key] then
+				claimable = true
+			end
+		end
+	else
+		for key in pairs(r.boardDone) do
+			if not r.boardClaimed[key] then
+				claimable = true
+			end
 		end
 	end
 	player:SetAttribute("CodexClaimable", claimable)
@@ -256,6 +288,26 @@ local function claimBoard(player, r, key)
 	return ok and summary or false
 end
 
+-- UI-1 5단계: 상자 n 받기(열림 · 안 받음) = 옛 점수판 받은 몫을 뺀 몫 × 열린 순간 스테이지 골드 + 강화석 + 토큰(60% · 70%)
+local function claimBox(player, r, key)
+	r.boxDone = type(r.boxDone) == "table" and r.boxDone or {}
+	r.boxClaimed = type(r.boxClaimed) == "table" and r.boxClaimed or {}
+	local n = tonumber(key)
+	if not n or not r.boxDone[key] or r.boxClaimed[key] then
+		return nil
+	end
+	local p = CodexRules.boxPay(n, r.boardClaimed)
+	local reward = { gold = (p.goldKills or 0) * goldPerKill(r.boxDone[key]), enhanceStone = (p.enhanceStone or 0) > 0 and p.enhanceStone or nil, sparkleShard = p.sparkleShard }
+	if reward.gold <= 0 then
+		reward.gold = nil
+	end
+	local ok, summary = pay(player, reward)
+	if ok then
+		r.boxClaimed[key] = true
+	end
+	return ok and summary or false
+end
+
 local lastReq = {}
 requestRemote.OnServerEvent:Connect(function(player, action, arg)
 	local now = os.clock()
@@ -284,10 +336,18 @@ requestRemote.OnServerEvent:Connect(function(player, action, arg)
 					one(claimCell(player, r, c.id))
 				end
 			end
-			for _, t in ipairs(CodexData.board) do
-				one(claimBoard(player, r, tostring(t)))
+			if BOX_ON then
+				for n = 1, CodexData.boxes.count do
+					one(claimBox(player, r, tostring(n)))
+				end
+			else
+				for _, t in ipairs(CodexData.board) do
+					one(claimBoard(player, r, tostring(t)))
+				end
 			end
-		elseif arg:sub(1, 6) == "board:" then
+		elseif arg:sub(1, 4) == "box:" and BOX_ON then
+			one(claimBox(player, r, arg:sub(5)))
+		elseif arg:sub(1, 6) == "board:" and not BOX_ON then
 			one(claimBoard(player, r, arg:sub(7)))
 		else
 			if r.done[arg] and not r.claimed[arg] and not cellMine(player, r, arg) then
@@ -397,10 +457,42 @@ function CodexService.noteNest(player)
 	schedule(player)
 end
 
+-- UI-1 5단계 성장 별(보상 없음): 그 직업 · 지금 무기 등급에서 강화 +10 = ★2 · +20 = ★3 기록(codex.stars[직업][등급 번호] - 옛 기록 = 지금 강화 수치로 한 번 채움)
+function CodexService.noteStars(player)
+	local r = rec(player)
+	local classId = PlayerProfile.getClassId and PlayerProfile.getClassId(player)
+	local weapon = PlayerProfile.getWeapon(player)
+	if not (r and classId and weapon) then
+		return
+	end
+	local grade = tonumber(weapon.grade) or 0
+	local level = tonumber(weapon.level) or 0
+	local star = 1
+	for i, lv in ipairs(CodexData.stars.levels) do
+		if level >= lv then
+			star = i + 1
+		end
+	end
+	r.stars = type(r.stars) == "table" and r.stars or {}
+	r.stars[classId] = type(r.stars[classId]) == "table" and r.stars[classId] or {}
+	local key = tostring(grade)
+	if (tonumber(r.stars[classId][key]) or 0) < star then
+		r.stars[classId][key] = star
+		schedule(player)
+	end
+end
+
 function CodexService.onLoaded(player)
 	local r = rec(player)
 	if not r then
 		return
+	end
+	CodexService.noteStars(player)
+	if not player:GetAttribute("CodexStarsHooked") then
+		player:SetAttribute("CodexStarsHooked", true)
+		player:GetAttributeChangedSignal("WeaponLevel"):Connect(function()
+			CodexService.noteStars(player)
+		end)
 	end
 	local classId = PlayerProfile.getClassId and PlayerProfile.getClassId(player)
 	if classId and r.cls[classId] == nil then

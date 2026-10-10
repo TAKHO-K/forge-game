@@ -38,6 +38,9 @@ return {
 		{ path = { "inventory", 1, "obtainedAt" }, scope = "character", sample = 1791600000, note = "UI-1 4단계 장비 얻은 시각(가방 정렬 최신 · 옛 아이템 = 없음 → 가방 순서)" },
 		{ path = { "settings", "bagSort" }, scope = "account", sample = "power", note = "UI-1 4단계 가방 정렬" },
 		{ path = { "settings", "bagSortAsc" }, scope = "account", sample = true, note = "UI-1 4단계 가방 정렬 낮은 것 먼저" },
+		{ path = { "codex", "boxDone", "1" }, scope = "account", sample = 25, note = "UI-1 5단계 도감 진행 상자 열린 스테이지(골드 고정)" },
+		{ path = { "codex", "boxClaimed", "1" }, scope = "account", sample = true, note = "UI-1 5단계 도감 진행 상자 받음" },
+		{ path = { "codex", "stars", "greatsword", "3" }, scope = "account", sample = 2, note = "UI-1 5단계 도감 성장 별(보상 없음)" },
 	},
 	-- 진행이 없는 직업 칸은 캐릭터로 만들지 않는다: 경험치 0 · 최고 스테이지 ≤ 1 · 환생 0 · 무기 +0 · 등급 0 · 착용 장비 없음 · 보석 없음
 }

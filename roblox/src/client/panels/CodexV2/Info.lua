@@ -35,6 +35,14 @@ Info.tabs = {
 	{ id = "armor", icon = "equipment" }, { id = "pet", icon = "pet" }, { id = "nest", icon = "explore" }, { id = "monster", icon = "monster" },
 	{ id = "boss", icon = "boss" }, { id = "class", icon = "class" }, { id = "board", icon = "rewards" }, { id = "title", icon = "title" },
 }
+Info.V2 = require(ReplicatedStorage.Shared.data.UiV2Flags).codex -- UI-1 5단계 도감 v2(08 v4-codex): 점수판 탭 없음(진행 상자 10개가 대신)
+if Info.V2 then
+	for i = #Info.tabs, 1, -1 do
+		if Info.tabs[i].id == "board" then
+			table.remove(Info.tabs, i)
+		end
+	end
+end
 
 Info.zones = {}
 local zoneIndex, bossZone = {}, {}
