@@ -106,6 +106,7 @@ function Text.nameFor(player, s)
 end
 
 -- 언어를 정해 놓고 채우기(테스트 · 넘침 점검이 쓴다)
+Text.missingKeys = {} -- SEC-FIX-1 12: 실행 중 본 없는 키(키 → 언어) - 검증 · 운영이 읽는다
 function Text.format(language, key, args)
 	local template = TextData[language] and TextData[language][key]
 	if template == nil and language ~= "ko" then
@@ -116,7 +117,11 @@ function Text.format(language, key, args)
 		end
 	end
 	if template == nil then
-		warn(("[Text] 없는 키: %s"):format(tostring(key)))
+		-- SEC-FIX-1 12(VERIFY-6 #18): 키를 변수로 넘기는 호출(정적 검사 불가)의 누락 키를 실행 중에 모은다(Text.missingKeys[키] = 처음 본 언어) · 경고는 키당 1번(옛 = 부를 때마다 warn - 화면 갱신마다 스팸)
+		if Text.missingKeys[tostring(key)] == nil then
+			Text.missingKeys[tostring(key)] = language
+			warn(("[Text] 없는 키: %s"):format(tostring(key)))
+		end
 		return tostring(key)
 	end
 	if args == nil then

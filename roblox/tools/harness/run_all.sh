@@ -18,7 +18,7 @@ declare -A EXP=( # 기대 검사 수(끝 a/b의 b) · require_path는 최소값(
 	[bignum]=67 [bulk_sell]=11 [stat_sheet]=9 [all10]=57 [gear_v3]=10 [gem_home]=25 [monster_stats]=5 [dash_modes]=19 [boss_feel]=13
 	[menu_gate]=14 [menu_gate_src]=11 [hud_v5_src]=10 [ui1_static]=9 [ui1c_static]=13 [ui_v2]=77 [hud_layout]=18 [ui1_parts]=11 [codex_box]=35
 	[ember_view]=8 [hud_edit]=16 [pet_ui]=7 [quick_chat]=6 [ui_rules]=4 [window_layers]=7 [help_data]=6 [train_bundle]=5 [community_goal]=24 [require_path]=5542 [regrow_timing]=8
-	[sec_save]=15 [sec_shop]=14 [sec_secret]=9 [sec_zone]=11 [sec_move]=8 [sec_econ]=7 [sec_log]=4 [sec_text]=3
+	[sec_save]=15 [sec_shop]=14 [sec_secret]=9 [sec_zone]=11 [sec_move]=8 [sec_econ]=7 [sec_log]=4 [sec_text]=3 [sec_textkey]=2
 )
 NALL=0; NBAD=0
 verdict() { # 이름 결과파일 종료코드 → 한 줄 출력
@@ -108,6 +108,7 @@ run pet_ui res_petui.txt "" pet_ui_test.luau # UI-1 7c 알 확률 합 100(알 ×
 run quick_chat res_qchat.txt "" quick_chat_test.luau # UI-1 7c 파티 빠른 말(번호만 · 같은 말 3번 연속 = 5초 쉬기)
 run window_layers res_wlay.txt "" window_layers_test.luau # UI-1b 1-b 10 창 층 표 · 나중에 연 창이 위
 run help_data res_help.txt "" help_data_test.luau # UI-1b [?] 도움말 · 재화 설명 문구 키 ko · en
+run sec_textkey res_sectk.txt "" sec_textkey_test.luau # SEC-FIX-1 12 없는 문구 키 런타임 수집 · 경고 키당 1번(옛 = X)
 run train_bundle res_tbun.txt "" train_bundle_test.luau # UI-1b 1-b 17 수련 · 능력 묶음 = 비용 합 같음 · 상한 같음
 run ui_rules res_ui.txt "" ui_rules_test.luau # QUEUE-ALL9C 블록 1 화면 규칙(순위 상위 약 n% 등 순수 함수)
 run community_goal res_goal.txt "" community_goal_test.luau # QUEUE-ALL7 B5 합동 목표 00 · ±25% · 문턱 순서
