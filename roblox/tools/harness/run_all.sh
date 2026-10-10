@@ -18,7 +18,7 @@ declare -A EXP=( # 기대 검사 수(끝 a/b의 b) · require_path는 최소값(
 	[bignum]=67 [bulk_sell]=11 [stat_sheet]=9 [all10]=57 [gear_v3]=10 [gem_home]=25 [monster_stats]=5 [dash_modes]=19 [boss_feel]=13
 	[menu_gate]=14 [menu_gate_src]=11 [hud_v5_src]=10 [ui1_static]=9 [ui1c_static]=13 [ui_v2]=77 [hud_layout]=18 [ui1_parts]=11 [codex_box]=35
 	[ember_view]=8 [hud_edit]=16 [pet_ui]=7 [quick_chat]=6 [ui_rules]=4 [window_layers]=7 [help_data]=6 [train_bundle]=5 [community_goal]=24 [require_path]=5542 [regrow_timing]=8
-	[sec_save]=15 [sec_shop]=14 [sec_secret]=9 [sec_zone]=11 [sec_move]=8 [sec_econ]=7 [sec_log]=4 [sec_text]=3 [sec_textkey]=2 [sec_enhance]=3
+	[sec_save]=15 [sec_shop]=14 [sec_secret]=9 [sec_zone]=11 [sec_move]=8 [sec_econ]=7 [sec_log]=4 [sec_text]=3 [sec_textkey]=2 [sec_enhance]=3 [sec_gem]=8
 )
 NALL=0; NBAD=0
 verdict() { # 이름 결과파일 종료코드 → 한 줄 출력
@@ -81,6 +81,7 @@ run season_pass res_season.txt "" season_pass_test.luau # QUEUE-ALL9A 1-5 패스
 run economy_all9b res_all9b.txt SecretNestData economy_all9b_test.luau # QUEUE-ALL9B 판매가 · 수련 · 토큰 · 패스 가치 · 출석판
 run enhance_g res_g.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem,EnhanceService,EnhancePolicy,ImmediateSave)" enhance_g_test.luau # QUEUE-ALL9B G 강화 최상위 · 초기화 바닥 · 방지 옵션 · 방지권 환산
 run sec_enhance res_secenh.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem,EnhanceService,EnhancePolicy,ImmediateSave)" sec_enhance_test.luau # SEC-FIX-1 13 상세 [강화] = 어디서든 · 보스전 거절(옛 = X)
+run sec_gem res_secgem.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem,GemEquip,TranscendService)" sec_gem_test.luau # SEC-FIX-1 14 보석 [빼기] 무료 · 100% 보존 · 연타 1개 · 초월 = 계정 목록(옛 = X)
 run bignum res_big.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem)" bignum_test.luau # QUEUE-ALL9B 큰 숫자 · ALL9C 0-2: 2^53 정밀도 4건 = "알려진 문제"(이름 고정 - 통과 수에서 빠짐)
 run bulk_sell res_bulk.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem,MonetizationService,InventorySync)" bulk_sell_test.luau # QUEUE-ALL9C 1-9 등급 체크 일괄 판매 75칸
 run sec_econ res_sececon.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem,MonetizationService,InventorySync)" sec_econ_test.luau # SEC-FIX-1 7 보석 판매가 차익(보석 레벨 기준) · 재련 경로 · 일괄 분해 개수 대조(옛 = X)

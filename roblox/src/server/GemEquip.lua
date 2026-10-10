@@ -19,4 +19,12 @@ function GemEquip.handle(player, slot, gemInventoryIndex)
 	return success == true, reason
 end
 
+-- SEC-FIX-1 14: 보석 빼기 요청 한 건(모양 검사 + PlayerProfile.unequipGem). 반환: 성공, 이유 | 종류("bag" | "transcend")
+function GemEquip.unequip(player, slot)
+	if type(slot) ~= "number" or slot ~= slot then
+		return false, "invalid"
+	end
+	return PlayerProfile.unequipGem(player, math.floor(slot))
+end
+
 return GemEquip

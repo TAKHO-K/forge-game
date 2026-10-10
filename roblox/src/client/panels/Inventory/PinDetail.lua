@@ -2,7 +2,7 @@
 --   상세 판(DetailSheet의 Detail 프레임 = 내용 · 버튼 · 잠금 그대로)을 창 밖(ScreenGui 자식)으로 옮겨 누른 칸 옆에 고정한다: 하늘 테 3 · 머리 "고정됨 · 바깥 누르면 닫힘" + [닫기] · 칸 ↔ 창 하늘 선(PC).
 --   닫기 = 같은 칸 다시 누름(기존 토글) · 창 바깥 누름 · [닫기]. 다른 칸 누름 = 그 칸 것으로 바뀜(창 하나 - 선택 상태 하나).
 --   상세 안 보석 홈 누름(무기) = 보석 창 겹침(자홍 테 · 상세 오른쪽 · 고른 홈 = 흰 고리 + 자홍 점선) · 같은 홈 다시 / [×] = 보석 창만 · 바깥 = 둘 다.
---   보석 "빼기"는 서버에 없다(항상 교체 - GemActions) → [빼기] = 회색 + 이유 토스트 · [바꾸기] = 보석 탭의 그 홈.
+--   [빼기] = SEC-FIX-1 14: 서버 GemUnequipRequest(무료 · 100% 보존 - 보석함 · 초월 보석 = 계정 목록 · 결과 올 때까지 연타 잠금) · [바꾸기] = 보석 탭의 그 홈.
 --   InventoryGui = Global z → 고정 창 · 보석 창 자식 전부 z + zBump(칸 위 · 확인 창 22 아래).
 -- PinDetail.attach(S, R, detail, card) -> pin = { head(phone), size(L), place(L, w, h), update(), shown() }
 local Players = game:GetService("Players")
@@ -120,6 +120,9 @@ function PinDetail.attach(S, R, detail, card)
 
 	local pin = {}
 	local gemSlot = nil -- 보석 창이 보여 주는 홈
+	local unequipRequest = ReplicatedStorage:WaitForChild("GemUnequipRequest") -- SEC-FIX-1 14
+	local unequipResult = ReplicatedStorage:WaitForChild("GemUnequipResult")
+	local removePending = nil -- 요청 중인 홈(결과 올 때까지 [빼기] 잠금)
 	local hits = {} -- [slot] = 누름 칸
 	local selKey, serial = nil, 0
 
@@ -317,8 +320,12 @@ function PinDetail.attach(S, R, detail, card)
 		local by = H - pad - bh
 		local bw = math.floor((W - pad * 3) / 2)
 		UiKit.button({ kind = "secondary", name = "GemRemove", text = Text.get("ui1c.gear.gem.remove"), textSize = "body", align = Enum.TextXAlignment.Center, parent = gemPop, rect = { pad, by, bw, bh }, onActivated = function()
-			Toast.push("TC", { text = Text.get("ui1c.gear.gem.removeNo"), colorName = "textPrimary", seconds = 3 })
-		end }).title.TextColor3 = V9.hex(C.muted) -- 서버에 빼기 없음 = 흐린 글자 + 누르면 이유
+			if removePending then
+				return -- 결과가 오기 전 연타 = 무시(서버도 빈 홈은 empty로 거절)
+			end
+			removePending = slot
+			unequipRequest:FireServer(slot)
+		end }) -- SEC-FIX-1 14: 옛 = 서버에 빼기 없음(흐린 글자 + 이유 토스트)
 		UiKit.button({ kind = "primary", name = "GemSwap", text = Text.get("ui1c.gear.gem.swap"), textSize = "body", align = Enum.TextXAlignment.Center, parent = gemPop, rect = { pad * 2 + bw, by, bw, bh }, onActivated = function()
 			local s = slot
 			PinDetail._close()
@@ -388,6 +395,19 @@ function PinDetail.attach(S, R, detail, card)
 			end
 		end
 	end
+
+	-- SEC-FIX-1 14: [빼기] 결과(성공 = 보석 창 닫음 + 한 줄 · 실패 = 이유 한 줄)
+	unequipResult.OnClientEvent:Connect(function(success, why, slot)
+		removePending = nil
+		if success then
+			if gemSlot == slot then
+				hideGem()
+			end
+			Toast.push("TC", { text = Text.get(why == "transcend" and "ui1c.gear.gem.removedTrans" or "ui1c.gear.gem.removed"), colorName = "textPrimary", seconds = 2 })
+		else
+			Toast.push("TC", { text = Text.get("ui1c.gear.gem.removeFail"), colorName = "textPrimary", seconds = 3 })
+		end
+	end)
 
 	function pin.shown()
 		return S.selectedKind ~= nil

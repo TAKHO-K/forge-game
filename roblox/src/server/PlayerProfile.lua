@@ -1509,6 +1509,42 @@ function PlayerProfile.equipGem(player, slot, gemInventoryIndex)
 	return true
 end
 
+-- SEC-FIX-1 14(UI-1c 후속): 보석 빼기 - 무료 · 100% 보존. 홈의 보석을 보석함(classState.gemInventory)으로 · 초월 보석 사본은 계정 목록으로(D16 - TranscendService.onCopyRemoved · 복제 0).
+--   홈 비우기와 보석함 넣기가 yield 없는 한 구간(둘 다 같은 캐릭터 키 - 다음 저장 한 번에 함께) → 복제 · 증발 0. 같은 홈 연타 = 두 번째는 empty(이미 빈 홈).
+--   보석함은 칸 상한이 없다(returnSocketedGems 주석과 같음) → "가득 → 넘침 보관함" 경우가 생기지 않는다 · 어떤 경우도 소멸 없음. 반환: true, "bag" | "transcend" | false, 이유.
+function PlayerProfile.unequipGem(player, slot)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState then
+		return false, "no_class"
+	end
+	local weapon = classState.weapon
+	if type(weapon) ~= "table" or type(weapon.gems) ~= "table" or type(slot) ~= "number" or slot < 1 or slot > Gem.slotCount or slot ~= math.floor(slot) then
+		return false, "invalid"
+	end
+	if not Gem.isFilled(weapon.gems, slot) then
+		return false, "empty"
+	end
+	local previous = weapon.gems[slot]
+	local kind = "bag"
+	if previous.transcendGemId then
+		if not require(script.Parent.TranscendService).onCopyRemoved(player, previous) then
+			return false, "not_found" -- 계정 목록에 원본이 없다(손상) - 홈을 비우지 않는다(소멸 0)
+		end
+		kind = "transcend"
+	else
+		table.insert(classState.gemInventory, {
+			grade = previous.grade, optionId = previous.optionId,
+			itemLevel = previous.itemLevel, option = previous.option,
+		})
+	end
+	weapon.gems[slot] = false
+	GemSync.push(player)
+	PlayerProfile.refreshMaxHp(player)
+	PlayerProfile.refreshMovementSpeed(player)
+	return true, kind
+end
+
 function PlayerProfile.getOptionRerollTickets(player)
 	local profile = profiles[player]
 	return profile and profile.purchases.optionRerollTickets

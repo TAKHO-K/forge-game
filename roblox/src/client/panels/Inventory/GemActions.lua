@@ -1,5 +1,5 @@
 -- 보석 장착 입력의 공통 통로(S20c). PC 더블클릭 · 우클릭 · 드래그 · 홈 먼저 고르기 · [장착] 버튼 · 폰 탭 - 어떤 입력이든 결국 GemActions.equip(slot, index) 하나를 부르고 같은 서버 요청(GemEquipRequest)을 쓴다.
--- 서버 규칙은 그대로다(PlayerProfile.equipGem = 항상 "교체": 기존 보석은 보석칸으로 돌아오고 비용 · 파괴가 없다. "해제"는 서버에 없다). 이 모듈은 입력 · 미리 보이기 · 거절 연출만 맡는다.
+-- 서버 규칙은 그대로다(PlayerProfile.equipGem = 항상 "교체": 기존 보석은 보석칸으로 돌아오고 비용 · 파괴가 없다. 빼기 = SEC-FIX-1 14 GemUnequipRequest - 고정 창 [빼기]). 이 모듈은 입력 · 미리 보이기 · 거절 연출만 맡는다.
 --   · 미리 보이기(blockReason / autoTarget)는 shared/Gem의 판정(socketBlockReason · autoSlot)을 읽는다 - 서버가 같은 규칙으로 다시 검증한다(판정은 서버 권위).
 --   · 요청 중 입력 잠금: 장착마다 보석칸 index가 밀린다(교체된 보석이 맨 끝으로 간다) - 결과(GemEquipResult)가 오기 전에 다음 입력이 같은 index로 나가면 다른 보석이 끼워진다. 결과를 기다리는 동안 새 입력을 무시한다.
 --   · 거절(클라 미리 판정이든 서버 결과든) = 같은 연출: 보석 유령이 원래 칸으로 returnTweenSeconds(0.2초) 동안 돌아가고 + 이유 토스트 1줄.

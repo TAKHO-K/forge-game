@@ -110,6 +110,24 @@ gemEquipRequest.OnServerEvent:Connect(function(player, slot, gemInventoryIndex)
 	gemEquipResult:FireClient(player, success, reason, type(slot) == "number" and slot or nil)
 end)
 
+-- SEC-FIX-1 14(UI-1c 후속): 보석 [빼기] - 무료 · 100% 보존(보석함 · 초월 보석 = 계정 목록) · 결과 = GemUnequipResult(성공, 이유 | 종류, 홈). 메모리 변경은 한 구간 · 성공이면 즉시저장.
+local gemUnequipRequest = Instance.new("RemoteEvent")
+gemUnequipRequest.Name = "GemUnequipRequest"
+gemUnequipRequest.Parent = ReplicatedStorage
+local gemUnequipResult = Instance.new("RemoteEvent")
+gemUnequipResult.Name = "GemUnequipResult"
+gemUnequipResult.Parent = ReplicatedStorage
+gemUnequipRequest.OnServerEvent:Connect(function(player, slot)
+	if not RequestGate.allow(player, "GemUnequipRequest") then
+		return
+	end
+	local success, why = GemEquip.unequip(player, slot)
+	if success then
+		ImmediateSave.request(player)
+	end
+	gemUnequipResult:FireClient(player, success, why, type(slot) == "number" and slot or nil)
+end)
+
 -- 26-3(PRD 20.67 [10]): 리롤 대상 = 홈 5 + 장비 3부위(가방 · 착용). kind로 어느 함수를 부를지 가르는 것은 GemWorkshop이 한다(kind="gem" key=슬롯 · "equipped" key=부위명 · "bag" key=인벤토리 index).
 -- S20e: 판정(모양 · 보석상인 반경 · PlayerProfile)은 GemWorkshop 한 곳이다 - 여기서는 저장과 결과 알림만 한다.
 rerollRequest.OnServerEvent:Connect(function(player, kind, key)
