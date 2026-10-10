@@ -45,6 +45,7 @@ return {
 		["ui1b.egg.found"] = "{zone} {n}번 ✓", -- ✔(무거운 체크) = 이모지 글꼴로 어둡게 그려짐 → ✓(Play 실측)
 		["ui1b.egg.notFound"] = "{zone} {n}번",
 		["ui1b.egg.hint"] = "{zone} 어딘가에 숨겨져 있어요",
+		["ui1b.linger.auto"] = "잠시 뒤 다음 스테이지로 가요",
 		["ui1b.help.row.rule"] = "규칙",
 		["ui1b.help.row.full"] = "가득",
 		["ui1b.help.row.down"] = "하락",
@@ -137,6 +138,7 @@ return {
 		["ui1b.egg.found"] = "{zone} #{n} ✓",
 		["ui1b.egg.notFound"] = "{zone} #{n}",
 		["ui1b.egg.hint"] = "Hidden somewhere in {zone}",
+		["ui1b.linger.auto"] = "You'll move to the next stage shortly",
 		["ui1b.help.row.rule"] = "Rule",
 		["ui1b.help.row.full"] = "Full",
 		["ui1b.help.row.down"] = "Drop",

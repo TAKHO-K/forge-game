@@ -117,7 +117,8 @@ local function showV6(payload)
 	local x = ps + 30
 	local title = UiKit.label(bar, Text.get("ui1.linger.title", { boss = Text.name(payload.bossName or "") }), "heading", "text.primary", { name = "Title", font = "korean" })
 	title.Position, title.Size = UDim2.fromOffset(x, 16), UDim2.new(1, -(x + 16), 0, phone and 26 or 36)
-	local line = UiKit.label(bar, Text.get("ui1.linger.reward") .. "\n" .. Text.get("ui1.linger.auto", { seconds = tostring(require(ReplicatedStorage.Shared.data.BossData).lingerSeconds) }), "caption", "text.secondary", { name = "Line", font = "korean", wrap = true })
+	-- UI-1b 3절 9: 숫자 없는 고정 문구 한 줄(서버 상한 lingerSeconds는 그대로)
+	local line = UiKit.label(bar, Text.get("ui1.linger.reward") .. "\n" .. Text.get("ui1b.linger.auto"), "caption", "text.secondary", { name = "Line", font = "korean", wrap = true })
 	line.Position, line.Size = UDim2.fromOffset(x, phone and 44 or 56), UDim2.new(1, -(x + 16), 0, phone and 40 or 48)
 	local bh = phone and 44 or 52
 	local defs = {
