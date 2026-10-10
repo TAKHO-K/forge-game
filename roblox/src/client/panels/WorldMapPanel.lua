@@ -99,7 +99,7 @@ local function marker(parent, place, size)
 	b.Size = UDim2.fromOffset(size, size)
 	b.BackgroundTransparency = 1
 	b.ZIndex = 5
-	local img = ArtImage.get(place.icon:find("/", 1, true) and place.icon or ("icons/ui/" .. place.icon)) -- ALL7B 2: 마을 기능 = 전체 경로
+	local img = ArtImage.get(require(game:GetService("ReplicatedStorage").Shared.UiModel).mapIcon(place.icon)) -- ALL7B 2: 마을 기능 = 전체 경로 · UI-1 ⑦ 핀 키(UiIconData.map)
 	if img then
 		b.Image = img
 	else
@@ -448,7 +448,7 @@ local function build()
 	me.BackgroundTransparency = 1
 	me.ZIndex = 8
 	me.Parent = canvas
-	local arrow = ArtImage.label(me, "icons/ui/pin_player", UDim2.fromScale(1, 1), "▲")
+	local arrow = ArtImage.label(me, require(game:GetService("ReplicatedStorage").Shared.UiModel).mapIcon("map.me"), UDim2.fromScale(1, 1), "▲")
 	arrow.ZIndex = 8
 
 	-- 오른쪽: 고른 것 이름 · 버튼 · 확대
@@ -575,7 +575,7 @@ local function build()
 	legend.Parent = view
 	Theme.corner(legend, 8)
 	for i, item in ipairs({ { "pin_player", "map.legend.me" }, { "pin_hub", "map.legend.hub" }, { "pin_forge", "map.legend.forge" }, { "pin_gate", "map.legend.gate" }, { "pin_checkpoint", "map.legend.checkpoint" }, { "pin_user", "map.legend.pin" } }) do
-		local ic = ArtImage.label(legend, "icons/ui/" .. item[1], UDim2.fromOffset(20, 20), "•")
+		local ic = ArtImage.label(legend, require(game:GetService("ReplicatedStorage").Shared.UiModel).mapIcon(item[1]), UDim2.fromOffset(20, 20), "•") -- UI-1 ⑦ 핀 키
 		ic.Position = UDim2.fromOffset(8, 6 + (i - 1) * 26)
 		ic.ZIndex = 21
 		local t = Theme.label(legend, Text.get(item[2]), "caption", "textPrimary")

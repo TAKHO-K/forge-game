@@ -70,7 +70,7 @@ end
 
 -- 아이콘 하나(이미지가 아직 없으면 색 점) - 겉 칸 px 자리
 local function icon(parent, iconName, px, fallbackColor)
-	local img = ArtImage.get(iconName:find("/", 1, true) and iconName or ("icons/ui/" .. iconName)) -- ALL7B 2: 마을 기능 = 전체 경로
+	local img = ArtImage.get(require(game:GetService("ReplicatedStorage").Shared.UiModel).mapIcon(iconName)) -- ALL7B 2: 마을 기능 = 전체 경로 · UI-1 ⑦ 핀 키(UiIconData.map)
 	local inst
 	if img then
 		inst = Instance.new("ImageLabel")
@@ -183,7 +183,7 @@ local function build()
 	me.BackgroundTransparency = 1
 	me.ZIndex = 8
 	me.Parent = overlay
-	ArtImage.label(me, "icons/ui/pin_player", UDim2.fromScale(1, 1), "▲").ZIndex = 8
+	ArtImage.label(me, require(game:GetService("ReplicatedStorage").Shared.UiModel).mapIcon("map.me"), UDim2.fromScale(1, 1), "▲").ZIndex = 8
 
 	-- 테두리(원)
 	local ring = Instance.new("Frame")
@@ -409,6 +409,15 @@ local function place()
 		local screen = gui.AbsoluteSize
 		local s = math.min(screen.X / 1920, screen.Y / 1080)
 		local size = math.floor(m[3] * s)
+		if require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).hud then -- UI-1 0단계: 02 v6 (오른쪽 424, 66) · 상단 바 밖 · HUD 배율 m(HudPlace) · 이 Gui = 인셋 아래 좌표
+			local HudPlace = require(game:GetService("ReplicatedStorage").Shared.HudPlace)
+			local view = workspace.CurrentCamera.ViewportSize
+			local r6 = HudLayout.v6.pc.minimap
+			local mm = HudPlace.scale(view.X, view.Y, false)
+			local r = HudPlace.screenRect(r6, r6.anchor, view.X, view.Y, mm, false)
+			local inset = view.Y - screen.Y
+			return "side", square(math.floor(r[1] - (view.X - screen.X)), math.floor(r[2] - inset), math.floor(r[3])), chips
+		end
 		return "side", square(screen.X - math.floor((1920 - m[1]) * s), math.floor(m[2] * s), size), chips
 	end
 	local screen = gui.AbsoluteSize

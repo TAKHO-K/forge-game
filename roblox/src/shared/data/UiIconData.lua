@@ -69,6 +69,17 @@ return {
 		healer = { legend = "ui/legends/class-healer", face = "ui/legends/face-healer", faceRect = { 130, 20, 320 }, faceCrop = { 135, 65, 313 }, placeholder = "ui/legends/class-healer-placeholder" },
 		dualblade = { legend = "ui/legends/class-rogue", face = "ui/legends/face-rogue", faceRect = { 190, 25, 315 }, faceCrop = { 214, 50, 322 }, placeholder = "ui/legends/class-rogue-placeholder" },
 	},
+	-- UI-1 0단계 ⑦(02 v6 · G 묶음): 지도 · 미니맵 핀 = 키 → 그림(ArtAssetIds 키). 코드는 키만 쓴다(UiModel.mapIcon) - 옛 이름 pin_<x> = map.pin.<x>로 읽힘
+	map = {
+		["map.me"] = "icons/ui/pin_player",
+		["map.pin.hub"] = "icons/ui/pin_hub",
+		["map.pin.forge"] = "icons/ui/pin_forge",
+		["map.pin.gate"] = "icons/ui/pin_gate",
+		["map.pin.checkpoint"] = "icons/ui/pin_checkpoint",
+		["map.pin.user"] = "icons/ui/pin_user",
+		["map.pin.quest"] = "icons/ui/pin_quest",
+		["map.pin.boss"] = "icons/ui/pin_boss",
+	},
 	-- 공격 버튼 아이콘 = 지금 직업 무기 아이콘(무기 아이콘 키 = icons/weapons/<직업>_<등급> - client/ItemIcons.keyFor)
 	attackUsesWeaponIcon = true,
 }

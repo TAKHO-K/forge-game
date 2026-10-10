@@ -75,7 +75,7 @@ local function mapSnippet(parent, size)
 	pin.AnchorPoint = Vector2.new(0.5, 1)
 	pin.Size = UDim2.fromOffset(18, 18)
 	pin.BackgroundTransparency = 1
-	pin.Image = ArtImage.get("icons/ui/pin_quest") or ""
+	pin.Image = ArtImage.get(require(game:GetService("ReplicatedStorage").Shared.UiModel).mapIcon("map.pin.quest")) or ""
 	pin.ZIndex = 3
 	pin.Parent = m
 	return m, discs, pin

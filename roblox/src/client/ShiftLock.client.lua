@@ -123,7 +123,13 @@ local function setLocked(on)
 	end
 end
 
+local UiV2Flags = require(ReplicatedStorage.Shared.data.UiV2Flags)
 local function isTouchLayout()
+	if UiV2Flags.hud then -- UI-1 0단계 폰 판정 하나(Theme.isMobile)
+		local Theme = require(script.Parent.ui.kit.Theme)
+		Theme.recompute()
+		return Theme.isMobile
+	end
 	return UserInputService.TouchEnabled or (RunService:IsStudio() and player:GetAttribute("ForceTouchLayout") == true)
 end
 
@@ -139,6 +145,12 @@ task.spawn(function()
 	chip.Parent = gui:FindFirstChild("CentralRow")
 	local function refresh()
 		button.Visible = isTouchLayout()
+		if UiV2Flags.hud and button.Visible then -- UI-1 0단계: 고정 = UiLayoutData.hud.phone.combat.lockon(대시 칸 기준 상대 자리 · 기준 px)
+			local C = require(ReplicatedStorage.Shared.data.UiLayoutData).hud.phone.combat
+			button.AnchorPoint = Vector2.zero
+			button.Position = UDim2.fromOffset(C.lockon[1] - C.dash[1], C.lockon[2] - C.dash[2])
+			button.Size = UDim2.fromOffset(C.lockon[3], C.lockon[4])
+		end
 		chip.Visible = false -- QUEUE-ALL2 P2 중복 삭제: PC = Ctrl 키로 충분(칸 숨김) · 폰 = 대시 옆 "고정" 버튼 유지
 	end
 	refresh()

@@ -125,10 +125,57 @@ return {
 				r = { 672, 186, 56, 56 },
 				t = { 736, 186, 56, 56 },
 				jump = { 536, 286, 64, 64 },
-				dash = { 544, 198, 52, 52 },
-				lockon = { 616, 160, 44, 44 },
+				dash = { 544, 206, 52, 52 }, -- UI-1 0단계: 02 v6 가운데 (570, 232) · 아래 충전 점 8
+				lockon = { 616, 164, 44, 44 }, -- UI-1 0단계: 02 v6 가운데 (638, 186)(옛 182)
 			},
 			lockedBubble = { w = 148, h = 34, seconds = 1.5 },
+		},
+		-- UI-1 0단계 · 02_hud/v6 spec §3 · §4 배치표(기준 px { X, Y, W, H } + anchor = 붙는 쪽 - shared/HudPlace). 글자만큼 폭인 칩 = 폭 상한(하네스 겹침 판정용).
+		--   modes = 그 요소가 보이는 때(normal = 평상시 · boss = 보스전) · touch = 누르는 것(폰 44 이상 검사) · text = 글자 1.3이면 늘어나는 높이(이름표 · 줄 수 기준 px)
+		--   reserve = 비움 구역(다른 요소가 들어가면 안 됨 - 상단 바 · 로블록스 버튼 · 엄지 영역)
+		v6 = {
+			pc = {
+				topBar = { 0, 0, 1920, 58, anchor = "WT", reserve = true },
+				robloxButtons = { 0, 0, 132, 60, anchor = "TL", reserve = true },
+				leftMenu = { 24, 96, 72, 541, anchor = "TL", modes = { normal = true }, touch = true, text = 125 },
+				leftMenuBoss = { 24, 96, 56, 320, anchor = "TL", modes = { boss = true }, touch = true },
+				zoneChip = { 1636, 66, 260, 32, anchor = "TR", modes = { normal = true, boss = true } },
+				currencyChip = { 1516, 106, 380, 40, anchor = "TR", modes = { normal = true, boss = true } },
+				stageChip = { 1556, 154, 340, 32, anchor = "TR", modes = { normal = true, boss = true } },
+				minimap = { 1316, 66, 180, 180, anchor = "TR", modes = { normal = true } },
+				nextGoal = { 1516, 198, 380, 72, anchor = "TR", modes = { normal = true }, touch = true, text = 22 },
+				serverGoal = { 1516, 278, 380, 44, anchor = "TR", modes = { normal = true } },
+				rightColumn = { 1824, 336, 72, 541, anchor = "TR", modes = { normal = true }, touch = true, text = 125 },
+				notices = { 760, 66, 400, 166, anchor = "TC", modes = { normal = true } },
+				bossBar = { 560, 66, 800, 92, anchor = "TC", modes = { boss = true }, text = 16 },
+				bossNotices = { 760, 166, 400, 50, anchor = "TC", modes = { boss = true } },
+				party = { 24, 672, 300, 244, anchor = "TL", modes = { normal = true } },
+				partyBoss = { 24, 440, 300, 244, anchor = "TL", modes = { boss = true } },
+				statusRow = { 680, 858, 296, 36, anchor = "BC", modes = { normal = true, boss = true }, touch = true },
+				hp = { 680, 902, 560, 24, anchor = "BC", modes = { normal = true, boss = true } },
+				skillRow = { 610, 950, 700, 90, anchor = "BC", modes = { normal = true, boss = true }, touch = true },
+				exp = { 0, 1066, 1920, 14, anchor = "W" },
+			},
+			phone = {
+				topBar = { 0, 0, 800, 58, anchor = "WT", reserve = true },
+				joystick = { 0, 190, 260, 170, anchor = "BL", reserve = true },
+				menuRow = { 8, 62, 148, 44, anchor = "TL", modes = { normal = true, boss = true }, touch = true },
+				infoChips = { 552, 62, 240, 28, anchor = "TR", modes = { normal = true } },
+				infoChipsBoss = { 632, 62, 160, 28, anchor = "TR", modes = { boss = true } }, -- 보스전 = 골드 · Lv만
+				nextGoal = { 530, 96, 262, 44, anchor = "TR", modes = { normal = true }, touch = true },
+				party = { 8, 112, 220, 80, anchor = "TL", modes = { normal = true, boss = true } },
+				bossBar = { 244, 62, 326, 60, anchor = "TC", modes = { boss = true }, text = 10 },
+				bossNotices = { 270, 128, 260, 30, anchor = "TC", modes = { boss = true } },
+				notices = { 270, 62, 260, 68, anchor = "TC", modes = { normal = true } },
+				statusRow = { 272, 286, 194, 30, anchor = "BC", modes = { normal = true, boss = true } },
+				hp = { 272, 322, 256, 14, anchor = "BC", modes = { normal = true, boss = true } },
+				exp = { 0, 354, 800, 6, anchor = "W" },
+			},
+			-- 폰 전투 버튼(기준 px · 오른쪽 아래 붙음 - hud.phone.combat 값을 읽어 짓는다 · 02 v6 §4 가운데 좌표 − 반지름)
+			phoneCombatAnchor = "BR",
+			-- B-7 오른쪽 열 접기(02 v6 §9): 시작 y · 칸 · 간격 · 이름표 · 아래 여백(24 + 경험치 줄 14)
+			rightFold = { y = 336, size = 72, gap = 14, label = 25, bottomPad = 38, innerGap = 14 },
+			leftColumn = { x = 24, y = 96, size = 72, gap = 14, label = 25 },
 		},
 	},
 	-- 03 가방 · 장비창 v2(03_bag-equip/v2 spec "화면 규칙") - 기존 장비창(panels/Inventory)의 겉모습 값. 장비창은 배율 1(화면 px - Inventory/Layout.compute)이라 좌표 대신 크기만 둔다.

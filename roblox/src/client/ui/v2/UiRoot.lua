@@ -8,10 +8,12 @@ local UiKit = require(script.Parent.UiKit)
 
 local UiRoot = {}
 
+local HudPlace = require(ReplicatedStorage.Shared.HudPlace)
 UiRoot.fit = require(ReplicatedStorage.Shared.UiModel).fit -- 순수(하네스) - 화면 크기 · 폰 여부 → 기준 크기 · 배율
 
 -- anchorX = 0(왼쪽 붙임 · 기본) | 1(오른쪽 붙임 - HUD 오른쪽 열 · 재화처럼 화면 오른쪽 끝 기준 좌표) · anchorY = 0.5(세로 가운데 · 기본) | 0(위 붙임 - HUD 위쪽 좌표)
-function UiRoot.new(screenGui, name, anchorX, anchorY)
+-- hud = true(UI-1 0단계): 배율 = HUD 배율 하나 m(HudPlace.scale - PC clamp 0.75 ~ 1.25 · 폰 min(가로 ÷ 800, 세로 ÷ 360)) - 메뉴 · 칩 · 미니맵 · 스킬 줄 · 체력바가 같은 값
+function UiRoot.new(screenGui, name, anchorX, anchorY, hud)
 	Theme.recompute()
 	local isPhone = Theme.isMobile
 	local frame = Instance.new("Frame")
@@ -29,6 +31,9 @@ function UiRoot.new(screenGui, name, anchorX, anchorY)
 			return
 		end
 		local base, s = UiRoot.fit(view.X, view.Y, isPhone)
+		if hud then
+			s = HudPlace.scale(view.X, view.Y, isPhone)
+		end
 		self.base = base
 		frame.Size = UDim2.fromOffset(base.w, base.h)
 		scale.Scale = s

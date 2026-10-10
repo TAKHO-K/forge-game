@@ -60,6 +60,10 @@ if require(ReplicatedStorage.Shared.data.HudData).menuV5 then -- QUEUE-UI2 UI2-4
 		if v.X > 0 and v.Y > 0 then
 			local _, s = fit(v.X, v.Y, Theme.isMobile)
 			rowScale.Scale = math.max(s, require(ReplicatedStorage.Shared.data.UiTokens).textMinRootScale) -- 글자 읽힘 하한(UI2-2와 같은 값)
+			if require(ReplicatedStorage.Shared.data.UiV2Flags).hud then -- UI-1 0단계: HUD 배율 하나(m = HudPlace.scale - 화면 전체 크기 기준)
+				local view = workspace.CurrentCamera.ViewportSize
+				rowScale.Scale = require(ReplicatedStorage.Shared.HudPlace).scale(view.X, view.Y, Theme.isMobile)
+			end
 		end
 	end
 	screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(rescale)

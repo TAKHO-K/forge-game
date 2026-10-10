@@ -13,6 +13,9 @@ if not HudData.menuV5 then
 	return
 end
 local Layout = require(ReplicatedStorage.Shared.data.UiLayoutData).hud
+local V6 = Layout.v6 -- UI-1 0단계: 02 v6 오른쪽 열 접기(B-7) · 상단 바 아래 기준 세로 자리
+local HudPlace = require(ReplicatedStorage.Shared.HudPlace)
+local UiModel = require(ReplicatedStorage.Shared.UiModel)
 local Tokens = require(ReplicatedStorage.Shared.data.UiTokens)
 local RewardHub = require(ReplicatedStorage.Shared.RewardHub)
 local Text = require(ReplicatedStorage.Shared.Text)
@@ -30,14 +33,15 @@ gui.Name = "HudMenuV2Gui"
 gui.ResetOnSpawn = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- 자식(아이콘 · 칩 · 점) = 부모 위(펼침 창 버튼 ZIndex를 올려도 아이콘이 가려지지 않게)
 gui.IgnoreGuiInset = true -- spec 좌표 원점 = 화면 왼쪽 위(로블록스 버튼 자리 0 ~ 60 비움 포함)
+gui.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets -- UI-1 0단계(02 v6 §2): 노치 = 기기 안전 영역 안 · 상단 바는 좌표로 비움
 gui.DisplayOrder = 150 -- 창 딤(100 ~ 149) 위 · overlay(200 ~) 아래 - 열린 창을 같은 버튼으로 닫는다(옛 MenuBar와 같은 층)
 gui.Parent = player:WaitForChild("PlayerGui")
 local recallEvent = Instance.new("BindableEvent") -- 귀환 = WorldClient(시전 · 취소 · 쿨 - 같은 동작)
 recallEvent.Name = "HudRecallPress"
 recallEvent.Parent = gui
 
-local leftRoot = UiRoot.new(gui, "HudLeft", 0, 0)
-local rightRoot = UiRoot.new(gui, "HudRight", 1, 0)
+local leftRoot = UiRoot.new(gui, "HudLeft", 0, 0, true) -- UI-1 0단계: HUD 배율 하나(m - HudPlace.scale)
+local rightRoot = UiRoot.new(gui, "HudRight", 1, 0, true)
 local phone = leftRoot.isPhone
 local L = phone and Layout.phone or Layout.pc
 for _, r in ipairs({ leftRoot, rightRoot }) do
@@ -287,25 +291,67 @@ do
 end
 
 -- ── 배치(보스전 · 숨김 항목 = 앞으로 당김) ──
--- PC 오른쪽 열 시작 = max(spec 248, 메인 퀘스트 칸 아래 + 12) · 화면 아래 끝(− 24)까지 안 들어가면 간격 → 칸 크기 순서로 줄임(이름표는 간격이 좁으면 숨김)
-local function fitRight(spec, n)
-	local s = math.max(rightRoot.scale.Scale, 0.01)
-	local top = spec.y
+-- UI-1 0단계 오른쪽 열(02 v6 §9 B-7 접기): 시작 = 상단 바 아래 기준 y(HudPlace.topY - 옛 fitRight는 배율을 y 전체에 곱해 1366×768에서 상단 바 쪽으로 올라갔다) ·
+--   메인 퀘스트 칸이 그보다 길면 그 아래(둘 다 AbsolutePosition 공통 좌표) · 칸 수 = 보이는 칸 · 이름표 높이(글자 배율) = 마지막 칸까지 포함.
+--   1단계 = 1열 · 2단계 = 바깥 3 + 안쪽 2 · 3단계 = 바깥 2 + 안쪽 1 + 나머지(상점 · 귀환)는 더보기 안으로.
+local foldedToMore = {} -- 3단계에서 더보기로 보낸 오른쪽 열 칸 id
+local function rightTop(m)
+	local top = HudPlace.topY(V6.rightFold.y, 0, 0, m, Tokens.base.pc) / m
 	local tg = player.PlayerGui:FindFirstChild("TodayGoalGui")
 	local box = tg and tg:FindFirstChild("TodayGoal")
 	if box and box.Visible and box.AbsoluteSize.Y > 0 then
-		local bottom = box.AbsolutePosition.Y + box.AbsoluteSize.Y + (tg.IgnoreGuiInset and 0 or GuiService:GetGuiInset().Y)
-		top = math.max(top, math.ceil((bottom - rightRoot.frame.AbsolutePosition.Y) / s) + 12)
+		-- AbsolutePosition = 모든 ScreenGui 공통 "상단 바 아래" 좌표(IgnoreGuiInset Gui 안 프레임도 화면 맨 위 = −58 · Studio 실측) → 인셋을 더하지 않는다(옛 = 58 이중 차감 · 02 MISSING 1)
+		local bottom = box.AbsolutePosition.Y + box.AbsoluteSize.Y
+		top = math.max(top, math.ceil((bottom - rightRoot.frame.AbsolutePosition.Y) / m) + 12)
 	end
-	local room = Tokens.base.pc.h - 24 - top
-	local size, gap = spec.size, spec.gap
-	if n * size + (n - 1) * gap > room then
-		gap = math.max(10, math.floor((room - n * size) / math.max(1, n - 1)))
+	return top
+end
+
+local function placeRight(col, boss)
+	local m = math.max(rightRoot.scale.Scale, 0.01)
+	local visible = {}
+	for _, id in ipairs(col.ids) do
+		if not hidden(id) then
+			table.insert(visible, id)
+		end
 	end
-	if n * size + (n - 1) * gap > room then
-		size = math.max(L.leftBoss.size, math.floor((room - (n - 1) * gap) / n))
+	local F = V6.rightFold
+	local top = rightTop(m)
+	local spec = table.clone(F)
+	spec.y = top
+	local fold = HudPlace.rightFold(spec, #visible, gui.AbsoluteSize.Y, m, UiModel.textMul(UiKit.textStep(), UiKit.platformTextName()))
+	table.clear(foldedToMore)
+	local slot = {}
+	for i, id in ipairs(visible) do
+		if i <= fold.outer then
+			slot[id] = { 0, i - 1 }
+		elseif i <= fold.outer + fold.inner then
+			slot[id] = { 1, i - fold.outer - 1 }
+		else
+			table.insert(foldedToMore, id)
+		end
 	end
-	return { x = spec.x + (spec.size - size), y = top, size = size, gap = gap }, gap >= 30
+	local x0 = col.spec.x
+	for _, id in ipairs(col.ids) do
+		local item = items[id]
+		local at = slot[id]
+		local show = at ~= nil and not boss
+		local folded = table.find(foldedToMore, id) ~= nil and not boss
+		item.button.Parent = folded and moreWin or rightRoot.frame
+		item.button.ZIndex = folded and 11 or 2
+		item.button.Visible = show or folded
+		if show then
+			item.button.Size = UDim2.fromOffset(F.size, F.size)
+			item.button.Position = UDim2.fromOffset(x0 - at[1] * (F.size + F.innerGap), top + at[2] * (F.size + fold.labelH + F.gap))
+		end
+		if item.label then
+			item.label.Visible = show
+		end
+		if item.chip then
+			item.chip.Visible = show
+		end
+	end
+	col.fold = fold
 end
 
 local function placeColumn(col, boss)
@@ -326,13 +372,13 @@ local function placeColumn(col, boss)
 		end
 	end
 	if col == columns.right then
-		local n = 0
+		placeRight(col, boss)
 		for _, id in ipairs(col.ids) do
-			if not hidden(id) then
-				n += 1
-			end
+			local item = items[id]
+			item.icon.ImageTransparency = boss and HudData.boss.menuTransparency or 0
+			item.button.ImageTransparency = boss and HudData.boss.menuTransparency or 0
 		end
-		spec, labelsFit = fitRight(spec, n)
+		return
 	end
 	local n = 0
 	for _, id in ipairs(col.ids) do
@@ -382,14 +428,23 @@ local function placeMore()
 		end
 	else
 		local col = 0
-		for _, id in ipairs(columns.more.lists[1]) do
+		local list = table.clone(columns.more.lists[1])
+		for _, id in ipairs(foldedToMore) do -- UI-1 0단계 접기 3단계: 상점 · 귀환 = 더보기 끝에
+			table.insert(list, id)
+		end
+		for _, id in ipairs(list) do
 			local item = items[id]
 			item.button.Visible = not hidden(id)
 			if item.button.Visible then
+				item.button.Size = UDim2.fromOffset(spec.size, spec.size)
 				item.button.Position = UDim2.fromOffset(spec.x + col * (spec.size + spec.gap), spec.y)
+				if item.label and table.find(foldedToMore, id) then
+					item.label.Visible = false
+				end
 				col += 1
 			end
 		end
+		moreWin.Size = UDim2.fromOffset(math.max(L.moreWindow[3], spec.x * 2 + col * spec.size + math.max(col - 1, 0) * spec.gap), L.moreWindow[4])
 	end
 end
 
@@ -451,7 +506,7 @@ local function refreshAlerts()
 		row.dot.Visible = dots[id] == true
 	end
 	local inMore = false
-	for _, list in ipairs(columns.more.lists) do
+	for _, list in ipairs({ foldedToMore, table.unpack(columns.more.lists) }) do
 		for _, id in ipairs(list) do
 			if items[id] and items[id].dot.Visible and items[id].button.Visible then
 				inMore = true
@@ -572,6 +627,21 @@ for _, name in ipairs({ "TutorialCompleted", "TutorialStep", "ClassId", "BossEnc
 		refreshAlerts()
 	end)
 end
+-- UI-1 0단계 ⑤: 메뉴 아이콘 · 판 그림 미리 받기(처음 보일 때 빈 칸 방지 · 더보기 안 아이콘 포함)
+task.spawn(function()
+	local list = {}
+	for _, item in pairs(items) do
+		for _, inst in ipairs({ item.icon, item.button }) do
+			if inst and (inst:IsA("ImageLabel") or inst:IsA("ImageButton")) and inst.Image ~= "" then
+				table.insert(list, inst)
+			end
+		end
+	end
+	pcall(function()
+		game:GetService("ContentProvider"):PreloadAsync(list)
+	end)
+end)
+
 -- 메뉴 화면(InMainMenu) 동안 숨김 - 월드에 들어오면 보임
 local function refreshVisible()
 	gui.Enabled = player:GetAttribute("InMainMenu") ~= true

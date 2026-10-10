@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+local HudPlace = require(ReplicatedStorage.Shared.HudPlace)
 
 local Theme = {}
 
@@ -39,7 +40,10 @@ Theme.tabHeight = 28
 function Theme.recompute()
 	local player = Players.LocalPlayer
 	local forced = RunService:IsStudio() and ((player ~= nil and player:GetAttribute("ForceTouchLayout") == true) or ReplicatedStorage:GetAttribute("ForceTouchLayout") == true) -- QUEUE-UI: Edit에서 ReplicatedStorage에 켜 두면 접속 처음부터 폰 배치(메인 메뉴 촬영)
-	Theme.isMobile = (UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled) or forced
+	-- UI-1 0단계 폰 판정 하나(HudPlace.isPhone): 안전 영역 짧은 변 ≤ 500 또는 터치만 → 폰 배치(옛 = 터치 + 키보드 기기는 작은 화면이어도 PC 배치 → 메뉴 배율 0.33)
+	local camera = workspace.CurrentCamera
+	local view = camera and camera.ViewportSize or Vector2.zero
+	Theme.isMobile = HudPlace.isPhone(view.X, view.Y, UserInputService.TouchEnabled, UserInputService.KeyboardEnabled) or forced
 	Theme.buttonHeight = Theme.buttonHeightFor(Theme.isMobile)
 	Theme.tabHeight = Theme.isMobile and 40 or 28
 end

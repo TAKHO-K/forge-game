@@ -168,6 +168,13 @@ local function onJumpRequest()
 	airMoveFx:FireServer("flip")
 end
 UserInputService.JumpRequest:Connect(onJumpRequest)
+-- UI-1 0단계: 폰 우리 점프 버튼(SkillSlots - 로블록스 기본 점프 숨김) = 같은 함수(지상 점프는 버튼이 Humanoid.Jump로)
+do
+	local hudJump = Instance.new("BindableEvent")
+	hudJump.Name = "HudJumpPress"
+	hudJump.Event:Connect(onJumpRequest)
+	hudJump.Parent = player:WaitForChild("PlayerGui")
+end
 
 -- FINAL-1 3 MOVE-2 백플립(S 두 번 · 폰 스틱 뒤로 두 번 - DashInput이 BackflipRequest를 쏜다): 점프 1회와 같다(지상 = 1단 점프 · 공중 = 공중 점프 충전 1 · 같은 잠금 · 최대 점프 수 그대로).
 --   카메라 뒤쪽으로 backSpeed를 boostSeconds 동안 주고(서버 이동 검사 = 걷기 버킷 안) · 몸은 카메라 앞을 보게 돌려 뒤로 한 바퀴(AirMotion "backflip" - 남에게는 중계)

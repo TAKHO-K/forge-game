@@ -100,6 +100,10 @@ local function place()
 		local boxScale = box:FindFirstChild("HudV5Scale") or Instance.new("UIScale") -- 칸도 기준 해상도 배율(칩 스택과 같음)
 		boxScale.Name = "HudV5Scale"
 		boxScale.Scale = math.max(s, require(game:GetService("ReplicatedStorage").Shared.data.UiTokens).textMinRootScale) -- 글자 읽힘 하한(UI2-2와 같은 값)
+		if require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).hud then -- UI-1 0단계: HUD 배율 하나(m)
+			local view = workspace.CurrentCamera.ViewportSize
+			boxScale.Scale = require(game:GetService("ReplicatedStorage").Shared.HudPlace).scale(view.X, view.Y, Theme.isMobile)
+		end
 		boxScale.Parent = box
 		menu = nil
 		box.AnchorPoint = Vector2.new(1, 0)

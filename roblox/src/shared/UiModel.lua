@@ -16,6 +16,25 @@ function UiModel.fit(viewW, viewH, isPhone)
 	return base, math.min(viewW / base.w, viewH / base.h)
 end
 
+-- UI-1 0단계 ⑦ 지도 핀 키 → 그림 키(UiIconData.map): "map.me" · "map.pin.hub" · 옛 이름 "pin_hub"(= map.pin.hub · pin_player = map.me) · 전체 경로("icons/…")는 그대로
+function UiModel.mapIcon(id)
+	if type(id) ~= "string" then
+		return nil
+	end
+	local map = IconData.map or {}
+	if map[id] then
+		return map[id]
+	end
+	if id:find("/", 1, true) then
+		return id
+	end
+	local short = id:match("^pin_(.+)$")
+	if short then
+		return map[short == "player" and "map.me" or ("map.pin." .. short)] or ("icons/ui/" .. id)
+	end
+	return "icons/ui/" .. id
+end
+
 -- 무기 등급 번호(0부터 - 저장값 weapon.grade) → 등급 id
 function UiModel.gradeId(gradeIndex)
 	return ArmorData.gradeOrder[(tonumber(gradeIndex) or 0) + 1] or ArmorData.gradeOrder[1]

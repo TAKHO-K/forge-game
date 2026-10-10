@@ -2453,6 +2453,9 @@ function BossPatterns.step(model, data, position, target, targetRoot, dt, member
 		pickCtx.graceUntil = st.graceUntil
 		-- 격노(HP ≤ enragedHpFraction)에서만 전역 쿨이 짧아진다(사용자 지시 - 연속 사용은 체력 20% 이하에서만).
 		pickCtx.enraged = MonsterState.getHpRatio(model) <= data.scheduler.enragedHpFraction
+		if model:GetAttribute("BossEnraged") ~= pickCtx.enraged then
+			model:SetAttribute("BossEnraged", pickCtx.enraged) -- UI-1 0단계 ⑧: 격노 = Attribute 하나(보스 바 · 상태 아이콘이 읽음 - 클라에서 HP ≤ 20%를 다시 계산하지 않는다)
+		end
 		local forced = st.sched.forced ~= nil -- 리뷰 6: DevTools · 검증이 강제한 스킬은 미루지 않는다(미루면 강제가 사라진다)
 		local pick = BossScheduler.pick(st.sched, data.skills, data.skillOrder, data.scheduler, pickCtx)
 		-- BR1 겹침(설계 §4-3): 환경이 도는 동안 "피할 수 없음" 쌍의 패턴은 나올 차례에 확률로 건너뛰고 같은 환경 발동 안에서 두 번 연속 나오지 않는다.

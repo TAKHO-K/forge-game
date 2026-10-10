@@ -105,7 +105,13 @@ end
 -- Studio는 TouchEnabled=false라 실제 터치 배치를 볼 수 없다 - Studio 한정으로 LocalPlayer
 -- Attribute ForceTouchLayout=true면 터치 레이아웃을 강제하고, 점프 버튼이 놓일 자리에
 -- 모의 원(JumpMock)을 그려 겹침을 눈으로 확인한다(에뮬레이션 - 실제 TouchGui가 아니다).
+local UiV2Flags = require(ReplicatedStorage.Shared.data.UiV2Flags)
+local Theme = require(script.Parent.ui.kit.Theme)
 local function isTouchLayout()
+	if UiV2Flags.hud then -- UI-1 0단계 폰 판정 하나(Theme.isMobile = HudPlace.isPhone · Studio ForceTouchLayout)
+		Theme.recompute()
+		return Theme.isMobile
+	end
 	if UserInputService.TouchEnabled then
 		return true
 	end
@@ -224,6 +230,8 @@ rowLayout.Padding = UDim.new(0, DASH_GAP)
 rowLayout.SortOrder = Enum.SortOrder.LayoutOrder
 rowLayout.Parent = row
 
+local slotFrames = {} -- UI-1 0단계: 칸 id → 칸 Frame(잠긴 칸 포함 - 폰 배치가 칸을 하나씩 옮긴다)
+
 -- 슬롯 하나(잠김·정상 공용). 정상 슬롯만 그라디언트·안쪽 하이라이트·발광·쿨다운 UI를
 -- 받는다 - 잠긴 슬롯은 그 무엇도 없이 어둡고 채도 없는 판만 남는다(지시 4).
 local function buildSlot(parent, layoutOrder, def)
@@ -264,6 +272,7 @@ local function buildSlot(parent, layoutOrder, def)
 		end
 	end
 	slot.Name = "Slot_" .. def.id
+	slotFrames[def.id] = slot
 	slot.LayoutOrder = layoutOrder
 	slot.Size = UDim2.new(0, SLOT_SIZE, 0, SLOT_SIZE)
 	slot.BackgroundColor3 = def.locked and UIColors.lockedBg or UIColors.metalBottom
@@ -439,6 +448,7 @@ local function buildSlot(parent, layoutOrder, def)
 end
 
 local slotHandles = {}
+local applyPhoneCombatV6 -- UI-1 0단계(아래 정의)
 
 local skillGroup = Instance.new("Frame")
 skillGroup.Name = "SkillGroup"
@@ -529,6 +539,149 @@ end
 -- 에뮬레이션용 모의 점프 버튼(Studio + ForceTouchLayout에서만 생성).
 local jumpMock = nil
 
+-- UI-1 0단계(02 v6 §2 · §4 · MISSING 4): 폰 전투 버튼 = UiLayoutData.hud.phone.combat(기준 800×360 · 오른쪽 아래 붙음 · HUD 배율 m) ·
+--   로블록스 기본 점프 숨김 → 우리 점프(64 · 지상 = 점프 · 공중 = 공중 점프 · 활강 끄기 · 올라서기 = DoubleJumpInput의 같은 함수) · 잠긴 칸 · 키 알약 숨김.
+local HudPlace = require(ReplicatedStorage.Shared.HudPlace)
+local COMBAT = require(ReplicatedStorage.Shared.data.UiLayoutData).hud.phone.combat
+local phoneRoot, phoneScale, jumpButton
+local defaultJumpConn
+local function hideDefaultJump(hide)
+	local touchGui = player.PlayerGui:FindFirstChild("TouchGui")
+	local jump = touchGui and touchGui:FindFirstChild("JumpButton", true)
+	if defaultJumpConn then
+		defaultJumpConn:Disconnect()
+		defaultJumpConn = nil
+	end
+	if jump then
+		jump.Visible = not hide and jump.Visible
+		if hide then
+			defaultJumpConn = jump:GetPropertyChangedSignal("Visible"):Connect(function()
+				if jump.Visible then
+					jump.Visible = false -- PlayerModule TouchJump가 캐릭터 · 점프력 바뀔 때 다시 켠다
+				end
+			end)
+		end
+	end
+end
+local function buildJumpButton(parent)
+	local b = Instance.new("TextButton")
+	b.Name = "JumpButton"
+	b.AutoButtonColor = false
+	b.Text = ""
+	b.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+	b.BackgroundTransparency = 0.25
+	b.Parent = parent
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(1, 0)
+	corner.Parent = b
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.fromRGB(255, 255, 255)
+	stroke.Transparency = 0.4
+	stroke.Thickness = 2
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent = b
+	local ArtImage = require(script.Parent.ui.ArtImage)
+	local IconData = require(ReplicatedStorage.Shared.data.UiIconData)
+	local img = Instance.new("ImageLabel")
+	img.Name = "Icon"
+	img.BackgroundTransparency = 1
+	img.AnchorPoint = Vector2.new(0.5, 0.5)
+	img.Position = UDim2.fromScale(0.5, 0.5)
+	img.Size = UDim2.fromScale(0.62, 0.62)
+	img.ScaleType = Enum.ScaleType.Fit
+	img.Image = ArtImage.get(IconData.icons.jump.asset) or ""
+	img.Parent = b
+	b.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then -- 전투 버튼 = 누르는 순간 발동(A 규칙)
+			b.BackgroundTransparency = 0.05
+			local character = player.Character
+			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			if humanoid then
+				humanoid.Jump = true -- 지상 1단 점프(엔진)
+			end
+			local press = player.PlayerGui:FindFirstChild("HudJumpPress")
+			if press then
+				press:Fire() -- 공중 점프 · 활강 끄기 · 올라서기(DoubleJumpInput.onJumpRequest)
+			end
+		end
+	end)
+	b.InputEnded:Connect(function()
+		b.BackgroundTransparency = 0.25
+	end)
+	return b
+end
+applyPhoneCombatV6 = function(touch)
+	if touch and not phoneRoot then
+		phoneRoot = Instance.new("Frame")
+		phoneRoot.Name = "PhoneCombat"
+		phoneRoot.BackgroundTransparency = 1
+		phoneRoot.AnchorPoint = Vector2.new(1, 1)
+		phoneRoot.Position = UDim2.fromScale(1, 1)
+		phoneRoot.Size = UDim2.fromOffset(HudPlace.base.phone.w, HudPlace.base.phone.h)
+		phoneScale = Instance.new("UIScale")
+		phoneScale.Parent = phoneRoot
+		phoneRoot.Parent = screenGui
+		jumpButton = buildJumpButton(phoneRoot)
+	end
+	if phoneRoot then
+		phoneRoot.Visible = touch
+	end
+	hideDefaultJump(touch)
+	if not touch then
+		for id, frame in pairs(slotFrames) do -- PC = 스킬 줄로 되돌림(칸 순서 = LayoutOrder 그대로)
+			if id == "dash" then
+				continue
+			end
+			frame.Parent = skillGroup
+			frame.Visible = true
+			frame.Size = UDim2.new(0, SLOT_SIZE, 0, SLOT_SIZE)
+			frame.Position = UDim2.new()
+		end
+		attackButton.Parent = screenGui
+		local dashSlot = slotFrames.dash
+		if dashSlot then
+			dashSlot.Size = UDim2.new(0, SLOT_SIZE, 0, SLOT_SIZE)
+		end
+		dashHolder.Size = UDim2.new(0, SLOT_SIZE, 0, ROW_HEIGHT)
+		dashHolder.AnchorPoint = Vector2.zero
+		dashHolder.Position = UDim2.new()
+		return
+	end
+	local view = workspace.CurrentCamera.ViewportSize -- 폰 기준 800×360 = 상단 바 포함 화면 전체(02 v6 §4)
+	phoneScale.Scale = HudPlace.scale(math.max(view.X, 1), math.max(view.Y, 1), true)
+	local function put(frame, r)
+		frame.Parent = phoneRoot
+		frame.AnchorPoint = Vector2.zero
+		frame.Position = UDim2.fromOffset(r[1], r[2])
+		frame.Size = UDim2.fromOffset(r[3], r[4])
+		frame.Visible = true
+	end
+	for _, id in ipairs({ "q", "e", "r" }) do
+		if slotFrames[id] then
+			put(slotFrames[id], COMBAT[id])
+		end
+	end
+	if slotFrames.locked2 then -- T(궁극기 게이지 칸 - UltGauge가 이 칸 안에 단다)
+		put(slotFrames.locked2, COMBAT.t)
+	end
+	if slotFrames.locked3 then
+		slotFrames.locked3.Parent = phoneRoot
+		slotFrames.locked3.Visible = false -- 폰 = 빈 칸 없음
+	end
+	put(attackButton, COMBAT.attack)
+	put(dashHolder, COMBAT.dash)
+	if slotFrames.dash then
+		slotFrames.dash.Size = UDim2.fromOffset(COMBAT.dash[3], COMBAT.dash[4])
+	end
+	put(jumpButton, COMBAT.jump)
+	local lock = dashHolder:FindFirstChild("ShiftLockButton") -- 시점 고정(ShiftLock) = 대시 칸 기준 상대 자리
+	if lock then
+		lock.AnchorPoint = Vector2.zero
+		lock.Position = UDim2.fromOffset(COMBAT.lockon[1] - COMBAT.dash[1], COMBAT.lockon[2] - COMBAT.dash[2])
+		lock.Size = UDim2.fromOffset(COMBAT.lockon[3], COMBAT.lockon[4])
+	end
+end
+
 local function applyLayout()
 	local touch = isTouchLayout()
 	for _, id in ipairs({ "q", "e", "dash" }) do
@@ -539,6 +692,12 @@ local function applyLayout()
 	end
 
 	attackButton.Visible = touch
+	if UiV2Flags.hud then
+		applyPhoneCombatV6(touch)
+		if touch then
+			return
+		end
+	end
 	if not touch then
 		row.AnchorPoint = ROW_ANCHOR_POINT
 		row.Position = ROW_POSITION
