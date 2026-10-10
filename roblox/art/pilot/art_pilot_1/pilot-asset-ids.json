@@ -1,0 +1,42 @@
+{
+ "boar_b1": {
+  "file": "Meshy_AI_Stone_Boar_quadruped_model_Animation_Walking_withSkin.fbx",
+  "sha256": "67f7233b69fb79e0395177f848d515adcc4e3d0f8a934162c4b541c889db297b",
+  "assetType": "Model",
+  "bytes": 4345788,
+  "assetId": 128414478880334,
+  "status": "Approved"
+ },
+ "boar_b1_tex": {
+  "file": "Meshy_AI_Stone_Boar_quadruped_texture_0.png",
+  "sha256": "3c1b343d14b619d9b583c5a8f6d70c45488e53626fe56f294fc1100c9dfc9dbe",
+  "assetType": "Decal",
+  "bytes": 3911636,
+  "assetId": 108013967024403,
+  "status": "Approved"
+ },
+ "boar_b2": {
+  "file": "rock_boar_b2.fbx",
+  "sha256": "0a3f18f95fa1df08a121ee816744bd4f165dbb9ceeea1e079e1b0e9190dd4a1b",
+  "assetType": "Model",
+  "bytes": 146908,
+  "assetId": 89766282306898,
+  "status": "Approved"
+ },
+ "smith_a2": {
+  "file": "smith_biped_Animation_Heavy_Hammer_Swing_withSkin.fbx",
+  "sha256": "77c4e3fc64202c1c5aa7cbf23e5d89c6875e8f10ab3a2e2793786cbad3ab3359",
+  "assetType": "Model",
+  "bytes": 16388540,
+  "assetId": 124875843859881,
+  "status": "Approved"
+ },
+ "smith_a2_tex": {
+  "file": "smith_biped_texture_0.png",
+  "sha256": "599ee2339e0b1ef171bedaf629fb5bdcc683159f153a5ae129970b6428bfd733",
+  "assetType": "Decal",
+  "bytes": 4249938,
+  "assetId": 86038080068377,
+  "status": "Approved"
+ }
+}
