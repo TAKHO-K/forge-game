@@ -340,6 +340,9 @@ function ArtMeshKit.weaponModel(classId, gradeId, options) -- options.keepDropPa
 	if v4 then
 		return v4
 	end
+	if options and options.v4Only then -- UI-1b 1-b 18: 도감 보기 = 새 모델만(없으면 nil → 2D 새 그림)
+		return nil
+	end
 	local look = Data.weaponGradeFile[gradeId] or "normal"
 	-- QUEUE-ALL9E1 1-1 장비 v3: 스위치 GearV3Meshes · weapons/<직업>_<단계>(s1 ~ s5 - 같은 손잡이 원점 · 부착점 = 옛 메타) · 색 = GearV3.weaponColor(구역) · 문 부품(초월 균열 Tr) = 그 등급만
 	local stage = GearV3.enabled() and GearV3.data.stageOfGrade[gradeId]

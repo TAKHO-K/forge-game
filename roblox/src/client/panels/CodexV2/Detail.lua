@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
+local NEW_LOOK = require(ReplicatedStorage.Shared.data.UiV2Flags).codexNewLook -- UI-1b 1-b 18
 local WorldMapLayout = require(ReplicatedStorage.Shared.WorldMapLayout)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local Text = require(ReplicatedStorage.Shared.Text)
@@ -198,7 +199,7 @@ function Detail.build(parent, S)
 		local ok, src = pcall(function()
 			local ArtMeshKit = require(ReplicatedStorage.Shared.ArtMeshKit)
 			if spec.weapon then
-				return ArtMeshKit.weaponModel(spec.weapon, spec.grade)
+				return ArtMeshKit.weaponModel(spec.weapon, spec.grade, NEW_LOOK and { v4Only = true } or nil)
 			end
 			local m = ArtMeshKit.get(spec.key)
 			return m and m:Clone() or nil
@@ -351,7 +352,15 @@ function Detail.build(parent, S)
 				pic2.Image = ArtImage.get(p.overlay) or ""
 				pic2.Visible = true
 			end
-			if showModel(Info.model(view, m)) then
+			if NEW_LOOK and m.kind == "boss" and not Info.unknown(view, m) then -- UI-1b 1-b 18: 보스 = F 초상(새 모습 · 옛 몸 3D 안 씀)
+				local e = require(script.Parent.Parent.Parent.ui.v2.BossPortrait).entry(m.bossId)
+				local img = e and ArtImage.get(e.image)
+				if img then
+					pic.Image = img
+					pic.ImageColor3, pic.ImageTransparency = Color3.new(1, 1, 1), 0
+					pic.Visible, pic2.Visible = true, false
+				end
+			elseif showModel(Info.model(view, m)) then
 				pic.Visible, pic2.Visible = false, false
 			end
 			pr = { v = cv.v, need = cv.need, done = cv.done, claimed = cv.claimed, claimable = cv.done and not cv.claimed }

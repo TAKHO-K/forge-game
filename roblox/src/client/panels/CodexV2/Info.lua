@@ -128,6 +128,12 @@ function Info.picture(view, m)
 	elseif k == "monster" then
 		return { key = "icons/codex/monster_" .. m.species, silhouette = Info.unknown(view, m) }
 	elseif k == "boss" then
+		if require(ReplicatedStorage.Shared.data.UiV2Flags).codexNewLook then -- UI-1b 1-b 18: 보스 칸 그림 = F 초상(옛 몸 렌더 icons/codex/boss_* 대신)
+			local e = require(ReplicatedStorage.Shared.data.BossPortraitData).bosses[m.bossId]
+			if e and e.image then
+				return { key = e.image, silhouette = Info.unknown(view, m) }
+			end
+		end
 		return { key = "icons/codex/boss_" .. m.bossId, silhouette = Info.unknown(view, m) }
 	elseif k == "class" then
 		return { key = "icons/codex/class_" .. m.classId, overlay = ("icons/weapons/%s_%s"):format(m.classId, ArmorData.gradeOrder[m.weaponGrade + 1]) }
