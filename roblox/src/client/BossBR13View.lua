@@ -201,26 +201,70 @@ local function clearSweep()
 end
 
 -- BR1-4a 에네르기파(낮은 빔 540°) 예고(사용자 정정): 540° 전체를 한 번에 칠하지 않는다(어디로 피할지 안 보인다).
---   바닥 띠(레이저 궤적 예고) = 레이저보다 BEAM_LEAD_SECONDS 앞서 같은 방향으로 도는 바닥 선 + 띠 바깥 끝의 회전 화살표 · 레이저가 지나간 자리는 아무것도 안 남는다.
---   전조 동안 띠는 시작선에 서 있다가 발사 BEAM_LEAD_SECONDS 전부터 돈다 · 빈틈 회차는 보스 곁 원을 안전색으로.
-local BEAM_LEAD_SECONDS = 0.6
+--   바닥 띠(레이저 궤적 예고) = 전조 동안 시작선에 옅게 서 있다가 · 발사 BAND_SWEEP_SECONDS 전부터 도는 방향으로 BAND_SWEEP_DEG만 빠르게 돌며 옅어져 사라진다
+--   (BOSS-NIGHT-3 1-⑤d 사용자 10-10: 옛 = 진한 빨강이 레이저보다 0.6초 앞서 끝까지 따라 돎 - 미관 · 방향만 알려 주면 됨) · 띠 바깥 끝의 회전 화살표도 같이 · 빈틈 회차는 보스 곁 원을 안전색으로.
+local BAND_SWEEP_DEG, BAND_SWEEP_SECONDS = 90, 0.45
+local BAND_TRANSPARENCY, ARROW_TRANSPARENCY = 0.6, 0.35 -- 옅은 선(옛 0.35 · 0.05) · 폰 · 낮은 그래픽에서도 보이게 0.6 이하(사용자 10-10)
+local BAND_COLOR = DANGER:Lerp(WHITE, 0.35)
+-- 1-⑤d 바닥 장판(위험 범위 예고 - 분명하게): 빔이 앞으로 지나갈 FAN_DEG(남은 회전이 적으면 남은 만큼)를 늘 덮는다 = 예고 없이 맞는 자리 0.
+--   빔은 옆으로 lat 비킨 줄이라 반경마다 극각이 atan2(lat, 빔 위 거리)만큼 앞선다 → 빔 위 거리 띠(FAN_BANDS)마다 그 띠 가운데의 앞섬으로 조각을 돌린다(판정 그대로 · 그림만).
+local FAN_DEG, FAN_TRANSPARENCY, FAN_TILE = 90, 0.6, 7
+local FAN_BANDS = { 0, 6, 10, 14, 19, 25, 35, 55, 85, 1e9 }
+local FAN_BACK_DEG = 5 -- 장판을 빔 쪽으로 조금 당겨 띠 안 앞섬 차이(안쪽 띠 최대 약 ±5°)를 덮음
 -- BOSS-NIGHT-3 1-⑤ 빔 위 시작 거리 = 서버 판정(r ≥ inner · 빔 위 거리 ≥ fwd)과 같은 식: 옆으로 lat 비킨 줄이 안쪽 원(inner)을 벗어나는 자리와 보석 앞(fwd) 중 먼 쪽
 local function beamStart(d)
 	local lat = d.lat or 0
 	return math.max(d.fwd or 0, math.sqrt(math.max(d.inner * d.inner - lat * lat, 0)))
 end
+local function buildFan(d)
+	local parts, s0 = {}, beamStart(d)
+	for i = 1, #FAN_BANDS - 1 do
+		local a0, a1 = math.max(FAN_BANDS[i], s0), math.min(FAN_BANDS[i + 1], d.length)
+		if a1 > a0 + 0.5 then
+			local lat = d.lat or 0
+			local r0, r1 = math.sqrt(lat * lat + a0 * a0), math.sqrt(lat * lat + a1 * a1)
+			local rm, am = (r0 + r1) / 2, (a0 + a1) / 2
+			local n = math.clamp(math.ceil(rm * math.rad(FAN_DEG) / FAN_TILE), 2, 30)
+			for k = 1, n do
+				local part = newPart(Vector3.new(1, 0.2, r1 - r0), BAND_COLOR, FAN_TRANSPARENCY)
+				table.insert(parts, { part = part, rm = rm, r1 = r1, lead = math.deg(math.atan2(lat, am)), k = k, n = n })
+			end
+		end
+	end
+	return parts
+end
+
+-- 장판 자리: 빔 각 theta부터 도는 방향으로 span°(조각 폭 = 그 반경의 호 길이 ÷ 조각 수)
+local function updateFan(d, theta, span)
+	for _, t in ipairs(sweep.fan) do
+		local visible = span > 0.5
+		t.part.Transparency = visible and FAN_TRANSPARENCY or 1
+		if visible then
+			local w = math.rad(span + FAN_BACK_DEG) / t.n
+			local a = math.rad(theta + t.lead - d.dirSign * FAN_BACK_DEG) + d.dirSign * w * (t.k - 0.5) -- 앞섬(lead)은 도는 방향과 무관(빔 위 점 극각 = 빔 각 + atan2(lat, 거리))
+			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+			t.part.Size = Vector3.new(t.r1 * w * 1.05, 0.2, t.part.Size.Z) -- 바깥 반경 기준 폭(가운데 기준이면 바깥 끝에 틈)
+			t.part.CFrame = CFrame.lookAt(d.center + dir * t.rm + Vector3.new(0, 0.12, 0), d.center + dir * (t.rm + 1) + Vector3.new(0, 0.12, 0))
+		end
+	end
+end
+
 function BossBR13View.sweepTelegraph(data)
 	clearSweep()
 	sweep = { data = data, parts = {}, fireAt = os.clock() + data.seconds }
 	local color = data.color or DANGER
 	local span = data.length - beamStart(data)
-	local band = newPart(Vector3.new(3, 0.2, span), DANGER, 0.35)
-	local arrowA = newPart(Vector3.new(1.2, 0.2, 4), WHITE, 0.05)
-	local arrowB = newPart(Vector3.new(1.2, 0.2, 4), WHITE, 0.05)
+	local band = newPart(Vector3.new(3, 0.2, span), BAND_COLOR, BAND_TRANSPARENCY)
+	local arrowA = newPart(Vector3.new(1.2, 0.2, 4), WHITE, ARROW_TRANSPARENCY)
+	local arrowB = newPart(Vector3.new(1.2, 0.2, 4), WHITE, ARROW_TRANSPARENCY)
 	for _, p in ipairs({ band, arrowA, arrowB }) do
 		table.insert(sweep.parts, p)
 	end
 	sweep.band, sweep.arrowA, sweep.arrowB = band, arrowA, arrowB
+	sweep.fan = buildFan(data)
+	for _, t in ipairs(sweep.fan) do
+		table.insert(sweep.parts, t.part)
+	end
 	if data.gap then -- 보스 곁 빈틈(안전) - 안전색 원판 + 테두리
 		local safe = disc(data.center, data.inner - 0.6, UIColors.success, 0.7)
 		table.insert(sweep.parts, safe)
@@ -228,7 +272,7 @@ function BossBR13View.sweepTelegraph(data)
 			table.insert(sweep.parts, part)
 		end
 	end
-	-- 기 모으기: 보스 앞(시작선 쪽) 낮은 높이에 빛이 커진다
+	-- 기 모으기: 빛이 커진다 - BOSS-NIGHT-3 1-⑤d(사용자 10-10): 무기(홀 보석 ScepterGem)에서 시작해 보석을 따라간다(매 프레임) · 보석을 못 찾으면 옛 자리(빔 시작 아래)
 	local startDir = Vector3.new(math.cos(math.rad(data.startDeg)), 0, math.sin(math.rad(data.startDeg)))
 	local orb = newPart(Vector3.one * 0.6, color, 0.1, Enum.PartType.Ball)
 	orb.CFrame = CFrame.new(data.center + Vector3.new(-startDir.Z, 0, startDir.X) * (data.lat or 0) + startDir * math.max(5, data.fwd or 0) + Vector3.new(0, data.beamHeight, 0)) -- 1-⑤ 홀 보석 아래
@@ -236,6 +280,7 @@ function BossBR13View.sweepTelegraph(data)
 	table.insert(sweep.parts, orb)
 	sweep.orb = orb
 	local boss = bossNear(data.center)
+	sweep.gem = boss and boss:FindFirstChild("ScepterGem", true)
 	local head = boss and boss:FindFirstChild("Head")
 	if head then
 		-- 위에서 보면 +각 = 시계 방향(X → Z) - 화면 기준 화살표 · 한 바퀴 반
@@ -243,18 +288,20 @@ function BossBR13View.sweepTelegraph(data)
 	end
 end
 
--- 바닥 띠 · 화살표 자리(매 프레임) - 발사 시각(전조 끝) 기준 BEAM_LEAD_SECONDS 앞의 레이저 각. 레이저가 끝나기 전에 띠가 끝 각에 닿으면 숨긴다.
+-- 바닥 띠 · 화살표 자리(매 프레임) - 발사 BAND_SWEEP_SECONDS 전까지 시작선 · 그 뒤 BAND_SWEEP_DEG만 빠르게 돌며 옅어짐 · 발사 순간 사라짐(1-⑤d)
 local function updateBand(d)
-	local skill = { sweepDeg = d.sweepDeg, sweepSeconds = d.sweepSeconds, startLeadDeg = d.startLeadDeg }
-	local ahead = os.clock() - sweep.fireAt + BEAM_LEAD_SECONDS
-	local done = ahead > d.sweepSeconds
+	local left = sweep.fireAt - os.clock() -- 발사까지 남은 초
+	local f = math.clamp(1 - left / BAND_SWEEP_SECONDS, 0, 1) -- 0 = 시작선 · 1 = 90° 돎(발사 순간)
+	local done = left <= 0
 	for _, p in ipairs({ sweep.band, sweep.arrowA, sweep.arrowB }) do
-		p.Transparency = done and 1 or (p == sweep.band and 0.35 or 0.05)
+		local base = p == sweep.band and BAND_TRANSPARENCY or ARROW_TRANSPARENCY
+		p.Transparency = done and 1 or base + (1 - base) * f * f -- 돌면서 옅어진다
 	end
 	if done then
 		return
 	end
-	local deg = BossSkillMath.sweepAngleAt(skill, d.angleDeg, d.dirSign, math.max(ahead, 0))
+	local startDeg = BossSkillMath.sweepAngleAt({ sweepDeg = d.sweepDeg, sweepSeconds = d.sweepSeconds, startLeadDeg = d.startLeadDeg }, d.angleDeg, d.dirSign, 0)
+	local deg = startDeg + d.dirSign * BAND_SWEEP_DEG * (1 - (1 - f) ^ 2) -- 빠르게 출발해 감속
 	local dir = Vector3.new(math.cos(math.rad(deg)), 0, math.sin(math.rad(deg)))
 	local y = Vector3.new(0, 0.25, 0)
 	local start = beamStart(d)
@@ -287,7 +334,7 @@ function BossBR13View.sweepFire(data)
 	-- BOSS-NIGHT-3 1-⑤c(사용자 10-10): 안전 원 회차(안쪽 반경이 줄을 가림)는 보석 → 안전 원 경계까지 희미한 빔(그림만 · 판정 없음 = 서버 r ≥ inner 그대로) - 허공에서 시작하지 않고 안전 구역이 보인다
 	local neckSpan = beamStart(d) - (d.fwd or 0)
 	if neckSpan > 0.5 then
-		local neck = newPart(Vector3.new(d.halfWidth * 1.2, d.beamHeight * 0.7, neckSpan), d.color or DANGER, 0.8)
+		local neck = newPart(Vector3.new(d.halfWidth * 1.2, d.beamHeight * 0.7, neckSpan), d.color or DANGER, 0.6) -- 0.6 이하 = 폰 · 낮은 그래픽에서도 보임
 		table.insert(sweep.parts, neck)
 		sweep.neck, sweep.neckSpan = neck, neckSpan
 	end
@@ -534,7 +581,18 @@ end
 -- 매 프레임: 빔 회전 · 분신 이동(서버와 같은 함수로 시계를 따라간다 - 판정은 서버)
 RunService.RenderStepped:Connect(function()
 	if sweep and sweep.band then
-		updateBand(sweep.data) -- BR1-4a: 레이저 궤적 예고 띠(0.6초 앞)
+		updateBand(sweep.data) -- BR1-4a: 레이저 궤적 예고 띠(1-⑤d: 발사 직전 90° 빠르게 돌며 옅어짐)
+	end
+	if sweep and sweep.fan then -- 1-⑤d 바닥 장판: 전조 = 시작 각부터 90° · 발사 뒤 = 지금 빔 각부터 앞 90°(남은 회전만큼)
+		local d = sweep.data
+		local skill = { sweepDeg = d.sweepDeg, sweepSeconds = d.sweepSeconds, startLeadDeg = d.startLeadDeg }
+		local elapsed = sweep.startedAt and (os.clock() - sweep.startedAt) or 0
+		local theta = BossSkillMath.sweepAngleAt(skill, d.angleDeg, d.dirSign, elapsed)
+		local remaining = d.sweepDeg * (1 - math.clamp(elapsed / d.sweepSeconds, 0, 1))
+		updateFan(d, theta, math.min(FAN_DEG, remaining))
+	end
+	if sweep and sweep.orb and sweep.orb.Parent and sweep.gem and sweep.gem.Parent then
+		sweep.orb.CFrame = sweep.gem.CFrame -- 1-⑤d 기 모으기 빛 = 무기 보석에서
 	end
 	if sweep and sweep.beam and sweep.startedAt then
 		local d = sweep.data
