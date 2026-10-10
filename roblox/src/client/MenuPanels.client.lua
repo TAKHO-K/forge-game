@@ -7,3 +7,6 @@ require(script.Parent.panels.SeasonBoard).init(require(script.Parent.panels.Atte
 if require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).auto then
 	require(script.Parent.panels.AttendanceV2).init() -- UI-1 7단계 출석 + 시즌판 창 하나 · 자동 창 규칙(출석 → 1초 뒤 선물함)
 end
+if require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).map then
+	require(script.Parent.panels.BossGateWindow).init() -- UI-1 7b 보스 관문 창(구역 선택 보스 칸 · 관문 F)
+end

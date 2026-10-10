@@ -30,6 +30,10 @@ local PANEL_SIZE = Vector2.new(520, 440)
 local PAD = 12
 local ROW = 48
 local TAB_IDS = { "screen", "sound", "game", "hotkeys" }
+local V7 = require(ReplicatedStorage.Shared.data.UiV2Flags).map -- UI-1 7b(06 v3 · 08 v7 §5): [조작 · HUD] 탭 = 언어 · 단축키 표시 · 진동(지원 기기만) · HUD 편집 · 처음 위치로(확인 2단계)
+if V7 then
+	table.insert(TAB_IDS, "control")
+end
 
 local player = Players.LocalPlayer
 local built
@@ -422,6 +426,100 @@ local function build()
 			player:SetAttribute("SettingDoubleTapDash", v)
 			save("doubleTapDash", v)
 		end })
+
+	if V7 then
+		local c = pages.control
+		local UiKit = require(script.Parent.Parent.ui.v2.UiKit)
+		local Haptics = require(script.Parent.Parent.ui.Haptics)
+		local newPill = require(ReplicatedStorage.Shared.data.UiLayoutData).settings.v7.showNewPill -- "새로" 알약 = 출시 판 숨김(스위치)
+		local y = PAD
+		cycleRow(c, y, Text.get("ui1.set.language") .. (newPill and (" · " .. Text.get("ui1.set.new")) or ""), "language", { ko = Text.get("ui1.set.langKo"), en = Text.get("ui1.set.langEn"), auto = Text.get("ui1.set.langAuto") }, refs)
+		local langNote = Theme.label(c, Text.get("ui1.set.languageNote"), "caption", "textSecondary")
+		langNote.TextWrapped = true
+		langNote.Position = UDim2.fromOffset(PAD, y + 38)
+		langNote.Size = UDim2.new(1, -PAD * 2, 0, 32)
+		y += 38 + 36
+		refs.showKeysToggle = Toggle.build({ parent = c, name = "ShowKeysToggle", text = Text.get("ui1.set.showKeys"), value = player:GetAttribute("SettingShowKeys") ~= false,
+			width = width, position = UDim2.fromOffset(PAD, y), onChanged = function(v)
+				player:SetAttribute("SettingShowKeys", v)
+				save("showKeys", v)
+			end })
+		y += ROW + 8
+		if Haptics.supported() then -- 진동 = 지원 기기만 줄 보임(PC = 줄 없음)
+			refs.vibrationToggle = Toggle.build({ parent = c, name = "VibrationToggle", text = Text.get("ui1.set.vibration"), value = player:GetAttribute("VibrationOff") ~= true,
+				width = width, position = UDim2.fromOffset(PAD, y), onChanged = function(v)
+					player:SetAttribute("VibrationOff", not v)
+					save("vibrationOff", not v)
+				end })
+			y += ROW + 8
+		end
+		local hudLabel = Theme.label(c, Text.get("ui1.set.hudLayout"), "body", "textPrimary")
+		hudLabel.Position = UDim2.fromOffset(PAD, y)
+		hudLabel.Size = UDim2.new(1, -PAD * 2, 0, 24)
+		y += 28
+		local editB = UiKit.button({ parent = c, kind = "secondary", name = "HudEditButton", text = Text.get("ui1.set.hudEdit"), align = Enum.TextXAlignment.Center, padX = 8, rect = { PAD, y, 200, 48 }, onActivated = function()
+			UIManager.close(SettingsPanel.id)
+			require(script.Parent.Parent.hud.HudEdit).enter()
+		end })
+		editB.root.Name = "HudEditButton"
+		-- [처음 위치로] = 확인 2단계(두 단계 모두 기본 = 노랑 [취소])
+		local confirm = Instance.new("Frame")
+		confirm.Name = "HudResetConfirm"
+		confirm.BackgroundColor3 = Color3.fromHex("161A2B")
+		confirm.Size = UDim2.fromScale(1, 1)
+		confirm.ZIndex = 20
+		confirm.Visible = false
+		confirm.Active = true
+		confirm.Parent = c
+		local cTitle = Theme.label(confirm, "", "header", "textPrimary")
+		cTitle.TextWrapped = true
+		cTitle.Position = UDim2.fromOffset(PAD, PAD)
+		cTitle.Size = UDim2.new(1, -PAD * 2, 0, 56)
+		cTitle.ZIndex = 21
+		local cBody = Theme.label(confirm, "", "body", "textSecondary")
+		cBody.TextWrapped = true
+		cBody.Position = UDim2.fromOffset(PAD, PAD + 60)
+		cBody.Size = UDim2.new(1, -PAD * 2, 0, 48)
+		cBody.ZIndex = 21
+		local step = 0
+		local goB
+		local function show(n)
+			step = n
+			confirm.Visible = n > 0
+			if n == 1 then
+				local device = Theme.isMobile and Text.get("ui1.hudEdit.phone") or Text.get("ui1.hudEdit.pc")
+				cTitle.Text = Text.get("ui1.set.reset1Title")
+				cBody.Text = Text.get("ui1.set.reset1Body", { device = device })
+				cBody.TextColor3 = Theme.color("textSecondary")
+				goB.setText(Text.get("ui1.set.next"))
+			elseif n == 2 then
+				cTitle.Text = Text.get("ui1.set.reset2Title")
+				cBody.Text = "▼ " .. Text.get("ui1.set.reset2Body")
+				cBody.TextColor3 = Color3.fromHex("FF8A8A")
+				goB.setText(Text.get("ui1.set.resetGo"))
+			end
+		end
+		UiKit.button({ parent = confirm, kind = "primary", name = "Cancel", text = Text.get("ui1.set.cancel"), align = Enum.TextXAlignment.Center, rect = { PAD, PAD + 120, 180, 52 }, onActivated = function()
+			show(0)
+		end })
+		goB = UiKit.button({ parent = confirm, kind = "secondary", name = "Go", text = "", align = Enum.TextXAlignment.Center, rect = { PAD + 196, PAD + 120, 180, 52 }, onActivated = function()
+			if step == 1 then
+				show(2)
+			elseif step == 2 then
+				show(0)
+				require(script.Parent.Parent.hud.HudEdit).resetSaved()
+			end
+		end })
+		for _, d in ipairs(confirm:GetDescendants()) do
+			if d:IsA("GuiObject") then
+				d.ZIndex = math.max(d.ZIndex, 21)
+			end
+		end
+		local resetB = UiKit.button({ parent = c, kind = "secondary", name = "HudResetButton", text = Text.get("ui1.set.hudReset"), align = Enum.TextXAlignment.Center, padX = 8, rect = { PAD + 216, y, 200, 48 }, onActivated = function()
+			show(1)
+		end })
+		resetB.root.Name = "HudResetButton"
+	end
 
 	built = { panel = panel, refs = refs, volumeRows = volumeRows, pages = pages, tabs = tabs }
 end

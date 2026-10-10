@@ -31,6 +31,9 @@ local UIManager = require(script.Parent.UIManager)
 local CombatFormula = require(ReplicatedStorage.Shared.CombatFormula) -- C2 권장 전투력(자리만 - U1)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local Text = require(ReplicatedStorage.Shared.Text)
+local V7 = require(ReplicatedStorage.Shared.data.UiV2Flags).map -- UI-1 7b(08 v7 §2): O/△/X → 상태 그림 4 + 첫 처치 별 · 보스 칸 = 금 테 + 초상
+local G7 = require(ReplicatedStorage.Shared.data.UiLayoutData).map.v7
+local ArtImage = require(script.Parent.ui.ArtImage)
 
 local stageMoveRequest = ReplicatedStorage:WaitForChild("StageMoveRequest")
 local stageMoveResult = ReplicatedStorage:WaitForChild("StageMoveResult")
@@ -266,6 +269,20 @@ for i, key in ipairs(LEGEND_ORDER) do
 	label.TextColor3 = spec.color
 	label.Text = Text.get(LEGEND_KEY[key], { symbol = spec.symbol })
 	label.Parent = legend
+	if V7 then -- 범례 = 칸과 같은 그림 + 글자(기호 대신)
+		label.Text = Text.get(LEGEND_KEY[key], { symbol = "" })
+		label.TextColor3 = UIColors.textPrimary
+		local pad = Instance.new("UIPadding")
+		pad.PaddingLeft = UDim.new(0, 18)
+		pad.Parent = label
+		local ic = Instance.new("ImageLabel")
+		ic.BackgroundTransparency = 1
+		ic.Image = ArtImage.get(G7.stageIcons[key]) or ""
+		ic.AnchorPoint = Vector2.new(0, 0.5)
+		ic.Position = UDim2.new(0, -18, 0.5, 0)
+		ic.Size = UDim2.fromOffset(16, 16)
+		ic.Parent = label
+	end
 end
 
 -- 구간 띠(S15): [◀] 칩 5개 [▶]. 칩은 한 구간(10스테이지)이고 눌러서 그 구간으로 간다 - 잠긴 구간도 눌린다(다음 목표를 보는 것 - 이동 가능 여부는 서버가 판정한다).
@@ -386,6 +403,38 @@ for i = 1, WINDOW_SIZE do
 	markLabel.Text = ""
 	markLabel.Parent = cell
 	cells[i] = { button = cell, number = stageNumberLabel, symbol = symbolLabel, stroke = stroke, mark = markLabel, stage = nil }
+	if V7 then
+		local stateIcon = Instance.new("ImageLabel") -- 상태 그림(오른쪽 위)
+		stateIcon.Name = "StateIcon"
+		stateIcon.BackgroundTransparency = 1
+		stateIcon.AnchorPoint = Vector2.new(1, 0)
+		stateIcon.Position = UDim2.new(1, -3, 0, 3)
+		stateIcon.Size = UDim2.fromOffset(G7.stateIcon, G7.stateIcon)
+		stateIcon.Parent = cell
+		local portrait = Instance.new("ImageLabel") -- 보스 칸 초상(원)
+		portrait.Name = "BossPortrait"
+		portrait.BackgroundColor3 = Color3.fromRGB(30, 26, 14)
+		portrait.AnchorPoint = Vector2.new(0.5, 1)
+		portrait.Position = UDim2.new(0.5, 0, 1, -3)
+		portrait.Size = UDim2.fromOffset(G7.cellPortrait, G7.cellPortrait)
+		portrait.Visible = false
+		portrait.Parent = cell
+		local pc = Instance.new("UICorner")
+		pc.CornerRadius = UDim.new(0.5, 0)
+		pc.Parent = portrait
+		local star = Instance.new("ImageLabel") -- 첫 처치 보상 남음 = 오른쪽 아래 별 배지
+		star.Name = "FirstRewardStar"
+		star.BackgroundTransparency = 1
+		star.Image = ArtImage.get(G7.stageIcons.reward) or ""
+		star.AnchorPoint = Vector2.new(1, 1)
+		star.Position = UDim2.new(1, -2, 1, -2)
+		star.Size = UDim2.fromOffset(G7.starBadge, G7.starBadge)
+		star.Visible = false
+		star.Parent = cell
+		cells[i].stateIcon, cells[i].portrait, cells[i].star = stateIcon, portrait, star
+		symbolLabel.Visible = false
+		markLabel.Visible = false
+	end
 end
 
 -- 페이지 이동 + 상태줄.
@@ -470,6 +519,10 @@ local band = StageRewardBand.build({
 	position = UDim2.new(0, 16, 0, BAND_TOP - BODY_TOP),
 	width = PANEL_WIDTH - 32,
 	onChallenge = function(stage)
+		if V7 then -- UI-1 7b: 보스 칸 [도전] = 보스 관문 창(초상 · 전투력 · 보상 · [혼자 도전])
+			require(script.Parent.panels.BossGateWindow).open({ stage = stage, entry = preview[stage] })
+			return
+		end
 		stageMoveRequest:FireServer(stage)
 	end,
 })
@@ -515,9 +568,24 @@ local function render()
 				cell.mark.Text = "✓"
 				cell.mark.TextColor3 = UIColors.textTertiary
 			end
+			if V7 then -- 상태 그림: 깸 · 도전 중(가 봄) · 아직 안 감(최고 + 1) · 못 감 / 보스 칸 = 금 테 + 짙은 금 바탕 + 초상 · 첫 처치 보상 남음 = 별
+				local key = status == "cleared" and "cleared" or (status == "locked" and "locked" or (stage <= best and "inProgress" or "open"))
+				cell.stateIcon.Image = ArtImage.get(G7.stageIcons[key]) or ""
+				local isBoss = StageRewardBand.isBossStage(stage)
+				local bossId = isBoss and require(ReplicatedStorage.Shared.BossRules).bossIdForStage(stage)
+				local portraitPath = bossId and G7.bossPortraits[bossId]
+				cell.portrait.Visible = portraitPath and true or false -- (false ~= nil = 참 주의)
+				cell.portrait.Image = portraitPath and (ArtImage.get(portraitPath) or "") or ""
+				cell.button.BackgroundColor3 = isBoss and Color3.fromHex(G7.bossCellBg) or UIColors.slot
+				cell.stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+				cell.stroke.Color = isBoss and Color3.fromHex(G7.bossCellStroke) or (status == "locked" and UIColors.lockedText or UIColors.rim)
+				cell.stroke.Transparency = isBoss and 0 or 0.4
+				cell.star.Visible = entry ~= nil and StageRewardBand.hasRemaining(entry)
+				cell.button.BackgroundTransparency = status == "locked" and 0.5 or UIColors.slotTransparency
+			end
 			-- 선택된 칸만 눈에 보이는 테두리를 준다(기존 셀의 UIStroke는 TextButton에서 글씨 외곽선 모드라 테두리로 안 그려진다 - 다른 칸의 모양은 그대로 둔다).
 			local selected = stage == selectedStage
-			cell.stroke.ApplyStrokeMode = selected and Enum.ApplyStrokeMode.Border or Enum.ApplyStrokeMode.Contextual
+			cell.stroke.ApplyStrokeMode = (selected or V7) and Enum.ApplyStrokeMode.Border or Enum.ApplyStrokeMode.Contextual
 			cell.stroke.Thickness = selected and 2 or 1.5
 			if selected then
 				cell.stroke.Color = UIColors.textPrimary
@@ -532,6 +600,10 @@ local function render()
 		rec = NumberFormat.format(CombatFormula.display(CombatFormula.displayRecommendedPower(recStage))), -- C3 0-3 표시 곡선
 		mine = NumberFormat.format(CombatFormula.display(player:GetAttribute("CombatPower") or 0)),
 	})
+	if V7 and windowStart > best + 1 and statusLine.Text == "" then -- 잠긴 구간 이유 한 줄(경고색 없음)
+		recommendLine.Visible = true
+		recommendLine.Text = Text.get("ui1.zone.lockedReason", { n = tostring(windowStart - 1), best = tostring(best) })
+	end
 	-- 구간 칩: 상태 색 · 기호(✓ ●) + 지금 보고 있는 구간은 rimHi 테두리.
 	for i, chip in ipairs(chips) do
 		local first = chipStart + (i - 1) * WINDOW_SIZE

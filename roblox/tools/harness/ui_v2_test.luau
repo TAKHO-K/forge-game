@@ -189,9 +189,10 @@ local okRun, err = pcall(function()
 	check("UI2-4 PC 더보기 = 파티 · 도감 · 순위 · 펫 · 설정", table.concat(HD.pc.more, ",") == "party,codex,leaderboard,pet,settings")
 	check("UI2-4 폰 위 줄 = 가방 · 보상 · 더보기 · 자주 쓰는 것 = 구역 · 수련 · 성장 · 퀘스트", table.concat(HD.phone.top, ",") == "inventory,reward,more" and table.concat(HD.phone.moreFrequent, ",") == "stageSelect,training,character,quests")
 	local all = {}
-	for _, list in ipairs({ HD.pc.left, HD.pc.right, { HD.pc.returnItem }, HD.pc.more }) do for _, id in ipairs(list) do all[id] = (all[id] or 0) + 1 end end
+	local V7 = HD.v7 and MODS.UiV2Flags.map -- UI-1 7b 더보기 격자(켜면 v7 목록이 실제 배치)
+	for _, list in ipairs({ HD.pc.left, HD.pc.right, { HD.pc.returnItem }, V7 and HD.v7.pcMore or HD.pc.more }) do for _, id in ipairs(list) do all[id] = (all[id] or 0) + 1 end end
 	local phoneAll = {}
-	for _, list in ipairs({ HD.phone.top, HD.phone.moreFrequent, HD.phone.moreRest }) do for _, id in ipairs(list) do phoneAll[id] = (phoneAll[id] or 0) + 1 end end
+	for _, list in ipairs(V7 and { HD.phone.top, HD.v7.phoneMore } or { HD.phone.top, HD.phone.moreFrequent, HD.phone.moreRest }) do for _, id in ipairs(list) do phoneAll[id] = (phoneAll[id] or 0) + 1 end end
 	local missing = {}
 	for id in pairs(HD.items) do
 		if all[id] ~= 1 then table.insert(missing, "pc:" .. id) end

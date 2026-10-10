@@ -46,6 +46,7 @@ run hud_layout res_hudlayout.txt "" hud_layout_test.luau # UI-1 0단계 02 v6 �
 run ui1_parts res_ui1parts.txt "" ui1_parts_test.luau # UI-1 1단계 A 부품: 상태 아이콘 39 · 그림 기록 · ko/en 짝 · 색 3개 · 잡힘 종류
 run codex_box res_codexbox.txt SecretNestData codex_box_test.luau # UI-1 5단계 도감 진행 상자 10 = 옛 점수판 29단계 총량 · 두 번 안 받음 · 토큰 600 + 140
 run ember_view res_ember.txt "" ember_view_test.luau # UI-1 6단계 불씨 칸 = spec 표(+24 = 17칸) · 가득까지 n번 · 하락 = 칸만 다시 나눔
+run hud_edit res_hudedit.txt "" hud_edit_test.luau # UI-1 7b HUD 편집 배치 = 서버와 같은 검사(화면 밖 · 상단 바 · 로블록스 버튼 · id 화이트리스트) · 요소 8
 run ui_rules res_ui.txt "" ui_rules_test.luau # QUEUE-ALL9C 블록 1 화면 규칙(순위 상위 약 n% 등 순수 함수)
 run community_goal res_goal.txt "" community_goal_test.luau # QUEUE-ALL7 B5 합동 목표 00 · ±25% · 문턱 순서
 run boss_motion res_motion.txt "" boss_motion_test.luau motion_prelude.luau

@@ -41,6 +41,11 @@ return {
 		{ path = { "codex", "boxDone", "1" }, scope = "account", sample = 25, note = "UI-1 5단계 도감 진행 상자 열린 스테이지(골드 고정)" },
 		{ path = { "codex", "boxClaimed", "1" }, scope = "account", sample = true, note = "UI-1 5단계 도감 진행 상자 받음" },
 		{ path = { "codex", "stars", "greatsword", "3" }, scope = "account", sample = 2, note = "UI-1 5단계 도감 성장 별(보상 없음)" },
+		{ path = { "settings", "hudLayoutPc" }, scope = "account", sample = "leftMenu:48,120", note = "UI-1 7b HUD 편집 배치 PC(id:x,y;…)" },
+		{ path = { "settings", "hudLayoutPhone" }, scope = "account", sample = "nextGoal:520,120", note = "UI-1 7b HUD 편집 배치 폰" },
+		{ path = { "settings", "hudLayoutVersion" }, scope = "account", sample = 1, note = "UI-1 7b HUD 배치 형식 번호" },
+		{ path = { "settings", "showKeys" }, scope = "account", sample = false, note = "UI-1 7b 단축키 표시" },
+		{ path = { "settings", "vibrationOff" }, scope = "account", sample = true, note = "UI-1 7b 진동 끔" },
 	},
 	-- 진행이 없는 직업 칸은 캐릭터로 만들지 않는다: 경험치 0 · 최고 스테이지 ≤ 1 · 환생 0 · 무기 +0 · 등급 0 · 착용 장비 없음 · 보석 없음
 }

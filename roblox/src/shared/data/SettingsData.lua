@@ -3,7 +3,7 @@
 --   B4 사운드: kind volume(0 ~ 1 숫자) = 카테고리별 음량(SoundData.categories가 settingKey로 가리킨다 · 클라 SoundHooks가 Attribute로 읽는다). 저장은 같은 settings 표(없는 키 = 기본값 - 이관 없음).
 --   reduceFlashes = 번개 · 태초 화면 섬광 끄기(관문 날씨 섬광 끔 · 피뢰침 방전은 흰 번쩍 대신 밝기만 · 태초 연출의 화면 밝아짐 없음 - 보스 경고 표시는 그대로).
 return {
-	order = { "cameraTopDown", "reduceFlashes", "screenShake", "dimOthersTrail", "autoStage", "volumeSfx", "volumeMusic", "volumeUi", "volumeBossCue", "transcendNotice", "fxLevel", "volumeAmbient", "muteSfx", "muteUi", "muteAmbient", "muteMusic", "windowPositions", "graphics", "language", "quietOthersSfx", "minimapOn", "minimapRotate", "minimapFar", "mapHintSeen", "hubIntroRank", "hubIntroBoard", "hubIntroChallenge", "hubIntroTailor", "bulkSellGrades", "sellHintSeen", "weekendBannerAt", "skipMenu", "autoProcessMode", "autoProcessHintSeen", "menuLoreSeen", "lastSeenNewsId", "textScale", "doubleTapDash", "bagSort", "bagSortAsc" },
+	order = { "cameraTopDown", "reduceFlashes", "screenShake", "dimOthersTrail", "autoStage", "volumeSfx", "volumeMusic", "volumeUi", "volumeBossCue", "transcendNotice", "fxLevel", "volumeAmbient", "muteSfx", "muteUi", "muteAmbient", "muteMusic", "windowPositions", "graphics", "language", "quietOthersSfx", "minimapOn", "minimapRotate", "minimapFar", "mapHintSeen", "hubIntroRank", "hubIntroBoard", "hubIntroChallenge", "hubIntroTailor", "bulkSellGrades", "sellHintSeen", "weekendBannerAt", "skipMenu", "autoProcessMode", "autoProcessHintSeen", "menuLoreSeen", "lastSeenNewsId", "textScale", "doubleTapDash", "bagSort", "bagSortAsc", "hudLayoutPc", "hudLayoutPhone", "hudLayoutVersion", "showKeys", "vibrationOff" },
 	keys = {
 		cameraTopDown = { kind = "boolean", default = false, attrs = { "CameraTopDown" } },
 		reduceFlashes = { kind = "boolean", default = false, attrs = { "ReduceFlashes" } },
@@ -28,7 +28,13 @@ return {
 		autoProcessHintSeen = { kind = "boolean", default = false, attrs = { "AutoProcessHintSeen" } },
 		menuLoreSeen = { kind = "boolean", default = false, attrs = { "MenuLoreSeen" } }, -- QUEUE-UI UI-1 메인 메뉴 첫 실행 설정 문구 1회(01 spec - 계정 · 없는 키 = 기본값, 이관 없음)
 		lastSeenNewsId = { kind = "stamp", default = 0, attrs = { "LastSeenNewsId" } }, -- QUEUE-UI1F-1 소식 창을 열 때 본 가장 큰 소식 id(SocialRewardData.news[].id - 계정 · 없는 키 = 0 = 빨간 점, 이관 없음)
-		doubleTapDash = { kind = "boolean", default = true, attrs = { "SettingDoubleTapDash" } },
+		doubleTapDash = { kind = "boolean", default = false, attrs = { "SettingDoubleTapDash" } }, -- UI-1 7b(06 v3 · G spec §5): 기본 끔(옛 true - 저장한 값은 그대로)
+		-- UI-1 7b HUD 편집(08 v7 §6 · 이름 = FINAL-1b 확정): "id:x,y;…" 기준 px · 서버 검사 = shared/HudEditRules(화면 밖 · 금지 자리 · id 화이트리스트) · 없는 키 = 기본 자리(이관 없음)
+		hudLayoutPc = { kind = "hudLayout", device = "pc", default = "", attrs = { "HudLayoutPc" } },
+		hudLayoutPhone = { kind = "hudLayout", device = "phone", default = "", attrs = { "HudLayoutPhone" } },
+		hudLayoutVersion = { kind = "stamp", default = 0, attrs = { "HudLayoutVersion" } },
+		showKeys = { kind = "boolean", default = true, attrs = { "SettingShowKeys" } }, -- UI-1 7b 단축키 표시(메뉴 키 칩 · 스킬 칸 키 판)
+		vibrationOff = { kind = "boolean", default = false, attrs = { "VibrationOff" } }, -- UI-1 7b 진동 끔(지원 기기만 줄 보임 - client/ui/Haptics)
 		-- UI-1 4단계(03 v3 §6): 가방 정렬(등급 · 부위 · 전투력 · 최신) · 낮은 것 먼저(기본 = 높은 것 먼저) - 계정 · 없는 키 = 기본값(이관 없음 · SAVE 버전 안 올림)
 		bagSort = { kind = "choice", default = "grade", options = { "grade", "part", "power", "newest" }, attrs = { "BagSort" } },
 		bagSortAsc = { kind = "boolean", default = false, attrs = { "BagSortAsc" } }, -- FINAL-1b 결정 3: W/A/D 두 번 = 짧은 대시(끄면 그 입력 무시 · S 두 번 백플립은 그대로 · 계정 · 없는 키 = 켬, 이관 없음)

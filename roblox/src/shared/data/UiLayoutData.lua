@@ -252,4 +252,50 @@ return {
 			rewardOrder = { "gold", "sparkleShard", "enhanceStone", "highEnhanceStone", "egg", "gemDust", "rerollTicket", "rebirthTicket", "passExp", "title", "cosmeticItem" },
 		},
 	},
+	-- UI-1 7b단계 G(08 v7-map-settings): 지도 버튼 · 핀 크기
+	map = {
+		v7 = { inset = 16, button = 52, buttonPhone = 44, gap = 8, meSize = 34, gateSize = 40, gateStroke = "FFD45A",
+			-- 구역 선택 칸(§2): 상태 그림 · 보스 칸
+			stateIcon = 20, cellPortrait = 22, starBadge = 16, bossCellBg = "3A3016", bossCellStroke = "D8B96E",
+			stageIcons = { cleared = "ui/g/stage-clear", inProgress = "ui/g/stage-tried", open = "ui/g/stage-open", locked = "ui/g/stage-locked", reward = "ui/g/stage-first-reward" },
+			bossPortraits = { section_guardian = "ui/boss/boss-portrait-guardian", crystal_queen = "ui/boss/boss-portrait-crystal", abyssal_lord = "ui/boss/boss-portrait-abyssal",
+				scorpion_queen = "ui/boss/boss-portrait-scorpion", storm_lord = "ui/boss/boss-portrait-storm", frost_giant = "ui/boss/boss-portrait-mammoth" },
+		},
+	},
+	-- UI-1 7b단계 보스 관문 창(08 v7 §3)
+	bossGate = {
+		v7 = {
+			pc = { x = 460, y = 230, w = 1000, h = 520, pad = 24, gap = 12, portrait = 280, close = 44, powerH = 64, bandH = 110, button = { 240, 64 } },
+			phone = { x = 8, y = 62, w = 784, h = 290, pad = 10, gap = 6, portrait = 120, close = 40, powerH = 40, bandH = 46, button = { 180, 44 } },
+			colors = { window = "161A2B", stroke = "3A4466", box = "1E2438", band = "3A3016", bandStroke = "D8B96E", bandText = "FFE9B0", info = "8FD8FF" },
+			displayOrder = 160,
+		},
+	},
+	-- UI-1 7b단계 HUD 편집 모드(08 v7 §6): 옮길 요소 8 = 기준 자리(hud.v6 이름) · 실제 프레임(PlayerGui 아래 경로) · 격자 · 금지 자리(상단 바 · 로블록스 버튼)
+	--   저장 = 설정 키 hudLayoutPc · hudLayoutPhone("id:x,y;…" 기준 px 왼쪽 위) · hudLayoutVersion(형식 번호) - 서버 SettingsService가 shared/HudEditRules로 같은 검사(화면 밖 · 금지 자리 · id 화이트리스트)
+	hudEdit = {
+		v7 = {
+			version = 1,
+			grid = { pc = 24, phone = 16 },
+			forbidden = { "topBar", "robloxButtons" }, -- hud.v6[기기] 사각형 이름
+			robloxButtons = { phone = { 0, 0, 140, 52 } }, -- 폰 표에 없는 로블록스 버튼 자리(01 spec 폰 140 × 52)
+			elements = {
+				{ id = "leftMenu", label = "ui1.hudEdit.el.leftMenu", rect = { pc = "leftMenu", phone = "menuRow" }, paths = { pc = { "HudMenuV2Gui/HudLeft" }, phone = { "HudMenuV2Gui/HudLeft" } } },
+				{ id = "rightMenu", label = "ui1.hudEdit.el.rightMenu", rect = { pc = "rightColumn" }, paths = { pc = { "HudMenuV2Gui/HudRight" } } },
+				{ id = "nextGoal", label = "ui1.hudEdit.el.nextGoal", rect = { pc = "nextGoal", phone = "nextGoal" }, paths = { pc = { "NextGoalGui/NextGoal" }, phone = { "NextGoalGui/NextGoal" } } },
+				{ id = "minimap", label = "ui1.hudEdit.el.minimap", rect = { pc = "minimap" }, paths = { pc = { "MinimapGui/Minimap", "MinimapGui/MinimapFeedAnchor" } } },
+				{ id = "party", label = "ui1.hudEdit.el.party", rect = { pc = "party", phone = "party" }, paths = { pc = { "PartyHudGui/PartyList" }, phone = { "PartyHudGui/PartyList" } } },
+				{ id = "hpStatus", label = "ui1.hudEdit.el.hpStatus", rect = { pc = "hp", phone = "hp" }, extra = { pc = "statusRow", phone = "statusRow" },
+					paths = { pc = { "PlayerHealthBarGui/HealthBar", "PlayerHealthBarGui/ComboPipsAnchor", "PlayerHealthBarGui/BuffHudAnchor", "StatusHudGui/StatusRowHolder" },
+						phone = { "PlayerHealthBarGui/HealthBar", "PlayerHealthBarGui/ComboPipsAnchor", "PlayerHealthBarGui/BuffHudAnchor", "StatusHudGui/StatusRowHolder" } } },
+				{ id = "bossBar", label = "ui1.hudEdit.el.bossBar", rect = { pc = "bossBar", phone = "bossBar" }, ghost = true, paths = { pc = { "BossBarGui/BossBar" }, phone = { "BossBarGui/BossBar" } } }, -- 편집 중엔 자리만 점선
+				{ id = "skillRow", label = "ui1.hudEdit.el.skillRow", rect = { phone = { 536, 150, 256, 206, anchor = "BR" } }, paths = { phone = { "SkillSlotsGui/PhoneCombat" } } }, -- 폰만(전투 버튼 묶음 · 오른쪽 아래에 붙음)
+			},
+			colors = { dim = 0.35, box = "8FD8FF", drag = "FFD45A", overlap = "FFB13D", forbidden = "6B7088", bar = "161A2B" },
+			bar = { pc = { y = 176, h = 64 }, phone = { y = 62, h = 44 } },
+			displayOrder = 180, -- HUD(150 · 160) 위 · 확인 창 overlay(200) 아래
+		},
+	},
+	-- UI-1 7b단계 설정 새 줄(06 v3): "새로" 알약 = 출시 판 숨김(스위치)
+	settings = { v7 = { showNewPill = false } },
 }

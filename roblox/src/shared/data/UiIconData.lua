@@ -42,6 +42,7 @@ return {
 		["shop"] = { asset = "ui/ds/icon-shop", tint = false, fallback = "?", old = "icons/hud/shop" },
 		["star"] = { asset = "ui/ds/icon-star", tint = false, fallback = "★" },
 		["x"] = { asset = "ui/ds/icon-x", tint = false, fallback = "X" },
+		["hud-edit"] = { asset = "ui/g/icon-hud-edit", tint = false, fallback = "H" }, -- UI-1 7b HUD 편집(08 v7 assets)
 		-- 00 v3(10-05): 구역 선택 · 수련 · 보상
 		["zone"] = { asset = "ui/ds/icon-zone", tint = false, fallback = "?", old = "icons/hud/zone_select" },
 		["training"] = { asset = "ui/ds/icon-training", tint = false, fallback = "?", old = "icons/hud/training" },
@@ -80,6 +81,18 @@ return {
 		["map.pin.quest"] = "icons/ui/pin_quest",
 		["map.pin.boss"] = "icons/ui/pin_boss",
 	},
+	-- UI-1 7b단계(08 v7-map-settings §1-1): 스위치 UiV2Flags.map 켬 = 이 표가 위 map보다 먼저(00 v6 pin-* · G map-me · F 보스 초상) - 끄면 옛 핀
+	mapV7 = {
+		["map.me"] = "ui/g/map-me",
+		["map.pin.forge"] = "ui/ds/pin-enhance", ["map.pin.shop"] = "ui/ds/pin-shop", ["map.pin.rank"] = "ui/ds/pin-rank", ["map.pin.rebirth"] = "ui/ds/pin-rebirth",
+		["map.pin.board"] = "ui/ds/pin-hub-board", ["map.pin.challenge"] = "ui/ds/pin-hub-challenge", ["map.pin.gemMerchant"] = "ui/ds/pin-hub-gem-merchant", ["map.pin.gemcraft"] = "ui/ds/pin-hub-gemcraft",
+		["map.pin.hatchery"] = "ui/ds/pin-hub-hatchery", ["map.pin.refine"] = "ui/ds/pin-hub-refine", ["map.pin.tailor"] = "ui/ds/pin-hub-tailor",
+		["map.bossgate.section_guardian"] = "ui/boss/boss-portrait-guardian", ["map.bossgate.crystal_queen"] = "ui/boss/boss-portrait-crystal", ["map.bossgate.abyssal_lord"] = "ui/boss/boss-portrait-abyssal",
+		["map.bossgate.scorpion_queen"] = "ui/boss/boss-portrait-scorpion", ["map.bossgate.storm_lord"] = "ui/boss/boss-portrait-storm", ["map.bossgate.frost_giant"] = "ui/boss/boss-portrait-mammoth",
+	},
+	-- 마을 기능 · NPC id → 지도 핀 키(HubServiceData · HubArtData - 머리 위 판 그림은 그대로)
+	servicePins = { hallOfFame = "map.pin.rank", noticeBoard = "map.pin.board", challengeKnight = "map.pin.challenge", refine = "map.pin.refine", gemcraft = "map.pin.gemcraft", shop = "map.pin.shop", tailor = "map.pin.tailor" },
+	npcPins = { smith = "map.pin.forge", merchant = "map.pin.shop" },
 	-- 공격 버튼 아이콘 = 지금 직업 무기 아이콘(무기 아이콘 키 = icons/weapons/<직업>_<등급> - client/ItemIcons.keyFor)
 	attackUsesWeaponIcon = true,
 }

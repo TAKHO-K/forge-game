@@ -60,6 +60,11 @@ function SettingsService.sanitize(key, value)
 			end
 		end
 		return value
+	elseif def.kind == "hudLayout" then -- UI-1 7b HUD 편집 배치: 화면 밖 · 상단 바 · 로블록스 버튼 자리 · 모르는 요소 id = 거절(클라 검사와 같은 함수)
+		if require(ReplicatedStorage.Shared.HudEditRules).validate(def.device, value) then
+			return value
+		end
+		return nil
 	elseif def.kind == "stamp" then -- QUEUE-ALL9A 1-2: 시각 도장(유닉스 초 정수 - 주말 배너 본 창)
 		if type(value) == "number" and value == math.floor(value) and value >= 0 and value < 2 ^ 40 then
 			return value

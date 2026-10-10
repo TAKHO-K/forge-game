@@ -92,6 +92,7 @@ local function notifyBlocked(text)
 end
 
 local items = {} -- id → { button, ctl, dot, label, chip, id }
+local V7MORE = require(ReplicatedStorage.Shared.data.UiV2Flags).map -- UI-1 7b 더보기 격자(08 v7 §4)
 local moreWin, rewardWin
 local setMore, setReward
 
@@ -115,6 +116,8 @@ local function press(id)
 		require(client.panels.EggInfo).toggle()
 	elseif def.action == "hubReturn" then
 		recallEvent:Fire()
+	elseif def.action == "hudEdit" then -- UI-1 7b HUD 편집 모드
+		require(client.hud.HudEdit).enter()
 	elseif def.panel then
 		local blocked = UIManager.switchBlockedReason(def.panel)
 		if blocked then
@@ -221,9 +224,24 @@ if phone then
 	band.ZIndex = 10
 	band.Parent = moreWin
 	columns.more = { frame = moreWin, lists = { HudData.phone.moreFrequent, HudData.phone.moreRest }, spec = L.moreItem }
+	if V7MORE then -- UI-1 7b: 폰 더보기 = 창 한 화면 격자(이름 포함 · 자주 쓰는 것 띠 없음)
+		head.Visible, band.Visible = false, false
+		columns.more.lists = { HudData.v7.phoneMore }
+		UiKit.place(moreWin, HudData.v7.phone.window)
+		local w = HudData.v7.phone.window -- 창이 메뉴 줄([더보기])을 덮으니 닫기 버튼(44)
+		local closeB = UiKit.closeButton({ parent = moreWin, name = "MoreClose", rect = { w[3] - 52, 8, 44, 44 }, onActivated = function()
+			setMore(false)
+		end })
+		closeB.ZIndex = 12
+		for _, d in ipairs(closeB:GetDescendants()) do
+			if d:IsA("GuiObject") then
+				d.ZIndex = 13
+			end
+		end
+	end
 	for _, list in ipairs(columns.more.lists) do
 		for _, id in ipairs(list) do
-			makeItem(moreWin, id, L.moreItem.size, false).button.ZIndex = 11
+			makeItem(moreWin, id, V7MORE and HudData.v7.phone.item or L.moreItem.size, V7MORE).button.ZIndex = 11
 		end
 	end
 else
@@ -238,9 +256,9 @@ else
 		makeItem(rightRoot.frame, id, L.right.size, true)
 	end
 	moreWin = popup(leftRoot.frame, "MorePanel", L.moreWindow)
-	columns.more = { frame = moreWin, lists = { HudData.pc.more }, spec = L.moreItem }
-	for _, id in ipairs(HudData.pc.more) do
-		makeItem(moreWin, id, L.moreItem.size, false).button.ZIndex = 11
+	columns.more = { frame = moreWin, lists = { V7MORE and HudData.v7.pcMore or HudData.pc.more }, spec = L.moreItem }
+	for _, id in ipairs(columns.more.lists[1]) do
+		makeItem(moreWin, id, V7MORE and HudData.v7.pc.item or L.moreItem.size, V7MORE).button.ZIndex = 11
 	end
 end
 
@@ -417,6 +435,37 @@ end
 
 local function placeMore()
 	local spec = columns.more.spec
+	if V7MORE then -- UI-1 7b 격자: 열 수 · 칸 · 간격 = HudData.v7(빨간 점 = 그 메뉴 안에 받을 것 있을 때만 - 옛 규칙 그대로)
+		local G = phone and HudData.v7.phone or HudData.v7.pc
+		local cols = phone and HudData.v7.phoneCols or HudData.v7.pcCols
+		local list = table.clone(columns.more.lists[1])
+		for _, id in ipairs(foldedToMore) do
+			if not table.find(list, id) then
+				table.insert(list, id)
+			end
+		end
+		local n = 0
+		for _, id in ipairs(list) do
+			local item = items[id]
+			item.button.Visible = not hidden(id)
+			if item.button.Visible then
+				local col, row = n % cols, n // cols
+				item.button.Size = UDim2.fromOffset(G.item, G.item)
+				item.button.Position = UDim2.fromOffset(G.padX + col * (G.item + G.gapX), G.padY + row * (G.item + G.label + G.gapY))
+				if item.label then
+					item.label.Visible = true
+				end
+				n += 1
+			end
+		end
+		if not phone then
+			local rows = math.max(1, math.ceil(n / cols))
+			local h = G.padY * 2 + rows * (G.item + G.label) + (rows - 1) * G.gapY
+			moreWin.Size = UDim2.fromOffset(G.padX * 2 + cols * G.item + (cols - 1) * G.gapX, h)
+			moreWin.Position = UDim2.fromOffset(L.moreWindow[1], L.moreWindow[2] + L.moreWindow[4] - h) -- 옛 판 아래 끝 고정 · 위로 늘어남(작은 창에서 화면 밖 X)
+		end
+		return
+	end
 	if phone then
 		local rowIndex, col = 1, 0
 		for li, list in ipairs(columns.more.lists) do

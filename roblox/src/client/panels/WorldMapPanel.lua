@@ -25,6 +25,8 @@ local TextService = game:GetService("TextService")
 
 local WorldMapPanel = {}
 WorldMapPanel.id = "worldMap"
+local V7 = require(ReplicatedStorage.Shared.data.UiV2Flags).map -- UI-1 7b(08 v7 §1): 지도 버튼 = 지도 판 안쪽 오른쪽 아래 · 관문 = 보스 초상 핀 · 내 위치로
+local G = require(ReplicatedStorage.Shared.data.UiLayoutData).map
 
 local player = Players.LocalPlayer
 local D = WorldMapData
@@ -72,7 +74,7 @@ local function places()
 				table.insert(list, { kind = "ground", icon = "pin_quest", name = Text.get("map.ground", { zone = zone.hunt.name, n = tostring(g.index) }), position = g.center, small = true })
 			end
 		end
-		table.insert(list, { kind = "gate", icon = "pin_gate", name = Text.get("map.gate", { zone = zone.theme }), position = WorldMapLayout.gate(zone) }) -- QUEUE-ALL7 D4: 관문은 안 가 본 구역도 늘 보인다(길 잃지 않게)
+		table.insert(list, { kind = "gate", icon = (V7 and zone.bossId) and ("map.bossgate." .. zone.bossId) or "pin_gate", name = Text.get("map.gate", { zone = zone.theme }), position = WorldMapLayout.gate(zone), locked = index > unlocked }) -- QUEUE-ALL7 D4: 관문은 안 가 본 구역도 늘 보인다(길 잃지 않게)
 	end
 	-- 체크포인트(Q5 - 발견한 것만 · 스위치 켬일 때)
 	local found = player:GetAttribute("CheckpointsFound")
@@ -102,6 +104,21 @@ local function marker(parent, place, size)
 	local img = ArtImage.get(require(game:GetService("ReplicatedStorage").Shared.UiModel).mapIcon(place.icon)) -- ALL7B 2: 마을 기능 = 전체 경로 · UI-1 ⑦ 핀 키(UiIconData.map)
 	if img then
 		b.Image = img
+		if V7 and place.kind == "gate" then -- 보스 관문 = 초상 원 + 금 테 3 · 잠긴 구역 = 회색
+			b.Size = UDim2.fromOffset(G.v7.gateSize, G.v7.gateSize)
+			b.BackgroundTransparency = 0
+			b.BackgroundColor3 = Color3.fromRGB(30, 34, 52)
+			local c = Instance.new("UICorner")
+			c.CornerRadius = UDim.new(0.5, 0)
+			c.Parent = b
+			local st = Instance.new("UIStroke")
+			st.Thickness = 3
+			st.Color = place.locked and Color3.fromRGB(120, 124, 140) or Color3.fromHex(G.v7.gateStroke)
+			st.Parent = b
+			if place.locked then
+				b.ImageColor3 = Color3.fromRGB(110, 110, 120)
+			end
+		end
 	else
 		b.BackgroundTransparency = 0
 		b.BackgroundColor3 = place.kind == "checkpoint" and Theme.color("success") or Theme.color("gold")
@@ -584,6 +601,42 @@ local function build()
 		t.ZIndex = 21
 	end
 	built = { panel = panel, view = view, canvas = canvas, markers = markers, me = me, title = title, autoButton = autoButton, guideButton = guideButton, teleButton = teleButton, legend = legend, minimapToggle = minimapToggle, firstHint = firstHint }
+	if V7 then -- [+] [−] [내 위치로] [?] = 지도 판 안쪽 오른쪽 아래(가장자리 16 · 52 × 4 간격 8 · 폰 44) · 범례 = 왼쪽 아래 16
+		local S = G.v7
+		local bs = Theme.isMobile and S.buttonPhone or S.button
+		local bar = Instance.new("Frame")
+		bar.Name = "MapControls"
+		bar.BackgroundTransparency = 1
+		bar.AnchorPoint = Vector2.new(1, 1)
+		bar.Position = UDim2.new(1, -S.inset, 1, -S.inset)
+		bar.Size = UDim2.fromOffset(bs * 4 + S.gap * 3, bs)
+		bar.ZIndex = 18
+		bar.Parent = view
+		local recenter = Button.build({ parent = side, kind = "secondary", width = 64, height = 48, text = "◎", onActivated = function()
+			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			if root then
+				local r = toMap(root.Position)
+				local side2 = math.min(view.AbsoluteSize.X, view.AbsoluteSize.Y) * zoom
+				offset = Vector2.new((0.5 - r.X) * side2, (0.5 - r.Y) * side2)
+				applyView()
+			end
+		end })
+		recenter.root.Name = "Recenter"
+		for i, b in ipairs({ zoomIn.root, zoomOut.root, recenter.root, legendButton.root }) do
+			b.Parent = bar
+			b.AnchorPoint = Vector2.zero
+			b.Position = UDim2.fromOffset((i - 1) * (bs + S.gap), 0)
+			b.Size = UDim2.fromOffset(bs, bs)
+			b.ZIndex = 19
+			for _, d in ipairs(b:GetDescendants()) do
+				if d:IsA("GuiObject") then
+					d.ZIndex = 20
+				end
+			end
+		end
+		legend.Position = UDim2.new(0, S.inset, 1, -(S.inset + bs + S.gap))
+		me.Size = UDim2.fromOffset(S.meSize, S.meSize)
+	end
 	view:GetPropertyChangedSignal("AbsoluteSize"):Connect(applyView)
 end
 

@@ -17,11 +17,23 @@ function UiModel.fit(viewW, viewH, isPhone)
 end
 
 -- UI-1 0단계 ⑦ 지도 핀 키 → 그림 키(UiIconData.map): "map.me" · "map.pin.hub" · 옛 이름 "pin_hub"(= map.pin.hub · pin_player = map.me) · 전체 경로("icons/…")는 그대로
+local MAP_V7 = nil -- UI-1 7b 스위치(처음 부를 때 읽음)
 function UiModel.mapIcon(id)
 	if type(id) ~= "string" then
 		return nil
 	end
 	local map = IconData.map or {}
+	local v7 = IconData.mapV7
+	if v7 and MAP_V7 == nil then
+		MAP_V7 = require(script.Parent.data.UiV2Flags).map == true
+	end
+	if v7 and MAP_V7 then -- UI-1 7b: 새 핀 그림 먼저(옛 이름 pin_<x>도 같은 키로)
+		local short = id:match("^pin_(.+)$")
+		local key = short and (short == "player" and "map.me" or ("map.pin." .. short)) or id
+		if v7[key] then
+			return v7[key]
+		end
+	end
 	if map[id] then
 		return map[id]
 	end

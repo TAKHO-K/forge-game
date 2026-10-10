@@ -6,6 +6,8 @@ local HubServiceData = require(ReplicatedStorage.Shared.data.HubServiceData)
 local HubArtData = require(ReplicatedStorage.Shared.data.HubArtData)
 local WorldMapLayout = require(ReplicatedStorage.Shared.WorldMapLayout)
 local Text = require(ReplicatedStorage.Shared.Text)
+local IconData = require(ReplicatedStorage.Shared.data.UiIconData)
+local V7 = require(ReplicatedStorage.Shared.data.UiV2Flags).map -- UI-1 7b: 지도 핀 = UiIconData 키(servicePins · npcPins)
 
 local HubPlaces = {}
 
@@ -33,7 +35,7 @@ function HubPlaces.list()
 	for _, s in ipairs(HubServiceData.services) do
 		local pos = WorldMapLayout.spot(s.spot)
 		if pos then -- nameHidden = 지도 이름 층에서 빼고 아이콘 · 누르면 길 안내는 그대로(미니맵 말풍선도 그대로)
-			table.insert(out, { kind = "service", icon = s.icon, name = Text.get(s.nameKey), position = pos, priority = 2, nameHidden = nearOwnBuilding(s, pos, buildings) })
+			table.insert(out, { kind = "service", icon = (V7 and IconData.servicePins[s.id]) or s.icon, name = Text.get(s.nameKey), position = pos, priority = 2, nameHidden = nearOwnBuilding(s, pos, buildings) })
 		end
 	end
 	for _, n in ipairs(HubArtData.npcs) do
@@ -48,7 +50,7 @@ function HubPlaces.list()
 				end
 			end
 			if not dup then
-				table.insert(out, { kind = "npc", icon = n.icon, name = Text.name(n.name), position = pos, priority = 3 })
+				table.insert(out, { kind = "npc", icon = (V7 and IconData.npcPins[n.id]) or n.icon, name = Text.name(n.name), position = pos, priority = 3 })
 			end
 		end
 	end
