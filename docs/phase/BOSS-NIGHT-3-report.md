@@ -15,7 +15,7 @@
 | 2 CC 체계(+ addendum-2 19 · VERIFY-2 정정 3 ~ 6) | 끝 | `bb912150` | 15 | 0 |
 | 3 투사체 · 범위(+ addendum-2 12 · 13 · VERIFY-2 7 · 8) | 끝 | `0b29ac56` | 9 | 0 |
 | addendum-2 15 패턴 굶주림 · 가중치 | 끝(목표 80%는 못 닿음 - 결정 필요) | `11e20e76` | 6 | 0 |
-| 7 난이도(BossSim 반응 대시 · 빔 점프 · 판정 줄 · 피해 계수) | 끝(처음 만남 전부 목표 안 · 아는 보스 하한 미달 - 결정) | (커밋 뒤 기록) | 8 | 0 |
+| 7 난이도(BossSim 반응 대시 · 빔 점프 · 판정 줄 · 피해 계수) | 끝(처음 만남 전부 목표 안 · 아는 보스 하한 미달 - 결정) | `951fd5ad` | 8 | 0 |
 
 ## 0단계 — 현황 통합표
 표 = `docs/design/boss-bible/BOSS-NIGHT-3/00_inventory.md`(6보스 × 79줄 · 평타 포함) · 덤프 하네스 = `roblox/tools/harness/boss_inventory_dump.luau`.
