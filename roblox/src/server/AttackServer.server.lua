@@ -14,7 +14,7 @@ local PrimordialData = require(ReplicatedStorage.Shared.data.PrimordialData)
 local SkillData = require(ReplicatedStorage.Shared.data.SkillData) -- C3-2 강궁(heavyShot - 관통)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
 local AimPicker = require(ReplicatedStorage.Shared.AimPicker)
-local ZoneBounds = require(ReplicatedStorage.Shared.ZoneBounds)
+local AttackZone = require(script.Parent.AttackZone) -- SEC-FIX-1 5: 구역 · 보스전 판정 한 곳(옛 ZoneBounds 직접 = 보스는 항상 통과)
 local MonsterState = require(script.Parent.MonsterState)
 local MonsterSpawner = require(script.Parent.MonsterSpawner)
 local PlayerProfile = require(script.Parent.PlayerProfile)
@@ -355,7 +355,7 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 	-- 구역 밖 공격 차단(19-4 [4]-나) - 담장(HuntingGround.server.lua)이 1차 방어, 이건
 	-- 뚫렸을 때의 2차 방어이자 "입구에 서서 안쪽을 쏘는" 행위 자체를 막는 장치다. 클라이언트
 	-- 좌표가 아니라 서버가 들고 있는 rootPart.Position으로 판정한다.
-	if target and not ZoneBounds.isInside(rootPart.Position, MonsterState.getZoneKey(target)) then
+	if target and not AttackZone.canHit(player, rootPart.Position, target) then
 		notifyZoneBlocked(player)
 		return
 	end
@@ -533,7 +533,7 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 		local root = pathTarget.PrimaryPart
 		local position = root and root.Position
 		local distance = position and (position - shotOrigin).Magnitude or 0
-		if position and distance > 0 and ZoneBounds.isInside(rootPart.Position, MonsterState.getZoneKey(pathTarget)) then
+		if position and distance > 0 and AttackZone.canHit(player, rootPart.Position, pathTarget) then
 			local blocked = Workspace:Raycast(shotOrigin, position - shotOrigin, raycastParams)
 			if not blocked or blocked.Distance >= distance - 1 then
 				table.insert(hitsToApply, { target = pathTarget, launchPosition = position, distance = distance })

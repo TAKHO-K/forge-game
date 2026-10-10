@@ -411,13 +411,14 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer, 
 	-- 0.28초 평타로 혼자 순식간에 깨서 "모두가 받는다"가 무의미해진다(설계의 핵심). 첫 유효
 	-- 피격을 낸 순간 보상 대상(chestHitters)에 들어간다 - 강한 사람도 15번, 약한 사람도 15번.
 	if entry.isChest then
+		-- SEC-FIX-1 5(AUDIT1 #19): 세지 않은 타격 = 들어간 피해 0(옛 = damage를 그대로 돌려 흡혈 · 궁극기 충전이 정상 몹처럼 들어왔다 - 상자 연타 = 무한 회복 · 충전)
 		if not attackerPlayer then
-			return false, damage
+			return false, 0
 		end
 		local now = os.clock()
 		local last = entry.chestLastHitAt[attackerPlayer]
 		if last and now - last < TreasureChestConfig.hitIntervalSeconds then
-			return false, damage
+			return false, 0
 		end
 		entry.chestLastHitAt[attackerPlayer] = now
 		entry.chestHitters[attackerPlayer] = true

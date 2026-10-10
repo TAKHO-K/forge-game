@@ -17,7 +17,7 @@ local Workspace = game:GetService("Workspace")
 local SkillData = require(ReplicatedStorage.Shared.data.SkillData)
 local SkillCombat = require(ReplicatedStorage.Shared.SkillCombat)
 local PlayerCombat = require(ReplicatedStorage.Shared.PlayerCombat)
-local ZoneBounds = require(ReplicatedStorage.Shared.ZoneBounds)
+local AttackZone = require(script.Parent.AttackZone) -- SEC-FIX-1 5
 local AimPicker = require(ReplicatedStorage.Shared.AimPicker)
 local Reach = require(ReplicatedStorage.Shared.Reach)
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
@@ -125,14 +125,9 @@ end
 
 -- 후보 몬스터 중 캐스터와 같은 구역(ZoneBounds) 안에 있는 것만 남긴다 - AttackServer의
 -- "구역 밖 공격 차단"(19-4 [4]-나)과 같은 2차 방어. 담장(물리 충돌)이 1차 방어다.
-local function filterSameZone(casterPosition, candidates)
-	local filtered = {}
-	for _, model in ipairs(candidates) do
-		if ZoneBounds.isInside(casterPosition, MonsterState.getZoneKey(model)) then
-			table.insert(filtered, model)
-		end
-	end
-	return filtered
+-- SEC-FIX-1 5: 판정 = server/AttackZone(잡몹 = 캐스터가 그 구역 안 · 보스 = 그 보스전 멤버만 - 옛 ZoneBounds는 보스를 항상 통과시켜 아레나 벽 너머에서도 맞았다).
+local function filterSameZone(casterPosition, candidates, player)
+	return AttackZone.filter(player, casterPosition, candidates)
 end
 
 -- K1: 궁극기 타격 = 스킬과 같은 피해 경로(치명 · 힐러 버프 · 보상 · 숫자). 결과는 슬롯 "T" 틱으로 클라에 보낸다(피해 숫자 · 적중 연출).
@@ -144,8 +139,8 @@ UltimateService.register(function(player, classId, target, coefficient, extraDam
 	local hit = strikeTarget(player, classId, SkillStats.attack(player, classId, weapon), target, coefficient, TutorialState.getMonsterStage(player), nil, nil, nil, extraDamage, true)
 	sendResult(player, "T", { ok = true, kind = "ultHit", hits = { hit } })
 	return hit
-end, function(position) -- 리뷰 1: 궁극기 대상 후보 = 스킬과 같은 구역 필터
-	return filterSameZone(position, MonsterState.getAllModels())
+end, function(position, player) -- 리뷰 1: 궁극기 대상 후보 = 스킬과 같은 구역 필터 · SEC-FIX-1 5: position = 캐스터 위치(조준점 아님)
+	return filterSameZone(position, MonsterState.getAllModels(), player)
 end)
 
 -- 담장에 막히는지 Raycast로 확인해 최종 도착점을 정한다(20-2a 관통돌진, 20-2b 백스텝샷이
@@ -167,7 +162,7 @@ local function castLineAttack(player, slot, def, classId, atk, rootPart, attacke
 	local startPos = rootPart.Position
 	local finalEnd = computeDashEndpoint(player, startPos, direction, def.rangeStuds)
 
-	local candidates = filterSameZone(startPos, MonsterState.getAllModels())
+	local candidates = filterSameZone(startPos, MonsterState.getAllModels(), player)
 	local targets = SkillCombat.hitsOnSegment(startPos, finalEnd, def.hitRadiusStuds, candidates)
 
 	-- 26-2(PRD 20.67 [2] "관통돌진 - Q coefficient ×(1+x)").
@@ -300,7 +295,7 @@ local function castCircleChannel(player, slot, def, classId, atk, attackerStage)
 		end
 
 		local casterPosition = rootPart.Position
-		local candidates = filterSameZone(casterPosition, MonsterState.getAllModels())
+		local candidates = filterSameZone(casterPosition, MonsterState.getAllModels(), player)
 		local targets = SkillCombat.hitsInCircle(casterPosition, def.radiusStuds, candidates)
 
 		local hits = {}
@@ -390,7 +385,7 @@ end
 -- 시전 시점에 고정된 하나뿐이라는 점만 다르다). 대상이 죽거나 사거리를 벗어나면 그 자리에서
 -- 멈춘다(재탐색하지 않는다 - SkillData.lua dualblade.E 주석 참고).
 local function castSingleChannel(player, slot, def, classId, atk, rootPart, attackerStage)
-	local candidates = filterSameZone(rootPart.Position, MonsterState.getAllModels())
+	local candidates = filterSameZone(rootPart.Position, MonsterState.getAllModels(), player)
 	local lockedTarget = AimPicker.pick(rootPart.Position, nil, def.rangeStuds, candidates)
 	if not lockedTarget then
 		reject(player, slot, "noTarget")
@@ -485,9 +480,9 @@ local function castHeal(player, slot, def, classId, cooldownSeconds)
 end
 
 -- ═══ K2 R 스킬(묶음 F3) ═══
-local function nearestMonster(position, rangeStuds)
+local function nearestMonster(position, rangeStuds, player)
 	local best, bestD = nil, rangeStuds
-	for _, model in ipairs(filterSameZone(position, MonsterState.getAllModels())) do
+	for _, model in ipairs(filterSameZone(position, MonsterState.getAllModels(), player)) do
 		local data = MonsterState.getData(model)
 		local root = model.PrimaryPart
 		if root and data and not data.isChest and not data.isRescueTarget then
@@ -502,7 +497,7 @@ end
 
 -- 쌍검 암영 표식: 20 stud 안 가장 가까운 대상 뒤로 순간이동(이동 = 클라 재생 · 대시 결과와 같은 모양) + 6초 표식(그 대상에게 치명 +20%p - AttackServer)
 local function castShadowMark(player, slot, def, rootPart, cooldownSeconds)
-	local target = nearestMonster(rootPart.Position, def.rangeStuds)
+	local target = nearestMonster(rootPart.Position, def.rangeStuds, player)
 	if not target then
 		reject(player, slot, "no_target") -- 대상이 없으면 쿨을 쓰지 않는다
 		return
@@ -530,6 +525,10 @@ local function castHunterTrap(player, slot, def, rootPart, aimPoint, cooldownSec
 		reject(player, slot, "aim")
 		return
 	end
+	if not AttackZone.sameArea(rootPart.Position, aimPoint) then -- SEC-FIX-1 5(AUDIT1 #17): 담장 밖에서 구역 안쪽에 설치 금지(시전자 = 조준점 구역)
+		reject(player, slot, "zone")
+		return
+	end
 	markCast(player, slot)
 	traps[player] = traps[player] or {}
 	local list = traps[player]
@@ -549,7 +548,7 @@ local function castHunterTrap(player, slot, def, rootPart, aimPoint, cooldownSec
 	part.Material = Enum.Material.Neon
 	part.Transparency = 0.55
 	part.Parent = Workspace
-	table.insert(list, { position = aimPoint, untilAt = os.clock() + def.lifeSeconds, part = part, def = def })
+	table.insert(list, { position = aimPoint, casterPosition = rootPart.Position, untilAt = os.clock() + def.lifeSeconds, part = part, def = def })
 	sendResult(player, slot, { ok = true, kind = "trap", cooldownSeconds = cooldownSeconds, position = aimPoint, hits = {} })
 end
 
@@ -560,7 +559,7 @@ game:GetService("RunService").Heartbeat:Connect(function()
 			local trap = list[i]
 			local fired = false
 			if now < trap.untilAt and player.Parent then
-				for _, model in ipairs(filterSameZone(trap.position, MonsterState.getAllModels())) do -- 리뷰 1: 구역 필터 · 같은 층
+				for _, model in ipairs(filterSameZone(trap.casterPosition, MonsterState.getAllModels(), player)) do -- 리뷰 1: 구역 필터 · 같은 층 · SEC-FIX-1 5: 기준 = 설치한 사람 자리(옛 = 덫 자리)
 					local root = model.PrimaryPart
 					local data = MonsterState.getData(model)
 					if root and data and not data.isChest and not data.isRescueTarget and Reach.horizontalDistance(root.Position, trap.position) <= trap.def.triggerRadiusStuds and Reach.sameLayer(root.Position, trap.position) then
@@ -595,7 +594,7 @@ end)
 local function castWarcry(player, slot, def, rootPart, cooldownSeconds)
 	markCast(player, slot)
 	local taunted = 0
-	for _, model in ipairs(SkillCombat.hitsInCircle(rootPart.Position, def.radiusStuds, filterSameZone(rootPart.Position, MonsterState.getAllModels()))) do
+	for _, model in ipairs(SkillCombat.hitsInCircle(rootPart.Position, def.radiusStuds, filterSameZone(rootPart.Position, MonsterState.getAllModels(), player))) do
 		local data = MonsterState.getData(model)
 		if data and not data.isBoss and not data.isChest and not data.isRescueTarget then
 			MonsterState.setAiState(model, "chasing")

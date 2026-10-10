@@ -16,7 +16,7 @@ local gauge = {} -- [Player] = 0 ~ max
 local transformUntil = {} -- [Player] = os.clock() 만료(대검)
 local marks = {} -- [Player] = { target, untilAt, stored }(쌍검)
 local sanctuaries = {} -- { caster, center, radius, untilAt }(치유사)
-local candidatesAt -- function(position) → 같은 구역 몹 목록(SkillServer filterSameZone - 리뷰 1)
+local candidatesAt -- function(casterPosition, player) → 그 캐스터가 때릴 수 있는 몹 목록(SkillServer filterSameZone - 리뷰 1 · SEC-FIX-1 5)
 local striker -- function(player, classId, target, coefficient, extraDamage) → hit(SkillServer - extraDamage = 계수 피해에 더할 고정 피해)
 local stats = { casts = 0, rejects = {} } -- 검증 · 개발 명령
 
@@ -36,8 +36,9 @@ function U.register(strikeFn, candidatesFn)
 	candidatesAt = candidatesFn
 end
 
-local function candidates(position)
-	return candidatesAt and candidatesAt(position) or MonsterState.getAllModels()
+-- SEC-FIX-1 5(AUDIT1 #18): 기준 = 캐스터 위치(옛 = 조준점 · 충격파 중심 기준이라 구역 밖에서 안쪽을 조준하면 맞았다) · 보스 = 그 보스전 멤버만(AttackZone)
+local function candidates(casterPosition, player)
+	return candidatesAt and candidatesAt(casterPosition, player) or MonsterState.getAllModels()
 end
 
 function U.get(player)
@@ -62,6 +63,9 @@ end
 -- 준 피해: units = 타 단위(atk로 나눈 계수) · dealt = 실제 피해 · distance = 시전자 ↔ 대상(활)
 function U.onDealt(player, classId, units, dealt, isCrit, distance, target)
 	local c = UltimateData.charge[classId]
+	if target and MonsterState.isChest(target) then
+		c = nil -- SEC-FIX-1 5(AUDIT1 #19): 보물상자 타격 = 충전 없음(피해 무관 · 횟수만 세는 대상 - 스킬 경로는 계수로 충전해 dealt 0이어도 찼다)
+	end
 	if c then
 		if classId == "greatsword" or classId == "healer" then
 			U.add(player, (units or 0) * c.perDamageUnit)
@@ -133,7 +137,7 @@ function U.onBasicHit(player, classId, rootPart, primaryTarget)
 	end
 	local def = UltimateData.skills.greatsword.shockwave
 	local center = rootPart.Position + rootPart.CFrame.LookVector * def.forwardStuds
-	for _, target in ipairs(SkillCombat.hitsInCircle(center, def.radiusStuds, candidates(center))) do
+	for _, target in ipairs(SkillCombat.hitsInCircle(center, def.radiusStuds, candidates(rootPart.Position, player))) do
 		if target ~= primaryTarget then
 			striker(player, classId, target, def.coefficient)
 		end
@@ -167,11 +171,14 @@ function U.cast(player, classId, rootPart, aimPoint)
 		if typeof(aimPoint) ~= "Vector3" or aimPoint ~= aimPoint or (aimPoint - rootPart.Position).Magnitude > def.maxCastStuds then
 			return reject(player, "aim")
 		end
+		if not require(script.Parent.AttackZone).sameArea(rootPart.Position, aimPoint) then -- SEC-FIX-1 5: 구역 · 아레나 밖에서 안쪽 조준 금지
+			return reject(player, "zone")
+		end
 	end
 	local markTarget
 	if def.shape == "ultMark" then
 		local best, bestD = nil, def.rangeStuds
-		for _, model in ipairs(candidates(rootPart.Position)) do
+		for _, model in ipairs(candidates(rootPart.Position, player)) do
 			local root = model.PrimaryPart
 			local data = MonsterState.getData(model)
 			if root and data and not data.isChest and not data.isRescueTarget then
@@ -204,7 +211,7 @@ function U.cast(player, classId, rootPart, aimPoint)
 				local character = player.Character
 				local root = character and character:FindFirstChild("HumanoidRootPart")
 				if root then
-					for _, target in ipairs(SkillCombat.hitsInCircle(root.Position, def.finale.radiusStuds, candidates(root.Position))) do
+					for _, target in ipairs(SkillCombat.hitsInCircle(root.Position, def.finale.radiusStuds, candidates(root.Position, player))) do
 						striker(player, classId, target, def.finale.coefficient)
 					end
 				end
@@ -213,6 +220,7 @@ function U.cast(player, classId, rootPart, aimPoint)
 		return true, { kind = "ultTransform", seconds = def.durationSeconds }
 	elseif def.shape == "ultRain" then
 		local center = Vector3.new(aimPoint.X, aimPoint.Y, aimPoint.Z)
+		local casterAt = rootPart.Position -- SEC-FIX-1 5: 화살비 대상 = 시전 순간 캐스터 자리 기준(구역 · 보스전)
 		player:SetAttribute("UltRain", ("%.1f,%.1f,%.1f|%d"):format(center.X, center.Y, center.Z, math.random(1, 1e6)))
 		task.spawn(function()
 			local interval = def.durationSeconds / def.tickCount
@@ -221,7 +229,7 @@ function U.cast(player, classId, rootPart, aimPoint)
 				if not player.Parent then
 					return
 				end
-				for _, target in ipairs(SkillCombat.hitsInCircle(center, def.radiusStuds, candidates(center))) do
+				for _, target in ipairs(SkillCombat.hitsInCircle(center, def.radiusStuds, candidates(casterAt, player))) do
 					striker(player, classId, target, def.coefficient / def.tickCount)
 				end
 			end
