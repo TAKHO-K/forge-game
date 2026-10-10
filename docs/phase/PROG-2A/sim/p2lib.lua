@@ -42,6 +42,15 @@ if curve then
 		InfiniteStage.getGoldMultiplier = function(stage)
 			return (1 + math.max(0, stage - 1) / c) ^ p
 		end
+	elseif curve == "sqrt" then -- GOLD-CURVE-1 C(강한 완만): 1,000까지 지금 식 그대로 · 뒤 = M(1,000) × (s/1,000)^p(p 0.5 = √) - 1,000 → 8,500 수입 약 ×2.9
+		local p = C.sqrtP or 0.5
+		local m1000 = 1.001 ^ 999
+		InfiniteStage.getGoldMultiplier = function(stage)
+			if stage <= 1000 then
+				return 1.001 ^ (stage - 1)
+			end
+			return m1000 * (stage / 1000) ^ p
+		end
 	elseif curve == "powlog" then -- 거듭제곱(로그 축 직선) - 참고: M = (1 + (s − 1)/B)^A · A/B = ln1.001
 		local B = C.powB or 4000
 		local A = B * LN1001
@@ -52,6 +61,35 @@ if curve then
 end
 local function Mg(s)
 	return InfiniteStage.getGoldMultiplier(s)
+end
+if C.levelKillsScale then -- GOLD-CURVE-1 하한 맞춤: 초월 강화 한 단계 비용(마리분) 배율
+	M.All10Data.transcendEnhance.levelKills *= C.levelKillsScale
+end
+if C.costGap then -- GOLD-CURVE-1 가설 실험: 비용 기준 스테이지를 costGap칸 내림(= 사냥 스테이지 근처 가격 - 계정 최고 vs 사냥 차이 효과만 따로 잼)
+	local oldScale = GoldCost.scale
+	GoldCost.scale = function(stage, kind)
+		return oldScale(stage and math.max(1, stage - C.costGap) or stage, kind)
+	end
+end
+if C.gapComp then -- GOLD-CURVE-1 "같은 변환": 새 곡선에서도 "계정 최고 vs 사냥 스테이지 차이(gapComp칸)" 비용 몫을 지금 곡선과 같게(1.001^gap) 맞춤
+	local oldScale = GoldCost.scale
+	local g = C.gapComp
+	GoldCost.scale = function(stage, kind)
+		local v = oldScale(stage, kind)
+		if stage and stage > g + 1 then
+			v *= 1.001 ^ g / (Mg(stage) / Mg(stage - g))
+		end
+		return v
+	end
+end
+if C.incomeScale then -- GOLD-CURVE-1 §5: 수입만 배율(사냥 · 보스 · 판매 = getGoldReward · 보스 첫 클리어 표) - 비용(GoldCost)은 그대로
+	local oldReward = InfiniteStage.getGoldReward
+	InfiniteStage.getGoldReward = function(baseGold, stage)
+		return math.floor(oldReward(baseGold, stage) * C.incomeScale)
+	end
+end
+if C.trainReserve then -- GOLD-CURVE-1 §6-3: 수련 구매 때 남겨 둘 다음 강화 비용 배수(지금 1 · 0 = 남는 골드로 바로 수련)
+	M.EconSimConfig.trainingReserveEnhance = C.trainReserve
 end
 if curve and not C.keepBossTable then -- 보스 첫 클리어 골드 = 옛 곡선으로 구운 숫자표(BossFirstClearGoldData) → 새 곡선 비율로 다시 굽는 것과 같게
 	local Enhance = M.Enhance
@@ -217,6 +255,33 @@ EconSim.withOverrides = function(whatIf, fn, state, ...)
 		local g = 4.95 * Mg(state.reach) * inc.petSalePerHour * secs / 3600
 		state.gold += g
 		state.p2pet = (state.p2pet or 0) + g
+	end
+	-- GOLD-CURVE-1 §3: 강화 한 번 = 사냥 몇 분(그 단계에 처음 닿은 청크 · 다음 1회 비용 ÷ 그 청크 분당 골드)
+	do
+		local secs = (r.seconds or 0) + (r.bossSeconds or 0)
+		local gpm = secs > 0 and earned / (secs / 60) or 0
+		PROG2.enh = PROG2.enh or {}
+		local function mark(key, cost)
+			if not PROG2.enh[key] and gpm > 0 then
+				PROG2.enh[key] = true
+				PROG2.log["enh_" .. key] = { ("%.2f"):format(hours), state.reach, ("%.4g"):format(cost), ("%.4g"):format(gpm), ("%.2f"):format(cost / gpm) }
+			end
+		end
+		for _, L in ipairs({ 10, 20, 29 }) do
+			if not state.transcend and state.weaponLevel >= L and state.weaponLevel < 30 then
+				mark(("g%d_+%d"):format(state.weaponGrade, L), M.Enhance.getCost(state.weaponLevel, state.reach) or 0)
+			end
+		end
+		if state.transcend then
+			for _, L in ipairs({ 10, 20 }) do
+				local lv = state.transcend.level
+				if lv >= L and lv < 25 then
+					local nxt = lv + 1
+					local c = All10.transcendBand(nxt) and All10.transcendAttemptCost(nxt, state.reach) or All10.transcendSlotCost(state.reach)
+					mark(("T+%d"):format(L), c)
+				end
+			end
+		end
 	end
 	-- 직업 능력
 	if ca then
