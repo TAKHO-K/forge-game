@@ -284,6 +284,13 @@ function BossBR13View.sweepFire(data)
 	table.insert(sweep.parts, beam)
 	table.insert(sweep.parts, core)
 	sweep.beam, sweep.core, sweep.startedAt = beam, core, os.clock()
+	-- BOSS-NIGHT-3 1-⑤c(사용자 10-10): 안전 원 회차(안쪽 반경이 줄을 가림)는 보석 → 안전 원 경계까지 희미한 빔(그림만 · 판정 없음 = 서버 r ≥ inner 그대로) - 허공에서 시작하지 않고 안전 구역이 보인다
+	local neckSpan = beamStart(d) - (d.fwd or 0)
+	if neckSpan > 0.5 then
+		local neck = newPart(Vector3.new(d.halfWidth * 1.2, d.beamHeight * 0.7, neckSpan), d.color or DANGER, 0.8)
+		table.insert(sweep.parts, neck)
+		sweep.neck, sweep.neckSpan = neck, neckSpan
+	end
 	BossFx.shake(d.center, 0.8)
 end
 
@@ -537,6 +544,10 @@ RunService.RenderStepped:Connect(function()
 		local mid = d.center + Vector3.new(-dir.Z, 0, dir.X) * (d.lat or 0) + dir * ((beamStart(d) + d.length) / 2) + Vector3.new(0, d.beamHeight / 2, 0) -- BR1-4a: 낮은 빔(발 위 beamHeight - 점프로 넘는다) · 1-⑤ 홀 아래 평행선
 		sweep.beam.CFrame = CFrame.lookAt(mid, mid + dir)
 		sweep.core.CFrame = sweep.beam.CFrame
+		if sweep.neck then -- 1-⑤c 희미한 빔: 보석 아래(fwd) → 밝은 빔 시작
+			local nmid = d.center + Vector3.new(-dir.Z, 0, dir.X) * (d.lat or 0) + dir * ((d.fwd or 0) + sweep.neckSpan / 2) + Vector3.new(0, d.beamHeight * 0.35, 0)
+			sweep.neck.CFrame = CFrame.lookAt(nmid, nmid + dir)
+		end
 	end
 	if boom and boom.startedAt then
 		local d = boom.data
