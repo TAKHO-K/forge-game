@@ -44,7 +44,8 @@ return {
 	},
 	-- 보상 작은 창(더보기 펼침과 같은 모양): 줄마다 받을 것이 있으면 점 · 버튼 점 = 셋 중 하나라도(숫자 없음)
 	rewards = {
-		{ id = "attendance", icon = "star", label = "hud.reward.attendance" }, -- panels/Attendance
+		{ id = "attendance", icon = "star", label = "hud.reward.attendance" }, -- panels/Attendance(UI-1b 나눔 = 첫 접속 7일 보상)
+		{ id = "login", icon = "gold", label = "ui1b.att.title.login", split = true }, -- UI-1b 1-b 12: 접속 보상 창(나눔 스위치 autoSplit 켤 때만)
 		{ id = "seasonBoard", icon = "book", label = "hud.reward.seasonBoard" }, -- panels/SeasonBoard(시즌 출석판)
 		{ id = "gift", icon = "reward", label = "hud.reward.gift" }, -- 선물함(서버 GiftPopup 다시 보내기)
 	},

@@ -8,6 +8,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local QuestData = require(ReplicatedStorage.Shared.data.QuestData)
 local HELP = require(ReplicatedStorage.Shared.data.UiV2Flags).help -- UI-1b 1절 3: 안내 줄 = [?]
+-- UI-1b 1-b 11 · 12(사용자 결정): 자동 창 = 따로 순서대로(첫 접속 7일 보상 → 접속 보상 → 시즌 출석판 → 선물함) · 받을 것 있을 때만 · 한 번에 하나 · 앞 창 닫히고 1초 뒤 ·
+--   창마다 [오늘 하루 보지 않기](설정 autoHide* = 체크하고 닫은 UTC 날 · 초기화 = 출석과 같은 경계) · 보상 탭에서 세 창 다시 열기 · 보상 칸 누르면 A 설명 창
+local SPLIT = require(ReplicatedStorage.Shared.data.UiV2Flags).autoSplit
+local SPLIT_ORDER = { "week", "login", "season" }
+local HIDE = { week = { "AutoHideWeek", "autoHideWeek" }, login = { "AutoHideLogin", "autoHideLogin" }, season = { "AutoHideSeason", "autoHideSeason" } }
 local SeasonBoardData = require(ReplicatedStorage.Shared.data.SeasonBoardData)
 local TitleData = require(ReplicatedStorage.Shared.data.TitleData)
 local CosmeticSlotData = require(ReplicatedStorage.Shared.data.CosmeticSlotData)
@@ -95,6 +100,16 @@ local function claimList(v)
 		table.insert(list, { "boardBonus", season = true })
 	end
 	return list
+end
+-- 창 하나(나눔)의 받을 것만
+local function claimListFor(v, tab)
+	local out = {}
+	for _, c in ipairs(claimList(v)) do
+		if (tab == "week" and c.week) or (tab == "login" and c[1] == "login") or (tab == "season" and c.season) then
+			table.insert(out, c)
+		end
+	end
+	return out
 end
 local function weekHas(v)
 	for _, c in ipairs(claimList(v)) do
@@ -226,8 +241,12 @@ local function todayPill(cell, phone)
 	corner(p, 8)
 end
 
+local cellTip -- UI-1b 보상 칸 설명(아래 정의)
 local function renderWeek(body, P, phone)
 	local att = view and view.attendance
+	if SPLIT and not att then -- 나눔: 7일 기록이 없는 계정도 창은 열림(전부 아직)
+		att = { count = 0, claimed = {}, rewards = QuestData.attendance }
+	end
 	local cells = {}
 	if not att then
 		return cells
@@ -254,8 +273,10 @@ local function renderWeek(body, P, phone)
 		local day = label(cell, Text.get("ui1.att.day", { n = key }), phone and 13 or 18, Color3.new(1, 1, 1), "koreanBold", Enum.TextXAlignment.Center)
 		day.Position = UDim2.fromOffset(0, phone and 6 or 12)
 		day.Size = UDim2.new(1, 0, 0, phone and 16 or 22)
-		local stack = rewardStack(cell, rewardParts(e.reward), W.icon, phone, true)
+		local parts = rewardParts(e.reward)
+		local stack = rewardStack(cell, parts, W.icon, phone, true)
 		stack.Position = UDim2.fromOffset(0, phone and 8 or 16)
+		cellTip(cell, parts, Text.get("ui1b.att.dayReward", { n = key }))
 		if today and not claimed then
 			todayPill(cell, phone)
 		end
@@ -323,7 +344,9 @@ local function renderSeason(body, P, phone)
 		local num = label(cell, key, phone and 10 or 13, Color3.fromRGB(200, 204, 220), "number")
 		num.Position = UDim2.fromOffset(phone and 5 or 10, phone and 2 or 8)
 		num.Size = UDim2.fromOffset(24, phone and 12 or 16)
-		local stack = rewardStack(cell, rewardParts(reward), S.icon, phone, false)
+		local parts = rewardParts(reward)
+		local stack = rewardStack(cell, parts, S.icon, phone, false)
+		cellTip(cell, parts, Text.get("ui1b.att.reward"))
 		if phone then -- 폰 88 × 40: 번호(왼쪽) · 그림 + 수량 · 배지(오른쪽 20) 자리를 나눔(겹침 0)
 			stack.Position = UDim2.fromOffset(14, 0)
 			stack.Size = UDim2.new(1, -(14 + P.badge + 6), 1, 0)
@@ -345,13 +368,69 @@ local function renderSeason(body, P, phone)
 	return cells
 end
 
+-- UI-1b 1-b 12: 보상 칸 누르면 A 설명 창(토글) - 이름 한 단어 + "획득처: …" + "사용처: …"(재화) 또는 "설명: …"
+cellTip = function(cell, parts, titleText)
+	if not SPLIT then
+		return
+	end
+	local b = Instance.new("TextButton")
+	b.Name = "Tip"
+	b.Text = ""
+	b.BackgroundTransparency = 1
+	b.Size = UDim2.fromScale(1, 1)
+	b.ZIndex = 9
+	b.Parent = cell
+	b.Activated:Connect(function()
+		local InfoTip = require(script.Parent.Parent.ui.v2.InfoTip)
+		local CI = require(ReplicatedStorage.Shared.data.CurrencyInfo)
+		if #parts == 1 and CI.ids[parts[1].key] then
+			InfoTip.currency(cell, parts[1].key)
+			return
+		end
+		local rows = {}
+		for _, p in ipairs(parts) do
+			local name = Text.get("item.name." .. p.key)
+			local desc = Text.get("item.desc." .. p.key)
+			table.insert(rows, { name .. (p.qty and (" " .. p.qty) or ""), desc ~= ("item.desc." .. p.key) and desc or "" })
+		end
+		InfoTip.toggle(cell, "attcell:" .. cell:GetFullName(), { title = #parts == 1 and Text.get("item.name." .. parts[1].key) or titleText, rows = rows })
+	end)
+end
+
+-- 접속 보상 창(나눔): 카드 1장 = 오늘 첫 접속 보상(QuestData.loginReward - 서버 지급과 같은 표)
+local function renderLogin(body, P, phone)
+	local W = P.weekCell
+	local ready = view and view.loginReady == true
+	local cell = Instance.new("Frame")
+	cell.Name = "LoginCard"
+	cell.BackgroundColor3 = ready and hex(C.cell) or hex(C.cellClaimed)
+	cell.AnchorPoint = Vector2.new(0.5, 0)
+	cell.Position = UDim2.new(0.5, 0, 0, W.y)
+	cell.Size = UDim2.fromOffset(W.w * 2 + W.gap, W.h)
+	cell.Parent = body
+	corner(cell, phone and 10 or 12)
+	stroke(cell, ready and hex(C.today) or hex(C.stroke), ready and 3 or 2)
+	local t = label(cell, Text.get("ui1b.att.loginCard"), phone and 13 or 18, Color3.new(1, 1, 1), "koreanBold", Enum.TextXAlignment.Center)
+	t.Position = UDim2.fromOffset(0, phone and 6 or 12)
+	t.Size = UDim2.new(1, 0, 0, phone and 16 or 22)
+	local parts = rewardParts(QuestData.loginReward)
+	local stack = rewardStack(cell, parts, W.icon, phone, false)
+	stack.Position = UDim2.fromOffset(0, phone and 8 or 16)
+	if not ready then
+		dimRewards(cell)
+		badge(cell, P)
+	end
+	cellTip(cell, parts, Text.get("ui1b.att.reward"))
+	return { cell }
+end
+
 local function tomorrowText()
 	return Text.get("ui1.att.tomorrow", { h = tostring((L.resetHourUtc + L.kstOffset) % 24) })
 end
 
-local function summaryText()
+local function summaryText(only)
 	local parts = {}
-	local list = claimList(view)
+	local list = only or claimList(view)
 	local weekDay, seasonCell, login = nil, nil, false
 	for _, c in ipairs(list) do
 		if c[1] == "attendance" then
@@ -428,6 +507,13 @@ local function build()
 		end,
 		onClose = function()
 			gui.Enabled = false
+			local B = built
+			if SPLIT and B.hideChecked and B.hideChecked[B.tab] and HIDE[B.tab] then -- [오늘 하루 보지 않기] = 오늘 UTC 날 저장(그날 이 자동 창 안 뜸)
+				local attr, key = HIDE[B.tab][1], HIDE[B.tab][2]
+				player:SetAttribute(attr, utcDay())
+				ReplicatedStorage:WaitForChild("SettingsSave"):FireServer(key, utcDay())
+			end
+			B.hideChecked = nil
 			AttendanceV2.flushGifts(L.giftDelay) -- 닫히고 1초 뒤 선물함
 		end,
 	})
@@ -443,9 +529,10 @@ function AttendanceV2.render()
 	end
 	local phone = B.phone
 	local P = phone and L.phone or L.pc
-	if not (view and view.attendance) then
+	if not SPLIT and not (view and view.attendance) then
 		B.tab = "season"
 	end
+	local myList = SPLIT and claimListFor(view, B.tab) or claimList(view) -- 나눔 = 이 창 것만
 	local season = B.tab == "season"
 	local win = Instance.new("Frame")
 	win.Name = "Window"
@@ -454,7 +541,7 @@ function AttendanceV2.render()
 		win.Position = UDim2.fromOffset(P.x, P.y)
 		win.Size = UDim2.fromOffset(P.w, P.h)
 	else
-		local spec = season and P.season or P.week
+		local spec = season and P.season or P.week -- 접속 보상(나눔) = 7일 창 크기
 		win.Position = UDim2.fromOffset(P.x, spec.y)
 		win.Size = UDim2.fromOffset(P.w, spec.h)
 	end
@@ -466,9 +553,12 @@ function AttendanceV2.render()
 	local headIcon = icon(win, L.headIcon, phone and 30 or 40)
 	headIcon.AnchorPoint = Vector2.new(0, 0.5)
 	headIcon.Position = UDim2.new(0, P.pad + 4, 0, P.head / 2)
-	local title = label(win, Text.get("ui1.att.title"), px(phone and 18 or 26), Color3.new(1, 1, 1), "korean")
+	local title = label(win, Text.get(SPLIT and ("ui1b.att.title." .. B.tab) or "ui1.att.title"), px(phone and 18 or 26), Color3.new(1, 1, 1), "korean")
 	title.Position = UDim2.fromOffset(P.pad + (phone and 40 or 54), 0)
 	title.Size = UDim2.fromOffset(phone and 52 or 70, P.head)
+	if SPLIT then
+		title.AutomaticSize = Enum.AutomaticSize.X
+	end
 	local helpW = 0
 	if HELP then -- UI-1b 1절 3: 제목 옆 [?] = 7일 · 시즌판 · 초기화 안내
 		local HB = require(script.Parent.Parent.ui.v2.HelpButton)
@@ -477,8 +567,8 @@ function AttendanceV2.render()
 		end })
 		helpW = require(ReplicatedStorage.Shared.data.UiLayoutData).helpButton.pcSize + 14
 	end
-	local n = #claimList(view)
-	if not phone then
+	local n = #myList
+	if not phone and not SPLIT then
 		local sub = label(win, n > 0 and Text.get("ui1.att.sub", { n = tostring(n) }) or "", px(16), Color3.fromRGB(190, 196, 214))
 		sub.Position = UDim2.fromOffset(P.pad + 130 + helpW, 0)
 		sub.Size = UDim2.fromOffset(300, P.head)
@@ -497,7 +587,7 @@ function AttendanceV2.render()
 		{ id = "season", text = phone and "ui1.att.tabSeasonShort" or "ui1.att.tabSeason", has = seasonHas(view), show = view and view.board ~= nil } }
 	local tx = phone and (P.pad + 100) or P.pad
 	for _, t in ipairs(tabs) do
-		if t.show then
+		if t.show and not SPLIT then -- 나눔 = 탭 없음(창마다 따로)
 			local on = B.tab == t.id
 			local b = Instance.new("TextButton")
 			b.Name = "Tab_" .. t.id
@@ -544,6 +634,9 @@ function AttendanceV2.render()
 	B.cells.week, B.cells.season = {}, {}
 	if season then
 		B.cells.season = renderSeason(body, P, phone)
+	elseif SPLIT and B.tab == "login" then
+		B.cells.week = {}
+		renderLogin(body, P, phone)
 	else
 		B.cells.week = renderWeek(body, P, phone)
 	end
@@ -565,13 +658,41 @@ function AttendanceV2.render()
 		sep.Parent = foot
 	end
 	local textW = P.w - P.pad * 2 - bw - 16
-	local sum = label(foot, summaryText(), px(phone and 13 or 17), Color3.new(1, 1, 1)) -- 왼쪽 글자 = 남은 폭 안에서 줄어듦(끝 말줄임 · TextScaled는 Studio에서 칸보다 작게 그려 안 씀)
+	local sum = label(foot, summaryText(SPLIT and myList or nil), px(phone and 13 or 17), Color3.new(1, 1, 1)) -- 왼쪽 글자 = 남은 폭 안에서 줄어듦(끝 말줄임 · TextScaled는 Studio에서 칸보다 작게 그려 안 씀)
 	sum.Size = UDim2.fromOffset(textW, F.h * 0.5)
 	sum.TextTruncate = Enum.TextTruncate.AtEnd
 	local tm = label(foot, tomorrowText(), px(phone and 11 or 14), Color3.fromRGB(150, 156, 180))
 	tm.Position = UDim2.fromOffset(0, F.h * 0.5)
 	tm.Size = UDim2.fromOffset(textW, F.h * 0.5)
 	tm.TextTruncate = Enum.TextTruncate.AtEnd
+	if SPLIT then -- [오늘 하루 보지 않기] 체크(닫을 때 저장) - 내일 안내는 [?] 초기화 줄
+		tm.Visible = false
+		local box = Instance.new("TextButton")
+		box.Name = "HideToday"
+		box.Text = ""
+		box.BackgroundTransparency = 1
+		box.Position = UDim2.fromOffset(0, F.h * 0.5)
+		box.Size = UDim2.fromOffset(textW, F.h * 0.5)
+		box.Parent = foot
+		local sq = Instance.new("Frame")
+		sq.Name = "Box"
+		local s = px(phone and 14 or 18)
+		sq.AnchorPoint = Vector2.new(0, 0.5)
+		sq.Position = UDim2.new(0, 0, 0.5, 0)
+		sq.Size = UDim2.fromOffset(s, s)
+		sq.BackgroundColor3 = B.hideChecked and B.hideChecked[B.tab] and hex(C.today) or hex(C.cell)
+		sq.Parent = box
+		corner(sq, 4)
+		stroke(sq, hex(C.stroke), 2)
+		local bl = label(box, Text.get("ui1b.att.hideToday"), px(phone and 12 or 15), Color3.fromRGB(190, 196, 214))
+		bl.Position = UDim2.fromOffset(s + 8, 0)
+		bl.Size = UDim2.new(1, -(s + 8), 1, 0)
+		box.Activated:Connect(function()
+			B.hideChecked = B.hideChecked or {}
+			B.hideChecked[B.tab] = not B.hideChecked[B.tab]
+			sq.BackgroundColor3 = B.hideChecked[B.tab] and hex(C.today) or hex(C.cell)
+		end)
+	end
 	local btn = UiKit.button({ parent = foot, kind = "primary", name = "ClaimAll", text = Text.get(n > 0 and "ui1.att.claimAll" or "ui1.att.allDone"), align = Enum.TextXAlignment.Center,
 		rect = { P.w - P.pad * 2 - bw, (F.h - bh) / 2, bw, bh }, onActivated = function()
 			AttendanceV2.claimAll()
@@ -597,7 +718,10 @@ function AttendanceV2.claimAll()
 	if claiming then
 		return
 	end
-	local list = claimList(view)
+	local function mine()
+		return SPLIT and built and claimListFor(view, built.tab) or claimList(view)
+	end
+	local list = mine()
 	if #list == 0 then
 		return
 	end
@@ -615,9 +739,9 @@ function AttendanceV2.claimAll()
 		task.wait(1.2)
 		claiming = false
 		AttendanceV2.render()
-		if #claimList(view) == 0 then -- 다 받음 = 잠깐 보여 준 뒤 닫힘(닫히고 1초 뒤 선물함)
+		if #mine() == 0 then -- 다 받음 = 잠깐 보여 준 뒤 닫힘(닫히고 1초 뒤 선물함)
 			task.wait(0.8)
-			if #claimList(view) == 0 and UIManager.isOpen(AttendanceV2.id) then
+			if #mine() == 0 and UIManager.isOpen(AttendanceV2.id) then
 				UIManager.close(AttendanceV2.id)
 			end
 		end
@@ -640,9 +764,12 @@ local function onClaimResult(kind, id, granted)
 	cell = cell or (built.button and built.button.root)
 	ClaimFx.play({ cell = cell, granted = granted, onDone = function()
 		AttendanceV2.render()
-		if #claimList(view) == 0 and not claiming then
+		local function mine()
+			return SPLIT and claimListFor(view, built.tab) or claimList(view)
+		end
+		if #mine() == 0 and not claiming then
 			task.delay(0.6, function()
-				if #claimList(view) == 0 then
+				if #mine() == 0 then
 					UIManager.close(AttendanceV2.id)
 				end
 			end)
@@ -656,7 +783,35 @@ end
 
 -- 자동 창: 마을 2초 뒤 · 받을 것 있을 때만 · 한 번에 하나(큰 창 · 보스전이면 기다림) · 그날 한 번
 local autoWaiting = false
+local function hiddenToday(tab)
+	return HIDE[tab] ~= nil and player:GetAttribute(HIDE[tab][1]) == utcDay()
+end
 local function tryAuto()
+	if SPLIT then -- 나눔: 첫 접속 7일 → 접속 보상 → 시즌판(받을 것 · 오늘 숨김 아님) 하나씩 · 앞 창 닫히고 1초 뒤 · 끝나면 선물함
+		if autoWaiting or autoDay == utcDay() or #claimList(view) == 0 or player:GetAttribute("TutorialCompleted") ~= true then
+			return
+		end
+		autoWaiting = true
+		autoDay = utcDay()
+		task.delay(L.openDelay, function()
+			for _, tab in ipairs(SPLIT_ORDER) do
+				if #claimListFor(view, tab) > 0 and not hiddenToday(tab) then
+					while not canAutoNow() do
+						task.wait(1)
+					end
+					if AttendanceV2.open(tab, true) then
+						while UIManager.isOpen(AttendanceV2.id) do
+							task.wait(0.25)
+						end
+						task.wait(L.giftDelay)
+					end
+				end
+			end
+			autoWaiting = false
+			AttendanceV2.flushGifts(0)
+		end)
+		return
+	end
 	if autoWaiting or autoDay == utcDay() or #claimList(view) == 0 or player:GetAttribute("TutorialCompleted") ~= true then
 		return
 	end
@@ -706,6 +861,15 @@ function AttendanceV2.open(tab, auto)
 		build()
 	end
 	built.tab = tab or ((weekHas(view) or not seasonHas(view)) and (view and view.attendance and "week" or "season") or "season")
+	if SPLIT and not tab then -- 나눔: 받을 것 있는 첫 창
+		built.tab = "week"
+		for _, t in ipairs(SPLIT_ORDER) do
+			if #claimListFor(view, t) > 0 then
+				built.tab = t
+				break
+			end
+		end
+	end
 	if auto and not canAutoNow() then
 		return false
 	end

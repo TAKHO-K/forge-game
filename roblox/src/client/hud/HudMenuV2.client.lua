@@ -274,7 +274,14 @@ do
 	title.ZIndex = 11
 	local rowH = phone and 44 or 46
 	local y0 = phone and 42 or 52
-	for i, r in ipairs(HudData.rewards) do
+	local SPLIT = require(ReplicatedStorage.Shared.data.UiV2Flags).autoSplit
+	local rowsShown = {}
+	for _, r in ipairs(HudData.rewards) do
+		if not r.split or SPLIT then
+			table.insert(rowsShown, r)
+		end
+	end
+	for i, r in ipairs(rowsShown) do
 		local b = UiKit.imageButton("sec", "Reward_" .. r.id)
 		UiKit.place(b, { 10, y0 + (i - 1) * (rowH + 4), L.rewardWindow[3] - 20, rowH })
 		b.ZIndex = 11
@@ -301,6 +308,8 @@ do
 			setReward(false)
 			if r.id == "attendance" then
 				require(client.panels.Attendance).open()
+			elseif r.id == "login" then -- UI-1b 1-b 12
+				require(client.panels.AttendanceV2).open("login")
 			elseif r.id == "seasonBoard" then
 				require(client.panels.SeasonBoard).open()
 			elseif r.id == "gift" then
@@ -593,7 +602,7 @@ local function refreshAlerts()
 	setDot("inventory", bagFull or (player:GetAttribute("InventoryNewCount") or 0) > 0)
 	setDot("shop", (player:GetAttribute("ShopClaimable") or 0) > 0)
 	local view = require(client.panels.Attendance).currentView()
-	local dots, any = RewardHub.dots(view, player:GetAttribute("GiftPending"))
+	local dots, any = RewardHub.dots(view, player:GetAttribute("GiftPending"), require(ReplicatedStorage.Shared.data.UiV2Flags).autoSplit)
 	setDot("reward", any)
 	for id, row in pairs(rewardRows) do
 		row.dot.Visible = dots[id] == true

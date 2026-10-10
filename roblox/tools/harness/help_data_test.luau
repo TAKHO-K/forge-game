@@ -41,6 +41,13 @@ local okRun, err = pcall(function()
 	end
 	check("재화 설명 키 ko · en(이름 · 획득처 · 사용처)", #miss == 0, table.concat(miss, ","))
 	check("재화 설명 틀 = 획득처 → 사용처(사용자 10-10)", CI.rows[1] == "where" and CI.rows[2] == "use" and #CI.rows == 2 and T.ko["ui1b.info.row.where"] == "획득처" and T.ko["ui1b.info.row.use"] == "사용처")
+	-- UI-1b 1-b 12: 보상 탭 점(나눔) = 접속 보상은 따로 · 7일 다 받아도 창은 남음(done)
+	local RH = MODS.RewardHub
+	local v = { loginReady = true, attendance = { count = 7, claimed = { ["1"] = true, ["2"] = true, ["3"] = true, ["4"] = true, ["5"] = true, ["6"] = true, ["7"] = true }, rewards = MODS.QuestData.attendance, done = true } }
+	local d, any = RH.dots(v, 0, true)
+	check("나눔: 접속 보상 점 = login 줄 · 7일(다 받음) 점 없음", d.login == true and d.attendance == false and any == true)
+	local d2 = RH.dots(v, 0, false)
+	check("나눔 끔: 접속 보상 = 출석 줄 점(옛 규칙)", d2.attendance == true and d2.login == nil)
 end)
 if not okRun then
 	print("[HELP] 하네스 에러 " .. tostring(err))

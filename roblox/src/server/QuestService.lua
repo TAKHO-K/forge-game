@@ -86,7 +86,11 @@ function QuestService.view(player)
 			for _, entry in ipairs(QuestData.attendance) do
 				all = all and att.claimed[tostring(entry.day)] == true
 			end
-			return not all and { count = att.count, claimed = att.claimed, rewards = QuestData.attendance } or nil
+			if all and not require(ReplicatedStorage.Shared.data.UiV2Flags).auto then
+				return nil
+			end
+			-- UI-1b 1-b 11: 7칸 다 받아도 창은 남김(받은 칸 = 체크 · done) - 옛 = 숨김 → 보상 탭에서 2일차 환생권 창이 사라졌다(사용자 10-10)
+			return { count = att.count, claimed = att.claimed, rewards = QuestData.attendance, done = all or nil }
 		end)(),
 		board = type(state.board) == "table" and (function() -- QUEUE-ALL9B 5 시즌 출석판(칸 · 받음 · 오늘 받을 것 · 다음 초기화까지 초 = 서버 UTC 자정)
 			local kind, cell = Quest.boardToday(state)
