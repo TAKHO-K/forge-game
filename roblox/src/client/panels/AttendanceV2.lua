@@ -420,7 +420,7 @@ local function build()
 		hasCloseButton = true,
 		onOpen = function()
 			gui.Enabled = true
-			gui.DisplayOrder = math.max(gui.DisplayOrder, L.displayOrder) -- 폰 창(y 62)이 HUD 메뉴 줄(HudMenuV2 150) 위에 오게
+			if not require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).layers then gui.DisplayOrder = math.max(gui.DisplayOrder, L.displayOrder) end -- UI-1b: 층 표(창 = HUD 메뉴 위)면 따로 안 올림(나중에 연 창이 위) -- 폰 창(y 62)이 HUD 메뉴 줄(HudMenuV2 150) 위에 오게
 			autoDay = utcDay()
 			AttendanceV2.render()
 		end,

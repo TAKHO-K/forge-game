@@ -13,11 +13,11 @@ T="${TEMP:-/tmp}"
 # 에러 문구 = "[태그] 에러 …" · "[태그] 하네스 에러 …" · "[태그] 스레드 에러 …"(하네스가 pcall로 잡은 것) + luau가 못 잡은 에러(stacktrace:)
 ERR_RE='^\[[A-Za-z0-9_]+\] ([^ ]+ )?에러 |^stacktrace:'
 declare -A EXP=( # 기대 검사 수(끝 a/b의 b) · require_path는 최소값(require가 늘면 같이 늘어남)
-	[security_launch]=45 [save_launch]=65 [save_lock]=12 [migrate_curve]=24 [id_quarantine]=15 [slot_save]=70 [monetize]=86 [dupe]=11
+	[security_launch]=45 [save_launch]=65 [save_lock]=12 [migrate_curve]=24 [id_quarantine]=15 [slot_save]=71 [monetize]=86 [dupe]=11
 	[multiplayer]=12 [attack]=10 [request_gate]=7 [mesh_import]=34 [ops_security]=34 [season_pass]=13 [economy_all9b]=34 [enhance_g]=25
 	[bignum]=67 [bulk_sell]=11 [stat_sheet]=9 [all10]=57 [gear_v3]=10 [gem_home]=25 [monster_stats]=5 [dash_modes]=19 [boss_feel]=13
 	[menu_gate]=14 [menu_gate_src]=11 [hud_v5_src]=10 [ui1_static]=9 [ui_v2]=74 [hud_layout]=18 [ui1_parts]=11 [codex_box]=35
-	[ember_view]=8 [hud_edit]=16 [pet_ui]=7 [quick_chat]=6 [ui_rules]=4 [community_goal]=24 [require_path]=5542 [regrow_timing]=8
+	[ember_view]=8 [hud_edit]=16 [pet_ui]=7 [quick_chat]=6 [ui_rules]=4 [window_layers]=7 [community_goal]=24 [require_path]=5542 [regrow_timing]=8
 )
 NALL=0; NBAD=0
 verdict() { # 이름 결과파일 종료코드 → 한 줄 출력
@@ -96,6 +96,7 @@ run ember_view res_ember.txt "" ember_view_test.luau # UI-1 6단계 불씨 칸 =
 run hud_edit res_hudedit.txt "" hud_edit_test.luau # UI-1 7b HUD 편집 배치 = 서버와 같은 검사(화면 밖 · 상단 바 · 로블록스 버튼 · id 화이트리스트) · 요소 8
 run pet_ui res_petui.txt "" pet_ui_test.luau # UI-1 7c 알 확률 합 100(알 × 부화 레벨) · 펫 놓아주기 판정(데리고 다님 · 잠금 거절)
 run quick_chat res_qchat.txt "" quick_chat_test.luau # UI-1 7c 파티 빠른 말(번호만 · 같은 말 3번 연속 = 5초 쉬기)
+run window_layers res_wlay.txt "" window_layers_test.luau # UI-1b 1-b 10 창 층 표 · 나중에 연 창이 위
 run ui_rules res_ui.txt "" ui_rules_test.luau # QUEUE-ALL9C 블록 1 화면 규칙(순위 상위 약 n% 등 순수 함수)
 run community_goal res_goal.txt "" community_goal_test.luau # QUEUE-ALL7 B5 합동 목표 00 · ±25% · 문턱 순서
 run boss_motion res_motion.txt "" boss_motion_test.luau motion_prelude.luau

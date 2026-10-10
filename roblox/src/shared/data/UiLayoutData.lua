@@ -320,8 +320,12 @@ return {
 	infoTip = {
 		pc = { w = 520, pad = 18, head = 44, rowPad = 10 },
 		phone = { w = 330, pad = 12, head = 34, rowPad = 7 },
-		bg = "161A2B", bgT = 0.04, stroke = "8FD8FF", strokeW = 3, ringW = 3, line = "2A3352", corner = 14, gap = 10, displayOrder = 175,
+		bg = "161A2B", bgT = 0.04, stroke = "8FD8FF", strokeW = 3, ringW = 3, line = "2A3352", corner = 14, gap = 10, displayOrder = 175, -- = layers.tip
 	},
+	-- UI-1b 1-b 10: ScreenGui 층(DisplayOrder) 표 하나(shared/WindowLayers) · 창(window)은 HUD 메뉴 위 · 나중에 연 창이 위(대역 안 +1) · 설명 창 · 확인 창은 그 위
+	layers = { station = 10, stationMax = 89, hudMenu = 90, window = 100, windowMax = 169, tip = 175, overlay = 200, overlayMax = 239 },
+	-- UI-1b 1절 3(I v1 0-2): 창 제목 옆 [?] = 원 36(폰 28) · 하늘 테 · 처음 1번 작은 점(client/ui/v2/HelpButton)
+	helpButton = { pcSize = 36, phoneSize = 28, bg = "1E2438", stroke = "8FD8FF", strokeW = 2, dot = "EB3C3C", dotSize = 10, gap = 10 },
 	-- UI-1b 1절 16(I v1 spec 0-4 · pc_10 · ph_06): HUD 오른쪽 위 칩 = 왼쪽 메뉴 버튼과 같은 크기 단계 · 아이콘 크게 + 이름 · 누르면 설명(InfoTip)
 	--   기준 px(HUD 배율 m 곱 · 폰 칩 배율 없음) · 줄 1 = 재화 · 줄 2 = 구역 · 스테이지 · 최고 + Lv · 전투력(폰 = 줄 2 = Lv · 전투력만 - 스테이지는 지도 · 구역 선택)
 	infoChips = {

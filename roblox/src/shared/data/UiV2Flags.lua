@@ -13,5 +13,6 @@ return {
 	topbarBoss = true, -- UI-1b 1절 2(I v1 spec 0-3): 보스 바 = 로블록스 상단 바 가운데 빈 칸 안(GuiService.TopbarInset) - 끔 = UI-1 v6 자리(위 가운데 · 상단 바 아래)
 	chipsV9 = true, -- UI-1b 1절 16(I v1 0-4): HUD 오른쪽 위 칩 = 높이 52 · 아이콘 36 · 이름 + 숫자 · 누르면 설명(hud/InfoChipsV9) - 끔 = 옛 칩
 	enhanceBig = true, -- UI-1b 1절 15: 강화대 빠른 창 1.3배 · "유물 무기" 줄 없앰 · 재화 = 큰 아이콘 + "골드" + 누르면 설명 - 끔 = UI-1 크기
+	layers = true, -- UI-1b 1-b 10: 창 층 표 하나(창 = HUD 메뉴 위 · 나중에 연 창이 위 · 창 Gui ZIndex 방식은 그대로) - 끔 = 옛 층(메뉴 150 · 출석 · 관문 160)
 	rest = true, -- 7c단계: H 알 · 펫 · 캐릭터 · 수련 · 퀘스트 · 파티 · 순위 · 상점
 }

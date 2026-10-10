@@ -121,7 +121,7 @@ local function build()
 		hasCloseButton = true,
 		onOpen = function()
 			gui.Enabled = true
-			gui.DisplayOrder = math.max(gui.DisplayOrder, L.displayOrder)
+			if not require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).layers then gui.DisplayOrder = math.max(gui.DisplayOrder, L.displayOrder) end -- UI-1b: 층 표(창 = HUD 메뉴 위)면 따로 안 올림(나중에 연 창이 위)
 			BossGateWindow.render()
 		end,
 		onClose = function()

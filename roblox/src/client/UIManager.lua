@@ -26,6 +26,8 @@ local TWEEN_INFO = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirecti
 -- 종류별 DisplayOrder 대역(30-0 S06, PRD 20.81 [D-1]): station 10 ~ 19 · window 100 ~ 149 · overlay 200 ~ 249. 다른 HUD ScreenGui(기본값 0 ~ 8)보다 항상 위.
 -- window의 값은 S06 전과 같다(BASE 100 + 스택 안 순번 = 가방 101).
 local KIND_BASE_ORDER = { station = 10, window = 100, overlay = 200 }
+local LAYERS_ON = require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).layers -- UI-1b 1-b 10
+local WindowLayers = require(game:GetService("ReplicatedStorage").Shared.WindowLayers)
 local CLOSE_TOP_KEYS = { [Enum.KeyCode.X] = true, [Enum.KeyCode.Backspace] = true }
 
 -- 패널 높이 제한(S12 사전 작업 2 - COMMON.md §2 영구 규칙): window · station은 열 때 높이를 (화면 높이 − 위아래 안전 여백) 이하로 줄이고, 위 · 아래 끝이 화면 밖이면 안으로 민다.
@@ -59,6 +61,19 @@ UIManager.isModalOpen = isModalOpen
 
 -- 스택 순서(맨 뒤 = 맨 위)대로, 같은 종류끼리 순번을 세어 그 종류 대역 안에서 DisplayOrder를 준다.
 local function applyStackOrder()
+	if LAYERS_ON then -- UI-1b: 층 = 데이터 표(WindowLayers) · 나중에 연 창이 위
+		local kinds = {}
+		for _, id in ipairs(stack) do
+			table.insert(kinds, windows[id].kind)
+		end
+		local orders = WindowLayers.stackOrders(kinds)
+		for i, id in ipairs(stack) do
+			if windows[id].screenGui then
+				windows[id].screenGui.DisplayOrder = orders[i]
+			end
+		end
+		return
+	end
 	local rank = { station = 0, window = 0, overlay = 0 }
 	for _, id in ipairs(stack) do
 		local win = windows[id]
@@ -263,6 +278,8 @@ function UIManager.register(id, config)
 	if config.hasCloseButton ~= true then
 		warn(("UIManager: '%s' 창에 닫기 버튼이 없다 - 모바일에서 닫을 방법이 없어진다"):format(id))
 	end
+	-- UI-1b 1-b 10: 창 Gui를 Sibling으로 일괄 전환하지 않는다 - 옛 버튼(UiKit.skin)은 그림(Skin)이 버튼의 자식이라 Sibling에서 버튼 글자를 덮는다
+	--   (Play 실측: 가방 "등급순 · 등급 골라 분해" 글자 사라짐). 새로 만드는 Gui만 Sibling(InfoTip · HelpButton · HudEdit 등).
 	windows[id] = config
 end
 

@@ -37,7 +37,7 @@ local V2HUD = require(ReplicatedStorage.Shared.data.UiV2Flags).hud -- UI-1b 0절
 if V2HUD then
 	gui.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets
 end -- UI-1 0단계(02 v6 §2): 노치 = 기기 안전 영역 안 · 상단 바는 좌표로 비움
-gui.DisplayOrder = 150 -- 창 딤(100 ~ 149) 위 · overlay(200 ~) 아래 - 열린 창을 같은 버튼으로 닫는다(옛 MenuBar와 같은 층)
+gui.DisplayOrder = require(ReplicatedStorage.Shared.data.UiV2Flags).layers and require(ReplicatedStorage.Shared.data.UiLayoutData).layers.hudMenu or 150 -- UI-1b: 층 표(창 아래 · 열린 창이 메뉴를 덮음) / 옛: 창 딤(100 ~ 149) 위 · overlay(200 ~) 아래 - 열린 창을 같은 버튼으로 닫는다(옛 MenuBar와 같은 층)
 gui.Parent = player:WaitForChild("PlayerGui")
 local recallEvent = Instance.new("BindableEvent") -- 귀환 = WorldClient(시전 · 취소 · 쿨 - 같은 동작)
 recallEvent.Name = "HudRecallPress"
