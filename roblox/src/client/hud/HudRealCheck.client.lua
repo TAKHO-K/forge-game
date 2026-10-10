@@ -54,13 +54,32 @@ local function run()
 		local node = find(u.path)
 		if node and node:IsA("GuiObject") and shown(node) then
 			if u.each then
-				for _, c in ipairs(node:GetChildren()) do
-					if c:IsA("GuiObject") and c.Visible then
-						table.insert(rects, rectOf(u.id .. "/" .. c.Name, c))
+				-- 투명 묶음 틀(그림 · 글 없는 Frame + 자식 있음 = 폰 메뉴 줄 TopRow 등)은 안쪽 자식마다 잰다
+				local function each(prefix, parent)
+					for _, c in ipairs(parent:GetChildren()) do
+						if c:IsA("GuiObject") and c.Visible then
+							local group = c.ClassName == "Frame" and c.BackgroundTransparency >= 1 and #c:GetChildren() > 0
+							local kids = 0
+							for _, k in ipairs(c:GetChildren()) do
+								if k:IsA("GuiObject") then
+									kids += 1
+								end
+							end
+							if group and kids > 0 then
+								each(prefix .. c.Name .. "/", c)
+							else
+								table.insert(rects, rectOf(prefix .. c.Name, c))
+							end
+						end
 					end
 				end
+				each(u.id .. "/", node)
 			else
-				table.insert(rects, rectOf(u.id, node))
+				local r = rectOf(u.id, node)
+				if r then
+					r.topbarOk = u.topbarOk
+				end
+				table.insert(rects, r)
 			end
 		end
 	end

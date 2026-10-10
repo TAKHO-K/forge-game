@@ -313,6 +313,14 @@ return {
 	character = { v1 = { avatarBottom = 120, titleCardH = 70 } },
 	-- UI-1 7c 파티 창 빠른 말 줄(F v2.1 · H §5): 말 8 + 이모트 4 = 한 격자
 	quickChat = { v1 = { height = 112, cellW = 106, cellH = 44 } },
+	-- UI-1b 1절 2(I v1 spec 0-3 · pc_11 · ph_06): 보스 바 = 로블록스 상단 바 가운데 빈 칸 안(전투 중에만 · 상단 바 비움의 유일한 예외)
+	--   화면 px(상단 바는 우리 배율과 무관) · 폭 = min(w, 빈 칸 폭 − 2 × margin) · minW보다 좁으면 상단 바 바로 아래(below) · 상태 아이콘 줄 = 바 바로 아래 · 위쪽 알림 = 그 아래
+	topbarBoss = {
+		pc = { w = 760, h = 44, portrait = 32, name = 20, bar = 16, pct = 20, nameW = 210, formW = 64, pctW = 64, pad = 8, status = 30 },
+		phone = { w = 430, h = 34, portrait = 24, name = 14, bar = 10, pct = 14, nameW = 104, formW = 46, pctW = 44, pad = 6, status = 24 },
+		minW = 360, margin = 12, below = 4, statusGap = 4, noticeGap = 8,
+		bg = "0E1120", bgT = 0.18, stroke = "3A4466", strokeW = 2, corner = 12,
+	},
 	-- UI-1b 0절(VERIFY-5 상3) 실제 화면 겹침 검사: 표 사각형이 아니라 실제 GUI 인스턴스의 AbsolutePosition · AbsoluteSize로 잰다(hud/HudRealCheck · shared/HudRealRules).
 	--   path = PlayerGui 기준 · each = 보이는 직속 자식마다 한 칸(메뉴 버튼 · 칩) · allow = 겹쳐도 되는 짝(설계상 겹침 - 이유 적기)
 	realCheck = {
@@ -327,7 +335,7 @@ return {
 			{ id = "status", path = "StatusHudGui/StatusRowHolder" },
 			{ id = "skills", path = "SkillSlotsGui/CentralRow" },
 			{ id = "phoneCombat", path = "SkillSlotsGui/PhoneCombat", each = true },
-			{ id = "bossBar", path = "BossBarGui/BossBar" },
+			{ id = "bossBar", path = "BossBarGui/BossBarBottom", topbarOk = true }, -- 상단 바 안 = 설계(I v1 0-3)
 			{ id = "party", path = "PartyHudGui/PartyList" },
 			{ id = "region", path = "WorldHud/RegionLabel" },
 		},

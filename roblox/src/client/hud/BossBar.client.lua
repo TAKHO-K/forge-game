@@ -212,6 +212,102 @@ local function buildArt()
 	return artBar
 end
 
+-- UI-1b 1절 2(I v1 spec 0-3): 보스 바 = 로블록스 상단 바 가운데 빈 칸 안(GuiService.TopbarInset = 로블록스 버튼을 뺀 남은 칸 · 화면 px).
+--   한 줄 판 = 초상 + 이름 + 형태 알약 + 체력 막대 + % · 폭이 좁으면 형태 알약 숨김 · 빈 칸 < minW = 상단 바 바로 아래 · 상태 아이콘 = 판 바로 아래 가운데.
+local TOPBAR_ON = require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).topbarBoss
+local TB = require(game:GetService("ReplicatedStorage").Shared.data.UiLayoutData).topbarBoss
+local topbarParts = nil
+local topbarRect = nil -- 판 화면 자리(알림 줄 · 상태 줄이 따라감)
+local function layoutTopbar(a)
+	local phone = Theme.isMobile
+	local P = phone and TB.phone or TB.pc
+	local inset = GuiService.TopbarInset
+	local view = workspace.CurrentCamera.ViewportSize
+	local room = inset.Width > 0 and inset.Width - 2 * TB.margin or view.X - 2 * TB.margin
+	local w = math.floor(math.min(P.w, room))
+	local x, y
+	if inset.Width > 0 and room >= TB.minW then
+		x = inset.Min.X + (inset.Width - w) / 2
+		y = inset.Min.Y + math.max(0, (inset.Height - P.h) / 2)
+	else -- 빈 칸이 좁음(폰 · 작은 창) = 상단 바 바로 아래
+		w = math.floor(math.min(P.w, view.X - 2 * TB.margin))
+		x = (view.X - w) / 2
+		y = math.max(inset.Max.Y, GuiService:GetGuiInset().Y) + TB.below
+	end
+	refs.screenGui.IgnoreGuiInset = true
+	refs.screenGui.ScreenInsets = Enum.ScreenInsets.None -- TopbarInset = 화면 좌표(안전 영역 기준 아님)
+	if not topbarParts then
+		topbarParts = {}
+		local st = Instance.new("UIStroke")
+		st.Name = "TopbarStroke"
+		st.Color = Color3.fromHex(TB.stroke)
+		st.Thickness = TB.strokeW
+		st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		st.Parent = a.root
+		local c = Instance.new("UICorner")
+		c.CornerRadius = UDim.new(0, TB.corner)
+		c.Parent = a.root
+		local holder = Instance.new("Frame")
+		holder.Name = "TopbarPortrait"
+		holder.BackgroundTransparency = 1
+		holder.Parent = a.root
+		topbarParts.portrait = holder
+	end
+	a.root.BackgroundColor3 = Color3.fromHex(TB.bg)
+	a.root.BackgroundTransparency = TB.bgT
+	a.root.AnchorPoint = Vector2.zero
+	a.root.Position = UDim2.fromOffset(math.floor(x), math.floor(y))
+	a.root.Size = UDim2.fromOffset(w, P.h)
+	topbarRect = { x = math.floor(x), y = math.floor(y), w = w, h = P.h }
+	local cx = P.pad
+	topbarParts.portrait.Size = UDim2.fromOffset(P.portrait, P.portrait)
+	topbarParts.portrait.Position = UDim2.fromOffset(cx, math.floor((P.h - P.portrait) / 2))
+	cx += P.portrait + P.pad
+	a.name.TextXAlignment = Enum.TextXAlignment.Left
+	a.name.TextSize = P.name
+	a.name.TextScaled = false
+	a.name.TextTruncate = Enum.TextTruncate.AtEnd
+	a.name.AnchorPoint = Vector2.new(0, 0.5)
+	a.name.Position = UDim2.new(0, cx, 0.5, 0)
+	a.name.Size = UDim2.fromOffset(P.nameW, P.h - 4)
+	cx += P.nameW + P.pad
+	local formRoom = w - cx - P.pctW - P.pad * 2 - 80 >= P.formW -- 좁으면 형태 알약 숨김(spec: 이름 줄임 → 형태 알약 숨김)
+	topbarParts.formX = formRoom and cx or nil
+	if formRoom then
+		cx += P.formW + P.pad
+	end
+	a.track.AnchorPoint = Vector2.new(0, 0.5)
+	a.track.Position = UDim2.new(0, cx, 0.5, 0)
+	a.track.Size = UDim2.fromOffset(math.max(40, w - cx - P.pctW - P.pad), P.bar)
+	a.pct.TextXAlignment = Enum.TextXAlignment.Right
+	a.pct.TextSize = P.pct
+	a.pct.AnchorPoint = Vector2.new(1, 0.5)
+	a.pct.Position = UDim2.new(1, -P.pad, 0.5, 0)
+	a.pct.Size = UDim2.fromOffset(P.pctW, P.h - 4)
+	for _, tick in ipairs(v6.ticks) do
+		tick.Size = UDim2.fromOffset(3, P.bar + 6)
+	end
+	v6.form.Size = UDim2.fromOffset(P.formW, P.h - 12)
+	v6.form.TextSize = P.pct - 4
+	v6.statusScale.Scale = 1
+	v6.statusHolder.Size = UDim2.fromOffset(P.status * 5, P.status)
+	v6.statusHolder.AnchorPoint = Vector2.new(0.5, 0)
+	v6.statusHolder.Position = UDim2.new(0.5, 0, 1, TB.statusGap)
+end
+
+-- 보스 초상(판 왼쪽 원) = 보스가 바뀔 때만 다시
+local function setTopbarPortrait(bossId)
+	if not topbarParts or topbarParts.bossId == bossId then
+		return
+	end
+	topbarParts.bossId = bossId
+	topbarParts.portrait:ClearAllChildren()
+	if bossId then
+		local p = require(script.Parent.Parent.ui.v2.BossPortrait).make(topbarParts.portrait, bossId, topbarParts.portrait.AbsoluteSize.X > 0 and topbarParts.portrait.AbsoluteSize.X or (Theme.isMobile and TB.phone or TB.pc).portrait, { stroke = 2 })
+		p.Position = UDim2.fromOffset(0, 0)
+	end
+end
+
 layoutArt = function()
 	local a = buildArt()
 	local screen = refs.screenGui.AbsoluteSize
@@ -292,6 +388,9 @@ layoutArt = function()
 		v6.statusHolder.Position = UDim2.new(0.6, -4, 0, math.floor((P.name * m - cell * m) / 2))
 		v6.statusScale.Scale = m
 		v6.form.Size = UDim2.fromOffset(math.floor(60 * m), math.floor(P.name * m))
+		if TOPBAR_ON then
+			layoutTopbar(a)
+		end
 		return
 	end
 	local barH = BossHudLayout.barHeight()
@@ -319,6 +418,10 @@ local function moveNotices(on)
 		local insetY = tcGui.IgnoreGuiInset and 0 or GuiService:GetGuiInset().Y
 		lane.AnchorPoint = Vector2.new(0.5, 0)
 		lane.Position = UDim2.new(0.5, 0, 0, math.floor(r[2] - insetY))
+		if TOPBAR_ON and topbarRect then -- UI-1b: 판 → 상태 아이콘 줄 → 알림(그 아래)
+			local P = Theme.isMobile and TB.phone or TB.pc
+			lane.Position = UDim2.new(0.5, 0, 0, math.floor(topbarRect.y + topbarRect.h + TB.statusGap + P.status + TB.noticeGap - insetY))
+		end
 	elseif not on and tcSaved then
 		if tcSaved.lane.Parent then
 			tcSaved.lane.Position, tcSaved.lane.AnchorPoint = tcSaved.pos, tcSaved.anchor
@@ -490,11 +593,19 @@ local function refresh()
 			a.fill.BackgroundColor3 = guard and Color3.fromHex(B.guardFill) or Color3.new(1, 1, 1)
 			v6.stripes.Visible = guard
 			local bossId = boss:GetAttribute("BossRig") -- 보스 데이터 id(MonsterSpawner)
+			if TOPBAR_ON then
+				setTopbarPortrait(bossId)
+			end
 			if B.formBosses[bossId] then -- 폼 꼬리표 = 폭풍 군주만
 				v6.form.Visible = true
 				v6.form.Text = Text.get(ratio < B.formAt and "ui1.boss.form2" or "ui1.boss.form1")
 				local tb = a.name.TextBounds.X
 				v6.form.Position = UDim2.fromOffset(math.floor(tb + 10), 0)
+				if TOPBAR_ON and topbarParts then -- UI-1b: 판 안 형태 알약 자리(좁으면 숨김)
+					v6.form.Visible = topbarParts.formX ~= nil
+					v6.form.AnchorPoint = Vector2.new(0, 0.5)
+					v6.form.Position = UDim2.new(0, topbarParts.formX or 0, 0.5, 0)
+				end
 			else
 				v6.form.Visible = false
 			end

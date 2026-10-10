@@ -379,7 +379,7 @@ local function placeRight(col, boss)
 			slot[id] = { 0, i - 1 }
 		elseif i <= fold.outer + fold.inner then
 			slot[id] = { 1, i - fold.outer - 1 }
-		else
+		elseif not boss then -- UI-1b: 보스전 = 오른쪽 열 전부 숨김 → 더보기로도 안 보냄(옛 = 더보기 자리 좌표로 오른쪽 루트에 보여 왼쪽 메뉴와 겹침 · 실제 겹침 검사로 발견)
 			table.insert(foldedToMore, id)
 		end
 	end

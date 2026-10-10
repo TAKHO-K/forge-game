@@ -15,7 +15,7 @@ end
 function HudRealRules.check(rects, view, allow)
 	local out = { overlaps = {}, offscreen = {}, topbar = {} }
 	for i, r in ipairs(rects) do
-		if r.y < 0 then
+		if r.y < 0 and not r.topbarOk then -- topbarOk = 상단 바 안이 설계(보스 바)
 			table.insert(out.topbar, r.id)
 		end
 		if r.x < 0 or r.x + r.w > view.w + 0.5 or r.y + r.h > view.h + 0.5 then

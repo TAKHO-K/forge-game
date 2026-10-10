@@ -10,5 +10,6 @@ return {
 	auto = true, -- 7단계: F 자동 창(출석 + 시즌판 · 선물함 순서)
 	map = true, -- 7b단계: G 지도 · 구역 선택 · 보스 관문 · 더보기 · 설정 · HUD 편집
 	text = true, -- UI-1b 1절 1: 글자 한 단계 키움(새 보통 = 옛 크게 ×1.15 · UiTokens.textBase · 최소 PC 본문 18 · 작은 15 / 폰 14 · 12) - 끔 = 옛 크기
+	topbarBoss = true, -- UI-1b 1절 2(I v1 spec 0-3): 보스 바 = 로블록스 상단 바 가운데 빈 칸 안(GuiService.TopbarInset) - 끔 = UI-1 v6 자리(위 가운데 · 상단 바 아래)
 	rest = true, -- 7c단계: H 알 · 펫 · 캐릭터 · 수련 · 퀘스트 · 파티 · 순위 · 상점
 }
