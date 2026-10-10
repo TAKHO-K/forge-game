@@ -1681,8 +1681,26 @@ local function handleCommand(player, args)
 			moves, notices = hook:Invoke(player, "tick")
 		end
 		reply(player, ("자동 이동 목표 %s · 관문 %s · 누적 이동 %s · 알림 %s · 설정 %s"):format(tostring(target), tostring(gate), tostring(moves), tostring(notices), tostring(player:GetAttribute("AutoStage"))))
+	elseif sub == "bossentry" then
+		-- BOSS-NIGHT-3 addendum-2 17: 반피 + 대시 쿨 중 → 보스 입장(실제 spawnFor) → 체력 · 대시(DashHook = 실제 판정) 확인 → 나가기
+		local dashHook = game:GetService("ServerStorage"):FindFirstChild("DashHook")
+		pcall(BossEncounter.leaveFor, player)
+		task.wait(2)
+		local maxHp = PlayerState.getMaxHp(player)
+		PlayerState.setHp(player, maxHp * 0.5)
+		require(script.Parent.PlayerDamage).syncHud(player)
+		local before = PlayerState.getHp(player) / maxHp
+		task.wait(1)
+		local first = dashHook and dashHook:Invoke(player, true)
+		local blocked = dashHook and dashHook:Invoke(player, false)
+		local spawned = pcall(BossEncounter.spawnFor, player, tonumber(args[2]) or 45)
+		task.wait(1.5)
+		local after = PlayerState.getHp(player) / maxHp
+		local dashAfter = dashHook and dashHook:Invoke(player, false)
+		print(("BOSSENTRY|spawned %s|hpBefore %.2f|dash1 %s|dashBeforeEntry %s|hpAfterEntry %.2f|dashAfterEntry %s|hpAttr %.2f"):format(tostring(spawned), before, tostring(first), tostring(blocked), after, tostring(dashAfter), (player:GetAttribute("Hp") or -1) / maxHp))
+		reply(player, ("보스 입장 확인: 체력 %.0f%% → %.0f%% · 대시 입장 전 %s → 입장 뒤 %s"):format(before * 100, after * 100, tostring(blocked), tostring(dashAfter)))
 	elseif sub == "ult" then
-		-- K1 궁극기: /gg ult fill(게이지 100) · /gg ult state · /gg ult forge(위조 요청 거부 검사 - 게이지 0 요청 · 활 먼 조준)
+		-- K1 궁극기:/gg ult fill(게이지 100) · /gg ult state · /gg ult forge(위조 요청 거부 검사 - 게이지 0 요청 · 활 먼 조준)
 		local Ultimate = require(script.Parent.UltimateService)
 		local debugCast = game:GetService("ServerStorage"):FindFirstChild("SkillCastDebug")
 		if args[2] == "fill" then

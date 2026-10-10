@@ -94,6 +94,26 @@ function BossEncounter.onEncounterEnded(fn)
 	table.insert(endedListeners, fn)
 end
 
+-- BOSS-NIGHT-3 addendum-2 17(PRD 20.44 · 웹 9-5 "진입 시 전체 회복 + 대시 타이머 초기화"): 입장 · 다시 도전마다 멤버 체력 가득 + 대시 쿨 초기화(DashServer가 듣는다 - 대시 상태는 그 스크립트 안에 있다)
+local refreshedListeners = {}
+function BossEncounter.onMemberRefreshed(fn)
+	table.insert(refreshedListeners, fn)
+end
+
+local function refreshMembers(members)
+	local PlayerDamage = require(script.Parent.PlayerDamage)
+	for _, member in ipairs(members) do
+		local maxHp = typeof(member) == "Instance" and PlayerState.getMaxHp(member)
+		if maxHp then
+			PlayerState.setHp(member, maxHp)
+			PlayerDamage.syncHud(member)
+			for _, fn in ipairs(refreshedListeners) do
+				task.spawn(fn, member)
+			end
+		end
+	end
+end
+
 local function fireListeners(listeners, encounter)
 	for _, fn in ipairs(listeners) do
 		task.spawn(fn, encounter)
@@ -416,6 +436,7 @@ local function spawnEncounter(data, stage, members, party, size, owner, isTutori
 	for i, member in ipairs(members) do
 		teleportTo(member, entryPositionForIndex(zone, i, #members))
 	end
+	refreshMembers(members)
 
 	-- Y는 바닥 윗면(ARENA_FLOOR_TOP_Y) + 1.5 - HuntingGround.server.lua의 tier 몬스터
 	-- 스폰 높이(FLOOR_Y+FLOOR_THICKNESS/2+1.5)와 같은 관례.
@@ -837,6 +858,7 @@ function BossEncounter.retryLinger(encounter)
 	for i, member in ipairs(encounter.members) do
 		teleportTo(member, entryPositionForIndex(zone, i, #encounter.members))
 	end
+	refreshMembers(encounter.members)
 	local model = MonsterSpawner.spawn(encounter.data, zone.center + Vector3.new(0, ARENA_FLOOR_TOP_Y + 1.5, 0), encounter.zoneKey)
 	encounter.model = model
 	encounter.lingering = false

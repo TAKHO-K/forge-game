@@ -136,6 +136,12 @@ if game:GetService("RunService"):IsStudio() then -- 검증 훅(MV1(나)): 실제
 	hook.Parent = game:GetService("ServerStorage")
 end
 
+-- BOSS-NIGHT-3 addendum-2 17: 보스 입장 · 다시 도전 = 대시 쿨 초기화(거절 결과 = 클라 쿨 상태 · 쿨 링도 비운다 - DashInput · SkillSlots)
+require(script.Parent.BossEncounter).onMemberRefreshed(function(player)
+	dashStates[player] = nil
+	dashResult:FireClient(player, { ok = false, reason = "reset" })
+end)
+
 Players.PlayerRemoving:Connect(function(player)
 	dashStates[player] = nil
 end)
