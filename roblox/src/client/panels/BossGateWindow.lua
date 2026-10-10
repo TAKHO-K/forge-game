@@ -180,8 +180,13 @@ function BossGateWindow.render()
 	local HELP = require(ReplicatedStorage.Shared.data.UiV2Flags).help
 	if HELP then -- UI-1b 1절 3: 파티 인원 · 처음 보는 기술 안내 = 머리 줄 옆 [?]
 		local firstMeet = current.firstMeet
+		local reachable, stage = current.reachable, current.stage
 		local hb = require(script.Parent.Parent.ui.v2.HelpButton).besideLabel(head, "bossGate", { rows = function()
-			return firstMeet and { { Text.get("ui1b.help.row.first"), Text.get("ui1.gate.firstMeet") } } or {}
+			local rows = firstMeet and { { Text.get("ui1b.help.row.first"), Text.get("ui1.gate.firstMeet") } } or {}
+			if phone then -- 폰 = 버튼 아래 이유 줄 자리가 없음 → [파티 찾기]가 꺼진 이유를 여기에(VERIFY-5 7b)
+				table.insert(rows, { Text.get("ui1b.help.row.party"), Text.get(reachable and "ui1.gate.partyReason" or "ui1.gate.notYet", { n = tostring(stage or 0) }) })
+			end
+			return rows
 		end })
 		hb.Size = UDim2.fromOffset(phone and 22 or 28, phone and 22 or 28)
 	end

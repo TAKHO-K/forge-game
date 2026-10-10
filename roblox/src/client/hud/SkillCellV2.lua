@@ -60,6 +60,12 @@ function SkillCellV2.decorate(slot, opts)
 		sec.BackgroundTransparency = 1
 		sec.Position = UDim2.fromScale(K.secondsLeft, K.secondsTop)
 		sec.Size = UDim2.fromScale(1 - K.secondsLeft, 1 - K.secondsTop)
+		if K.secondsCorner then -- UI-1b(VERIFY-5 · F v2 정본): 쿨 숫자 = 칸 오른쪽 아래(옛 = 가운데)
+			sec.Position = UDim2.fromScale(0, 0)
+			sec.Size = UDim2.fromScale(1 - K.secondsCorner, 1 - K.secondsCorner)
+			sec.TextXAlignment = Enum.TextXAlignment.Right
+			sec.TextYAlignment = Enum.TextYAlignment.Bottom
+		end
 		sec.Font = Enum.Font.FredokaOne
 		sec.TextColor3 = Color3.new(1, 1, 1)
 		sec.Text = ""

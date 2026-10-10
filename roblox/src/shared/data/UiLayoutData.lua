@@ -183,7 +183,7 @@ return {
 			hudHiddenCurrency = { sparkleShard = true },
 			phoneChipScale = 0.7, -- 2단계: 폰 정보 칩 높이 28(02 v6 §4) ÷ 지금 칩 높이 40 · 보스전 = 골드 · Lv만(스테이지 칩 숨김) -- 2단계(02 v6 MISSING 13 · CC-UI-1 §2): 꾸미기 토큰 = HUD 칩에서 숨김(상점 · 도감에서만)
 			-- 2단계 스킬 줄(02 v6 §7 · F v2 §1 B v2): PC 칸 72 · 간격 18 · 대시 원형 · 폰 = hud.phone.combat 크기
-			skill = { pc = 72, gap = 18, dashGap = 26, keyRatio = 0.3, keyPhone = { 17, 14 }, secondsRatio = 0.56, secondsLeft = 0.12, secondsTop = 0.20, twoDigitScale = 0.8, stunInset = 8, stunRatio = 0.34, keyBg = "0E1120", keyBgTransparency = 0.15, secondsStroke = 5 },
+			skill = { pc = 72, gap = 18, dashGap = 26, keyRatio = 0.3, keyPhone = { 17, 14 }, secondsRatio = 0.56, secondsLeft = 0.12, secondsTop = 0.20, twoDigitScale = 0.8, stunInset = 8, stunRatio = 0.34, keyBg = "0E1120", keyBgTransparency = 0.15, secondsStroke = 5, secondsCorner = 0.08 }, -- secondsCorner = UI-1b(VERIFY-5 · F v2 정본): 쿨 숫자 = 칸 오른쪽 아래(안쪽 여백 비율)
 			-- 2단계 보스 바(02 v6 §5): 이름 줄 · 막대 · 아래 줄 높이(기준 px) · 표시선 · 폼 꼬리표 = 폭풍 군주만(F v2 0절 4)
 			bossBar = { pc = { name = 32, bar = 22, below = 24, status = 32 }, phone = { name = 22, bar = 12, below = 14, status = 22 }, ticks = { 0.5, 0.2 }, formBosses = { storm_lord = true }, formAt = 0.5,
 				fill = "F2453D", track = "3A1416", guardFill = "8A8F9E" },
@@ -264,6 +264,8 @@ return {
 			bossPortraits = { section_guardian = "ui/boss/boss-portrait-guardian", crystal_queen = "ui/boss/boss-portrait-crystal", abyssal_lord = "ui/boss/boss-portrait-abyssal",
 				scorpion_queen = "ui/boss/boss-portrait-scorpion", storm_lord = "ui/boss/boss-portrait-storm", frost_giant = "ui/boss/boss-portrait-mammoth" },
 		},
+		-- UI-1b 3절 7(G spec §1 · pc_01_map): 창 1600 × 880(기준 1920 × 1080 · 작은 화면 = 같이 줄어듦 · 하한 minScale) · 오른쪽 판 452 · 줄 높이 · 카드
+		frame = { w = 1600, h = 880, side = 452, row = 40, head = 30, card = 132, gap = 12, minScale = 0.55, maxScale = 1.25 },
 		-- UI-1b 1-b 14(사용자: 전갈 여왕 핀이 잘 안 보임 · 버튼이 아래 핀을 가림): 흐림(안 가 본 구역) 투명도 · 핀 흰 테 · 그림자 · 구역 이름 비켜 놓을 자리(지도 비율 y)
 		v1b = { fogDim = 0.7, pinStroke = "FFFFFF", pinStrokeW = 2, shadowOffset = 2, shadowT = 0.45, nameTries = { { 0, -0.045 }, { 0, 0.05 }, { 0, -0.08 }, { 0, 0.085 }, { 0.07, -0.045 }, { -0.07, -0.045 }, { 0.07, 0.05 }, { -0.07, 0.05 }, { 0, -0.115 }, { 0, 0.12 } }, nameGap = 6 }, -- { x, y } 비율(구역 가운데 기준)
 	},

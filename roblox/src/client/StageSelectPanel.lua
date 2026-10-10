@@ -786,7 +786,17 @@ closeButton.Activated:Connect(function()
 end)
 
 -- 칩 · 자체 점검(ui/PanelFitCheck)이 부르는 옛 이름 그대로 - 안에서는 UIManager로 간다.
+local portraitsWarm = false
 function StageSelectPanel.open()
+	if not portraitsWarm and require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).boss then -- UI-1b(VERIFY-5 3단계): 구역 선택 = 보스 초상 미리 받기(관문 · 진입 카드 첫 표시 빈 칸 방지 · 한 번)
+		portraitsWarm = true
+		local BossPortrait = require(script.Parent.ui.v2.BossPortrait)
+		for _, z in ipairs(require(game:GetService("ReplicatedStorage").Shared.data.WorldMapData).zones) do
+			if z.bossId then
+				BossPortrait.preload(z.bossId)
+			end
+		end
+	end
 	return UIManager.open("stageSelect")
 end
 

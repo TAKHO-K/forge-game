@@ -26,6 +26,23 @@ local TextService = game:GetService("TextService")
 local WorldMapPanel = {}
 WorldMapPanel.id = "worldMap"
 local MAP1B = require(ReplicatedStorage.Shared.data.UiV2Flags).map1b -- UI-1b 1-b 14
+local MAPFRAME = require(ReplicatedStorage.Shared.data.UiV2Flags).mapFrame -- UI-1b 3절 7
+-- 보기 토글(이번 접속 동안 · 지도에 그리는 것만): 장소 kind → 묶음
+local LAYERS = { "village", "gate", "checkpoint", "hunt", "pins" }
+local layerOn = { village = true, gate = true, checkpoint = true, hunt = true, pins = true }
+local function layerOf(place)
+	local k = place.kind
+	if k == "gate" then
+		return "gate"
+	elseif k == "camp" or k == "checkpoint" then
+		return "checkpoint"
+	elseif k == "ground" then
+		return "hunt"
+	elseif k == "pin" then
+		return "pins"
+	end
+	return "village"
+end
 local V7 = require(ReplicatedStorage.Shared.data.UiV2Flags).map -- UI-1 7b(08 v7 §1): 지도 버튼 = 지도 판 안쪽 오른쪽 아래 · 관문 = 보스 초상 핀 · 내 위치로
 local G = require(ReplicatedStorage.Shared.data.UiLayoutData).map
 
@@ -439,6 +456,9 @@ local function renderMarkers()
 	end
 	built.labels = {}
 	for _, place in ipairs(places()) do
+		if MAPFRAME and not layerOn[layerOf(place)] then
+			continue -- UI-1b 3절 7: 보기 토글 끔
+		end
 		local size = place.small and 14 or 22
 		marker(built.markers, place, size)
 		if place.named and not place.nameHidden then -- QUEUE-ALL9A 3-1 자기 건물 가까운 기능 = 건물 이름만
@@ -453,7 +473,9 @@ local function renderMarkers()
 		task.defer(avoidZoneNames)
 	end
 	for _, pin in ipairs(MapPins.list()) do
-		marker(built.markers, { kind = "pin", icon = "pin_user", name = pin.label, position = pin.position, pin = pin }, 24)
+		if not (MAPFRAME and not layerOn.pins) then
+			marker(built.markers, { kind = "pin", icon = "pin_user", name = pin.label, position = pin.position, pin = pin }, 24)
+		end
 	end
 	refreshDim()
 end
@@ -494,8 +516,14 @@ function WorldMapPanel.select(place)
 end
 
 local function build()
-	local panel = Panel.create({ id = WorldMapPanel.id, kind = "window", title = Text.get("map.title"), size = PANEL_SIZE,
+	local mapFrameSize = MAPFRAME and not Theme.isMobile and Vector2.new(G.frame.w, G.frame.h) or nil -- UI-1b 3절 7: 기준 크기(열 때 화면에 맞춰 줄임)
+	local panel = Panel.create({ id = WorldMapPanel.id, kind = "window", title = Text.get("map.title"), size = mapFrameSize or PANEL_SIZE, maxSize = mapFrameSize,
 		onOpen = function()
+			if mapFrameSize and built then -- 창 = 1600 × 880 × min(화면 비율) · 상단 바 아래 여백
+				local v = workspace.CurrentCamera.ViewportSize
+				local s = math.clamp(math.min((v.X - 24) / G.frame.w, (v.Y - 58 - 24) / G.frame.h), G.frame.minScale, G.frame.maxScale)
+				built.panel.frame.Size = UDim2.fromOffset(math.floor(G.frame.w * s), math.floor(G.frame.h * s))
+			end
 			task.defer(function()
 				applyView()
 				renderMarkers()
@@ -566,7 +594,7 @@ local function build()
 	title.Name = "Selected"
 	title.TextWrapped = true
 	title.Size = UDim2.new(1, 0, 0, 64)
-	local autoButton = Button.build({ parent = side, kind = "primary", width = SIDE_W, height = 48, text = Text.get("map.autoWalk"), position = UDim2.fromOffset(0, 72),
+	local autoButton = Button.build({ parent = side, kind = MAPFRAME and "secondary" or "primary", width = SIDE_W, height = 48, text = Text.get("map.autoWalk"), position = UDim2.fromOffset(0, 72),
 		onActivated = function()
 			if selected then
 				MapPins.go(selected.position, selected.name, true)
@@ -574,7 +602,7 @@ local function build()
 			end
 		end })
 	autoButton.root.Name = "AutoWalkButton"
-	local guideButton = Button.build({ parent = side, kind = "secondary", width = SIDE_W, height = 48, text = Text.get("map.guide"), position = UDim2.fromOffset(0, 128),
+	local guideButton = Button.build({ parent = side, kind = MAPFRAME and "primary" or "secondary", width = SIDE_W, height = 48, text = Text.get("map.guide"), position = UDim2.fromOffset(0, 128), -- UI-1b: [길 안내] = 노랑(G spec)
 		onActivated = function()
 			if selected then
 				MapPins.go(selected.position, selected.name, false)
@@ -699,7 +727,11 @@ local function build()
 		bar.Size = UDim2.fromOffset(bs * 4 + S.gap * 3, bs)
 		bar.ZIndex = 18
 		bar.Parent = view
-		if MAP1B then -- UI-1b 1-b 14: 지도 판 밖 오른쪽 세로 열(판 아래쪽 핀을 가리던 것) · 지도 판 = 그 폭만큼 좁힘
+		if MAP1B and MAPFRAME then -- UI-1b 3절 7: 큰 지도 판(가로가 넓어 원판 밖 여백) 안쪽 오른쪽 아래 세로 열 = 원판 핀을 안 가림(G spec · 1-b 14)
+			bar.AnchorPoint = Vector2.new(1, 1)
+			bar.Position = UDim2.new(1, -S.inset, 1, -S.inset)
+			bar.Size = UDim2.fromOffset(bs, bs * 4 + S.gap * 3)
+		elseif MAP1B then -- UI-1b 1-b 14: 지도 판 밖 오른쪽 세로 열(판 아래쪽 핀을 가리던 것) · 지도 판 = 그 폭만큼 좁힘
 			view.Size = UDim2.new(1, -(SIDE_W + 20 + bs + S.gap), 1, -16)
 			bar.Parent = content
 			bar.AnchorPoint = Vector2.new(0, 1)
@@ -730,6 +762,93 @@ local function build()
 		end
 		legend.Position = UDim2.new(0, S.inset, 1, -(S.inset + bs + S.gap))
 		me.Size = UDim2.fromOffset(S.meSize, S.meSize)
+	end
+	if MAPFRAME and not Theme.isMobile then -- UI-1b 3절 7(G spec §1): 창 1600 × 880 비율 · 지도 판 + 오른쪽 판(보기 토글 · 고른 곳 카드 · 미니맵 토글)
+		local FR = G.frame
+		local sideR = FR.side / FR.w
+		view.Size = UDim2.new(1 - sideR, -24, 1, -16)
+		side.Position = UDim2.new(1 - sideR, 0, 0, 8)
+		side.Size = UDim2.new(sideR, -12, 1, -16)
+		-- 판 내용 = 글자 크기 그대로(작은 화면에서 배율로 줄이면 글자가 너무 작아짐 - Play 실측) · 넘치면 세로 스크롤
+		local inner = Instance.new("ScrollingFrame")
+		inner.Name = "SideScroll"
+		inner.BackgroundTransparency = 1
+		inner.BorderSizePixel = 0
+		inner.ScrollBarThickness = 4
+		inner.ScrollingDirection = Enum.ScrollingDirection.Y
+		inner.Size = UDim2.fromScale(1, 1)
+		inner.AutomaticCanvasSize = Enum.AutomaticSize.Y
+		inner.CanvasSize = UDim2.new()
+		inner.Parent = side
+		for _, c in ipairs(side:GetChildren()) do
+			if c ~= inner and c:IsA("GuiObject") then
+				c.Parent = inner
+			end
+		end
+		side = inner
+		local function full(o, y, h)
+			o.Position = UDim2.fromOffset(0, y)
+			o.Size = UDim2.new(1, 0, 0, h)
+		end
+		local y = 0
+		local head = Theme.label(side, Text.get("ui1b.map.view"), "header", "textPrimary")
+		head.Name = "ViewHead"
+		full(head, y, FR.head)
+		y += FR.head + 4
+		built.layerToggles = {}
+		for _, id in ipairs(LAYERS) do
+			local t = Toggle.build({ parent = side, name = "Layer_" .. id, text = Text.get("ui1b.map.layer." .. id), value = layerOn[id], width = 200, position = UDim2.fromOffset(0, y), onChanged = function(v)
+				layerOn[id] = v
+				renderMarkers()
+			end })
+			t.root.Size = UDim2.new(1, -6, 0, FR.row)
+			built.layerToggles[id] = t
+			y += FR.row
+		end
+		y += FR.gap
+		local card = Instance.new("Frame") -- 고른 곳 카드(금 테) = 이름 + 노랑 [길 안내] + 자동 이동 · 체크포인트 이동
+		card.Name = "PickCard"
+		card.BackgroundColor3 = Color3.fromRGB(22, 26, 40)
+		card.Parent = side
+		full(card, y, FR.card + 56)
+		Theme.corner(card, 12)
+		local cst = Instance.new("UIStroke")
+		cst.Color = Theme.color("gold")
+		cst.Thickness = 2
+		cst.Parent = card
+		title.Parent = card
+		title.Position = UDim2.fromOffset(14, 10)
+		title.Size = UDim2.new(1, -28, 0, 44)
+		guideButton.root.Parent = card
+		guideButton.root.Position = UDim2.fromOffset(14, 60)
+		guideButton.root.Size = UDim2.new(1, -28, 0, 52)
+		autoButton.root.Parent = card
+		autoButton.root.Position = UDim2.fromOffset(14, 120)
+		autoButton.root.Size = UDim2.new(0.5, -18, 0, 44)
+		teleButton.root.Parent = card
+		teleButton.root.Position = UDim2.new(0.5, 4, 0, 120)
+		teleButton.root.Size = UDim2.new(0.5, -18, 0, 44)
+		y += FR.card + 56 + FR.gap
+		hint.Visible = false -- 핀 찍기 안내 = [?] 범례 쪽(지엽 설명)
+		local mh = Theme.label(side, Text.get("ui1b.map.minimap"), "header", "textPrimary")
+		mh.Name = "MinimapHead"
+		full(mh, y, FR.head)
+		y += FR.head + 4
+		minimapToggle.root.Position = UDim2.fromOffset(0, y)
+		minimapToggle.root.Size = UDim2.new(1, -6, 0, FR.row)
+		y += FR.row
+		for _, key in ipairs({ "minimapRotate", "minimapFar" }) do
+			local attr = key == "minimapRotate" and "MinimapRotate" or "MinimapFar"
+			local t = Toggle.build({ parent = side, name = "Toggle_" .. key, text = Text.get("ui1b.map." .. key), value = player:GetAttribute(attr) == true, width = 200, position = UDim2.fromOffset(0, y), onChanged = function(v)
+				SettingSave(key, v)
+			end })
+			t.root.Size = UDim2.new(1, -6, 0, FR.row)
+			player:GetAttributeChangedSignal(attr):Connect(function()
+				t.setValue(player:GetAttribute(attr) == true, true)
+			end)
+			y += FR.row
+		end
+		firstHint.Position = UDim2.fromOffset(0, y + 4) -- 미니맵 첫 안내 = 토글들 아래(옛 = 다음 줄과 겹침)
 	end
 	view:GetPropertyChangedSignal("AbsoluteSize"):Connect(applyView)
 end
