@@ -248,6 +248,9 @@ local function handleAttack(player, aimPoint, clientAir, clientSeq)
 	if not rootPart then
 		return
 	end
+	if not require(script.Parent.HeightGuard).checkRequest(player, "attack") then -- SEC-FIX-1 6: 폴링 사이 순간이동 공격(쿨 · 콤보 안 씀)
+		return
+	end
 
 	-- MV1 공중 공격: 클라가 공중이라고 보냈거나(clientAir) 서버가 AirState.airSanitySeconds 넘게 공중으로 본 요청 = 공중 공격.
 	-- 예산(MoveRules.airAttackBudget - 해금된 공중 점프 + 이번 체공의 공중 대시)을 넘거나 해금 전이면 거부(쿨다운 · 콤보를 건드리지 않는다 - 요청이 없던 것과 같다).

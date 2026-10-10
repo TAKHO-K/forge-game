@@ -111,6 +111,9 @@ return {
 	--   padSpeedMargin(S1 후속 0-4) = 플레이어 발판 허가(나무 점프대 · 수정 부수기 발판)의 수평 상한 = 설계 수평 속도(포물선 거리 ÷ 비행 시간) × 이 여유. 통통 열매 · 붙잡기 = 걷기 그대로(수평 속도를 안 준다).
 	--   walkMargin = 걷기 상한 물리 여유(경사 미끄럼 · 부딪힘 - S1 지연 실측: 상한 그대로면 24/s로 계속 걸을 때 버킷이 안 차 경계 오탐 1건) - 10% 미만 속도 조작은 못 잡는다(보고서).
 	moveGuard = { bucketSeconds = 1.5, slackStuds = 3, walkMargin = 1.1, glideMargin = 1.1, flowMaxStuds = 18, permitSpeed = 400, padSpeedMargin = 1.25, dashMargin = 1.15, dashWindowSeconds = 1.3, burstWindowSeconds = 1.0,
+		-- SEC-FIX-1 6: 공격 · 스킬 요청 순간 위치 검사(0.25초 폴링 사이 순간이동 → 치고 돌아오기) 허용 = 합법 속도 × (마지막 검증 뒤 경과 + requestJitterSeconds) + 남은 대시 · 밀림 허가 + slackStuds.
+		--   통(bucketSeconds 1.5초 ≈ 42 stud)을 쓰지 않는다 - 폴링의 통은 늦게 온 위치 몰림 여유라 한 번에 42 stud 순간이동 공격이 합법이 됐다. 넘으면 그 요청만 거절(되돌리기는 폴링).
+		requestJitterSeconds = 0.5,
 		legal = { "걷기(이속 상한 24)", "대시 · 공중 대시 · 태초 2단 대시(서버 대시 허가)", "활강(Gliding)", "물살", "발사 허가(점프대 · 통통 열매 · 보스 던지기 · 회오리 · 판 털기 · 넉백 · 붙잡기 올라서기)",
 			"선인장 밀림(burst)", "원거리 공중 정지 · 일어나기(이동 0)", "사다리 · 덩굴(수직)", "서버 순간이동(Travel · 리프트 · 복귀 · 보스 입장 · 보스 기믹 = HeightGuard.reset)", "붙잡힘 · 가둠(exempt)" } },
 	-- stallSeconds · stallDropStuds(S1 후속 0-1 - 공중 정체): 활강 · 원거리 공중 정지 · 허가 · 예외 · 유예 밖에서 공중으로 stallSeconds 넘게 stallDropStuds만큼도 안 내려가면 되돌린다

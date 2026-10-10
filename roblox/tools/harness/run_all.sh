@@ -18,7 +18,7 @@ declare -A EXP=( # 기대 검사 수(끝 a/b의 b) · require_path는 최소값(
 	[bignum]=67 [bulk_sell]=11 [stat_sheet]=9 [all10]=57 [gear_v3]=10 [gem_home]=25 [monster_stats]=5 [dash_modes]=19 [boss_feel]=13
 	[menu_gate]=14 [menu_gate_src]=11 [hud_v5_src]=10 [ui1_static]=9 [ui1c_static]=13 [ui_v2]=77 [hud_layout]=18 [ui1_parts]=11 [codex_box]=35
 	[ember_view]=8 [hud_edit]=16 [pet_ui]=7 [quick_chat]=6 [ui_rules]=4 [window_layers]=7 [help_data]=6 [train_bundle]=5 [community_goal]=24 [require_path]=5542 [regrow_timing]=8
-	[sec_save]=13 [sec_shop]=6 [sec_secret]=9 [sec_zone]=11
+	[sec_save]=13 [sec_shop]=6 [sec_secret]=9 [sec_zone]=11 [sec_move]=8
 )
 NALL=0; NBAD=0
 verdict() { # 이름 결과파일 종료코드 → 한 줄 출력
@@ -73,6 +73,7 @@ run dupe res_dupe.txt "$(python deps.py PlayerProfile,PetService,QuestService,Sa
 run multiplayer res_multi.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem)" multiplayer_test.luau
 run attack res_attack.txt "$ATTACK" attack_test.luau
 run sec_zone res_seczone.txt "$(python deps.py AttackZone,UltimateService,MonsterState)" sec_zone_test.luau # SEC-FIX-1 5 구역 · 아레나 밖 공격(보스 = 멤버만 · 화살비 · 덫 = 시전자 구역) · 보물상자 흡혈 · 충전(옛 = X)
+run sec_move res_secmove.txt HeightGuard sec_move_test.luau # SEC-FIX-1 6 공격 · 스킬 요청 순간 위치 검사(폴링 사이 순간이동 공격 · 옛 = X)
 run request_gate res_gate.txt "$ATTACK,RequestGate" request_gate_test.luau
 run mesh_import res_mesh.txt "" mesh_import_test.luau
 run ops_security res_ops.txt OpsRollback,SuspicionMonitor,AuditTrail,SecurityOpsConfig ops_security_test.luau # QUEUE-ALL6 F 되돌리기 · 차단 · 탐지 · 감사

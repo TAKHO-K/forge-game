@@ -695,6 +695,10 @@ local function handleSkill(player, slot, aimPoint)
 		if not rootPart then
 			return
 		end
+		if not require(script.Parent.HeightGuard).checkRequest(player, "ult") then -- SEC-FIX-1 6
+			reject(player, slot, "position")
+			return
+		end
 		local ok, result = UltimateService.cast(player, classId, rootPart, aimPoint)
 		if ok then
 			result.ok = true
@@ -725,6 +729,10 @@ local function handleSkill(player, slot, aimPoint)
 	local character = player.Character
 	local rootPart = character and character:FindFirstChild("HumanoidRootPart")
 	if not rootPart then
+		return
+	end
+	if not require(script.Parent.HeightGuard).checkRequest(player, "skill") then -- SEC-FIX-1 6: 폴링 사이 순간이동 스킬(쿨 안 씀)
+		reject(player, slot, "position")
 		return
 	end
 

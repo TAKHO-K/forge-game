@@ -207,6 +207,47 @@ function HeightGuard.evaluateHorizontal(st, sample, now, ctx)
 	return "hrevert"
 end
 
+-- SEC-FIX-1 6: 공격 · 스킬 요청 순간 위치(순수 - 소비하지 않는 미리보기). 반환 ok, 수평 거리, 허용.
+--   허용 = 합법 속도 × (마지막 검증 뒤 경과 + requestJitterSeconds) + 남은 대시 · 밀림 허가 + 여유. 예외 · 유예 · 기준 없음 = 통과(폴링과 같은 계약).
+function HeightGuard.requestPositionOk(st, pos, now, ctx)
+	if ctx.exempt or ctx.grace or not st.hGood then
+		return true, 0, math.huge
+	end
+	local dt = math.clamp(now - (st.hAt or now), 0, 1)
+	local allowed = ctx.rate * (dt + MG.requestJitterSeconds) + MG.slackStuds
+	for _, b in ipairs(st.hBank or {}) do
+		if now <= b.untilAt then
+			allowed += b.studs
+		end
+	end
+	local d = Vector3.new(pos.X - st.hGood.X, 0, pos.Z - st.hGood.Z).Magnitude
+	return d <= allowed, d, allowed
+end
+
+-- 공격 · 스킬 입구가 부른다: 거절이면 false(그 요청만 무시 · 기록 · 로그 5초에 한 번 - 킥 · 제재 없음)
+function HeightGuard.checkRequest(player, kind)
+	if HeightGuard.debugOff or typeof(player) ~= "Instance" then
+		return true
+	end
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not root or not humanoid or root.Anchored or humanoid.Health <= 0 then
+		return true
+	end
+	local st = stateOf(player)
+	local now = os.clock()
+	local ok, d, allowed = HeightGuard.requestPositionOk(st, root.Position, now, HeightGuard.horizontalContext(st, character, root, humanoid, now))
+	if not ok then
+		st.requestRejects = (st.requestRejects or 0) + 1
+		if (st.reqWarnedAt or -math.huge) < now - 5 then
+			st.reqWarnedAt = now
+			warn(("[forge-game] 위치 검사 거절(%s): %s 수평 %.1f stud(허용 %.1f) · 누적 %d"):format(tostring(kind), player.Name, d, allowed, st.requestRejects))
+		end
+	end
+	return ok
+end
+
 -- 순수: 허가 한 장 쌓기(대시 · 밀림) - 검증이 합성 상태에 준다.
 function HeightGuard.bankAt(st, studs, seconds, now)
 	st.hBank = st.hBank or {}
