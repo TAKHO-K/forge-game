@@ -119,7 +119,8 @@ local function row(t, order)
 	local now = t.level * (t.perLevel or 0) * 100
 	local nxt = (t.level + (t.step or 1)) * (t.perLevel or 0) * 100 -- UI-1b 1-b 17: 한 번 누름 = 묶음(step 단계)
 	local atCap = t.level >= t.cap
-	local change = Theme.label(f, atCap and Text.get("training.valueCap", { now = ("%.2f"):format(now) })
+	local locked = t.goal and t.goal.locked -- PROG-2B-1 4: 아직 안 열린 치명 수련 = "(최대) · 상한" 대신 "잠김"
+	local change = Theme.label(f, locked and ("%.2f%%"):format(now) or atCap and Text.get("training.valueCap", { now = ("%.2f"):format(now) })
 		or Text.get("training.value", { now = ("%.2f"):format(now), next = ("%.2f"):format(nxt) }), "body", atCap and "textSecondary" or "success")
 	change.Name = "Change"
 	change.Position = UDim2.fromOffset(56, 28)
@@ -132,7 +133,7 @@ local function row(t, order)
 	end
 	local ok = affordable(t)
 	local b = Button.build({ parent = f, kind = ok and "primary" or "secondary", width = 150, height = 44,
-		text = atCap and Text.get("quests.trainCap") or Text.get("training.button", { cost = NumberFormat.currency(t.cost, Text.languageFor()) }),
+		text = locked and Text.get("training.locked") or atCap and Text.get("quests.trainCap") or Text.get("training.button", { cost = NumberFormat.currency(t.cost, Text.languageFor()) }),
 		position = UDim2.new(1, -8, 0.5, 0), anchorPoint = Vector2.new(1, 0.5), onActivated = function()
 			requestRemote:FireServer("train", t.kind, t.id)
 		end })

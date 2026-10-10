@@ -6,6 +6,19 @@ local M = MODS
 local Training, TrainingData, All10, InfiniteStage, GoldCost = M.Training, M.TrainingData, M.All10, M.InfiniteStage, M.GoldCost
 local LN1001 = math.log(1.001)
 
+-- PROG-2B-1 7: 균열 가정(rift = { share = 숫자 | "byHours", gold = 배율 }) - "byHours" = 하루 2번 × 30분(1시간) ÷ 하루 플레이 시간(상한 1) · share 0 = 균열 끔
+if C.rift then
+	local share = C.rift.share
+	if share == "byHours" then
+		share = math.min(1, (C.rift.hoursPerDay or 1) / M.EconSimConfig.profiles[P2PROF].hoursPerDay)
+	end
+	M.EconSim.riftShare = share
+	if C.rift.gold then
+		M.RiftData.goldMultiplier = C.rift.gold
+	end
+	PROG2.log.rift = { ("%.3f"):format(share), tostring(M.RiftData.goldMultiplier) }
+end
+
 -- ── ① 수입 곡선(골드 배수 M(s) - 몹 골드 · GoldCost 비용이 같은 함수를 쓴다) ──
 local curve = C.goldCurve
 if curve then

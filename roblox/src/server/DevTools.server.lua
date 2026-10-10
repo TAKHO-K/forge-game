@@ -2042,6 +2042,31 @@ local function handleCommand(player, args)
 		else
 			reply(player, "실패: " .. tostring(reason))
 		end
+	elseif sub == "prog2b" then
+		-- PROG-2B-1 7 Studio 확인: /gg prog2b gems <n> = 보석함에 영웅 보석 n개(넘치면 넘침 보관함) · /gg prog2b crit <합 %> = 버프 뺀 치명 확률 합 강제(넘침 줄 확인 · /gg prog2b crit off = 해제)
+		local profile = PlayerProfile.getProfile(player)
+		local classId = PlayerProfile.getClassId(player)
+		if args[3] == nil or not profile or not classId then
+			reply(player, "/gg prog2b gems <n> | crit <합%|off>")
+		elseif args[2] == "gems" and tonumber(args[3]) then
+			ensureBackup(player)
+			local cs = profile.classes[classId]
+			for i = 1, math.clamp(math.floor(tonumber(args[3])), 1, 1000) do
+				table.insert(cs.gemInventory, { grade = "epic", itemLevel = i, option = { id = "attackPercent", roll = 1 } })
+			end
+			require(script.Parent.GemSync).push(player)
+			reply(player, ("보석함 %d / %d · 넘침 보관함 %d"):format(#cs.gemInventory, PlayerProfile.inventoryCapacity(profile), #(cs.gemOverflow or {})))
+		elseif args[2] == "crit" then
+			local RS = game:GetService("ReplicatedStorage")
+			local PlayerCombat = require(RS.Shared.PlayerCombat)
+			local class = require(RS.Shared.data.ClassData).classes[classId]
+			local total = tonumber(args[3])
+			local fixed = class.critRate + PlayerCombat.getLevelCritBonus(PlayerProfile.getCharacterLevel(player)) + PlayerCombat.getRebirthCritBonus(PlayerProfile.getRebirthCount(player))
+			PlayerProfile.debugOptionCritRate[player] = total and (total / 100 - fixed) or nil
+			local info = PlayerProfile.getOverflowInfo(player)
+			print(("PROG2B_CRIT|raw %.3f|over %.3f|critConv %.4f|speedConv %.4f|apb %.4f|room %.4f|speedRaw %.3f"):format(info.rawCrit, info.overCrit, info.critConv, info.speedConv, info.apb, info.room, info.speedRaw))
+			reply(player, ("치명 합 %.1f%% · 넘침 %.1f%%p → 위력 +%.1f%% · 공속 원래 ×%.2f → 위력 +%.1f%%"):format(info.rawCrit * 100, info.overCrit * 100, info.critConv * 100, info.speedRaw, info.speedConv * 100))
+		end
 	elseif sub == "gemflow" then
 		-- S20c(수동 Play 확인용): 보석 장착 입력 시험 상태를 넣는다(홈 1 ~ 4 열림 · 채움, 홈 5 잠김 · 보석칸 6개) - "/gg reset"으로 되돌린다. 장착은 강화대 12stud 안에서만 된다.
 		ensureBackup(player)

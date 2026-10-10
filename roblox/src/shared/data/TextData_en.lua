@@ -223,6 +223,7 @@ return {
 	["training.critToFull"] = "{n} levels to 100% Critical Hit Chance",
 	["training.critFull"] = "100% Critical Hit Chance · overflow turns into Power",
 	["training.opensAt"] = "Opens at Stage {stage}",
+	["training.locked"] = "Locked",
 	["gear.gem.full"] = "Gem bag and overflow storage are full. Clear some gems to dismantle again",
 	["gear.gem.capacity"] = "Gem bag {n} / {cap}",
 	["gear.gem.overflow"] = "Overflow storage {m} · moves in when space frees up",

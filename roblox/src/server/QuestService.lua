@@ -64,7 +64,7 @@ function QuestService.view(player)
 			-- PROG-2B-1 4: 치명 수련 목표 한 줄(아직 안 열림 = 열리는 스테이지 · 확률 = "100%까지 n단계" · 도달 = 넘침 안내)
 			local goal
 			if def.startStage and level == 0 and cap == 0 then
-				goal = { key = "training.opensAt", args = { stage = tostring(def.startStage) } }
+				goal = { key = "training.opensAt", args = { stage = require(ReplicatedStorage.Shared.NumberFormat).commas(def.startStage) }, locked = true }
 			elseif def.critAxis == "rate" then
 				local raw = PlayerProfile.getOverflowInfo(player).rawCrit
 				local need = math.max(0, math.ceil((1 - raw) / def.perLevel - 1e-9))
