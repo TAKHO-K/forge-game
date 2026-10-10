@@ -91,6 +91,12 @@ dismantleRequest.OnServerEvent:Connect(function(player, index)
 	end
 
 	local success, gradeOrReason = PlayerProfile.dismantleItem(player, math.floor(index))
+	if not success and gradeOrReason == "gem_full" then -- PROG-2B-1 6: 보석함 + 넘침 보관함 가득 안내(가방 창 BulkSell이 받는 같은 길)
+		local sellRequest = game:GetService("ReplicatedStorage"):FindFirstChild("SellRequest")
+		if sellRequest then
+			sellRequest:FireClient(player, "dismantle", false, gradeOrReason)
+		end
+	end
 	if success then
 		ImmediateSave.request(player)
 		print(("[forge-game] 분해: %s - %s 등급 보석 획득"):format(player.Name, gradeOrReason))

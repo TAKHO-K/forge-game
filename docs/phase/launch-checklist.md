@@ -18,7 +18,7 @@
 | 7 | Studio `Workspace.PlayerCharacterDestroyBehavior` 값 확인(속성 창 - 스크립트로는 못 읽음) | 3절 아래 메모 | `Enabled`가 아니면 바꾸고 퍼블리시(리스폰마다 캐릭터별 연결이 쌓이는 것 방지) ★ |
 | 8 | 퍼블리시 직전: ReplicatedStorage · Workspace Attribute에 시험 값이 없는지(`VerifyArmedUntil` · `VerifyOnly` · `ArtStyleV1Force` · `TextLanguageDev` · `RiftForce` · `StudioFreshProfile`) | 3절 | QUEUE-STUDIO 끝에 Studio에서 전부 nil 확인함 |
 | 9 | 아트 켬 확인 = 라이브 접속 콘솔 `[forge-game] 카툰 스타일 artV1` | 4절 5 | Studio 확인: 기본 = artV1(B-1 O) · 비상 끔 `ArtStyleV1Force = false` → `base`(B-2 O) |
-| 10 | 좋아요 목표 단계(QUEUE-ALL6 A5): **1단계 1,000** = `LIKES1K`(입력 가능 · 숨김) → 넘기면 `hidden` 지우고 업데이트 · 2단계 5,000 `LIKES5K` · 3단계 10,000 `LIKES10K`는 `inactive = true`(입력도 안 됨) - 앞 단계 달성 때 `inactive` 지우고(보상 · 기한 확정) 공지 때 `hidden` 지움 | `docs/release/codes.md` | 출시 기념 `FORGE2026`는 처음부터 보임 |
+| 10 | 좋아요 목표 단계(QUEUE-ALL6 A5): **1단계 1,000** = `THANKS1K7Q`(입력 가능 · 숨김) → 넘기면 `hidden` 지우고 업데이트 · 2단계 5,000 `THANKS5K2M` · 3단계 10,000 `THANKS10K9Z`는 `inactive = true`(입력도 안 됨) - 앞 단계 달성 때 `inactive` 지우고(보상 · 기한 확정) 공지 때 `hidden` 지움 | `docs/release/codes.md` | 출시 기념 `FORGE2026`는 처음부터 보임 |
 
 ---
 
@@ -204,7 +204,7 @@
 | 6 | 시즌 1 시작일 | `LeaderboardConfig.lua:21` | `firstSeasonDateKst = nil` | `{ 년, 월, 일 }` = 오픈일 ★ | 2-1절 |
 | 7 | 체크포인트 순간이동 | `roblox/src/shared/data/WorldMapData.lua:451` | `enabledByDefault = true`(Workspace Attribute `CheckpointTeleport`) | ★ 사용자 결정(지금 켬 = 시험판 그대로 출시) | 서버 부팅 때 `Travel.lua:801-802`가 이 값으로 Attribute를 켠다 · 라이브도 같은 값. 끄려면 `false` |
 | 8 | 텔레메트리 | `roblox/src/shared/data/TelemetryData.lua:6` · `:8` · `:14` | `enabled = true` · `dryRunInStudio = true` · `purchase.enabled = false` | **그대로** | 라이브 = AnalyticsService로 실제 전송(경제 · 커스텀 · 퍼널) · Studio = `[T1][드라이런]` 로그만. 구매 통계는 이미 `Telemetry.custom("Purchase_<key>")`로 간다 → `purchase` 분류는 자리라 꺼 둬도 된다 |
-| 9 | 코드(쿠폰) 표 | `roblox/src/shared/data/SocialRewardData.lua` `codes` | `FORGE2026` 출시 기념(강화석 15 · 반짝 조각 20 · 만료 2026-12-31) · `LIKES1K` 좋아요 목표(강화석 10 · 반짝 조각 10 · 만료 2027-01-31 · 게시판 숨김 - 목표 달성 때 `hidden` 지우고 업데이트) | 만료일 확인 ★ | 만료 = **UTC** 날짜 끝까지(KST로는 다음 날 오전 9시). 설명 초안 · 게시판 첫 글이 `FORGE2026 … 2026-12-31까지`를 적고 있다 - 날짜를 바꾸면 초안도 같이 |
+| 9 | 코드(쿠폰) 표 | `roblox/src/shared/data/SocialRewardData.lua` `codes` | `FORGE2026` 출시 기념(강화석 15 · 반짝 조각 20 · 만료 2026-12-31) · `THANKS1K7Q` 좋아요 목표(강화석 10 · 반짝 조각 10 · 만료 2027-01-31 · 게시판 숨김 - 목표 달성 때 `hidden` 지우고 업데이트) | 만료일 확인 ★ | 만료 = **UTC** 날짜 끝까지(KST로는 다음 날 오전 9시). 설명 초안 · 게시판 첫 글이 `FORGE2026 … 2026-12-31까지`를 적고 있다 - 날짜를 바꾸면 초안도 같이 |
 | 10 | 업데이트 게시판 날짜 | `SocialRewardData.lua:22-25` | `news` 두 줄 날짜 `2026-10-01` | 오픈일로 ★ | 허브 게시판에 그대로 보인다 |
 | 11 | 합동 목표 1주차 | `roblox/src/shared/data/CommunityGoalData.lua:17` · `server/CommunityGoalService.lua:111-156` | `week1Factor = 0.7` · 주 = **월요일 0시 UTC**(`Quest.lua:13-14` - KST 월요일 오전 9시) | 값 그대로 · **오픈 요일**에 주의 ★ | 1주차 목표 = 그 주 **첫 기여부터 24시간 실측 합 × 7 × 0.7**(`CommunityGoalRules.lua:29-30`) - 24시간 동안 HUD는 "목표 계산 중". 주 중간(예: 목요일)에 열면 남은 날이 적어 1주차 목표에 못 닿기 쉽다 → **월요일(KST 09시 이후) 오픈 추천**. 또 라이브 테스트(2-5의 2단계)에서 남은 `week_<번호>` 기록이 "지난 3주"로 잡히면 첫 목표가 아주 작아진다 → 오픈 전 Creator Hub **Data Stores Manager**에서 `CommunityGoal_v1`의 옛 주 키 확인(Studio 기록은 `studio_` 접두어라 무관) |
 | 12 | 자동 검증 회귀 스위치 | `DevToolsConfig.lua:38` | `verify.regression = false` | **`false` 확인** | 출시 직전 회귀 전체를 돌렸다면(블록 G) 다시 false로 돌려놨는지. 라이브에선 어차피 안 돈다(IsStudio) · `:40 exclude = { "S04(나)" }`는 그대로 |

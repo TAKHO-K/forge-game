@@ -53,6 +53,7 @@ return {
 		{ path = { "settings", "helpSeen" }, scope = "account", sample = "ember,codex", note = "UI-1b 1절 3 눌러 본 [?] 도움말 id(새 [?] 작은 점 = 처음 1번)" },
 		{ path = { "seasonPass", "skipDay" }, scope = "account", sample = 20372, note = "SEC-FIX-1 8 칸 건너뛰기를 산 UTC 날짜(하루 1번 - 못 한 출석 따라잡기)" },
 		{ path = { "goldCurveRescale", "stage" }, scope = "character", sample = 8500, note = "PROG-2B-1 2 골드 곡선 C 보유 골드 환산 기록(캐릭터 골드와 같은 범위)" },
+		{ path = { "classes", "*", "gemOverflow", 1, "itemLevel" }, scope = "character", sample = 300, note = "PROG-2B-1 6 넘침 보관함(보석함 상한 = 가방 칸 수를 넘은 보석)" },
 	},
 	-- 진행이 없는 직업 칸은 캐릭터로 만들지 않는다: 경험치 0 · 최고 스테이지 ≤ 1 · 환생 0 · 무기 +0 · 등급 0 · 착용 장비 없음 · 보석 없음
 }

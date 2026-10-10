@@ -37,6 +37,7 @@ local function snapshot(player)
 			rerollTickets = { ancient = 0, primordial = 0 },
 		}
 	end
+	local gemSlots, overflowCount = PlayerProfile.settleGemBag(player) -- PROG-2B-1 6: 보낼 때마다 상한 정리(넘침 보관함 ↔ 보석함 - 한 곳)
 	return {
 		gems = weapon.gems,
 		-- 23-4: 클라이언트가 매번 rebirthCount에서 잠금 여부를 다시 계산하지 않고 저장된
@@ -51,7 +52,9 @@ local function snapshot(player)
 		end)(),
 		gemInventory = PlayerProfile.getGemInventory(player),
 		rerollTickets = PlayerProfile.getOptionRerollTickets(player),
-		-- 보석칸 상한(gemSlots)은 아직 없다 = 이 키가 없으면 "상한 없음"(nil). 상한이 정해지면 InventorySync의 slots처럼 여기에 실어 보낸다 - 클라는 S.gemState().gemSlots로 읽는다.
+		-- PROG-2B-1 6: 보석칸 상한(gemSlots = 가방 칸 수) · 넘침 보관함 개수 - 클라는 S.gemState().gemSlots · gemOverflowCount로 읽는다.
+		gemSlots = gemSlots,
+		gemOverflowCount = overflowCount,
 	}
 end
 

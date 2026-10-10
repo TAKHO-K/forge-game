@@ -223,6 +223,9 @@ return {
 	["training.critToFull"] = "{n} levels to 100% Critical Hit Chance",
 	["training.critFull"] = "100% Critical Hit Chance · overflow turns into Power",
 	["training.opensAt"] = "Opens at Stage {stage}",
+	["gear.gem.full"] = "Gem bag and overflow storage are full. Clear some gems to dismantle again",
+	["gear.gem.capacity"] = "Gem bag {n} / {cap}",
+	["gear.gem.overflow"] = "Overflow storage {m} · moves in when space frees up",
 	-- C5-7b 초월 특수 옵션 툴팁 한 줄(TranscendentData - 숫자는 ItemDescribe가 넘긴다)
 	["transcendent.special.phantom"] = "Phantom: {chance}% chance of an extra phantom hit · Every 3rd is a heavy hit",
 	["transcendent.special.frenzy"] = "Frenzy: In combat, move · attack speed +{speed}% · Dash cooldown −{dash}%",

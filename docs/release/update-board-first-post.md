@@ -26,7 +26,7 @@
 
 **출시 기념 코드** (설정 → 게임 → 코드 입력)
 - `FORGE2026` - 강화석 15 · 반짝 조각 20 (2026년 12월 31일까지)
-- (좋아요 목표 달성 때 공개) `LIKES1K` - 강화석 10 · 반짝 조각 10 (2027년 1월 31일까지)
+- (좋아요 목표 달성 때 공개) `THANKS1K7Q` - 강화석 10 · 반짝 조각 10 (2027년 1월 31일까지)
 - 마감일은 세계 표준시(UTC) 기준이라 **한국 시간으로는 다음 날 오전 9시**에 끝나요.
 
 첫 초월 장비의 주인공은 누가 될까요? 뜨는 순간, 전 서버가 봅니다! 🌟
@@ -53,7 +53,7 @@ Hi! Starting today, anyone can begin their adventure in Big Tree Town.
 
 **Launch codes** (Settings → Game → Enter code)
 - `FORGE2026` - 15 Enhance Stones + 20 Sparkle Shards (until Dec 31, 2026)
-- (revealed when we hit our like goal) `LIKES1K` - 10 Enhance Stones + 10 Sparkle Shards (until Jan 31, 2027)
+- (revealed when we hit our like goal) `THANKS1K7Q` - 10 Enhance Stones + 10 Sparkle Shards (until Jan 31, 2027)
 - Codes end at the end of that day in UTC.
 
 Who will get the first Transcendent item? When it drops, every server sees it! 🌟

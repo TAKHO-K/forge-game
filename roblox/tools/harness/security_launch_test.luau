@@ -193,12 +193,12 @@ local ok, err = pcall(function()
 	busyWait(3.05)
 	local r2 = invoke("RedeemCode", c1, "FORGE2026")
 	check("쿨 뒤 같은 코드 다시 = 이미 받음(계정당 1회)", type(r2) == "table" and r2.ok == false and shards(c1) == s1, type(r2) == "table" and tostring(r2.message) or "")
-	local _, before = Social.find("LIKES1K", os.time({ year = 2027, month = 1, day = 31, hour = 23, min = 59, sec = 0 }))
-	local _, after = Social.find("LIKES1K", os.time({ year = 2027, month = 2, day = 1, hour = 0, min = 0, sec = 1 }))
+	local _, before = Social.find("THANKS1K7Q", os.time({ year = 2027, month = 1, day = 31, hour = 23, min = 59, sec = 0 }))
+	local _, after = Social.find("THANKS1K7Q", os.time({ year = 2027, month = 2, day = 1, hour = 0, min = 0, sec = 1 }))
 	local none = Social.find("NOPE123")
 	check("만료: 마지막 날 23:59 = 유효 · 다음 날 = 만료 · 없는 코드 = nil", before == true and after == false and none == nil)
-	local r5k = invoke("RedeemCode", newPlayer("Code5K", 1005), "LIKES5K") -- QUEUE-ALL6 A5: 아직 안 연 단계(inactive) = 없는 코드
-	check("좋아요 2 · 3단계(inactive) = 없는 코드처럼 거절 · 1단계는 입력 가능", Social.find("LIKES5K") == nil and Social.find("LIKES10K") == nil and Social.find("LIKES1K") ~= nil and type(r5k) == "table" and r5k.ok == false)
+	local r5k = invoke("RedeemCode", newPlayer("Code5K", 1005), "THANKS5K2M") -- QUEUE-ALL6 A5: 아직 안 연 단계(inactive) = 없는 코드
+	check("좋아요 2 · 3단계(inactive) = 없는 코드처럼 거절 · 1단계는 입력 가능", Social.find("THANKS5K2M") == nil and Social.find("THANKS10K9Z") == nil and Social.find("THANKS1K7Q") ~= nil and type(r5k) == "table" and r5k.ok == false)
 	local rBad = invoke("RedeemCode", newPlayer("Code2", 1002), { "FORGE2026" })
 	check("코드 자리에 표 = 거절(에러 없음)", type(rBad) == "table" and rBad.ok == false)
 	-- SEC-FIX-1 4: 게시판 코드 = 서버가 공개분만(hidden · inactive · 만료 빠짐 · 보상 안 보냄)
@@ -208,7 +208,7 @@ local ok, err = pcall(function()
 		seen[c.code] = true
 		rewardSent = rewardSent or c.reward ~= nil or c.likesGoal ~= nil
 	end
-	check("SEC-FIX-1 4 게시판 코드 = 공개 코드만(숨김 · 안 연 단계 빠짐 · 보상 안 보냄)", Social.boardCodes ~= nil and seen.FORGE2026 and not seen.LIKES1K and not seen.LIKES5K and not rewardSent, ("%d줄"):format(#board))
+	check("SEC-FIX-1 4 게시판 코드 = 공개 코드만(숨김 · 안 연 단계 빠짐 · 보상 안 보냄)", Social.boardCodes ~= nil and seen.FORGE2026 and not seen.THANKS1K7Q and not seen.THANKS5K2M and not rewardSent, ("%d줄"):format(#board))
 	local boardLate = Social.boardCodes and Social.boardCodes(os.time({ year = 2027, month = 1, day = 1, hour = 0 })) or { 1 }
 	check("SEC-FIX-1 4 게시판 코드 = 만료 지난 코드 빠짐", #boardLate == 0, ("%d줄"):format(#boardLate))
 

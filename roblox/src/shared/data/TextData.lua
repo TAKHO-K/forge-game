@@ -228,6 +228,9 @@ local TextData = {
 		["training.critToFull"] = "치명타 확률 100%까지 {n}단계", -- PROG-2B-1 4 수련 창 목표 한 줄
 		["training.critFull"] = "치명타 확률 100% 도달 · 넘친 몫은 위력으로", -- PROG-2B-1 4
 		["training.opensAt"] = "스테이지 {stage}에서 열림", -- PROG-2B-1 4 치명 수련(아직 안 열림)
+		["gear.gem.full"] = "보석함과 넘침 보관함이 가득 찼어요. 보석을 정리하면 다시 분해할 수 있어요", -- PROG-2B-1 6
+		["gear.gem.capacity"] = "보석함 {n} / {cap}", -- PROG-2B-1 6 보석 탭 안내 앞줄
+		["gear.gem.overflow"] = "넘침 보관함 {m}개 · 자리가 나면 저절로 들어와요", -- PROG-2B-1 6
 		-- C5-7b 초월 특수 옵션 툴팁 한 줄(TranscendentData - 숫자는 ItemDescribe가 넘긴다)
 		["transcendent.special.phantom"] = "환영: 기본 공격 {chance}% 확률로 환영 추가타 · 3번째마다 강공격",
 		["transcendent.special.frenzy"] = "광폭: 전투 중 이동 속도 · 공격 속도 +{speed}% · 대시 쿨타임 −{dash}%",

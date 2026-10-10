@@ -130,7 +130,12 @@ sellRequest.OnServerEvent:Connect(function(player, action, arg, signature)
 			if action == "sellList" then
 				ok = PlayerProfile.sellItem(player, i)
 			else
-				ok = PlayerProfile.dismantleItem(player, i)
+				local why
+				ok, why = PlayerProfile.dismantleItem(player, i)
+				if why == "gem_full" then
+					sellRequest:FireClient(player, "dismantle", false, why) -- PROG-2B-1 6: 보석함 + 넘침 보관함 가득 안내
+					break
+				end
 			end
 			if ok then
 				done += 1
@@ -149,8 +154,8 @@ sellRequest.OnServerEvent:Connect(function(player, action, arg, signature)
 		if n > 0 then
 			print(("[Q13] 일괄 분해: %s ~%s → 보석 %d개"):format(player.Name, arg, n))
 			ImmediateSave.request(player)
-		elseif why == "count_mismatch" then
-			sellRequest:FireClient(player, "dismantleBulk", false, why) -- 클라 = 안내 + 새 개수로 확인 창 다시(판매와 같은 길)
+		elseif why == "count_mismatch" or why == "gem_full" then
+			sellRequest:FireClient(player, "dismantleBulk", false, why) -- 클라 = 안내 + 새 개수로 확인 창 다시(판매와 같은 길) · PROG-2B-1 6 보석함 가득 안내
 		end
 	else
 		return

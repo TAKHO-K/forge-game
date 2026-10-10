@@ -246,6 +246,20 @@ local function hintText()
 end
 
 local function paintHint()
+	-- PROG-2B-1 6: 보석함 n / 칸(= 가방 칸 수) · 넘침 보관함이 있으면 그 개수(정보만) - 서버 GemSync gemSlots · gemOverflowCount
+	--   안내 줄은 한 줄(18px)이라 보석함이 찼을 때만 상황 안내 대신 이 줄을 보인다.
+	local s = currentGemState
+	local cap = s and s.gemSlots
+	local n = #(s and s.gemInventory or {})
+	local over = s and s.gemOverflowCount or 0
+	if cap and (n >= cap or over > 0) then
+		local line = Text.get("gear.gem.capacity", { n = tostring(n), cap = tostring(cap) })
+		if over > 0 then
+			line ..= " · " .. Text.get("gear.gem.overflow", { m = tostring(over) })
+		end
+		header.setHint(line)
+		return
+	end
 	header.setHint(hintText())
 end
 

@@ -1260,6 +1260,12 @@ local DISMANTLE_MIN_GRADE_INDEX = ArmorData.dismantleMinGradeIndex -- G1-2: 데�
 
 -- QUEUE-ALL9E1 ADD 2-3(B2 안전장치): 장비가 사라지는 경로마다 먼저 부른다 - 장비에 박힌 보석(item.gems)을 보석 가방으로 옮기고 표에서 뗀다(같은 동기 구간 · yield 없음 → 중간 실패 · 복제 없음).
 -- 지금은 방어구에 홈이 없어 늘 0개(무기 5홈은 장비 제거 경로 밖) · 보석 가방은 칸 제한이 없어 넘침 보관함이 필요 없다. 반환 = 옮긴 수.
+-- 보석이 n개 더 들어올 자리(보석함 빈칸 + 넘침 보관함 남은 칸) - 분해(한 개 · 일괄 · 자동)가 확인한다("gem_full")
+local function gemRoom(profile, classState, n)
+	local over = type(classState.gemOverflow) == "table" and #classState.gemOverflow or 0
+	return PlayerProfile.inventoryCapacity(profile) - #classState.gemInventory + GemData.gemBag.overflowMax - over >= (n or 1)
+end
+
 local function returnSocketedGems(classState, item)
 	if not classState or Gem.socketedCount(item) == 0 then
 		return 0
@@ -1296,6 +1302,9 @@ function PlayerProfile.dismantleItem(player, index)
 	if item.grade == TranscendentData.gradeId and TranscendentData.dismantleBlocked then -- C5-7: 초월은 분해 불가
 		return false, "transcendent"
 	end
+	if not gemRoom(profile, classState, 1 + Gem.socketedCount(item)) then -- PROG-2B-1 6: 보석함 + 넘침 보관함 가득
+		return false, "gem_full"
+	end
 
 	table.remove(profile.inventory, index)
 	returnSocketedGems(classState, item) -- ADD 2-3
@@ -1325,6 +1334,15 @@ function PlayerProfile.dismantleItemsUpTo(player, gradeId, expectedCount)
 			return 0, "count_mismatch"
 		end
 	end
+	local need = 0
+	for _, item in ipairs(profile.inventory) do
+		if Loot.isBulkDismantleTarget(item, gradeId) then
+			need += 1 + Gem.socketedCount(item)
+		end
+	end
+	if need > 0 and not gemRoom(profile, classState, need) then -- PROG-2B-1 6: 보석함 + 넘침 보관함 가득(일부만 분해하지 않는다 - 확인 창 개수와 맞게 전부 / 전무)
+		return 0, "gem_full"
+	end
 	local remaining, n = {}, 0
 	for _, item in ipairs(profile.inventory) do
 		if Loot.isBulkDismantleTarget(item, gradeId) then
@@ -1347,6 +1365,34 @@ end
 function PlayerProfile.inventoryCapacity(profile)
 	return InventorySync.capacity(profile) -- 식 한 곳(InventorySync - 클라 스냅샷 slots와 같은 값)
 end
+
+-- PROG-2B-1 6: 보석함 상한 = 가방 칸 수 · 넘친 보석 = 넘침 보관함(소멸 0) · 자리가 나면 오래된 것부터 돌아옴. GemSync가 보석 상태를 보낼 때마다 부른다(한 곳).
+--   넘치면 보석함 끝(가장 최근에 들어온 것들)을 들어온 순서대로 보관함 뒤로 · 돌아올 때는 보관함 앞(가장 오래된 것)부터. 반환 = 보석함 칸 수, 보관함 개수
+function PlayerProfile.settleGemBag(player)
+	local profile = profiles[player]
+	local classState = profile and activeClassState(profile)
+	if not classState or type(classState.gemInventory) ~= "table" then
+		return nil, 0
+	end
+	local cap = PlayerProfile.inventoryCapacity(profile)
+	if type(classState.gemOverflow) ~= "table" then
+		classState.gemOverflow = {}
+	end
+	local bag, over = classState.gemInventory, classState.gemOverflow
+	if #bag > cap then -- 넘친 몫(가장 최근에 들어온 것들)을 들어온 순서 그대로 보관함 뒤에
+		for i = cap + 1, #bag do
+			table.insert(over, bag[i])
+		end
+		for i = #bag, cap + 1, -1 do
+			bag[i] = nil
+		end
+	end
+	while #bag < cap and #over > 0 do -- 자리가 나면 보관함 앞(가장 오래된 것)부터
+		table.insert(bag, table.remove(over, 1))
+	end
+	return cap, #over
+end
+
 
 -- ═══ 보석 가루(P2.5b C) ═══
 -- 증감 통로는 이 함수 하나(분해가 더하고 재련 · 변환권 구매가 뺀다 - 빼는 쪽은 호출부가 먼저 잔량을 확인한다). Attribute GemDust로 클라에 내린다.
@@ -2063,11 +2109,14 @@ function PlayerProfile.autoProcessDrop(player, item)
 	if not classState or not setting or not setting.enabled or not Loot.isAutoProcessTarget(item, setting.maxGrade) then -- QUEUE-N1004 A-1: 판정 = 공용 함수(잠금 · 스킬 변형 · 보스 세트 · 태초 · 초월 제외)
 		return nil
 	end
+	local index = gradeIndex(item.grade)
+	local mode = type(profile.settings) == "table" and profile.settings.autoProcessMode or SettingsData.keys.autoProcessMode.default -- A-1 방식(설정 · 없는 키 = 기본 = 옛 동작)
+	if index >= DISMANTLE_MIN_GRADE_INDEX and mode ~= "sell" and not gemRoom(profile, classState, 1 + Gem.socketedCount(item)) then
+		return nil -- PROG-2B-1 6: 보석함 + 넘침 보관함 가득 = 자동 분해 안 함(가방으로 - 묻지 않고 팔지 않는다)
+	end
 	if returnSocketedGems(classState, item) > 0 then -- ADD 2-3(바닥 드랍은 홈이 없어 늘 0)
 		GemSync.push(player)
 	end
-	local index = gradeIndex(item.grade)
-	local mode = type(profile.settings) == "table" and profile.settings.autoProcessMode or SettingsData.keys.autoProcessMode.default -- A-1 방식(설정 · 없는 키 = 기본 = 옛 동작)
 	if index >= DISMANTLE_MIN_GRADE_INDEX and mode ~= "sell" then
 		table.insert(classState.gemInventory, { grade = item.grade, itemLevel = item.itemLevel, option = item.option })
 		GemSync.push(player)

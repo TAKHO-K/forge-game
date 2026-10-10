@@ -98,6 +98,8 @@ local function defaultClassState()
 		-- 않았고, 분해 한 번에 방어구 한 개를 소모해야만 늘어나는 값이라 실제로는 많이
 		-- 쌓이지 않는다 - "임의 결정" 목록 참고).
 		gemInventory = {},
+		-- PROG-2B-1 6(v80): 넘침 보관함 - 보석함 상한(= 가방 칸 수)을 넘은 보석(소멸 0 · 자리가 나면 오래된 것부터 보석함으로 - PlayerProfile.settleGemBag). gemInventory와 같은 원소 모양.
+		gemOverflow = {},
 
 		-- 환생 후 레벨 마일스톤(P2.5c B2, v33 - v32의 회차별 표 milestones를 대신한다) - 이 직업이 받은 마지막 능력치 마일스톤 레벨(0 = 없음 · 200 · 250 …).
 		-- 직업별(레벨 · 환생이 직업별이다). 버킷 값은 이 레벨에서 계산한다. 규칙 = shared/Milestone.lua.
@@ -1632,6 +1634,16 @@ local function migrate(data)
 		end
 		data.version = 79
 	end
+	if data.version < 80 then
+		-- PROG-2B-1 6(사용자 확정 "보석함 상한 = 가방 칸 수"): 직업(캐릭터)마다 넘침 보관함 gemOverflow = {}(추가만). 상한을 넘는 옛 보석은 접속 뒤 첫 보석 상태 전송 때
+		--   PlayerProfile.settleGemBag이 보관함으로 옮긴다(가방 칸 수 = 게임패스 · 마일스톤까지 서버 함수라 이관 안에서 계산하지 않는다 - 소멸 0).
+		for _, classState in pairs(type(data.classes) == "table" and data.classes or {}) do
+			if type(classState) == "table" and type(classState.gemOverflow) ~= "table" then
+				classState.gemOverflow = {}
+			end
+		end
+		data.version = 80
+	end
 
 	data.savedAt = data.savedAt or 0
 	SaveSystem.clampStageCap(data) -- S1 리뷰 7: 불러온 옛 값도 상한으로
@@ -1763,6 +1775,16 @@ local function isValidProfile(data)
 		for _, gem in ipairs(classState.gemInventory) do
 			if not isValidOption(gem.option) then
 				return false
+			end
+		end
+		if classState.gemOverflow ~= nil then -- PROG-2B-1 6(v80): 넘침 보관함 = 보석함과 같은 모양
+			if type(classState.gemOverflow) ~= "table" then
+				return false
+			end
+			for _, gem in ipairs(classState.gemOverflow) do
+				if type(gem) ~= "table" or not isValidOption(gem.option) then
+					return false
+				end
 			end
 		end
 	end
@@ -2116,6 +2138,20 @@ function SaveSystem.quarantineUnknownIds(data)
 				end
 				if #gems ~= #cs.gemInventory then
 					cs.gemInventory = gems
+				end
+			end
+			if type(cs.gemOverflow) == "table" then -- PROG-2B-1 6: 넘침 보관함도 같은 규칙(모르는 id = 보관 칸)
+				local gems = {}
+				for _, gem in ipairs(cs.gemOverflow) do
+					local why = IdRegistry.unknownInGem(gem)
+					if why then
+						put("gem", why, gem, classId)
+					else
+						table.insert(gems, gem)
+					end
+				end
+				if #gems ~= #cs.gemOverflow then
+					cs.gemOverflow = gems
 				end
 			end
 		end

@@ -71,7 +71,7 @@ local ok, err = pcall(function()
 	d.version = 78
 	d.training.crit_rate, d.training.crit_dmg = nil, nil
 	local mg = SaveSystem.migrate(d)
-	check("저장 v79: 옛 계정 training.crit_rate · crit_dmg = 0 · 새 계정 기본값 0", mg.version == 79 and mg.training.crit_rate == 0 and mg.training.crit_dmg == 0 and SaveSystem.defaultProfile().training.crit_rate == 0
+	check("저장 v79: 옛 계정 training.crit_rate · crit_dmg = 0 · 새 계정 기본값 0", mg.version >= 79 and mg.training.crit_rate == 0 and mg.training.crit_dmg == 0 and SaveSystem.defaultProfile().training.crit_rate == 0
 		and SaveSystem.migrate({}).training.crit_dmg == 0)
 	local bad = SaveSystem.defaultProfile()
 	bad.training.crit_rate, bad.training.crit_dmg = 0 / 0, 99

@@ -47,15 +47,17 @@ local ok, err = pcall(function()
 	end
 	check("14 같은 홈 연타 10번 → 1개만 옮김 · 나머지 empty(복제 0)", okN == 1 and emptyN == 9 and #cs.gemInventory == 1, ("성공 %d · 빈 홈 %d · 보석함 %d"):format(okN, emptyN, #cs.gemInventory))
 
-	-- 보석함이 아주 많아도(칸 상한 없음) = 들어감 · 소멸 0
+	-- 보석함이 아주 많아도 = 소멸 0(PROG-2B-1 6: 칸 수를 넘은 몫은 넘침 보관함)
 	GemEquip.handle(player, 1, 1)
 	for i = 1, 1000 do
 		table.insert(cs.gemInventory, { grade = "epic", itemLevel = i, option = gem.option })
 	end
 	local before = #cs.gemInventory
 	local okBig = unequip(player, 1)
-	check("14 보석함 1,000개 = 그대로 들어감(칸 상한 없음 → 넘침 경우 없음 · 소멸 0)", okBig == true and #cs.gemInventory == before + 1 and not Gem.isFilled(cs.weapon.gems, 1), ("%d → %d"):format(before, #cs.gemInventory))
-	cs.gemInventory = {}
+	local overN = type(cs.gemOverflow) == "table" and #cs.gemOverflow or 0 -- PROG-2B-1 6: 보석함 상한 = 가방 칸 수 · 넘친 몫 = 넘침 보관함(소멸 0)
+	check("14 보석함 1,000개 + 빼기 = 보석함(칸 수) + 넘침 보관함 합이 그대로 +1(소멸 0 · PROG-2B-1 6)", okBig == true and #cs.gemInventory + overN == before + 1 and #cs.gemInventory <= MODS.PlayerProfile.inventoryCapacity(p)
+		and not Gem.isFilled(cs.weapon.gems, 1), ("%d → 보석함 %d + 보관함 %d"):format(before, #cs.gemInventory, overN))
+	cs.gemInventory, cs.gemOverflow = {}, {}
 
 	-- 잘못된 홈 · 빈 홈 · 표 모양
 	local a, wa = unequip(player, 0)

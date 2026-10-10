@@ -233,6 +233,8 @@ sellRequest.OnClientEvent:Connect(function(action, ok, why)
 	if (action == "sellGrades" or action == "dismantleBulk") and not ok and why == "count_mismatch" then -- SEC-FIX-1 7: 분해도 같은 안내
 		Toast.push("TC", { text = Text.get("gear.bulk.changed"), grade = "notice", seconds = 4 })
 		;(R.openSalvageV2 or openConfirm)()
+	elseif not ok and why == "gem_full" then -- PROG-2B-1 6: 보석함 + 넘침 보관함 가득(분해만 막음 - 보석을 정리하면 다시 됨)
+		Toast.push("TC", { text = Text.get("gear.gem.full"), grade = "notice", seconds = 4 })
 	end
 end)
 
