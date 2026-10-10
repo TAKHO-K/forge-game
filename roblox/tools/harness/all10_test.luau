@@ -79,7 +79,7 @@ local ok, err = pcall(function()
 	check("+21 ~ +25 = 최고 스테이지 24,000 이상에서만(23,999 = 상한 20 · 24,000 = 25)", All10.transcendCap(23999) == 20 and All10.transcendCap(24000) == 25)
 	local slot10k = All10.transcendSlotCost(10000)
 	local want10k = GoldCost.cost(MonsterData.tier1.goldDrop * te.levelKills / te.slots * Data.killUnitScale, 10000, "transcend")
-	check("초월 칸 가격 = tier1 골드 × levelKills ÷ 10 × 1.76 × GoldCost(최고 스테이지) · 스테이지 오르면 수입과 같은 율", slot10k == want10k and near(All10.transcendSlotCost(12000) / slot10k, 1.001 ^ 2000, 1e-6), ("%.4g"):format(slot10k))
+	check("초월 칸 가격 = tier1 골드 × levelKills ÷ 10 × 1.76 × GoldCost(최고 스테이지) · 스테이지 오르면 수입과 같은 율", slot10k == want10k and near(All10.transcendSlotCost(12000) / slot10k, MODS.InfiniteStage.getGoldMultiplier(12000) / MODS.InfiniteStage.getGoldMultiplier(10000), 1e-6), ("%.4g"):format(slot10k))
 
 	-- 고급 수련: 초월 무기 없으면 50(스테이지만으로 안 열림) · 있으면 50 + (s − 10,000) ÷ 100 · 15,000 = 100 · (PROG-2B-1) 51 ~ 60 할인 폐지 · 76 ~ 100 × 2
 	check("고급 수련 상한: 초월 없음 25,300 = 50 · 초월 9,000 = 50 · 10,150 = 51 · 15,000 = 100 · 30,000 = 100", All10.advancedCap(25300, false) == 50 and All10.advancedCap(9000, true) == 50
@@ -198,7 +198,7 @@ local okT, errT = pcall(function()
 		end })
 		local prof = SaveSystem.migrate({})
 		prof.classId = "bow"
-		prof.gold = 1e30
+		prof.gold = 1e15 -- PROG-2B-1 2: 골드 안전 상한 2^53 안(옛 1e30은 첫 증감에서 상한으로 잘림)
 		local cs = prof.classes.bow
 		cs.weapon.grade, cs.weapon.level = grade or 6, level or 30
 		cs.weapon.slotUnlocked = { true, true, true, true, true }
@@ -457,7 +457,7 @@ local okT, errT = pcall(function()
 	local atk1 = PlayerCombat.getAttack(cs.weapon, "bow", 100, 0, 0, 1, nil)
 	prof.gold = 0
 	local poor = TS.payEnhance(pl)
-	prof.gold = 1e30
+	prof.gold = 1e15 -- PROG-2B-1 2: 골드 안전 상한 2^53 안(옛 1e30은 첫 증감에서 상한으로 잘림)
 	check("초월 강화: 칸 10번 = +1(칸 0) · 칸당 가격 일정 · +1 칸 1 공격 = ×1.25 × (1 + 0.05 × 1.1) · 골드 부족 = 칸 그대로", paidOk and r1.ok and cs.weapon.transcend.slot == 1
 		and math.abs(atk1 / atkBefore - 1.25 * (1 + 0.05 * 1.1)) < 1e-12 and not poor.ok and poor.why == "no_gold" and cs.weapon.transcend.slot == 1)
 	-- QUEUE-ALL9E1 0-4 서버 확률 시도: 실패 = 골드만 · 단계 그대로 · 불씨 +1 · 성공 = +1 · 불씨 0 · 천장 = 확정 · 공격 ×1.22

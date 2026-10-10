@@ -1021,7 +1021,7 @@ local function seasonPassIncome(state, profile)
 		local reach = math.min(math.floor(state.passExp / SeasonPassData.expPerTier), SeasonPassData.tiers + (SeasonPassData.bonusCap or 0))
 		while state.passTier < reach do
 			state.passTier += 1
-			local r = SeasonPassData.rewardAt(1, "free", state.passTier)
+			local r = GoldCost.resolveKillGold(SeasonPassData.rewardAt(1, "free", state.passTier), MonsterData.tier1.goldDrop, state.reach) -- PROG-2B-1 2: 마리분 → 그날 계정 최고 골드(게임 SeasonPassService와 같은 함수)
 			if r.gold then
 				state.gold += r.gold
 				state.passGold = (state.passGold or 0) + r.gold
@@ -1275,7 +1275,7 @@ local function stepLevel(state, profile, run, rng, whatIf)
 		expPerKill = InfiniteStage.getExpReward(tier.expReward, hunt.stage) * expGapMultiplier(state.level, hunt.stage) * run.expMult * CharacterLevel.getRebirthExpMultiplier(state.rebirth)
 			* CharacterLevel.getReclaimMultiplier(state.rebirth, state.level, state.reclaimLevel) * CharacterLevel.getExpScale(state.level) -- C5-2 되찾기 · P2.5c: 환생 경험치 배율(재료에는 안 곱한다) · P3c C4
 		perKillSeconds = hunt.killSeconds + profile.moveOverheadSeconds
-		goldPerKill = InfiniteStage.getGoldReward(tier.goldDrop, hunt.stage) * sparkleGoldFactor() * riftGoldFactor() * codexGoldFactor() -- D1-2: 반짝이 골드(모형이 켜져 있을 때) · QUEUE-ALL1 P3 균열 비중
+		goldPerKill = InfiniteStage.getGoldReward(tier.goldDrop, hunt.stage) * (sparkleGoldFactor() + riftGoldFactor() - 1) * codexGoldFactor() -- D1-2: 반짝이 골드(모형이 켜져 있을 때) · QUEUE-ALL1 P3 균열 비중 · PROG-2B-1 2(G5): 반짝이 덤 · 균열 = 합(게임 GoldBonus - 평균이라 상한 안 닿음)
 		sellPerKill = EconSim.sellGoldPerKill(hunt.tier, hunt.stage, hunt.killSeconds) -- QUEUE-ALL9B 1
 		-- 재료 마릿수분 = tier 보상 배율^p(MonsterState.getKillUnits와 같은 값 - 접두사 평균 1)
 		killUnits = tier.killUnits -- C3-3
@@ -1466,7 +1466,7 @@ local function tutorialPhase(state, profile, run)
 			end
 		end
 		if data.isFinal then
-			state.gold += TutorialData.tutorialCompletionGold or 0
+			state.gold += GoldCost.rewardGold(MonsterData.tier1.goldDrop, TutorialData.tutorialCompletionGoldKills, math.max(1, state.reach or 1)) -- PROG-2B-1 2: 마리분(게임 TutorialState와 같은 식)
 		end
 	end
 	state.weaponGrade = baseline.weaponGrade

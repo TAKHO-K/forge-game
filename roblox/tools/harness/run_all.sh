@@ -13,12 +13,12 @@ T="${TEMP:-/tmp}"
 # 에러 문구 = "[태그] 에러 …" · "[태그] 하네스 에러 …" · "[태그] 스레드 에러 …"(하네스가 pcall로 잡은 것) + luau가 못 잡은 에러(stacktrace:)
 ERR_RE='^\[[A-Za-z0-9_]+\] ([^ ]+ )?에러 |^stacktrace:'
 declare -A EXP=( # 기대 검사 수(끝 a/b의 b) · require_path는 최소값(require가 늘면 같이 늘어남)
-	[security_launch]=47 [save_launch]=65 [save_lock]=12 [migrate_curve]=24 [id_quarantine]=15 [slot_save]=75 [monetize]=86 [dupe]=11
+	[security_launch]=47 [save_launch]=65 [save_lock]=12 [migrate_curve]=24 [id_quarantine]=15 [slot_save]=76 [monetize]=86 [dupe]=11
 	[multiplayer]=12 [attack]=10 [request_gate]=7 [mesh_import]=34 [ops_security]=34 [season_pass]=13 [economy_all9b]=34 [enhance_g]=25
-	[bignum]=67 [bulk_sell]=11 [stat_sheet]=9 [all10]=57 [gear_v3]=10 [gem_home]=25 [monster_stats]=5 [dash_modes]=19 [boss_feel]=13
+	[bignum]=71 [bulk_sell]=11 [stat_sheet]=9 [all10]=57 [gear_v3]=10 [gem_home]=25 [monster_stats]=5 [dash_modes]=19 [boss_feel]=13
 	[menu_gate]=14 [menu_gate_src]=11 [hud_v5_src]=10 [ui1_static]=9 [ui1c_static]=13 [ui_v2]=77 [hud_layout]=18 [ui1_parts]=11 [codex_box]=35
 	[ember_view]=8 [hud_edit]=16 [pet_ui]=7 [quick_chat]=6 [ui_rules]=4 [window_layers]=7 [help_data]=6 [train_bundle]=5 [community_goal]=24 [require_path]=5542 [regrow_timing]=8
-	[sec_save]=15 [sec_shop]=14 [sec_secret]=9 [sec_zone]=11 [sec_move]=8 [sec_econ]=7 [sec_log]=4 [sec_text]=3 [sec_textkey]=2 [sec_enhance]=3 [sec_gem]=8
+	[sec_save]=15 [sec_shop]=14 [sec_secret]=9 [sec_zone]=11 [sec_move]=8 [sec_econ]=7 [sec_log]=4 [sec_text]=3 [sec_textkey]=2 [sec_enhance]=3 [sec_gem]=8 [gold_curve]=26
 )
 NALL=0; NBAD=0
 verdict() { # 이름 결과파일 종료코드 → 한 줄 출력
@@ -64,6 +64,7 @@ run security_launch res_sec.txt "$(python deps.py SocialRewardService,CodexServi
 run save_launch res_launch.txt SaveSystem,SlotSave,SaveCoordinator,ImmediateSave,LiveStoreConfig save_launch_test.luau
 run save_lock res_lock.txt SaveSystem,SlotSave save_lock_test.luau
 run migrate_curve res_curve.txt SaveSystem,SlotSave migrate_curve_test.luau
+run gold_curve res_goldc.txt SaveSystem,SlotSave gold_curve_test.luau # PROG-2B-1 2 골드 곡선 C · 보스 첫 처치 마리분 · 시즌 패스 · 견습 · 보너스 합 · 2^53 · v78 환산
 run id_quarantine res_quar.txt SaveSystem,SlotSave id_quarantine_test.luau
 run slot_save res_slot.txt SaveSystem,SlotSave,SkillCooldowns,MenuBlock,LiveStoreConfig slot_save_test.luau # QUEUE-MENU2 B 캐릭터 칸 저장(이관 · 분리 · 중복 · 상한 · 보관 · 두 서버 · 스위치 끔/켬 · 크기 · 새 계정)
 run sec_save res_secsave.txt SaveSystem,SlotSave,SaveCoordinator,ImmediateSave,SlotSwitch,SaveServer.server,LiveStoreConfig sec_save_test.luau # SEC-FIX-1 1 · 2 칸 전환 중 자동저장 · 계정 키 먼저 · 같은 서버 재접속(옛 = X · ECON_SRC로 옛 스냅샷 확인)
@@ -82,7 +83,7 @@ run economy_all9b res_all9b.txt SecretNestData economy_all9b_test.luau # QUEUE-A
 run enhance_g res_g.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem,EnhanceService,EnhancePolicy,ImmediateSave)" enhance_g_test.luau # QUEUE-ALL9B G 강화 최상위 · 초기화 바닥 · 방지 옵션 · 방지권 환산
 run sec_enhance res_secenh.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem,EnhanceService,EnhancePolicy,ImmediateSave)" sec_enhance_test.luau # SEC-FIX-1 13 상세 [강화] = 어디서든 · 보스전 거절(옛 = X)
 run sec_gem res_secgem.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem,GemEquip,TranscendService)" sec_gem_test.luau # SEC-FIX-1 14 보석 [빼기] 무료 · 100% 보존 · 연타 1개 · 초월 = 계정 목록(옛 = X)
-run bignum res_big.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem)" bignum_test.luau # QUEUE-ALL9B 큰 숫자 · ALL9C 0-2: 2^53 정밀도 4건 = "알려진 문제"(이름 고정 - 통과 수에서 빠짐)
+run bignum res_big.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem)" bignum_test.luau # QUEUE-ALL9B 큰 숫자 · ALL9C 0-2: 2^53 정밀도 4건 = "알려진 문제" → PROG-2B-1 2 골드 안전 상한 2^53으로 해결(일반 검사 71)
 run bulk_sell res_bulk.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem,MonetizationService,InventorySync)" bulk_sell_test.luau # QUEUE-ALL9C 1-9 등급 체크 일괄 판매 75칸
 run sec_econ res_sececon.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem,MonetizationService,InventorySync)" sec_econ_test.luau # SEC-FIX-1 7 보석 판매가 차익(보석 레벨 기준) · 재련 경로 · 일괄 분해 개수 대조(옛 = X)
 run stat_sheet res_sheet.txt "$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem)" stat_sheet_test.luau # QUEUE-ALL9C 1-2 상세 능력치 합계 = 전투 값 · 줄/출처 = StatSheetData

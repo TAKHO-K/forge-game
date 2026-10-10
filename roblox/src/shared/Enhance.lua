@@ -306,8 +306,10 @@ end
 
 -- QUEUE-ALL9B G: 보스 계정 첫 처치 지급(옛 방지권 → 골드). 지급 일정은 getBossGrant 그대로. 지급이 없는 스테이지는 0.
 -- QUEUE-ALL9C 0-5(결정 3): 값 = 보스별 표(BossFirstClearGoldData - 옛 방지권 장수 × 옛 상점가). 옛 공식(방지 1회 추가 비용)은 약 7 ~ 10배라 +25 이하가 빨라졌다.
+-- PROG-2B-1 2: 표 = 마리분(BossFirstClearGoldData 주석) → 골드 = GoldCost.rewardGold(tier1 골드, 마리분, 보스 스테이지) - 골드 곡선을 따라간다.
 function Enhance.getBossGrantGold(stage)
-	return BossFirstClearGoldData[stage] or 0
+	local kills = BossFirstClearGoldData[stage]
+	return kills and GoldCost.rewardGold(MonsterData.tier1.goldDrop, kills, stage) or 0
 end
 
 -- 강화 판정 1회(순수 함수 - 저장 · 골드 · 재료 · 방지권 차감은 호출부 몫). flags = { useDropTicket, useResetTicket }(호출부가 resolveProtectionFlags로

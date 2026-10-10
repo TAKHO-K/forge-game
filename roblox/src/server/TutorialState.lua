@@ -221,8 +221,9 @@ function TutorialState.onBossCleared(player, target)
 			ItemDropSpawner.spawn(item, deathPosition, player)
 			print(("[forge-game] 견습 확정 드랍: %s - %s등급 %s"):format(player.Name, item.grade, item.part))
 		elseif stepData.isFinal then
-			PlayerProfile.addGold(player, TutorialData.tutorialCompletionGold)
-			print(("[forge-game] 견습 완료 보상: %s +%d 골드"):format(player.Name, TutorialData.tutorialCompletionGold))
+			local gold = require(ReplicatedStorage.Shared.GoldCost).rewardGold(MonsterData.tier1.goldDrop, TutorialData.tutorialCompletionGoldKills, PlayerProfile.getAccountBestStage(player)) -- PROG-2B-1 2: 마리분
+			PlayerProfile.addGold(player, gold)
+			print(("[forge-game] 견습 완료 보상: %s +%d 골드"):format(player.Name, gold))
 		end
 		PlayerProfile.markTutorialGrant(player, step)
 	end

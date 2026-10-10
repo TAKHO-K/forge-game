@@ -83,13 +83,17 @@ local ok, err = pcall(function()
 	check("G3 방지 켬 → 초기화 · 하락 대신 유지(+26 초기화 · +23 초기화 · +23 하락)", g1.result == "maintain" and g1.blockedBy == "reset" and g1.level == 26 and g2.result == "maintain" and g2.blockedBy == "reset"
 		and g3.result == "maintain" and g3.blockedBy == "drop", ("%s/%s · %s/%s · %s/%s"):format(g1.result, tostring(g1.blockedBy), g2.result, tostring(g2.blockedBy), g3.result, tostring(g3.blockedBy)))
 	-- QUEUE-ALL9C 0-5(결정 3): 보스별 표 = 옛 방지권 장수 × 옛 상점가(niceReward) · 표 칸 = 지급 일정(getBossGrant)과 정확히 같음
+	-- PROG-2B-1 2: 표 = 마리분(골드 곡선을 따라감) → 곡선 A(옛 1.001^s)로 되돌리면 옛 값(옛 방지권 장수 × 옛 상점가)과 같아야
 	local tableOk, tableN, bad = true, 0, nil
+	local curveC = MODS.InfiniteStageConfig.goldCurve
+	MODS.InfiniteStageConfig.goldCurve = nil
 	for stage in pairs(MODS.BossFirstClearGoldData) do
 		local d, r = Enhance.getBossGrant(stage)
 		local want = GoldCost.niceReward(d * Enhance.getProtectionPrice("drop", stage) + r * Enhance.getProtectionPrice("reset", stage))
 		tableN += 1
 		if d == 0 or Enhance.getBossGrantGold(stage) ~= want or want % 100 ~= 0 then tableOk, bad = false, stage end
 	end
+	MODS.InfiniteStageConfig.goldCurve = curveC
 	local schedN, s0 = 0, Cfg.protection.bossGrant.firstStage
 	while s0 <= MODS.InfiniteStageConfig.hardMaxStage do schedN += 1; s0 += Cfg.protection.bossGrant.stepStages end
 	check("G3 보스 첫 처치 골드 = 보스별 표(옛 방지권 장수 × 옛 상점가 · 끝자리 00) · 표 칸 = 지급 일정 · 지급 없는 스테이지 0", tableOk and tableN == schedN and Enhance.getBossGrantGold(365) == 0
@@ -147,7 +151,8 @@ local ok, err = pcall(function()
 	for _, cs in pairs(old.classes) do cs.stageProgress.infiniteBest = 1950 end
 	local m = SaveSystem.migrate(old)
 	local want = 7 * Enhance.getProtectionPrice("drop", 1950) + 3 * Enhance.getProtectionPrice("reset", 1950)
-	check("v67 → v68 방지권 7 · 3장 → 골드 환산(상점가 × 장수 · 손해 0) · 키는 0장으로 남음", m.version >= 68 and m.gold == 1000 + want and m.purchases.protectionTickets.drop == 0 and m.purchases.protectionTickets.reset == 0
+	local rescale = math.floor((1000 + want) * MODS.InfiniteStage.getGoldMultiplier(1950) / 1.001 ^ 1949) -- PROG-2B-1 2: 이어서 v78 골드 곡선 환산(가치 보존)
+	check("v67 → v68 방지권 7 · 3장 → 골드 환산(상점가 × 장수 · 손해 0) · 키는 0장으로 남음 · v78 곡선 환산", m.version >= 68 and m.gold == rescale and m.purchases.protectionTickets.drop == 0 and m.purchases.protectionTickets.reset == 0
 		and m.purchases.protectionRefund.gold == want and m.purchases.protectionRefund.drop == 7, ("골드 1000 → %d(+%d)"):format(m.gold, want))
 	local again = SaveSystem.migrate(m)
 	check("v68 환산 멱등(다시 돌려도 골드 그대로)", again.gold == m.gold)

@@ -1604,9 +1604,28 @@ local function migrate(data)
 		end
 		data.version = 77
 	end
+	if data.version < 78 then
+		-- PROG-2B-1 2(GOLD-CURVE-1 G8 - 사용자 확정): 골드 곡선 C(1,000 뒤 √ 완만) - 보유 골드 × M_새(계정 최고) ÷ M_옛(계정 최고)(가치 보존 = 같은 "사냥 몇 분").
+		--   기록 goldCurveRescale = { from, to, stage }(추가만 · 한 번만 - 있으면 건너뜀). 계정 최고 1,000 이하 = 배율 1(숫자 그대로). 새 계정 = 건너뜀(골드 0 · 기록 없음).
+		if not isNewAccount and type(data.gold) == "number" and data.gold == data.gold and data.goldCurveRescale == nil then
+			local best = 1
+			for _, classState in pairs(type(data.classes) == "table" and data.classes or {}) do
+				local progress = type(classState) == "table" and classState.stageProgress
+				best = math.max(best, type(progress) == "table" and tonumber(progress.infiniteBest) or 1)
+			end
+			local IsConfig = require(ReplicatedStorage.Shared.data.InfiniteStageConfig)
+			best = math.clamp(math.floor(best), 1, IsConfig.hardMaxStage) -- 손상된 큰 스테이지가 환산을 부풀리지 않게(v68과 같은 규칙)
+			local ratio = require(ReplicatedStorage.Shared.InfiniteStage).getGoldMultiplier(best) / IsConfig.goldGrowthRate ^ (best - 1)
+			local to = math.floor(math.max(0, data.gold) * ratio)
+			data.goldCurveRescale = { from = data.gold, to = to, stage = best }
+			data.gold = to
+		end
+		data.version = 78
+	end
 
 	data.savedAt = data.savedAt or 0
 	SaveSystem.clampStageCap(data) -- S1 리뷰 7: 불러온 옛 값도 상한으로
+	SaveSystem.clampGold(data) -- PROG-2B-1 2: 불러온 골드도 2^53 상한
 	SaveSystem.sanitizeAll10(data) -- QUEUE-ALL10 1-1: 초월 계승 숫자(빈 값 · 큰 수 · NaN) 매 로드 정리
 	return data
 end
@@ -2493,6 +2512,9 @@ function SaveSystem.saveSlotProfile(player, profile)
 	if #bad > 0 then
 		warn(("[forge-game] 저장 전 스테이지 하드 상한으로 자름: %s - %s"):format(tostring(player and player.Name), table.concat(bad, " · ")))
 	end
+	if SaveSystem.clampGold(profile) then -- PROG-2B-1 2
+		warn(("[forge-game] 저장 전 골드 안전 상한 2^53으로 자름: %s → %s"):format(tostring(player and player.Name), tostring(profile.gold)))
+	end
 	local now = os.time()
 	if profile.classId and not sess.charId then
 		local slot, charId = SlotSave.claimSlot(sess.account, profile.classId, now)
@@ -2835,6 +2857,17 @@ function SaveSystem.clampStageCap(profile)
 	return bad
 end
 
+-- PROG-2B-1 2: 저장 직전 · 로드 직후 골드 내부 안전 상한(NumberGuard.SAFE_MAX = 2^53 - 넘으면 자름). 반환 = 바뀌었나
+--   NaN · inf · 음수는 여기서 안 고친다 - sanitizeForSave(저장) · 손상 판정(로드)이 고치고 "고친 칸"을 기록한다(먼저 고치면 기록이 사라짐).
+function SaveSystem.clampGold(profile)
+	local NumberGuard = require(ReplicatedStorage.Shared.NumberGuard)
+	if type(profile) ~= "table" or type(profile.gold) ~= "number" or not (profile.gold > NumberGuard.SAFE_MAX) or profile.gold == math.huge then
+		return false
+	end
+	profile.gold = NumberGuard.SAFE_MAX
+	return true
+end
+
 function SaveSystem.saveProfile(player, profile)
 	if SlotSaveData.enabled then
 		return SaveSystem.saveSlotProfile(player, profile) -- QUEUE-MENU2 B: 옛 키(Player_)는 켬 동안 쓰지 않는다(legacy 보존)
@@ -2842,6 +2875,9 @@ function SaveSystem.saveProfile(player, profile)
 	local bad = SaveSystem.clampStageCap(profile)
 	if #bad > 0 then
 		warn(("[forge-game] 저장 전 스테이지 하드 상한으로 자름: %s - %s"):format(tostring(player and player.Name), table.concat(bad, " · ")))
+	end
+	if SaveSystem.clampGold(profile) then -- PROG-2B-1 2
+		warn(("[forge-game] 저장 전 골드 안전 상한 2^53으로 자름: %s → %s"):format(tostring(player and player.Name), tostring(profile.gold)))
 	end
 	local key = storeKey(player)
 	local baselineSavedAt = profile.savedAt or 0

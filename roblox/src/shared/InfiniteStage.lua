@@ -71,7 +71,13 @@ function InfiniteStage.getTrashAttack(baseAttack, stage)
 end
 
 -- P2.5a C8: 골드 전용 배수 = goldGrowthRate^(stage − 1)(k가 아니다 - InfiniteStageConfig.goldGrowthRate 주석). 몬스터 골드와 GoldCost(비용)가 이 한 함수를 쓴다.
+-- PROG-2B-1 2(GOLD-CURVE-1 C · G1 · G2 - 사용자 확정): 꺾임 스테이지(goldCurve.kneeStage 1,000)까지 지금 식 그대로 · 뒤 = M(꺾임) × (s ÷ 꺾임)^지수(0.5 = √).
+--   1,000 → 8,500 수입 ×2.9 · M(25,300) ≈ 13.6 · 진행 끝까지 보유 골드 최대 약 1e10(2^53에 안 닿음). 비용(GoldCost)과 수입이 같은 함수라 "강화 한 번 = 사냥 몇 분"은 그대로.
 function InfiniteStage.getGoldMultiplier(stage)
+	local c = InfiniteStageConfig.goldCurve
+	if c and stage > c.kneeStage then
+		return InfiniteStageConfig.goldGrowthRate ^ (c.kneeStage - 1) * (stage / c.kneeStage) ^ c.exponent
+	end
 	return InfiniteStageConfig.goldGrowthRate ^ (stage - 1)
 end
 

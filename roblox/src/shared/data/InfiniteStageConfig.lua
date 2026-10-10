@@ -29,6 +29,9 @@ return {
 	-- InfiniteStage.getGoldMultiplier). 수입과 비용이 같은 율로 크므로 구매력(골드/분 ÷ 강화 1회 비용)은 이 값과 무관하게 스테이지 내내 일정하고, 숫자 크기만
 	-- 정한다: 스테이지 20,000에서 골드 배수 1.001^19999 ≈ 4.8e8(k로 키우면 ≈ 1e172).
 	goldGrowthRate = 1.001,
+	-- PROG-2B-1 2(GOLD-CURVE-1 C · G1 · G2 - 사용자 확정 "숫자가 기하급수로 커지는 현상"): 꺾임 스테이지 뒤 골드 배수 = M(꺾임) × (s ÷ 꺾임)^exponent(InfiniteStage.getGoldMultiplier).
+	--   1,000까지 = 위 성장률 그대로(초반 곡선 불변 · 사용자 앵커 "1,000에서 10만 ≈ 1.7h") · 8,500에서 25만 = 일반 약 122분 · 상위 약 49분.
+	goldCurve = { kneeStage = 1000, exponent = 0.5 },
 	-- P2.5c 결정 10(COMMON §1 "k 의존 값 = 힘 비율"): 옛 k. 옛 스테이지 번호로 정한 임계값(재료 해금 · 방지권 · 보스 밀도 · 보스 드랍 편차)을 같은 힘의 지금
 	-- 스테이지로 옮길 때만 쓴다(InfiniteStage.fromLegacyStage · fromLegacySpan - 1.155 → 1.02에서 옛 1칸 ≈ 7.28칸). 게임 성장률이 아니다.
 	legacyGrowthRate = 1.155,

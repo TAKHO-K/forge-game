@@ -103,6 +103,6 @@ local okB3, whyB3 = Mon.canClaim(p0, "free", 43, reach, Season.tiers, true)
 local okOff, whyOff = Mon.canClaim(p0, "free", 41, reach, Season.tiers, false)
 local okPaid, whyPaid = Mon.canClaim(p0, "paid", 41, reach, Season.tiers, true)
 check("보너스 41 · 42칸 O · 43칸 not_reached · bonus 끔 bad_tier · 유료 줄 not_premium", okB1 and not okB3 and whyB3 == "not_reached" and not okOff and whyOff == "bad_tier" and not okPaid and whyPaid == "not_premium")
-check("보너스 칸 보상 = 무료 토큰 1 + 골드 · 유료 토큰 2(QUEUE-ALL9B 보완 5-1)", Season.rewardAt(1, "free", 41).sparkleShard == 1 and Season.rewardAt(1, "free", 41).gold == 3600 and Season.rewardAt(1, "paid", 99).sparkleShard == 2 and Season.rewardAt(1, "free", 40).gliderSkin ~= nil)
+check("보너스 칸 보상 = 무료 토큰 1 + 골드 10분(PROG-2B-1 600마리분) · 유료 토큰 2(QUEUE-ALL9B 보완 5-1)", Season.rewardAt(1, "free", 41).sparkleShard == 1 and Season.rewardAt(1, "free", 41).goldKills == 600 and Season.rewardAt(1, "paid", 99).sparkleShard == 2 and Season.rewardAt(1, "free", 40).gliderSkin ~= nil)
 
 print(("[SEASON] 끝 %d/%d"):format(pass, total))

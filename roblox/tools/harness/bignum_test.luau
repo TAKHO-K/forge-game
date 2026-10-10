@@ -1,15 +1,11 @@
--- 큰 골드 숫자 안전성 하네스(골드 점검 2): 저장 왕복 · 서버 골드 계산 · 화면 표기를 1e12 ~ 1e18 · 2^53 경계에서 확인한다(보고 전용 - 고치지 않는다 · 정밀도 4건 = KNOWN 표).
+-- 큰 골드 숫자 안전성 하네스(골드 점검 2): 저장 왕복 · 서버 골드 계산 · 화면 표기를 1e12 ~ 1e18 · 2^53 경계에서 확인한다(보고 전용 - 고치지 않는다 · 옛 정밀도 4건 = PROG-2B-1 2^53 상한으로 해결 · 일반 검사).
 -- 실행: LUAU=<luau.exe> PRELUDE=server_prelude.luau EXTRA_SERVER=$(python deps.py PlayerProfile,PetService,QuestService,SaveSystem) ECON_RES=res_big.txt python build_run.py bignum_test.luau
 --   결과 = %TEMP%/res_big.txt · "[BIG] ... O/X" 줄 + "[BIG] 끝 n/m"
 Random = { new = function(seed) math.randomseed(seed or 1); return { NextInteger = function(_, a, b) return math.random(a, b) end, NextNumber = function(_, a, b) a = a or 0; b = b or 1; return a + math.random() * (b - a) end } end }
 local pass, total = 0, 0
 -- QUEUE-ALL9C 0-2: 알려진 문제(이름 = check 라벨 그대로 고정 - 다른 X는 여기에 숨지 않는다). 사유 · 관련 결정. 고쳐져 O가 되면 "해결됨"으로 찍히니 표에서 뺀다.
-local KNOWN = {
-	["addGold 2^53 - 1 + 2 = 2^53 + 1 정확"] = "2^53 넘는 정수는 double로 정확히 못 담음(1 잃음) · ALL9B 결정 필요 8 → ALL9C 0-11 안전망 · 0-12 소모처 결정 뒤",
-	["addGold 1.09e18 보유에 처치당 9.6e11 × 1,000회 정확"] = "1e18 근처 ulp 128 - 처치 골드 반올림 누적(상대 오차 3e-11) · 같은 결정",
-	["trySpendGold 1.09e18 - 12,345 정확"] = "1e18 근처 ulp 128 - 작은 비용이 128 단위로 깎임 · 같은 결정",
-	["addGold 1e18 + 50 정확(작은 보상)"] = "1e18 근처 ulp 128 - 64 미만 보상 사라짐 · 같은 결정(0-11 사라지는 보상 목록)",
-}
+-- PROG-2B-1 2: 옛 4건(2^53 넘는 보유의 정수 정밀도)은 골드 내부 안전 상한 2^53(NumberGuard · changeGold · 저장 · 로드)으로 해결 → 일반 검사로 바꿈(상한에서 멈춤 · 상한 안은 정확).
+local KNOWN = {}
 local knownHit, knownFixed = 0, {}
 local function check(label, ok, detail)
 	if KNOWN[label] then
@@ -95,7 +91,7 @@ local ok, err = pcall(function()
 		back = SaveSystem.migrate(back)
 		local repaired = SaveSystem.repairProfile(back)
 		local valid = SaveSystem.isValidProfile(back)
-		check(("저장 왕복 gold = %s"):format(label), valid and back.gold == g and #repaired == 0, ("→ %.17g · 유효 %s · 고친 칸 %d"):format(back.gold, tostring(valid), #repaired))
+		check(("저장 왕복 gold = %s"):format(label), valid and back.gold == math.min(g, P53) and #repaired == 0, ("→ %.17g · 유효 %s · 고친 칸 %d(PROG-2B-1: 2^53 넘으면 상한)"):format(back.gold, tostring(valid), #repaired))
 	end
 	info("2^53 + 1 리터럴", ("double로 이미 %.17g(= 2^53) - 저장 이전에 정수 하나가 사라진다"):format(P53 + 1))
 
@@ -124,19 +120,15 @@ local ok, err = pcall(function()
 	-- 3-2. 2^53 넘기는 1회
 	setGold(P53 - 1)
 	PlayerProfile.addGold(player, 2)
-	check("addGold 2^53 - 1 + 2 = 2^53 + 1 정확", p.gold == P53 + 1 and p.gold - (P53 - 1) == 2, ("→ %.17g(정답 9007199254740993)"):format(p.gold))
-	-- 3-3. 최종 스테이지 처치당 골드(9.6e11)를 6개월 보유(1.09e18)에 1,000회 더하기 - 정수 정밀도
-	setGold(TOP_6M)
-	local base = p.gold
-	local ulp = 2 ^ (math.floor(math.log(base, 2)) - 52)
+	check("addGold 2^53 - 1 + 2 = 2^53(PROG-2B-1 안전 상한 - 넘는 몫 버림)", p.gold == P53, ("→ %.17g"):format(p.gold))
+	-- 3-3. 상한 근처에서 옛 최종 처치당 골드(9.6e11) × 1,000회 = 2^53에서 멈춤(넘지 않음 · 유한)
+	setGold(P53 - 1000)
 	for _ = 1, 1000 do PlayerProfile.addGold(player, PER_KILL_END + 37) end
-	local want = PER_KILL_END * 1000 + 37000
-	local got = p.gold - base
-	check("addGold 1.09e18 보유에 처치당 9.6e11 × 1,000회 정확", got == want, ("증가 %.17g · 정답 %.17g · 오차 %.0f골드(ulp %.0f · 상대 %.2g)"):format(got, want, got - want, ulp, math.abs(got - want) / want))
-	-- 3-4. trySpendGold: 큰 보유에서 작은 비용(수련 · 보석 재련급) 차감 정확
-	setGold(TOP_6M)
+	check("addGold 상한 근처 처치당 9.6e11 × 1,000회 = 2^53에서 멈춤", p.gold == P53 and attrs.Gold == P53, ("→ %.17g"):format(p.gold))
+	-- 3-4. trySpendGold: 상한 보유에서 작은 비용(수련 · 보석 재련급) 차감 정확
+	setGold(P53)
 	local spentOk = PlayerProfile.trySpendGold(player, 12345)
-	check("trySpendGold 1.09e18 - 12,345 정확", spentOk and TOP_6M - p.gold == 12345, ("실제 차감 %.17g"):format(TOP_6M - p.gold))
+	check("trySpendGold 2^53 - 12,345 정확", spentOk and P53 - p.gold == 12345, ("실제 차감 %.17g"):format(P53 - p.gold))
 	setGold(P53 - 100)
 	local spent2 = PlayerProfile.trySpendGold(player, 12345)
 	check("trySpendGold 2^53 아래 - 12,345 정확", spent2 and p.gold == P53 - 100 - 12345, ("→ %.17g"):format(p.gold))
@@ -146,14 +138,14 @@ local ok, err = pcall(function()
 	setGold(1e18)
 	check("trySpendGold 보유 < 비용(1e18 + 1e3) → 거부 · 그대로", not PlayerProfile.trySpendGold(player, 1e18 + 1024) and p.gold == 1e18, ("→ %.17g"):format(p.gold))
 	-- 3-6. inf · nan 오염 차단(기존 가드)
-	setGold(TOP_6M)
+	setGold(P53 - 5)
 	PlayerProfile.addGold(player, math.huge)
 	PlayerProfile.addGold(player, 0 / 0)
-	check("addGold inf · nan = 0으로 건너뜀(1.09e18 그대로)", p.gold == TOP_6M, ("→ %.17g"):format(p.gold))
-	-- 3-7. 1e18 이상에서 작은 보상(출석 · 패스 골드 몇 천)이 사라지는가
-	setGold(1e18)
+	check("addGold inf · nan = 0으로 건너뜀(2^53 − 5 그대로)", p.gold == P53 - 5, ("→ %.17g"):format(p.gold))
+	-- 3-7. 상한 안 큰 보유에서 작은 보상(출석 · 패스 골드 몇 천)이 사라지지 않음
+	setGold(P53 - 100)
 	PlayerProfile.addGold(player, 50)
-	check("addGold 1e18 + 50 정확(작은 보상)", p.gold - 1e18 == 50, ("실제 증가 %.17g(ulp 128)"):format(p.gold - 1e18))
+	check("addGold 2^53 − 100 + 50 정확(작은 보상)", p.gold == P53 - 50, ("→ %.17g"):format(p.gold))
 
 	-- ═══ 4. QUEUE-ALL9C 0-11 안전망: 골드 증감 한 곳(changeGold) · 비정상 금액 · 1e16 / 1e18 / 1e20 ═══
 	setGold(5000)
@@ -176,7 +168,7 @@ local ok, err = pcall(function()
 		sp.gold = g
 		SaveSystem.sanitizeForSave(sp, nil, "profile")
 		local back = SaveSystem.migrate(roundTrip(sp))
-		local okSave = SaveSystem.isValidProfile(back) and back.gold == g and #SaveSystem.repairProfile(back) == 0
+		local okSave = SaveSystem.isValidProfile(back) and back.gold == math.min(g, P53) and #SaveSystem.repairProfile(back) == 0 -- PROG-2B-1: 로드 = 2^53 상한
 		-- 구매 가능 비교(같은 값 · 1ulp 넘게 큰 값 · 작은 값)
 		local ulpG = 2 ^ (math.floor(math.log(g, 2)) - 52)
 		setGold(g)
@@ -185,12 +177,12 @@ local ok, err = pcall(function()
 		p.inventory = { { id = "big1", grade = "normal", part = "armor", tierIndex = 1, dropStage = 1, itemLevel = 1 } }
 		local price = MODS.Loot.getSellPrice(p.inventory[1])
 		local sold = PlayerProfile.sellItem(player, 1)
-		local sellOk = sold and p.gold >= g and p.gold == p.gold and p.gold < math.huge
+		local sellOk = sold and p.gold == math.min(g + price, P53) and p.gold == p.gold and p.gold < math.huge -- PROG-2B-1: 증감 = 2^53 상한
 		-- 강화 비용 차감(스테이지 25,300 · +26 방지 켬 = 최대 단일 비용)
 		setGold(g)
 		local cost = Enhance.getCost(26, 25300, true, true)
 		local spent = PlayerProfile.trySpendGold(player, cost)
-		local enhOk = (spent == (g >= cost)) and p.gold == (spent and g - cost or g) and p.gold >= 0 -- 보유 ≥ 비용일 때만 차감
+		local enhOk = (spent == (g >= cost)) and p.gold == (spent and math.min(g - cost, P53) or g) and p.gold >= 0 -- 보유 ≥ 비용일 때만 차감 · PROG-2B-1: 증감 = 2^53 상한
 		-- 표시
 		local en, ko = NumberFormat.currency(p.gold, "en"), NumberFormat.currency(p.gold, "ko")
 		local dispOk = sane(en) and sane(ko) and attrs.Gold == p.gold

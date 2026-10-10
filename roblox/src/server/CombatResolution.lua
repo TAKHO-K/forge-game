@@ -149,17 +149,21 @@ local function grantKillReward(recipient, target, monsterData, deathPosition, de
 	local dropStage = isBoss and monsterData.stageNumber or recipientStage
 
 	local goldDrop = MonsterState.getGoldDropFor(target, recipientStage)
+	local goldFlat = 0
 	if isSparkle then
 		-- 반짝이 자신의 처치 골드는 절반(웹 규칙) + 전용 보상으로 "그 구역 잡몹 N마리분"
 		-- 골드를 얹는다(22-2 [2], RareMonsterConfig.goldBonusKillEquivalent 주석 - 등급표는
 		-- 절대 안 올린다). 기준은 접두사 없는 기본형 골드(InfiniteStage 배율만).
 		local baseGold = InfiniteStage.getGoldReward(monsterData.goldDrop, recipientStage)
-		goldDrop = math.floor(goldDrop * RareMonsterConfig.goldMultiplier + baseGold * RareMonsterConfig.goldBonusKillEquivalent)
+		goldDrop *= RareMonsterConfig.goldMultiplier
+		goldFlat = baseGold * RareMonsterConfig.goldBonusKillEquivalent -- PROG-2B-1 2: 고정 덤(% 보너스에 안 곱함)
 	end
+	-- PROG-2B-1 2(G5): % 보너스 = 합 · 상한 +100%(shared/GoldBonus · 목록 = GoldBonusData) - 옛 = 반짝이 덤까지 균열 × 1.25(곱)
+	local goldBonuses = {}
 	if workspace:GetAttribute("RiftActive") == true then -- QUEUE-ALL1 P3 §3 균열: 처치 골드 배율(RiftService가 켠다)
-		goldDrop *= require(ReplicatedStorage.Shared.data.RiftData).goldMultiplier
+		table.insert(goldBonuses, require(ReplicatedStorage.Shared.data.RiftData).goldMultiplier - 1)
 	end
-	goldDrop = math.floor(goldDrop)
+	goldDrop = require(ReplicatedStorage.Shared.GoldBonus).killGold(goldDrop, goldBonuses, goldFlat)
 	PlayerProfile.addGold(recipient, goldDrop)
 	CombatResolution.goldGained:FireClient(recipient, goldDrop)
 

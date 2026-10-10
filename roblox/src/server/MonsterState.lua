@@ -313,6 +313,7 @@ function MonsterState.applyDamage(model, damage, attackerStage, attackerPlayer, 
 	if not entry then
 		return false, 0
 	end
+	damage = require(ReplicatedStorage.Shared.NumberGuard).amount(damage, 0) -- PROG-2B-1 2: 공용 검증(NaN · inf · 음수 피해 = 0)
 	if typeof(attackerPlayer) == "Instance" then
 		require(script.Parent.SuspicionMonitor).noteHit(attackerPlayer) -- QUEUE-ALL6 F2: 명중/분(서버가 피해를 계산한 횟수)
 	end

@@ -22,7 +22,7 @@ end
 -- 비용 = floor(기본 비용 × 배수). 기준 스테이지 1인 종류는 floor(기본 × k^(s−1)) = InfiniteStage.getGoldReward(기본, s)와 같은 값이다.
 -- 비정상 값(inf · NaN)은 math.huge로 끊는다 - trySpendGold가 항상 거절한다(공짜가 되는 쪽으로 새지 않는다).
 function GoldCost.cost(baseCost, stage, kind)
-	return Sanitize.number(math.floor(baseCost * GoldCost.scale(stage, kind)), math.huge)
+	return require(ReplicatedStorage.Shared.NumberGuard).amount(math.floor(baseCost * GoldCost.scale(stage, kind)), math.huge) -- PROG-2B-1 2: 공용 검증(음수 · NaN = 못 삼)
 end
 
 -- QUEUE-ALL6 D 보상 골드 = "보기 좋은 숫자"(지급값 자체 - 표시만 반올림하지 않는다 · 서버 지급 · 클라 미리보기가 같은 함수):
@@ -41,6 +41,18 @@ function GoldCost.niceReward(n)
 		step = 10 ^ (math.floor(math.log10(n)) - 1)
 	end
 	return math.max(100, math.floor(n / step + 0.5) * step)
+end
+
+-- PROG-2B-1 2(GOLD-CURVE-1 G4): 보상 표의 goldKills(몇 마리분)를 그 스테이지 골드로 바꾼 새 표(gold에 더함 · goldKills 지움 · 없으면 그대로) - 시즌 패스 칸 · 견습 완료 같은 덩어리 보상.
+--   서버 지급과 화면 표시가 같은 함수 · 같은 스테이지(계정 최고)를 넘긴다.
+function GoldCost.resolveKillGold(reward, goldPerKill, stage)
+	if type(reward) ~= "table" or reward.goldKills == nil then
+		return reward
+	end
+	local out = table.clone(reward)
+	out.gold = (out.gold or 0) + GoldCost.rewardGold(goldPerKill, out.goldKills, stage)
+	out.goldKills = nil
+	return out
 end
 
 -- 퀘스트 · 출석 · 초반 여정 · 시즌 패스 보상 골드(QuestService.grant · RewardIcons 미리보기 - 같은 값). kills = 데이터의 "잡몹 몇 마리 몫"

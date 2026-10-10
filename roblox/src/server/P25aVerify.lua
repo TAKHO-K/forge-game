@@ -209,9 +209,9 @@ function P25aVerify.runPure()
 		r.check(("C6 등급 1단계 ×1.45(무기 · 장갑 · 신발 · 옵션 표) · 갑옷 표 = D1 가속 계단 %s · 일반 1.0 · 갑옷 일반 %.3f · 태초 %.4f · tier6 r %.4f"):format(tostring(ok), ArmorData.grades.normal.defenseGradeMultiplier,
 			ItemVisualData.gradeVisuals.primordial.statMultiplier, MonsterData.getRewardRatio(6)), ok and ItemVisualData.gradeVisuals.normal.statMultiplier == 1 and ArmorData.grades.normal.defenseGradeMultiplier == 1.184)
 		local goldOk = InfiniteStage.getGoldReward(6, 1000) == math.floor(6 * InfiniteStageConfig.goldGrowthRate ^ 999) and GoldCostConfig.anchorStage.enhance == 1
-		local ratio = Enhance.getCost(20, 5001) / Enhance.getCost(20, 5000)
-		r.check(("C8 골드 성장률 %.3f · 잡몹 골드(스테이지 1000) = floor(6 × 1.001^999) %s · 강화 비용 기준 1 · 한 스테이지 비용 비 %.6f(기대 = 골드 성장률)"):format(
-			InfiniteStageConfig.goldGrowthRate, tostring(goldOk), ratio), goldOk and near(ratio, InfiniteStageConfig.goldGrowthRate, 1e-6))
+		local ratio = Enhance.getCost(20, 501) / Enhance.getCost(20, 500) -- PROG-2B-1 2: 골드 곡선 꺾임(1,000) 전 구간에서 잼(뒤 = √ 완만)
+		r.check(("C8 골드 성장률 %.3f · 잡몹 골드(스테이지 1000) = floor(6 × 1.001^999) %s · 강화 비용 기준 1 · 한 스테이지 비용 비 %.6f(기대 = 골드 성장률 · 꺾임 전)"):format(
+			InfiniteStageConfig.goldGrowthRate, tostring(goldOk), ratio), goldOk and near(ratio, InfiniteStageConfig.goldGrowthRate, 1e-4))
 		r.check(("C10 보석 곡선 p = %.3f(기대 0.025)"):format(OptionData.levelLogSlope), OptionData.levelLogSlope == 0.025)
 	end)
 

@@ -39,6 +39,7 @@ local EnhanceMaterialData = require(ReplicatedStorage.Shared.data.EnhanceMateria
 local BossData = require(ReplicatedStorage.Shared.data.BossData)
 -- S21-0 A2: 보상 계산 출구(NaN·inf 오염 차단).
 local Sanitize = require(ReplicatedStorage.Shared.Sanitize)
+local NumberGuard = require(ReplicatedStorage.Shared.NumberGuard) -- PROG-2B-1 2: 골드 · 체력 공용 검증(2^53 골드 상한)
 local Telemetry = require(script.Parent.Telemetry) -- Q15 T1: 화폐 입구(골드 · 재료 · 보석 가루)에서 한 줄씩
 -- P2.5b A: 장비 계승 규칙(클라 미리 판정과 같은 순수 함수).
 local Inherit = require(ReplicatedStorage.Shared.Inherit)
@@ -411,7 +412,12 @@ local function changeGold(player, profile, delta)
 	if after ~= after or after == math.huge or after == -math.huge then
 		return false
 	end
-	profile.gold = math.max(0, after)
+	local clamped
+	after, clamped = NumberGuard.gold(math.max(0, after)) -- PROG-2B-1 2: 내부 안전 상한 2^53(넘는 몫은 버림 + 경고 - 곡선 C에서 실제로는 안 닿음)
+	if clamped then
+		warn(("[forge-game] 골드 안전 상한 2^53에서 자름: %s"):format(tostring(player and player.Name)))
+	end
+	profile.gold = after
 	player:SetAttribute("Gold", profile.gold)
 	return true
 end
@@ -447,7 +453,7 @@ end
 function PlayerProfile.trySpendGold(player, amount)
 	local profile = profiles[player]
 	-- QUEUE-ALL9C 0-11: 금액이 숫자가 아니거나 NaN · inf · 음수면 거부(옛 코드는 NaN이면 골드가 NaN, 음수면 골드가 늘었다)
-	if not profile or type(amount) ~= "number" or amount ~= amount or amount < 0 or amount == math.huge or profile.gold < amount then
+	if not profile or NumberGuard.amount(amount, -1) < 0 or profile.gold < amount then -- PROG-2B-1 2: 공용 검증(숫자 아님 · NaN · inf · 음수 = 거부)
 		return false
 	end
 	if not changeGold(player, profile, -amount) then
@@ -1931,7 +1937,7 @@ end
 local function computeMaxHp(player)
 	local bonus = Loot.getMaxHpBonus(PlayerProfile.getEquipped(player, "armor"))
 	local optionMaxHpPercent = PlayerProfile.getOptionBonus(player, "maxHpPercent")
-	return (CombatConfig.playerMaxHp + bonus) * (1 + optionMaxHpPercent) * PlayerProfile.getMilestoneMaxHpMultiplier(player) -- P2.5b D · P2.5c B2: 마일스톤 버킷(MilestoneData.stat = "survival"일 때만 - 기본 1)
+	return NumberGuard.amount((CombatConfig.playerMaxHp + bonus) * (1 + optionMaxHpPercent) * PlayerProfile.getMilestoneMaxHpMultiplier(player), CombatConfig.playerMaxHp) -- P2.5b D · P2.5c B2: 마일스톤 버킷(MilestoneData.stat = "survival"일 때만 - 기본 1) · PROG-2B-1 2 공용 검증(비정상 = 기본 체력)
 end
 
 function PlayerProfile.refreshMaxHp(player)

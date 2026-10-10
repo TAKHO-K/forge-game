@@ -188,7 +188,7 @@ end
 local PAID_ROW_KINDS = { sparkleShard = true, cosmeticTheme = true, gliderSkin = true, cosmeticItem = true }
 Monetization.PAID_ROW_KINDS = PAID_ROW_KINDS -- 리뷰 중요 2: 서버가 유료 줄을 지급할 때도 같은 표로 막는다
 local FREE_ROW_KINDS = { sparkleShard = true, cosmeticTheme = true, gliderSkin = true, cosmeticItem = true, egg = true,
-	gold = true, enhanceStone = true, highEnhanceStone = true, gemDust = true, protectDrop = true }
+	gold = true, goldKills = true, enhanceStone = true, highEnhanceStone = true, gemDust = true, protectDrop = true } -- PROG-2B-1 2: goldKills = 마리분 골드(받을 때 계정 최고 스테이지로)
 Monetization.FREE_ROW_KINDS = FREE_ROW_KINDS
 local COSMETIC = { cosmeticTheme = true, gliderSkin = true, cosmeticItem = true }
 -- 한 칸 보상의 줄 규칙(40칸 표 · 시즌 대표 · 보너스 칸이 같은 검사)
@@ -215,6 +215,9 @@ local function checkRowReward(reasons, data, cosmetics, rowName, reward, label)
 		end
 		if grant.kind == "gold" and (type(grant.amount) ~= "number" or grant.amount % 100 ~= 0) then
 			table.insert(reasons, ("%s: 골드 %s - 끝 두 자리 00 아님"):format(label, tostring(grant.amount))) -- QUEUE-ALL9B 보완 6-3
+		end
+		if grant.kind == "goldKills" and (type(grant.amount) ~= "number" or grant.amount <= 0 or grant.amount % 10 ~= 0) then
+			table.insert(reasons, ("%s: 마리분 골드 %s - 10 단위 양수 아님"):format(label, tostring(grant.amount))) -- PROG-2B-1 2
 		end
 	end
 end

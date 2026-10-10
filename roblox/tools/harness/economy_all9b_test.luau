@@ -192,9 +192,9 @@ do
 			for _, g in ipairs(Mon.rewardToGrants(pr)) do table.insert(t, g.kind .. "=" .. tostring(g.id or g.amount)) end
 			return table.concat(t, ",")
 		end)()))
-		if f.gold and f.gold % 100 ~= 0 then table.insert(badGold, tier) end
+		if (f.gold and f.gold % 100 ~= 0) or (f.goldKills and f.goldKills % 10 ~= 0) then table.insert(badGold, tier) end -- PROG-2B-1 2: 무료 줄 골드 = 마리분(10 단위)
 		if tier <= 10 then
-			early.gold = early.gold or f.gold ~= nil
+			early.gold = early.gold or f.goldKills ~= nil
 			early.stone = early.stone or f.enhanceStone ~= nil
 		end
 		for k in pairs(pr) do
@@ -206,7 +206,7 @@ do
 	local sk = Mon.skippedFreeReward(Season, rows.free[5])
 	local sk2 = Mon.skippedFreeReward(Season, rows.free[2])
 	local sk3 = Mon.skippedFreeReward(Season, rows.free[20])
-	check("4-8 · 보완 6-2 건너뛴 칸: 알 + 골드 → 토큰 3 · 골드 + 강화석 → 토큰 1 · 치장 그대로", sk.egg == nil and sk.gold == nil and sk.sparkleShard == 3 and sk2.gold == nil and sk2.enhanceStone == nil and sk2.sparkleShard == 1
+	check("4-8 · 보완 6-2 건너뛴 칸: 알 + 골드 → 토큰 3 · 골드 + 강화석 → 토큰 1 · 치장 그대로", sk.egg == nil and sk.gold == nil and sk.goldKills == nil and sk.sparkleShard == 3 and sk2.gold == nil and sk2.goldKills == nil and sk2.enhanceStone == nil and sk2.sparkleShard == 1
 		and sk3.cosmeticTheme == "meadowStar" and sk3.sparkleShard == nil)
 	local pass = { premium = true, claimedFree = {}, claimedPaid = {} }
 	local okB, whyB = Mon.canClaim(pass, "free", Season.tiers + Season.bonusCap + 1, 999, Season.tiers, true, Season.bonusCap)

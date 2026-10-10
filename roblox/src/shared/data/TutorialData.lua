@@ -157,6 +157,8 @@ end
 -- ≈ 5분 파밍 상당. 강화 +1~+8 시도 합(EnhanceConfig.goldCost)보다 적어 "첫 강화 몇 번 눌러볼
 -- 돈"이지 강화 단계를 사는 돈이 아니다(PRD 그대로 - 새 상수지만 PRD가 이미 근거를 댄 값이라
 -- 그대로 채택한다).
-TutorialData.tutorialCompletionGold = 500
+-- PROG-2B-1 2(GOLD-CURVE-1 G4 - 사용자 확정): 고정 500 → 마리분 100(약 2분 · tier1 잡몹 골드 × 100 × GoldCost(계정 최고 스테이지) · niceReward).
+--   견습 끝 무렵(최고 스테이지 약 20)에는 옛 값과 같은 500골드 - 골드 곡선이 바뀌어도 "그 시점 사냥 n분"으로 따라간다.
+TutorialData.tutorialCompletionGoldKills = 100
 
 return TutorialData

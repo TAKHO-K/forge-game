@@ -182,7 +182,7 @@ local function applyFinalDamage(targetPlayer, damage, label, opts)
 	end
 	-- S21-0 A2: 실제로 HP를 깎기 직전의 마지막 출구(모든 피해 경로의 공통 지점) - 배율들이
 	-- 오염된 값과 곱해져도 여기서 한 번 더 끊는다.
-	damage = Sanitize.number(damage, 0)
+	damage = require(ReplicatedStorage.Shared.NumberGuard).amount(damage, 0) -- PROG-2B-1 2: 공용 검증(NaN · inf · 음수 = 0 - 음수 피해가 회복이 되지 않게)
 	-- 반환은 지금까지처럼 피해 하나(호출자들이 "피격이 있었나"로 읽는다) - 쉴드가 다 막아도 피격은 피격이다. 흡수량이 필요한 곳은 takeDamage를 직접 부른다.
 	return (PlayerDamage.takeDamage(targetPlayer, damage, { label = label, ignoresShield = opts and opts.ignoresShield, fixed = fixed })) -- K1: fixed(최대 체력 % 기믹 · 전멸기) = 성역 HP 바닥 밖
 end

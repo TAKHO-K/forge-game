@@ -13,8 +13,25 @@ local Quest = require(ReplicatedStorage.Shared.Quest)
 local QuestData = require(ReplicatedStorage.Shared.data.QuestData)
 local SeasonBoardData = require(ReplicatedStorage.Shared.data.SeasonBoardData)
 local PlayerProfile = require(script.Parent.PlayerProfile)
+local GoldCost = require(ReplicatedStorage.Shared.GoldCost)
+local MonsterData = require(ReplicatedStorage.Shared.data.MonsterData)
 
 local SeasonPassService = {}
+
+-- PROG-2B-1 2: 칸 보상의 마리분 골드(goldKills) → 이 사람 계정 최고 스테이지 골드(받기 · 화면이 같은 값)
+local function withGold(player, reward)
+	return GoldCost.resolveKillGold(reward, MonsterData.tier1.goldDrop, PlayerProfile.getAccountBestStage(player))
+end
+local function rowsWithGold(player, rows)
+	local out = { free = {}, paid = {} }
+	for rowName, list in pairs(rows) do
+		out[rowName] = {}
+		for tier, reward in pairs(list) do
+			out[rowName][tier] = withGold(player, reward)
+		end
+	end
+	return out
+end
 
 -- QUEUE-ALL9A 1-2 주말 2배. 시각 = 서버 os.time()(UTC)만. 개발 덮어쓰기(/gg weekend on|off|auto) = Studio에서만 받고 읽는다(출시 서버 = 무시).
 local weekendOverride = nil -- nil(auto) | true(on) | false(off)
@@ -255,8 +272,8 @@ function SeasonPassService.view(player)
 		premium = pass.premium,
 		claimedFree = table.clone(pass.claimedFree),
 		claimedPaid = table.clone(pass.claimedPaid),
-		rows = SeasonPassData.rowsFor(pass.season), -- QUEUE-ALL1 R1 시즌 한정 칸
-		bonus = SeasonPassData.bonus, -- QUEUE-ALL9A 1-3 반복 보너스 칸(41칸부터 - 도달 = reach)
+		rows = rowsWithGold(player, SeasonPassData.rowsFor(pass.season)), -- QUEUE-ALL1 R1 시즌 한정 칸 · PROG-2B-1 2 마리분 골드 → 지금 골드
+		bonus = SeasonPassData.bonus and { free = withGold(player, SeasonPassData.bonus.free), paid = withGold(player, SeasonPassData.bonus.paid) }, -- QUEUE-ALL9A 1-3 반복 보너스 칸(41칸부터 - 도달 = reach)
 		reach = reach,
 		bonusCap = SeasonPassData.bonusCap, -- QUEUE-ALL9B 보완 5-2(41 ~ 40 + 상한)
 		skipRoom = SeasonPassService.skipRoom(player), skipWhy = select(2, SeasonPassService.skipRoom(player)), skipBought = pass.skipBought, skipTiers = table.clone(pass.skipTiers), -- 4-8 · SEC-FIX-1 8 막힌 이유
@@ -302,6 +319,7 @@ function SeasonPassService.claim(player, rowName, tier)
 	if rowName == "free" and pass.skipTiers[tostring(tier)] then
 		reward = Monetization.skippedFreeReward(SeasonPassData, reward) -- QUEUE-ALL9B 4-8 · 보완 6-2: 건너뛴 칸 = 알 · 성장 재화 → 토큰
 	end
+	reward = withGold(player, reward) -- PROG-2B-1 2: 마리분 골드 → 받는 순간 계정 최고 스테이지 골드
 	local okReward, summary = require(script.Parent.MonetizationService).applyReward(player, reward, rowName == "paid" and "seasonPaid" or "season")
 	if not okReward then
 		return false, summary
