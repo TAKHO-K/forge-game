@@ -167,7 +167,8 @@ return {
 				bossBar = { 244, 62, 326, 60, anchor = "TC", modes = { boss = true }, text = 10 },
 				bossNotices = { 270, 128, 260, 30, anchor = "TC", modes = { boss = true } },
 				notices = { 270, 62, 260, 68, anchor = "TC", modes = { normal = true } },
-				statusRow = { 272, 286, 194, 30, anchor = "BC", modes = { normal = true, boss = true } },
+				-- UI-1b: 실제 상태 아이콘(44 칸)이 체력바에 1px 닿아 y 286 → 282(F7 실제 검사)
+				statusRow = { 272, 282, 194, 30, anchor = "BC", modes = { normal = true, boss = true } },
 				hp = { 272, 322, 256, 14, anchor = "BC", modes = { normal = true, boss = true } },
 				exp = { 0, 354, 800, 6, anchor = "W" },
 				-- 2단계 폰 메뉴 줄 펼침 창(메뉴 줄이 (8, 62)로 내려가 그 아래 · 화면 안)

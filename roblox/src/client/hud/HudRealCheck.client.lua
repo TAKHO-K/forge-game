@@ -32,6 +32,22 @@ local function find(path)
 	return node
 end
 
+-- 그려지는 것인가: 투명 Frame(글 · 그림 없음)은 칸을 차지해도 화면에 안 보임 → 겹침 판정에서 뺌(빈 상태 아이콘 틀 등 가짜 겹침)
+local function drawn(c)
+	if c.ClassName == "Frame" or c.ClassName == "ScrollingFrame" then
+		if c.BackgroundTransparency < 1 then
+			return true
+		end
+		for _, k in ipairs(c:GetChildren()) do
+			if k:IsA("GuiObject") and k.Visible and drawn(k) then
+				return true
+			end
+		end
+		return false
+	end
+	return true
+end
+
 local function rectOf(id, o)
 	local p, s = o.AbsolutePosition, o.AbsoluteSize
 	if s.X < 1 or s.Y < 1 then
@@ -40,7 +56,7 @@ local function rectOf(id, o)
 	-- 보이는 직속 자식(메뉴 버튼 아래 이름표 · 점 등)까지 합친 범위 = 화면에 실제로 그려지는 자리
 	local x0, y0, x1, y1 = p.X, p.Y, p.X + s.X, p.Y + s.Y
 	for _, c in ipairs(o:GetChildren()) do
-		if c:IsA("GuiObject") and c.Visible and c.AbsoluteSize.X >= 1 and c.AbsoluteSize.Y >= 1 and (not c:IsA("TextLabel") or c.Text ~= "") then
+		if c:IsA("GuiObject") and c.Visible and c.AbsoluteSize.X >= 1 and c.AbsoluteSize.Y >= 1 and (not c:IsA("TextLabel") or c.Text ~= "") and drawn(c) then
 			local cx, cy, cw, ch = c.AbsolutePosition.X, c.AbsolutePosition.Y, c.AbsoluteSize.X, c.AbsoluteSize.Y
 			if c:IsA("TextLabel") and not c.TextScaled then -- 글자 칸 = 실제 글자 폭(칸이 글자보다 넓으면 가짜 겹침)
 				local tb = c.TextBounds
@@ -75,6 +91,8 @@ local function run()
 							end
 							if group and kids > 0 then
 								each(prefix .. c.Name .. "/", c)
+							elseif group or not drawn(c) then
+								-- 빈 투명 틀 = 안 그림
 							else
 								table.insert(rects, rectOf(prefix .. c.Name, c))
 							end
