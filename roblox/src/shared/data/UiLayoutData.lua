@@ -170,12 +170,23 @@ return {
 				statusRow = { 272, 286, 194, 30, anchor = "BC", modes = { normal = true, boss = true } },
 				hp = { 272, 322, 256, 14, anchor = "BC", modes = { normal = true, boss = true } },
 				exp = { 0, 354, 800, 6, anchor = "W" },
+				-- 2단계 폰 메뉴 줄 펼침 창(메뉴 줄이 (8, 62)로 내려가 그 아래 · 화면 안)
+				menuTop = { x = 8, y = 62, size = 44, gap = 8 },
+				moreWindow = { 8, 110, 312, 246 },
+				rewardWindow = { 8, 110, 260, 172 },
 			},
 			-- 폰 전투 버튼(기준 px · 오른쪽 아래 붙음 - hud.phone.combat 값을 읽어 짓는다 · 02 v6 §4 가운데 좌표 − 반지름)
 			phoneCombatAnchor = "BR",
 			-- B-7 오른쪽 열 접기(02 v6 §9): 시작 y · 칸 · 간격 · 이름표 · 아래 여백(24 + 경험치 줄 14)
 			rightFold = { y = 336, size = 72, gap = 14, label = 25, bottomPad = 38, innerGap = 14 },
 			leftColumn = { x = 24, y = 96, size = 72, gap = 14, label = 25 },
+			hudHiddenCurrency = { sparkleShard = true },
+			phoneChipScale = 0.7, -- 2단계: 폰 정보 칩 높이 28(02 v6 §4) ÷ 지금 칩 높이 40 · 보스전 = 골드 · Lv만(스테이지 칩 숨김) -- 2단계(02 v6 MISSING 13 · CC-UI-1 §2): 꾸미기 토큰 = HUD 칩에서 숨김(상점 · 도감에서만)
+			-- 2단계 스킬 줄(02 v6 §7 · F v2 §1 B v2): PC 칸 72 · 간격 18 · 대시 원형 · 폰 = hud.phone.combat 크기
+			skill = { pc = 72, gap = 18, dashGap = 26, keyRatio = 0.3, keyPhone = { 17, 14 }, secondsRatio = 0.56, secondsLeft = 0.12, secondsTop = 0.20, twoDigitScale = 0.8, stunInset = 8, stunRatio = 0.34, keyBg = "0E1120", keyBgTransparency = 0.15, secondsStroke = 5 },
+			-- 2단계 보스 바(02 v6 §5): 이름 줄 · 막대 · 아래 줄 높이(기준 px) · 표시선 · 폼 꼬리표 = 폭풍 군주만(F v2 0절 4)
+			bossBar = { pc = { name = 32, bar = 22, below = 24, status = 32 }, phone = { name = 22, bar = 12, below = 14, status = 22 }, ticks = { 0.5, 0.2 }, formBosses = { storm_lord = true }, formAt = 0.5,
+				fill = "F2453D", track = "3A1416", guardFill = "8A8F9E" },
 		},
 	},
 	-- 03 가방 · 장비창 v2(03_bag-equip/v2 spec "화면 규칙") - 기존 장비창(panels/Inventory)의 겉모습 값. 장비창은 배율 1(화면 px - Inventory/Layout.compute)이라 좌표 대신 크기만 둔다.

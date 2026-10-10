@@ -44,6 +44,10 @@ local leftRoot = UiRoot.new(gui, "HudLeft", 0, 0, true) -- UI-1 0단계: HUD 배
 local rightRoot = UiRoot.new(gui, "HudRight", 1, 0, true)
 local phone = leftRoot.isPhone
 local L = phone and Layout.phone or Layout.pc
+if phone and require(ReplicatedStorage.Shared.data.UiV2Flags).hud then -- UI-1 2단계(02 v6 §4): 폰 메뉴 줄 = 상단 바 밖 (8, 62) · 펼침 창 = 그 아래
+	L = table.clone(Layout.phone)
+	L.top, L.moreWindow, L.rewardWindow = V6.phone.menuTop, V6.phone.moreWindow, V6.phone.rewardWindow
+end
 for _, r in ipairs({ leftRoot, rightRoot }) do
 	r.frame.ZIndex = 1
 end
@@ -299,7 +303,12 @@ local function rightTop(m)
 	local top = HudPlace.topY(V6.rightFold.y, 0, 0, m, Tokens.base.pc) / m
 	local tg = player.PlayerGui:FindFirstChild("TodayGoalGui")
 	local box = tg and tg:FindFirstChild("TodayGoal")
-	if box and box.Visible and box.AbsoluteSize.Y > 0 then
+	local ng = player.PlayerGui:FindFirstChild("NextGoalGui")
+	local card = ng and ng.Enabled and ng:FindFirstChild("NextGoal")
+	if card and card.AbsoluteSize.Y > 0 then -- UI-1 2단계: 다음 목표 카드 아래(카드가 칩 묶음 따라 내려가면 같이)
+		top = math.max(top, math.ceil((card.AbsolutePosition.Y + card.AbsoluteSize.Y - rightRoot.frame.AbsolutePosition.Y) / m) + V6.rightFold.gap)
+	end
+	if box and tg.Enabled and box.Visible and box.AbsoluteSize.Y > 0 then -- UI-1 2단계: 옛 3줄 칸이 꺼져 있으면(다음 목표 카드) 밀지 않음
 		-- AbsolutePosition = 모든 ScreenGui 공통 "상단 바 아래" 좌표(IgnoreGuiInset Gui 안 프레임도 화면 맨 위 = −58 · Studio 실측) → 인셋을 더하지 않는다(옛 = 58 이중 차감 · 02 MISSING 1)
 		local bottom = box.AbsolutePosition.Y + box.AbsoluteSize.Y
 		top = math.max(top, math.ceil((bottom - rightRoot.frame.AbsolutePosition.Y) / m) + 12)
@@ -617,6 +626,17 @@ task.spawn(function() -- 메인 퀘스트 칸 크기 · 자리가 바뀌면 오�
 		for _, prop in ipairs({ "AbsoluteSize", "AbsolutePosition", "Visible" }) do
 			box:GetPropertyChangedSignal(prop):Connect(relayout)
 		end
+		relayout()
+	end
+end)
+task.spawn(function() -- UI-1 2단계: 다음 목표 카드 자리 · 크기 · 켜짐이 바뀌면 오른쪽 열 다시
+	local ng = player.PlayerGui:WaitForChild("NextGoalGui", 30)
+	local card = ng and ng:WaitForChild("NextGoal", 10)
+	if card then
+		for _, prop in ipairs({ "AbsoluteSize", "AbsolutePosition" }) do
+			card:GetPropertyChangedSignal(prop):Connect(relayout)
+		end
+		ng:GetPropertyChangedSignal("Enabled"):Connect(relayout)
 		relayout()
 	end
 end)

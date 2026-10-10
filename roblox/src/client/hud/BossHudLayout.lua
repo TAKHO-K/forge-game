@@ -43,6 +43,19 @@ function BossHudLayout.gimmickLabel(label, fallbackPosition, fallbackAnchor)
 	if BossHudLayout.enabled() then
 		label.AnchorPoint = Vector2.new(0.5, 1)
 		label.Position = UDim2.new(0.5, 0, 1, -(BossHudLayout.blockTop() + H.gimmickGap))
+		if require(ReplicatedStorage.Shared.data.UiV2Flags).hud then -- UI-1 2단계(02 v6 §5): 보스 바 위 가운데 → 기믹 줄 = 보스 바 아래 한 줄
+			local V6 = require(ReplicatedStorage.Shared.data.UiLayoutData).hud.v6
+			local HudPlace = require(ReplicatedStorage.Shared.HudPlace)
+			local spec = Theme.isMobile and V6.phone.bossBar or V6.pc.bossBar
+			local P = Theme.isMobile and V6.bossBar.phone or V6.bossBar.pc
+			local view = Workspace.CurrentCamera.ViewportSize
+			local m = HudPlace.scale(view.X, view.Y, Theme.isMobile)
+			local r = HudPlace.screenRect(spec, spec.anchor, view.X, view.Y, m, Theme.isMobile)
+			local sg = label:FindFirstAncestorOfClass("ScreenGui")
+			local inset = (sg and not sg.IgnoreGuiInset) and game:GetService("GuiService"):GetGuiInset().Y or 0
+			label.AnchorPoint = Vector2.new(0.5, 0)
+			label.Position = UDim2.new(0.5, 0, 0, math.floor(r[2] + (P.name + P.bar + 4) * m - inset))
+		end
 		if not label:GetAttribute("BossHudFade") then
 			label:SetAttribute("BossHudFade", true)
 			local serial = 0

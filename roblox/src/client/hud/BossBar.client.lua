@@ -65,6 +65,14 @@ local TweenService = game:GetService("TweenService")
 local TextChatService = game:GetService("TextChatService")
 local BossHudLayout = require(script.Parent.BossHudLayout)
 local HB = ArtV1UiData.bossHud
+-- UI-1 2단계(02 v6 §5 · F v2 0절 4): 스위치 UiV2Flags.hud = 보스 바 위 가운데(PC 560, 66, 800 · 폰 244, 62, 326) · 표시선 50% · 20% · 보스 상태 아이콘(이름 줄 오른쪽) · 폼 꼬리표 = 폭풍 군주만 ·
+--   변신 무적 = 채움 회색 + 사선 무늬 · BREAK 게이지 · 내 기여 % = 데이터 없음 → 그 줄 숨김(MISSING 5 · 6) · 위쪽 알림(TC 줄) = 보스 바 바로 아래로.
+local V6ON = require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).hud
+local V6 = require(game:GetService("ReplicatedStorage").Shared.data.UiLayoutData).hud.v6
+local HudPlace = require(game:GetService("ReplicatedStorage").Shared.HudPlace)
+local ArtImage = require(script.Parent.Parent.ui.ArtImage)
+local v6 = nil -- { ticks, statusRow, form, stripes }
+local boss = nil -- 지금 표시 중인 보스 모델
 
 -- ─── QUEUE-ALL1 01 A-1 하단 보스 바(아트 켬) ───
 local artBar = nil
@@ -148,6 +156,73 @@ layoutArt = function()
 		width = math.min(width, screen.X - 2 * HB.phoneSideReserve)
 	end
 	width = math.max(width, MIN_MOBILE_WIDTH)
+	if V6ON then -- UI-1 2단계: 위 가운데
+		local B = V6.bossBar
+		local P = Theme.isMobile and B.phone or B.pc
+		local spec = Theme.isMobile and V6.phone.bossBar or V6.pc.bossBar
+		local view = workspace.CurrentCamera.ViewportSize
+		local m = HudPlace.scale(view.X, view.Y, Theme.isMobile)
+		local r = HudPlace.screenRect(spec, spec.anchor, view.X, view.Y, m, Theme.isMobile)
+		refs.screenGui.IgnoreGuiInset = true
+		refs.screenGui.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets
+		a.root.AnchorPoint = Vector2.new(0, 0)
+		a.root.Position = UDim2.fromOffset(math.floor(r[1]), math.floor(r[2]))
+		a.root.Size = UDim2.fromOffset(math.floor(r[3]), math.floor((P.name + P.bar) * m))
+		a.track.Size = UDim2.new(1, 0, 0, math.floor(P.bar * m))
+		a.name.Size = UDim2.new(0.6, 0, 0, math.floor(P.name * m))
+		a.pct.Size = UDim2.new(0.4, 0, 0, math.floor(P.name * m))
+		a.pct.Position = UDim2.new(0.6, 0, 0, 0)
+		if not v6 then
+			v6 = {}
+			v6.ticks = {}
+			for _, t in ipairs(B.ticks) do
+				local tick = Instance.new("ImageLabel")
+				tick.Name = "Tick" .. math.floor(t * 100)
+				tick.BackgroundTransparency = 1
+				tick.Image = ArtImage.get("ui/ds/bossbar-tick") or ""
+				tick.AnchorPoint = Vector2.new(0.5, 0.5)
+				tick.Position = UDim2.fromScale(t, 0.5)
+				tick.ZIndex = 5
+				tick.Parent = a.track
+				table.insert(v6.ticks, tick)
+			end
+			v6.stripes = Instance.new("ImageLabel")
+			v6.stripes.Name = "GuardStripes"
+			v6.stripes.BackgroundTransparency = 1
+			v6.stripes.Image = ArtImage.get("ui/ds/bossbar-guard-stripes") or ""
+			v6.stripes.ScaleType = Enum.ScaleType.Tile
+			v6.stripes.TileSize = UDim2.fromOffset(16, 16)
+			v6.stripes.Size = UDim2.fromScale(1, 1)
+			v6.stripes.ZIndex = 4
+			v6.stripes.Visible = false
+			v6.stripes.Parent = a.track
+			v6.form = Theme.label(a.root, "", "caption", "textPrimary")
+			v6.form.Name = "FormTag"
+			v6.form.Font = Theme.font
+			v6.form.TextStrokeTransparency = 0.2
+			v6.form.Visible = false
+			local holder = Instance.new("Frame")
+			holder.Name = "BossStatus"
+			holder.BackgroundTransparency = 1
+			holder.AnchorPoint = Vector2.new(1, 0)
+			holder.Parent = a.root
+			v6.statusHolder = holder
+			v6.statusScale = Instance.new("UIScale")
+			v6.statusScale.Parent = holder
+			v6.statusRow = require(script.Parent.Parent.ui.v2.UiParts).statusRow({ parent = holder, place = "boss", tappable = true, name = "BossStatusRow", max = 4, info = function(id)
+				return boss and require(script.Parent.Parent.ui.v2.UiParts).readStatus(id, { boss = boss }, "boss")
+			end })
+		end
+		for _, tick in ipairs(v6.ticks) do
+			tick.Size = UDim2.fromOffset(math.max(2, math.floor(4 * m)), math.floor((P.bar + 6) * m))
+		end
+		local cell = (Theme.isMobile and 30 or 38)
+		v6.statusHolder.Size = UDim2.fromOffset(cell * 5, cell)
+		v6.statusHolder.Position = UDim2.new(0.6, -4, 0, math.floor((P.name * m - cell * m) / 2))
+		v6.statusScale.Scale = m
+		v6.form.Size = UDim2.fromOffset(math.floor(60 * m), math.floor(P.name * m))
+		return
+	end
 	local barH = BossHudLayout.barHeight()
 	refs.screenGui.IgnoreGuiInset = false
 	a.root.Position = UDim2.new(0.5, 0, 1, -BossHudLayout.barBottom())
@@ -159,7 +234,32 @@ end
 local SHIFTED_NAMES = { "BuffHudAnchor", "ComboPipsAnchor", "ToastLane_BC", "BossTrapPanel" }
 local shifted = {} -- [GuiObject] = 원래 Position
 local shiftSearchAt = nil -- 리뷰 6: PlayerGui 재귀 탐색은 1초에 한 번(늦게 생기는 잡기 패널 때문에 한 번으로 끝내지는 않는다)
+local tcSaved = nil -- UI-1 2단계: 위쪽 알림 줄(TC) 원래 자리
+local function moveNotices(on)
+	local gui = player:FindFirstChild("PlayerGui")
+	local tcGui = gui and gui:FindFirstChild("ToastGuiTC")
+	local lane = tcGui and tcGui:FindFirstChildWhichIsA("Frame")
+	if on and lane and not tcSaved and artBar then
+		tcSaved = { lane = lane, pos = lane.Position, anchor = lane.AnchorPoint }
+		local spec = Theme.isMobile and V6.phone.bossNotices or V6.pc.bossNotices
+		local view = workspace.CurrentCamera.ViewportSize
+		local m = HudPlace.scale(view.X, view.Y, Theme.isMobile)
+		local r = HudPlace.screenRect(spec, spec.anchor, view.X, view.Y, m, Theme.isMobile)
+		local insetY = tcGui.IgnoreGuiInset and 0 or GuiService:GetGuiInset().Y
+		lane.AnchorPoint = Vector2.new(0.5, 0)
+		lane.Position = UDim2.new(0.5, 0, 0, math.floor(r[2] - insetY))
+	elseif not on and tcSaved then
+		if tcSaved.lane.Parent then
+			tcSaved.lane.Position, tcSaved.lane.AnchorPoint = tcSaved.pos, tcSaved.anchor
+		end
+		tcSaved = nil
+	end
+end
 local function shiftOthers(on)
+	if V6ON then
+		moveNotices(on) -- 보스 바가 위로 갔다 → 아래 칸을 올릴 필요 없음 · 위쪽 알림만 보스 바 아래로
+		return
+	end
 	local gui = player:FindFirstChild("PlayerGui")
 	if on then
 		if shiftSearchAt and os.clock() - shiftSearchAt < 1 then
@@ -252,7 +352,7 @@ GuiService:GetPropertyChangedSignal("TopbarInset"):Connect(applyWidth)
 player:GetAttributeChangedSignal("ForceTouchLayout"):Connect(function()
 	task.delay(0.1, applyWidth)
 end)
-local boss = nil -- 지금 표시 중인 보스 모델
+boss = nil -- 지금 표시 중인 보스 모델(UI-1: 선언은 위 - 보스 상태 설명 창이 읽는다)
 local shownRatio = nil
 
 local function findBoss(id)
@@ -301,6 +401,30 @@ local function refresh()
 		refs.root.Visible = false
 		a.name.Text = Text.name(boss:GetAttribute("BossName") or boss.Name)
 		setArtRatio(ratio)
+		if V6ON and v6 then
+			local B = V6.bossBar
+			local guard = boss:GetAttribute("BossTransformGuard") == true
+			a.fill.BackgroundColor3 = guard and Color3.fromHex(B.guardFill) or Color3.new(1, 1, 1)
+			v6.stripes.Visible = guard
+			local bossId = boss:GetAttribute("BossRig") -- 보스 데이터 id(MonsterSpawner)
+			if B.formBosses[bossId] then -- 폼 꼬리표 = 폭풍 군주만
+				v6.form.Visible = true
+				v6.form.Text = Text.get(ratio < B.formAt and "ui1.boss.form2" or "ui1.boss.form1")
+				local tb = a.name.TextBounds.X
+				v6.form.Position = UDim2.fromOffset(math.floor(tb + 10), 0)
+			else
+				v6.form.Visible = false
+			end
+			local list = {}
+			for _, id in ipairs({ "stun", "boss-transform-guard", "boss-enrage", "shield" }) do
+				local st = require(script.Parent.Parent.ui.v2.UiParts).readStatus(id, { boss = boss }, "boss")
+				if st then
+					st.id = id
+					table.insert(list, st)
+				end
+			end
+			v6.statusRow.update(list)
+		end
 		a.root.Visible = true
 		a.startedAt = a.startedAt or os.clock()
 		local secs = math.floor(os.clock() - a.startedAt)

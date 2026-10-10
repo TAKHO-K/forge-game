@@ -62,11 +62,20 @@ if require(ReplicatedStorage.Shared.data.HudData).menuV5 then -- QUEUE-UI2 UI2-4
 			rowScale.Scale = math.max(s, require(ReplicatedStorage.Shared.data.UiTokens).textMinRootScale) -- 글자 읽힘 하한(UI2-2와 같은 값)
 			if require(ReplicatedStorage.Shared.data.UiV2Flags).hud then -- UI-1 0단계: HUD 배율 하나(m = HudPlace.scale - 화면 전체 크기 기준)
 				local view = workspace.CurrentCamera.ViewportSize
-				rowScale.Scale = require(ReplicatedStorage.Shared.HudPlace).scale(view.X, view.Y, Theme.isMobile)
+				local HudPlace = require(ReplicatedStorage.Shared.HudPlace)
+				local m = HudPlace.scale(view.X, view.Y, Theme.isMobile)
+				rowScale.Scale = Theme.isMobile and m * require(ReplicatedStorage.Shared.data.UiLayoutData).hud.v6.phoneChipScale or m
+				-- 2단계(02 v6 §3 · §4): 칩 묶음 = 오른쪽 24(폰 8) · 위 66(폰 62) - 이 Gui = 인셋 아래 좌표 → 상단 바 아래 기준 y − 인셋
+				local V6 = require(ReplicatedStorage.Shared.data.UiLayoutData).hud.v6
+				local spec = Theme.isMobile and V6.phone.infoChips or V6.pc.currencyChip -- PC = 구역 이름 칩(66) 아래 재화 칩(106)부터
+				local B = Theme.isMobile and HudPlace.base.phone or HudPlace.base.pc
+				local inset = game:GetService("GuiService"):GetGuiInset().Y -- 이 Gui = 인셋 아래 좌표(카메라 크기는 접속 직후 1 × 1일 수 있어 빼기로 재지 않는다)
+				row.Position = UDim2.new(1, -(B.w - spec[1] - spec[3]) * m, 0, HudPlace.topY(spec[2], 0, 0, m, B) - inset)
 			end
 		end
 	end
 	screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(rescale)
+	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(rescale) -- UI-1: HUD 배율 m = 카메라 화면 크기 기준
 	rescale()
 end
 
@@ -81,6 +90,13 @@ rowLayout.Parent = row
 -- 세로 스택 안에서는 맨 아래(LayoutOrder=3)에 온다.
 local wrapper = Instance.new("Frame")
 wrapper.Name = "StageWrapper"
+if require(ReplicatedStorage.Shared.data.UiV2Flags).hud and Theme.isMobile then -- UI-1 2단계(02 v6 §4): 폰 보스전 = 골드 · Lv만
+	local function bossHide()
+		wrapper.Visible = Players.LocalPlayer:GetAttribute("BossEncounterId") == nil
+	end
+	Players.LocalPlayer:GetAttributeChangedSignal("BossEncounterId"):Connect(bossHide)
+	bossHide()
+end
 wrapper.LayoutOrder = 3
 wrapper.AutomaticSize = Enum.AutomaticSize.XY
 wrapper.Size = UDim2.new(0, 0, 0, 0)

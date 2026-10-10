@@ -104,7 +104,11 @@ end
 local function toggle()
 	setOpen(not drawer.Visible)
 end
+local hudHidden = require(ReplicatedStorage.Shared.data.UiV2Flags).hud and require(ReplicatedStorage.Shared.data.UiLayoutData).hud.v6.hudHiddenCurrency or {}
 for i, id in ipairs(CurrencyBar.cfg.always) do
+	if hudHidden[id] then
+		continue -- UI-1 2단계: 꾸미기 토큰 = HUD에서 숨김(상점 · 도감에서만)
+	end
 	CurrencyBar.item(counter, id, { height = 26, textSize = 13, order = i, onActivated = toggle, gainSide = "left" })
 end
 

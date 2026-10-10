@@ -150,6 +150,22 @@ Theme.corner(regionLabel, 6)
 local regionPad = Instance.new("UIPadding")
 regionPad.PaddingLeft, regionPad.PaddingRight = UDim.new(0, 8), UDim.new(0, 8)
 regionPad.Parent = regionLabel
+-- UI-1 2단계(02 v6 §3): PC 구역 이름 칩 = 오른쪽 24 · 위 66 · 높이 32(HUD 배율 m) · 폰 = 정보 칩에 구역 이름 없음(02 v6 §4) → 숨김
+local regionV6 = require(ReplicatedStorage.Shared.data.UiV2Flags).hud
+local regionHidePhone = regionV6 and Theme.isMobile
+if regionV6 and not Theme.isMobile then
+	local HudPlace = require(ReplicatedStorage.Shared.HudPlace)
+	local spec = require(ReplicatedStorage.Shared.data.UiLayoutData).hud.v6.pc.zoneChip
+	local function placeRegion()
+		local view = workspace.CurrentCamera.ViewportSize
+		local m = HudPlace.scale(view.X, view.Y, false)
+		regionLabel.AnchorPoint = Vector2.new(1, 0)
+		regionLabel.Position = UDim2.new(1, -(HudPlace.base.pc.w - spec[1] - spec[3]) * m, 0, HudPlace.topY(spec[2], 0, 0, m, HudPlace.base.pc) - game:GetService("GuiService"):GetGuiInset().Y)
+		regionLabel.Size = UDim2.new(0, 0, 0, math.floor(spec[4] * m))
+	end
+	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(placeRegion)
+	placeRegion()
+end
 -- M1-3 관문 등록: 등록 전 보스 스테이지 = "다음 목표: ○○ 관문을 찾아라 · 거리" 추적(지역명 왼쪽 같은 줄 · 보스 색 글씨)
 local objectiveLabel = regionLabel:Clone()
 objectiveLabel.Name = "ObjectiveLabel"
@@ -460,7 +476,7 @@ RunService.Heartbeat:Connect(function(dt)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	partyButton.Visible = player:GetAttribute("InParty") == true
-	regionLabel.Visible = player:GetAttribute("BossEncounterId") == nil -- 보스전 중엔 숨김
+	regionLabel.Visible = player:GetAttribute("BossEncounterId") == nil and not regionHidePhone -- 보스전 중엔 숨김 · UI-1 폰 v6 = 숨김
 	if root then
 		local feet = root.Position - Vector3.new(0, 3, 0)
 		local above = feet.Y - WorldMapData.floorTopY

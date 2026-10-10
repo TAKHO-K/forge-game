@@ -198,9 +198,137 @@ local function refresh()
 	place()
 end
 
+-- UI-1 2단계(02 v6 §10 · MISSING 10): 다음 목표 = 카드 1개(PC 380 × 72 · 폰 262 × 44 · 오른쪽 위 v6 자리 · HUD 배율 m) · 제목 + 할 일 + 진행 게이지 + [길 안내](44) ·
+--   카드 누름 = 퀘스트 창 · [길 안내] = 바닥 길 안내(QuestGuide) · 보스전 숨김 · 목표 = 메인 지금 단계 → 수련 → 안 끝난 일간 1개(오늘의 목표 3줄 = 퀘스트 창). 스위치 UiV2Flags.hud = false → 옛 3줄 칸.
+local cardV6 = nil
+local V6ON = require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).hud
+local function buildCard()
+	local RS = game:GetService("ReplicatedStorage")
+	local V6 = require(RS.Shared.data.UiLayoutData).hud.v6
+	local HudPlace = require(RS.Shared.HudPlace)
+	local UiParts = require(script.Parent.Parent.ui.v2.UiParts)
+	local UiKit = require(script.Parent.Parent.ui.v2.UiKit)
+	local ArtImage = require(script.Parent.Parent.ui.ArtImage)
+	local phone = Theme.isMobile
+	local spec = phone and V6.phone.nextGoal or V6.pc.nextGoal
+	local g = Instance.new("ScreenGui")
+	g.Name = "NextGoalGui"
+	g.ResetOnSpawn = false
+	g.IgnoreGuiInset = true
+	g.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets
+	g.DisplayOrder = 4
+	g.Parent = player:WaitForChild("PlayerGui")
+	local card = Instance.new("ImageButton")
+	card.Name = "NextGoal"
+	card.AutoButtonColor = false
+	card.BackgroundTransparency = 1
+	card.Image = ArtImage.get("ui/ds/hud-panel") or ""
+	card.ScaleType = Enum.ScaleType.Slice
+	card.SliceCenter = Rect.new(20, 20, 76, 76)
+	card.Size = UDim2.fromOffset(spec[3], spec[4])
+	card.Parent = g
+	local sc = Instance.new("UIScale")
+	sc.Parent = card
+	local title = UiKit.label(card, Text.get("ui1.nextGoal.title"), "caption", "accent", { name = "Title", font = "korean" })
+	local task_ = UiKit.label(card, "", "body", "text.primary", { name = "Task", font = "korean" })
+	local count = UiKit.label(card, "", "caption", "text.secondary", { name = "Count", font = "number", align = Enum.TextXAlignment.Right })
+	local guide = UiKit.button({ kind = "secondary", text = Text.get("ui1.nextGoal.guide"), parent = card, name = "Guide", textSize = "caption", padX = 6 })
+	local gauge
+	if phone then
+		title.Visible = false
+		task_.Position, task_.Size = UDim2.fromOffset(10, 0), UDim2.new(1, -110, 1, 0)
+		count.Position, count.Size = UDim2.new(1, -98, 0, 0), UDim2.fromOffset(40, spec[4])
+		guide.root.Position, guide.root.Size = UDim2.new(1, -54, 0, 0), UDim2.fromOffset(54, 44)
+	else
+		title.Position, title.Size = UDim2.fromOffset(14, 6), UDim2.new(1, -130, 0, 20)
+		task_.Position, task_.Size = UDim2.fromOffset(14, 24), UDim2.new(1, -170, 0, 26)
+		count.Position, count.Size = UDim2.new(1, -160, 0, 24), UDim2.fromOffset(50, 26)
+		gauge = UiParts.gauge(card, { w = spec[3] - 140, h = 8, color = require(RS.Shared.data.UiPartsData).gaugeColors.exp, position = UDim2.fromOffset(14, 56) })
+		guide.root.Position, guide.root.Size = UDim2.new(1, -104, 0, 14), UDim2.fromOffset(92, 44)
+	end
+	local current = nil
+	card.Activated:Connect(function()
+		require(script.Parent.Parent.panels.Quests).open(current and current.tab or "main")
+	end)
+	guide.Activated:Connect(function()
+		if current and current.guide then
+			require(script.Parent.Parent.QuestGuide).go(current.guide, false)
+		elseif current and current.onPress then
+			current.onPress()
+		end
+	end)
+	local function place()
+		local view = workspace.CurrentCamera.ViewportSize
+		local m = HudPlace.scale(view.X, view.Y, phone)
+		local ax, ox, ay, oy = HudPlace.udim(spec, spec.anchor, m, phone)
+		-- 지금 칩 묶음(구역 · 재화 · 레벨 · 전투력 · 스테이지 + 최고 기록)이 v6 3줄보다 길다 → v6 자리와 칩 묶음 아래 + 8 중 더 아래(AbsolutePosition = 상단 바 아래 공통 좌표 + 58 = 화면)
+		local chips = player.PlayerGui:FindFirstChild("TopChipsGui") and player.PlayerGui.TopChipsGui:FindFirstChild("TopChipsRow")
+		if chips and chips.AbsoluteSize.Y > 0 and not phone then
+			oy = math.max(oy, chips.AbsolutePosition.Y + chips.AbsoluteSize.Y + game:GetService("GuiService"):GetGuiInset().Y + 8 * m)
+		end
+		card.Position = UDim2.new(ax, ox, ay, oy)
+		sc.Scale = m
+	end
+	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(place)
+	place()
+	task.spawn(function()
+		local chipsGui = player.PlayerGui:WaitForChild("TopChipsGui", 30)
+		local chips = chipsGui and chipsGui:WaitForChild("TopChipsRow", 10)
+		if chips then
+			chips:GetPropertyChangedSignal("AbsoluteSize"):Connect(place)
+			chips:GetPropertyChangedSignal("AbsolutePosition"):Connect(place)
+			place()
+		end
+	end)
+	cardV6 = { gui = g, card = card, task = task_, count = count, gauge = gauge, guide = guide, set = function(c)
+		current = c
+	end }
+	box.Visible = false
+	gui.Enabled = false -- 옛 3줄 칸 끔(지우지 않음)
+end
+local function refreshCard()
+	if not cardV6 then
+		return
+	end
+	local c = nil
+	if view and view.main then
+		local m = view.main
+		c = { name = m.name, n = m.n, target = m.target, guide = (not m.done) and m.guide or nil, tab = "main" }
+	elseif player:GetAttribute("TrainingReady") == true then
+		c = { name = Text.get("today.training"), tab = "main", onPress = function()
+			UIManager.openLazy("training")
+		end }
+	elseif view then
+		for _, q in ipairs(view.daily or {}) do
+			if q.n < q.target then
+				c = { name = q.name, n = q.n, target = q.target, tab = "daily" }
+				break
+			end
+		end
+	end
+	cardV6.set(c)
+	local show = c ~= nil and player:GetAttribute("BossEncounterId") == nil and player:GetAttribute("ClassId") ~= nil and player:GetAttribute("ClassId") ~= ""
+	cardV6.gui.Enabled = show and player:GetAttribute("InMainMenu") ~= true
+	if c then
+		cardV6.task.Text = c.name or ""
+		cardV6.count.Text = c.target and ("%d/%d"):format(c.n or 0, c.target) or ""
+		if cardV6.gauge then
+			cardV6.gauge.set(c.target and math.clamp((c.n or 0) / c.target, 0, 1) or 0)
+		end
+		cardV6.guide.root.Visible = c.guide ~= nil or c.onPress ~= nil
+	end
+end
+if V6ON then
+	buildCard()
+	for _, name in ipairs({ "TrainingReady", "BossEncounterId", "ClassId", "InMainMenu" }) do
+		player:GetAttributeChangedSignal(name):Connect(refreshCard)
+	end
+end
+
 updateRemote.OnClientEvent:Connect(function(v)
 	view = v
 	refresh()
+	refreshCard()
 end)
 for _, name in ipairs({ "TrainingReady", "BossEncounterId", "ClassId" }) do
 	player:GetAttributeChangedSignal(name):Connect(refresh)

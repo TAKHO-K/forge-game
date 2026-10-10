@@ -415,7 +415,7 @@ local function place()
 			local r6 = HudLayout.v6.pc.minimap
 			local mm = HudPlace.scale(view.X, view.Y, false)
 			local r = HudPlace.screenRect(r6, r6.anchor, view.X, view.Y, mm, false)
-			local inset = view.Y - screen.Y
+			local inset = game:GetService("GuiService"):GetGuiInset().Y
 			return "side", square(math.floor(r[1] - (view.X - screen.X)), math.floor(r[2] - inset), math.floor(r[3])), chips
 		end
 		return "side", square(screen.X - math.floor((1920 - m[1]) * s), math.floor(m[2] * s), size), chips

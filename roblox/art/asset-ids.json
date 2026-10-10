@@ -7566,6 +7566,20 @@
   "status": "Approved",
   "imageId": 71396866510360
  },
+ "ui/ds/bossbar-guard-stripes.png": {
+  "sha256": "2df91044d8e0a279a4994dbff30e4087f8efc8c0f0baa6ebfb7eca215d748c08",
+  "assetType": "Decal",
+  "assetId": 96161295096758,
+  "status": "Approved",
+  "imageId": 90037614507280
+ },
+ "ui/ds/bossbar-tick.png": {
+  "sha256": "1c7248f076b6389190cfe674abfd4f46f6b085368056781239d98222a55194a4",
+  "assetType": "Decal",
+  "assetId": 136520926422113,
+  "status": "Approved",
+  "imageId": 102930669360659
+ },
  "ui/ds/btn-card-disabled.png": {
   "sha256": "128b4061c20072b9a5b8eced6a2488b37dcc2b0be3cdd6ad3a61e12719e76c20",
   "assetType": "Decal",
@@ -8042,6 +8056,20 @@
   "status": "Approved",
   "imageId": 88438912181736
  },
+ "ui/ds/hud-panel.png": {
+  "sha256": "cf03001e6dd7dc40acfeacf94b60d353cf294281f8c5b270579f4625f88352b3",
+  "assetType": "Decal",
+  "assetId": 136988572115566,
+  "status": "Approved",
+  "imageId": 84805444301789
+ },
+ "ui/ds/hud-pill.png": {
+  "sha256": "418fd232c35aba260530d7635e066136a80691f31b1c3863e213230e7c1a29df",
+  "assetType": "Decal",
+  "assetId": 138007358446010,
+  "status": "Approved",
+  "imageId": 94335826163809
+ },
  "ui/ds/icon-archive.png": {
   "sha256": "bee7b6c29c31d338053972b4b18a0982c6da9a8e8b1cd0f9d7542eb9538029ef",
   "assetType": "Decal",
@@ -8419,6 +8447,20 @@
   "assetId": 107957378112047,
   "status": "Approved",
   "imageId": 124695660841973
+ },
+ "ui/ds/jump-dot-off.png": {
+  "sha256": "cf7b556a939411a587c7c16684201d97f04f0c3ccc57b666bca522b9729eac77",
+  "assetType": "Decal",
+  "assetId": 138935591209953,
+  "status": "Approved",
+  "imageId": 83495675686810
+ },
+ "ui/ds/jump-dot-on.png": {
+  "sha256": "51c36af46d3b869cef6d04cece676e9f0cbf4df314b9a7f6a963be7a3ba3d8b0",
+  "assetType": "Decal",
+  "assetId": 96159838449647,
+  "status": "Approved",
+  "imageId": 81324337127409
  },
  "ui/ds/status-airborne.png": {
   "sha256": "5e1c6371a1ab0209c3fbe57ed588d426dc9b01522aa0e973aa2434812daaeb45",

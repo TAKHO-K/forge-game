@@ -48,6 +48,11 @@ return {
 		["ui1.status.endless"] = "끌 때까지",
 		["ui1.status.fromBoss"] = "준 것 · {name}",
 		["ui1.status.more"] = "+{n}",
+		-- 2단계 다음 목표 카드
+		["ui1.nextGoal.title"] = "다음 목표", ["ui1.nextGoal.guide"] = "길 안내",
+		["ui1.exp.percent"] = "경험치 {percent}%",
+		-- 2단계 보스 바 폼 꼬리표(폭풍 군주만)
+		["ui1.boss.form1"] = "1폼", ["ui1.boss.form2"] = "2폼",
 		-- 전투 문구 한국어 줄
 		["ui1.ct.dodge"] = "완벽한 회피",
 		["ui1.ct.break"] = "약점 공략 성공",
@@ -107,6 +112,9 @@ return {
 		["ui1.status.endless"] = "Until turned off",
 		["ui1.status.fromBoss"] = "From · {name}",
 		["ui1.status.more"] = "+{n}",
+		["ui1.boss.form1"] = "Form 1", ["ui1.boss.form2"] = "Form 2",
+		["ui1.nextGoal.title"] = "Next Goal", ["ui1.nextGoal.guide"] = "Guide",
+		["ui1.exp.percent"] = "EXP {percent}%",
 		["ui1.ct.dodge"] = "Perfect dodge",
 		["ui1.ct.break"] = "Weak point hit",
 		["ui1.ct.rescued"] = "Rescued",

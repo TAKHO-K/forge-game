@@ -112,6 +112,30 @@ buffHudAnchor.Size = UDim2.new(0, 0, 0, 0)
 buffHudAnchor.BackgroundTransparency = 1
 buffHudAnchor.Parent = screenGui
 
+-- UI-1 2단계(02 v6 §3 · §4): 내 체력바 = PC (680, 902, 560 × 24) · 폰 (272, 322, 256 × 14) · 아래 가운데 붙음 · HUD 배율 m(HudPlace) · 콤보 점 = 바로 위
+if require(ReplicatedStorage.Shared.data.UiV2Flags).hud then
+	local HudPlace = require(ReplicatedStorage.Shared.HudPlace)
+	local V6 = require(ReplicatedStorage.Shared.data.UiLayoutData).hud.v6
+	local Theme = require(script.Parent.ui.kit.Theme)
+	local hpScale = Instance.new("UIScale")
+	hpScale.Parent = container
+	local function placeV6()
+		local phone = Theme.isMobile
+		local spec = phone and V6.phone.hp or V6.pc.hp
+		local view = workspace.CurrentCamera.ViewportSize
+		local m = HudPlace.scale(view.X, view.Y, phone)
+		local ax, ox, ay, oy = HudPlace.udim(spec, spec.anchor, m, phone)
+		container.AnchorPoint = Vector2.zero
+		container.Position = UDim2.new(ax, ox, ay, oy)
+		container.Size = UDim2.fromOffset(spec[3], spec[4])
+		hpScale.Scale = m
+		comboPipsAnchor.AnchorPoint = Vector2.new(0.5, 1)
+		comboPipsAnchor.Position = UDim2.new(ax, ox + spec[3] * m / 2, ay, oy - COMBO_PIPS_GAP_ABOVE)
+	end
+	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(placeV6)
+	task.defer(placeV6)
+end
+
 local containerStroke = Instance.new("UIStroke")
 containerStroke.Color = UIColors.rim
 containerStroke.Transparency = UIColors.rimTransparency

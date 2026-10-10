@@ -98,6 +98,23 @@ percentLabelStroke.Thickness = 1.5
 percentLabelStroke.Color = Color3.new(0, 0, 0)
 percentLabelStroke.Parent = percentLabel
 
+-- UI-1 2단계(02 v6 §10): 경험치 줄 = 아래 끝 전체 폭 · PC 14 + "경험치 n%" · 폰 6(글자 없음) · HUD 배율 m
+local V6ON = require(ReplicatedStorage.Shared.data.UiV2Flags).hud
+if V6ON then
+	local Theme = require(script.Parent.ui.kit.Theme)
+	local V6 = require(ReplicatedStorage.Shared.data.UiLayoutData).hud.v6
+	local function placeExp()
+		local view = workspace.CurrentCamera.ViewportSize
+		local m = require(ReplicatedStorage.Shared.HudPlace).scale(view.X, view.Y, Theme.isMobile)
+		local spec = Theme.isMobile and V6.phone.exp or V6.pc.exp
+		track.Size = UDim2.new(1, 0, 0, math.max(4, math.floor(spec[4] * m)))
+		percentLabel.Visible = not Theme.isMobile
+		percentLabel.TextSize = math.max(12, math.floor(12 * m))
+	end
+	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(placeExp)
+	placeExp()
+end
+
 local sweepUntil = 0 -- QUEUE-ALL2 P4: 레벨업 스윕 중에는 채움 폭을 스윕이 끝날 때 넣는다
 local pendingRatio = nil
 
@@ -114,6 +131,9 @@ local function update()
 		fill.Size = UDim2.new(ratio, 0, 1, 0)
 	end
 	percentLabel.Text = ("%d%%"):format(math.floor(ratio * 100))
+	if V6ON then
+		percentLabel.Text = require(ReplicatedStorage.Shared.Text).get("ui1.exp.percent", { percent = tostring(math.floor(ratio * 100)) })
+	end
 end
 
 -- QUEUE-ALL2 P4 2순위: 레벨업 = 바가 가득 → 흰 스윕 → 0에서 새 진행률로(약 0.57초). 아트 끔 · 연출 세기 끔 = 옛 동작(즉시). ReduceFlashes = 흰 띠 없이 채움만.

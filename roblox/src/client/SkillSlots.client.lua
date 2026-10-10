@@ -483,6 +483,28 @@ slotHandles["dash"] = buildSlot(dashHolder, 1, { id = "dash", key = "SHIFT", ico
 slotHandles["dash"].slot.AnchorPoint = Vector2.new(0, 1)
 slotHandles["dash"].slot.Position = UDim2.new(0, 0, 1, 0)
 
+-- UI-1 2단계 B v2 스킬 칸(hud/SkillCellV2 · F v2 §1 정본) + PC 줄(02 v6 §7: 칸 72 · 간격 18 · 아래 가운데 y 950 · HUD 배율 m)
+local V6 = require(ReplicatedStorage.Shared.data.UiLayoutData).hud.v6
+local PC_SLOT = UiV2Flags.hud and V6.skill.pc or SLOT_SIZE
+if UiV2Flags.hud then
+	local SkillCellV2 = require(script.Parent.hud.SkillCellV2)
+	local touch0 = isTouchLayout()
+	for _, def in ipairs({ { id = "q", key = "Q" }, { id = "e", key = "E" }, { id = "r", key = "R" }, { id = "dash", key = "SHIFT" } }) do
+		local h = slotHandles[def.id]
+		if h then
+			h.v2 = SkillCellV2.decorate(h.slot, { key = def.key, round = touch0 or def.id == "dash" })
+		end
+	end
+	if slotFrames.locked2 then
+		SkillCellV2.decorate(slotFrames.locked2, { key = "T", keyOnly = true })
+	end
+	skillGroupLayout.Padding = UDim.new(0, V6.skill.gap)
+	rowLayout.Padding = UDim.new(0, V6.skill.gap)
+	local rowScale = Instance.new("UIScale")
+	rowScale.Name = "HudScaleV6"
+	rowScale.Parent = row
+end
+
 -- QUEUE-ALL1 01 B(아트 켬): 대시 충전 점 = Shift 칸 안 아래(충전 수 1 · 태초 신발 2) - 가득이면 숨김(쓸 때만) · 따로 떠 있는 게이지 없음
 do
 	local DashConfig = require(ReplicatedStorage.Shared.data.DashConfig)
@@ -633,18 +655,29 @@ applyPhoneCombatV6 = function(touch)
 				continue
 			end
 			frame.Parent = skillGroup
-			frame.Visible = true
-			frame.Size = UDim2.new(0, SLOT_SIZE, 0, SLOT_SIZE)
+			frame.Visible = id ~= "locked3" -- 02 v6 §7: Q · E · R · T + 대시(5번째 빈 칸 없음)
+			frame.Size = UDim2.new(0, PC_SLOT, 0, PC_SLOT)
 			frame.Position = UDim2.new()
 		end
 		attackButton.Parent = screenGui
 		local dashSlot = slotFrames.dash
 		if dashSlot then
-			dashSlot.Size = UDim2.new(0, SLOT_SIZE, 0, SLOT_SIZE)
+			dashSlot.Size = UDim2.new(0, PC_SLOT, 0, PC_SLOT)
 		end
-		dashHolder.Size = UDim2.new(0, SLOT_SIZE, 0, ROW_HEIGHT)
+		dashHolder.Size = UDim2.new(0, PC_SLOT, 0, PC_SLOT)
 		dashHolder.AnchorPoint = Vector2.zero
 		dashHolder.Position = UDim2.new()
+		skillGroup.Size = UDim2.new(0, 0, 0, PC_SLOT)
+		row.Size = UDim2.new(0, 0, 0, PC_SLOT)
+		local rs = row:FindFirstChild("HudScaleV6")
+		if rs then -- 아래 가운데 · 칸 위 끝 y 950(기준) → 아래 끝에서 (1080 − 950 − 72) × m
+			local view = workspace.CurrentCamera.ViewportSize
+			local m = HudPlace.scale(view.X, view.Y, false)
+			local spec = V6.pc.skillRow
+			rs.Scale = m
+			row.AnchorPoint = Vector2.new(0.5, 1)
+			row.Position = UDim2.new(0.5, 0, 1, -(HudPlace.base.pc.h - spec[2] - PC_SLOT) * m)
+		end
 		return
 	end
 	local view = workspace.CurrentCamera.ViewportSize -- 폰 기준 800×360 = 상단 바 포함 화면 전체(02 v6 §4)
@@ -687,16 +720,14 @@ local function applyLayout()
 	for _, id in ipairs({ "q", "e", "dash" }) do
 		local handle = slotHandles[id]
 		if handle and handle.keyPill then
-			handle.keyPill.Visible = not touch
+			handle.keyPill.Visible = not touch and not handle.v2 -- UI-1 B v2 = 칸 안 단축키 판(옛 알약 숨김)
 		end
 	end
 
 	attackButton.Visible = touch
-	if UiV2Flags.hud then
-		applyPhoneCombatV6(touch)
-		if touch then
-			return
-		end
+	if UiV2Flags.hud and touch then
+		applyPhoneCombatV6(true)
+		return
 	end
 	if not touch then
 		row.AnchorPoint = ROW_ANCHOR_POINT
@@ -705,6 +736,9 @@ local function applyLayout()
 		if jumpMock then
 			jumpMock:Destroy()
 			jumpMock = nil
+		end
+		if UiV2Flags.hud then
+			applyPhoneCombatV6(false) -- UI-1: PC 줄 = 02 v6 자리 · 크기(옛 자리 다음에 덮어씀)
 		end
 		return
 	end
@@ -748,10 +782,13 @@ end
 applyLayout()
 player:GetAttributeChangedSignal("ForceTouchLayout"):Connect(applyLayout)
 screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-	if isTouchLayout() then
+	if isTouchLayout() or UiV2Flags.hud then -- UI-1: PC 줄도 HUD 배율 m을 다시
 		applyLayout()
 	end
 end)
+if UiV2Flags.hud then
+	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(applyLayout) -- 카메라 크기는 접속 직후 1 × 1일 수 있다
+end
 
 -- 19-2 [5]: 직업 전환 시 Q/E 아이콘·테두리색을 갱신한다(WeaponVisual.refresh와 같은
 -- ClassId Attribute 갱신 패턴). 직업을 안 골랐으면(빈 classId) 손대지 않는다 - 이전
@@ -821,6 +858,15 @@ local function setCooldown(slotId, remainingSeconds, totalSeconds)
 	end
 
 	local isCooling = remainingSeconds > 0 and totalSeconds > 0
+
+	if handle.v2 then -- UI-1 2단계 B v2: A 덮개 · 큰 남은 초 · 회색 그림 · 준비 반짝
+		handle.v2.set(remainingSeconds, totalSeconds, handle.iconImage)
+		if not isCooling and handle.wasCooling then
+			handle.v2.flash(handle.iconImage and handle.iconImage.Parent)
+		end
+		handle.wasCooling = isCooling
+		return
+	end
 
 	if isCooling then
 		handle.updateRing(remainingSeconds / totalSeconds)
