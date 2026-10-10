@@ -236,5 +236,5 @@ return {
 		cap = 25300,
 	},
 	modelTraining = true, -- QUEUE-10h Q6 G3: 수련 · 직업 능력 구매(강화가 쓰고 남은 골드 - EconSim.tryTrainWithGold)
-	trainingReserveEnhance = 1, -- 다음 강화 비용 × 이 배수는 남기고 산다(강화 우선)
+	trainingReserveEnhance = 0, -- 다음 강화 비용 × 이 배수는 남기고 산다(옛 1 = 강화 우선) - PROG-2B-1 1(GOLD-CURVE-1 G6 · 사용자 확정): 0 = "수련 먼저"(싼 수련부터 바로 삼 · 몹 HP 보정 "상한까지 산다"와 같은 정책)
 }

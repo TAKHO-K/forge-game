@@ -44,9 +44,9 @@ local okRun, err = pcall(function()
 	check("묶음으로 끝까지 = 상한 단계(최대치 동일)", okAll)
 	check("묶음 비용 합 = 단계 비용 합(경제 영향 0)", sameAll)
 	check("묶음 = 목표 %(수련 1% · 능력 5%) 이상 · 아니면 마지막 자투리", badAll == 0, tostring(badAll))
-	check("공격 수련 50단계 = 5번(+1%씩)", (function()
+	check("공격 수련 50단계 = 50번(PROG-2B-1 1: 단계 = +1% 그대로 한 번)", (function()
 		local cap = T.capFor(D.stats[1], 20000)
-		return cap == 50 and T.bundleLevels(D.stats[1], 0, cap, D.bundle.stat) == 10
+		return cap == 50 and T.bundleLevels(D.stats[1], 0, cap, D.bundle.stat) == 1
 	end)(), table.concat(info, " · "))
 	check("상한 = 묶음 0", T.bundleLevels(D.stats[1], 50, 50, D.bundle.stat) == 0)
 end)

@@ -99,8 +99,8 @@ do
 	end
 	local maxAtk = Training.bucketBonus({ attack = 50 }, {}, "bow", "attack")
 	local maxHp = Training.bucketBonus({ hp = 50 }, {}, "bow", "hp")
-	check("2-3 최대 효과 = 공격 +5% · 체력 +20% · 방어 +10%(결정 ① 수련 체감 우선 - 사용자 10-03)", math.abs(maxAtk - 0.05) < 1e-9 and math.abs(maxHp - 0.2) < 1e-9
-		and math.abs(Training.axisValues({ defense = 50 }, {}, "bow", "defensePercent")[1] - 0.1) < 1e-9)
+	check("2-3 최대 효과 = 공격 +50% · 체력 +50% · 방어 +25%(PROG-2B-1 1 · PROG-2A D1 · D2 - 옛 +5 · +20 · +10%)", math.abs(maxAtk - 0.5) < 1e-9 and math.abs(maxHp - 0.5) < 1e-9
+		and math.abs(Training.axisValues({ defense = 50 }, {}, "bow", "defensePercent")[1] - 0.25) < 1e-9)
 	check("2-4 상위 1% 하한 = 2,150h(결정 ① 수련 체감 우선 — 사용자 10-03 · 옛 2,200)", MODS.EconSimConfig.targets.topDesignMinHours == 2150, tostring(MODS.EconSimConfig.targets.topDesignMinHours))
 	local gf = MODS.BossData.mechanics and MODS.BossData.mechanics.gimmickFail
 	check("2-3 보스 = 실력: 기믹 실패 피해 = 최대 체력 비율(체력 수련으로 버틸 수 없음)", gf ~= nil and gf.maxHpFraction < 1 and gf.firstMaxHpFraction < 1, gf and ("%.2f · %.2f"):format(gf.firstMaxHpFraction, gf.maxHpFraction) or "nil")

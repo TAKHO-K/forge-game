@@ -81,14 +81,16 @@ local ok, err = pcall(function()
 	local want10k = GoldCost.cost(MonsterData.tier1.goldDrop * te.levelKills / te.slots * Data.killUnitScale, 10000, "transcend")
 	check("초월 칸 가격 = tier1 골드 × levelKills ÷ 10 × 1.76 × GoldCost(최고 스테이지) · 스테이지 오르면 수입과 같은 율", slot10k == want10k and near(All10.transcendSlotCost(12000) / slot10k, 1.001 ^ 2000, 1e-6), ("%.4g"):format(slot10k))
 
-	-- 고급 수련: 초월 무기 없으면 50(스테이지만으로 안 열림) · 있으면 50 + (s − 10,000) ÷ 100 · 15,000 = 100 · 51 ~ 60 비용 × 0.4
+	-- 고급 수련: 초월 무기 없으면 50(스테이지만으로 안 열림) · 있으면 50 + (s − 10,000) ÷ 100 · 15,000 = 100 · (PROG-2B-1) 51 ~ 60 할인 폐지 · 76 ~ 100 × 2
 	check("고급 수련 상한: 초월 없음 25,300 = 50 · 초월 9,000 = 50 · 10,150 = 51 · 15,000 = 100 · 30,000 = 100", All10.advancedCap(25300, false) == 50 and All10.advancedCap(9000, true) == 50
 		and All10.advancedCap(10150, true) == 51 and All10.advancedCap(15000, true) == 100 and All10.advancedCap(30000, true) == 100)
 	local ad = Data.advancedTraining
-	local c51, c60, c61 = All10.advancedCost(50, 12000), All10.advancedCost(59, 12000), All10.advancedCost(60, 12000)
+	local c51, c60, c76 = All10.advancedCost(50, 12000), All10.advancedCost(59, 12000), All10.advancedCost(75, 12000)
 	local unit = MonsterData.tier1.goldDrop * Data.killUnitScale
-	check("고급 수련 비용: 51 = 1,840 × 0.4 · 60 = 1,840 × 1.03^9 × 0.4 · 61 = 1,840 × 1.03^10(완만 끝)", c51 == GoldCost.cost(unit * ad.baseKills * ad.early.factor, 12000, "advTraining")
-		and c60 == GoldCost.cost(unit * ad.baseKills * ad.growth ^ 9 * ad.early.factor, 12000, "advTraining") and c61 == GoldCost.cost(unit * ad.baseKills * ad.growth ^ 10, 12000, "advTraining"))
+	-- PROG-2B-1 1(PROG-2A D3 · A안): 51 ~ 60 할인 폐지(× 1) · 76 ~ 100 × 2(75에서 계단)
+	check("고급 수련 비용: 51 = 1,840 · 60 = 1,840 × 1.03^9(할인 폐지) · 76 = 1,840 × 1.03^25 × 2(계단)", ad.early.factor == 1 and c51 == GoldCost.cost(unit * ad.baseKills, 12000, "advTraining")
+		and c60 == GoldCost.cost(unit * ad.baseKills * ad.growth ^ 9, 12000, "advTraining") and c76 == GoldCost.cost(unit * ad.baseKills * ad.growth ^ 25 * 2, 12000, "advTraining")
+		and All10.advancedCost(74, 12000) < c76 / 1.9)
 	check("고급 수련 공격 몫: 50 = 0 · 75 = +25% · 100 = +50% · 120(손상) = +50%", All10.advancedBonus(50) == 0 and near(All10.advancedBonus(75), 0.25) and near(All10.advancedBonus(100), 0.5) and near(All10.advancedBonus(120), 0.5))
 	-- 방어 수련
 	check("방어 수련: 초월 + 12,000 열림 · 11,999 · 초월 없음 = 닫힘 · 받는 피해 0.99^단계(30 상한)", All10.defenseUnlocked(12000, true) and not All10.defenseUnlocked(11999, true) and not All10.defenseUnlocked(20000, false)

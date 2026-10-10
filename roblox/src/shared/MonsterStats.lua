@@ -6,13 +6,15 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
 local BossCurveData = require(ReplicatedStorage.Shared.data.BossCurveData)
 local All10 = require(ReplicatedStorage.Shared.All10) -- QUEUE-ALL10 2-6 몹 곡선(전역 재조정 · 사람별 돌파 계수 - 스위치 끔 = 1)
+local ReferenceBuild = require(ReplicatedStorage.Shared.ReferenceBuild) -- PROG-2B-1 몹 기준 함수(새 힘만큼 HP 계수)
 
 local MonsterStats = {}
 
 -- 잡몹(구간 배율 포함). base = MonsterData tier 표(hp · attack · defense?) · prefix = 접두사 표(hpMultiplier) 또는 nil
 -- QUEUE-ALL10 2-6(D3 · D11): 전역 재조정 = All10.hpCurveFactor · attackCurveFactor(16,000부터) - 스위치 끄면 1이라 지금 곡선(골든 표 그대로).
+-- PROG-2B-1: × ReferenceBuild.hpFactor(기준 빌드 한 대 기대 피해 비 - 잡몹 · 보스 같은 계수)
 function MonsterStats.trashHp(baseHp, stage)
-	return InfiniteStage.getTrashHp(baseHp, stage) * All10.hpCurveFactor(stage)
+	return InfiniteStage.getTrashHp(baseHp, stage) * All10.hpCurveFactor(stage) * ReferenceBuild.hpFactor(stage)
 end
 
 function MonsterStats.trashAttack(baseAttack, stage)
@@ -39,7 +41,7 @@ end
 
 -- 보스(구간 배율 없음 · tier 압축 전 HP). BossRules.buildInstanceDataFrom이 부른다 - 인원 배수(partyHpMultiplier)는 BossRules가 계산해 넘긴다.
 function MonsterStats.bossHp(trashBase, stage, boss, hpMultiplierExtra, partyHpMultiplier)
-	return InfiniteStage.getMonsterHp(trashBase.hpUnscaled or trashBase.hp, stage) * boss.hpMultiplier * hpMultiplierExtra * partyHpMultiplier * All10.hpCurveFactor(stage)
+	return InfiniteStage.getMonsterHp(trashBase.hpUnscaled or trashBase.hp, stage) * boss.hpMultiplier * hpMultiplierExtra * partyHpMultiplier * All10.hpCurveFactor(stage) * ReferenceBuild.hpFactor(stage)
 end
 
 function MonsterStats.bossAttack(trashBase, stage, boss)

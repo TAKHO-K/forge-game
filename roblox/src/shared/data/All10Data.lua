@@ -63,7 +63,8 @@ return {
 		fromLevel = 51, maxLevel = 100, -- D8: 101 ~ = maxLevel만
 		perLevel = 0.01, -- 단계당 공격 +1%(영구 공격 버킷 합연산)
 		baseKills = 1840, growth = 1.03, -- 비용 = baseKills × growth^(단계 − 51)(제안서 마리분)
-		early = { untilLevel = 60, factor = 0.4 }, -- 결정 4 보완: 51 ~ 60 비용 × 0.4(계승 직후 골드가 바로 쓰이게)
+		early = { untilLevel = 60, factor = 1 }, -- 결정 4 보완: 51 ~ 60 비용 × 0.4(계승 직후 골드가 바로 쓰이게) → PROG-2B-1 1(PROG-2A D3 폐지): × 1(50 → 51 계단이 보이게 - 옛 = T 14 → 9분으로 싸짐)
+		lateStep = { fromLevel = 76, factor = 2 }, -- PROG-2B-1 1(PROG-2A A안): 76 ~ 100 비용 × 2(75에서 계단 - 25 · 50 · 75에서 눈에 띄게 비싸짐)
 		capStart = 10000, capStep = 100, -- 단계 상한 = 50 + (계정 최고 스테이지 − capStart) ÷ capStep(15,000에 100) · 초월 무기 없으면 50
 	},
 

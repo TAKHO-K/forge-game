@@ -36,7 +36,17 @@ end
 
 -- 다음 단계(level → level + 1) 가격(골드) - 몇 마리분 × GoldCost(계정 최고 스테이지)
 function Training.killsFor(def, level)
-	return def.baseKills * (def.levelGrowth or TrainingData.levelGrowth) ^ (level or 0) -- QUEUE-ALL9B 2: 항목별 증가율(수련 = 1.08)
+	if def.priceBands then -- PROG-2B-1 1: 구간표(다음 단계가 속한 구간의 시작 마리분 × 증가율^(단계 − 구간 시작)) - 25 · 50에서 계단
+		local nextLevel = (level or 0) + 1
+		local band = def.priceBands[1]
+		for _, b in ipairs(def.priceBands) do
+			if nextLevel >= b.fromLevel then
+				band = b
+			end
+		end
+		return band.kills * band.growth ^ (nextLevel - band.fromLevel)
+	end
+	return def.baseKills * (def.levelGrowth or TrainingData.levelGrowth) ^ (level or 0) -- QUEUE-ALL9B 2: 항목별 증가율(직업 능력 = levelGrowth)
 end
 
 function Training.costFor(def, level, bestStage)

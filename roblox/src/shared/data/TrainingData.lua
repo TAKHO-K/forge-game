@@ -18,10 +18,14 @@ return {
 	--   근거 = EconSim(docs/phase/QUEUE-ALL9B-report.md 3절): 캐주얼 스테이지 1,000 ≈ 37 ~ 39단계 · 50단계 ≈ 스테이지 1,800 · 상위 1% 25,300 = 공격 +3.75%에서 2,242h(통과) ·
 	--   공격 +5%면 2,160h · +7.5%면 2,191h(하한 2,200 밖) - 공격 상한은 상위 1% 관문이 정한다(결정 필요). 체력 · 방어는 처치 속도에 안 걸려 크게 둘 수 있다.
 	--   보스 = 실력: 기믹 실패 피해는 최대 체력 비율(BossData.mechanics.gimmickFail 55 · 85% · 방어 무시)이라 체력 · 방어 수련으로 패턴을 버틸 수 없다.
+	-- PROG-2B-1 1(PROG-2A D1 A안 · D2 · D3 · GOLD-CURVE-1 G6 - 사용자 확정): 단계당 공격 · 체력 +1% · 방어 +0.5%(합연산 그대로) · 최대 50 · 상한 = 최고 스테이지 ÷ 20 그대로.
+	--   가격 = priceBands(구간표 - 다음 단계 L이 속한 구간 { fromLevel, kills, growth } → kills × growth^(L − fromLevel)마리분 × GoldCost) - 1 ~ 25 = 40 × 1.04^(L − 1)(0.7 ~ 1.7분) ·
+	--   26 ~ 50 = 400 × 1.04^(L − 26)(6.7 ~ 17분 · 25 → 26 계단 ×10). 1 ~ 50 합 18,324마리분(옛 32 × 1.08^L 합 18,361과 같음). 51 ~ 100 = 고급 수련(All10Data.advancedTraining).
+	--   몹 HP 보정 = shared/ReferenceBuild(중앙값이 상한까지 산다고 보고 새 힘만큼 곱함 - 안 하면 상위 1% 하한 밖). 옛 값(공격 0.1% · 체력 0.4% · 방어 0.2% · 32 × 1.08^L) = ReferenceBuildData.legacyTraining.
 	stats = {
-		{ id = "attack", name = "공격 수련", bucket = "attack", perLevel = 0.001, maxLevel = 50, stagesPerLevel = 20, levelGrowth = 1.08, baseKills = 32 },
-		{ id = "hp", name = "체력 수련", bucket = "hp", perLevel = 0.004, maxLevel = 50, stagesPerLevel = 20, levelGrowth = 1.08, baseKills = 32 },
-		{ id = "defense", name = "방어 수련", axis = "defensePercent", perLevel = 0.002, maxLevel = 50, stagesPerLevel = 20, levelGrowth = 1.08, baseKills = 32 },
+		{ id = "attack", name = "공격 수련", bucket = "attack", perLevel = 0.01, maxLevel = 50, stagesPerLevel = 20, priceBands = { { fromLevel = 1, kills = 40, growth = 1.04 }, { fromLevel = 26, kills = 400, growth = 1.04 } } },
+		{ id = "hp", name = "체력 수련", bucket = "hp", perLevel = 0.01, maxLevel = 50, stagesPerLevel = 20, priceBands = { { fromLevel = 1, kills = 40, growth = 1.04 }, { fromLevel = 26, kills = 400, growth = 1.04 } } },
+		{ id = "defense", name = "방어 수련", axis = "defensePercent", perLevel = 0.005, maxLevel = 50, stagesPerLevel = 20, priceBands = { { fromLevel = 1, kills = 40, growth = 1.04 }, { fromLevel = 26, kills = 400, growth = 1.04 } } },
 	},
 	-- 직업 고유 능력: 직업 DPS 최저 대비 ≤ 1.32 유지(K1 규칙) - 네 직업 모두 공격 · 체력 버킷은 같은 값, 직업 축만 다르다(속도 축은 상한 작게).
 	classAbilities = {

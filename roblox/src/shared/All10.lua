@@ -125,6 +125,9 @@ function All10.advancedCost(level, bestStage)
 	if d.early and nextLevel <= d.early.untilLevel then
 		kills *= d.early.factor
 	end
+	if d.lateStep and nextLevel >= d.lateStep.fromLevel then -- PROG-2B-1 1: 75에서 계단
+		kills *= d.lateStep.factor
+	end
 	return scaledGold(kills, bestStage, "advTraining")
 end
 
