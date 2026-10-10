@@ -500,8 +500,12 @@ local function tryBossBasic(model, data, monsterPosition, targetPlayer, targetRo
 			if typeof(v.player) ~= "Instance" or v.player.Parent then
 				if (PlayerState.getHp(v.player) or 0) > 0 then
 					local far = Reach.horizontalDistance(v.root.Position, monsterPosition) > data.attackRangeStuds
-					local multiplier = (data.basicAttackDamageMultiplier or 1) * (far and (data.attackFarMultiplier or 1) or 1) * (v.scale or 1)
-					applyHitToPlayer(v.player, MonsterState.getAttackFor(model, TutorialState.getMonsterStage(v.player)), nil, multiplier)
+					local PlayerCC = require(script.Parent.PlayerCC) -- BOSS-NIGHT-3 2단계: 수정 표식 × 2 · 평타 = 약한 경직(전 보스)
+					local multiplier = (data.basicAttackDamageMultiplier or 1) * (far and (data.attackFarMultiplier or 1) or 1) * (v.scale or 1) * PlayerCC.markMultiplier(v.player, data.id)
+					local dealt = applyHitToPlayer(v.player, MonsterState.getAttackFor(model, TutorialState.getMonsterStage(v.player)), nil, multiplier)
+					if (dealt or 0) > 0 and BossData.mechanics.cc.stagger.basicAttack then
+						PlayerCC.stagger(v.player)
+					end
 				end
 			end
 		end

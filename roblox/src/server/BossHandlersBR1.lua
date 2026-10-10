@@ -1141,6 +1141,7 @@ BossHandlersBR1.boomerang = {
 		-- 맞음 기록 = 한 시전 전체가 같이 쓴다: 붙어 선 두 사람의 줄(인당 · 리뷰 2) · 분신 3줄(BOSS-NIGHT-3 1-① VERIFY-1 상-1 - 옛 = 줄마다 따로라 근접 유저가 3줄 × 가고 오며 최대 6타)이 겹쳐도
 		--   1인 가는 길 1회 · 오는 길 1회
 		local sharedHit = { out = {}, back = {} }
+		st.boomVictims = {} -- BOSS-NIGHT-3 2단계: 시전이 끝난 뒤 afterCastOnHit(수정 표식)을 걸 사람
 		for _, base in ipairs(bases) do
 			for k = 0, (skill.directions or 1) - 1 do
 				local deg = base + skill.stepDeg * k
@@ -1188,11 +1189,17 @@ BossHandlersBR1.boomerang = {
 						kit.applySkillDamage(c.model, c.data, skill, v.player)
 						kit.judgeEnd(c, { kind = "circle", centers = { Vector3.new(at.X, st.floorY, at.Z) }, radius = skill.halfWidthStuds, inner = 0 })
 						kit.debugEvent("boomerangHit", { player = v.player, leg = leg, at = c.now })
+						kit.runHitEffects(c, skill.onHit, v, at, 1) -- BOSS-NIGHT-3 2단계 둔화
+						st.boomVictims[v.player] = v
 					end
 				end
 			end
 		end
 		if not running then
+			for _, v in pairs(st.boomVictims or {}) do -- BOSS-NIGHT-3 2단계: 수정 표식 = 시전이 끝난 뒤(분신 자신의 피해엔 × 2 없음)
+				kit.runHitEffects(c, skill.afterCastOnHit, v, st.boomOrigin, 1)
+			end
+			st.boomVictims = nil
 			kit.send(st, "boomEnd", { center = Vector3.new(st.boomOrigin.X, st.floorY, st.boomOrigin.Z) })
 			kit.endSkill(c.model, st, c.data, c.now)
 		end

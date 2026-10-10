@@ -50,6 +50,7 @@ local BossArenaContainment = require(script.Parent.BossArenaContainment) -- P3d 
 local HeightGuard = require(script.Parent.HeightGuard) -- G2a: 넉백 · 회오리 동안 서버 높이 검증 예외 → M1-2c 발사 허가(설계 높이까지 · 착지하면 끝)
 local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
 local PlayerStun = require(script.Parent.PlayerStun) -- BR1-3 강화 평타 기절
+local PlayerCC = require(script.Parent.PlayerCC) -- BOSS-NIGHT-3 2단계 경직 · 넉백/띄움 면역 · 둔화 · 수정 표식
 -- BR1: 새 조각(부채꼴 · 투사체 · 소용돌이) · 대공 잡기 · 환경 트랙 - 이 파일의 공용 함수 표(kit)를 받아 HANDLERS에 꽂는다.
 local BossHandlersBR1 = require(script.Parent.BossHandlersBR1)
 local BossAirGrab = require(script.Parent.BossAirGrab)
@@ -246,6 +247,9 @@ function BossPatterns.launchPlayer(player, from, heightStuds, distanceStuds, sou
 	end
 	local weight = BossMechanics.weightFactorOf(player)
 	local height, distance = heightStuds / weight, distanceStuds / weight
+	if not PlayerCC.tryLaunch(player, height, JumpMath.launchAirSeconds(height)) then -- BOSS-NIGHT-3 2단계 넉백/띄움 면역
+		return false
+	end
 	HeightGuard.grantLaunch(player, height, JumpMath.launchAirSeconds(height) + 0.5, source or "넉백")
 	debugEvent("launch", { player = player, coHits = 1, heightStuds = height, distanceStuds = distance, from = from, source = source })
 	sendTo(player, "launch", { from = from, heightStuds = height, distanceStuds = distance })
@@ -316,7 +320,7 @@ local function applySkillDamage(model, data, skill, player)
 	if damage.kind == "maxHp" then
 		dealt = BossMechanics.applyGimmickDamage(model, player, damage.fraction, skill.damageLabel)
 	else
-		dealt = PlayerDamage.applyHit(player, data.attack, skill.damageLabel, damage.multiplier)
+		dealt = PlayerDamage.applyHit(player, data.attack, skill.damageLabel, damage.multiplier * (skill.ignoresCrystalMark and 1 or PlayerCC.markMultiplier(player, data.id))) -- BOSS-NIGHT-3 2단계 수정 표식
 		if dealt > 0 then
 			BossTrap.noteSkillHit(player) -- 29-5: 예고가 있는 피격은 누르고 있던 구출을 처음으로 돌린다(%피해 쪽은 BossMechanics가 부른다)
 		end
@@ -797,12 +801,26 @@ local function runHitEffects(c, effects, v, from, coHits)
 				send(c.st, "playerStun", { userId = typeof(v.player) == "Instance" and v.player.UserId or nil, seconds = effect.seconds })
 				debugEvent("playerStun", { player = v.player, at = c.now, seconds = effect.seconds })
 			end
+		elseif effect.type == "stagger" then -- BOSS-NIGHT-3 2단계: 경직(이동 입력만 · 대시 됨)
+			if PlayerCC.stagger(v.player) then
+				debugEvent("playerStagger", { player = v.player, at = c.now })
+			end
+		elseif effect.type == "slow" then
+			PlayerCC.slow(v.player)
+		elseif effect.type == "crystalMark" then
+			PlayerCC.crystalMark(v.player, c.data.id)
 		elseif effect.type == "launch" and not BossTrap.isTrapped(v.player) and not BossArenaContainment.isProtected(v.player)
 			and not (typeof(v.player) == "Instance" and require(script.Parent.UltimateService).isUnstoppable(v.player)) then -- K1 대검 파괴의 화신: 넉백 면역 -- P3d B2: 맵 이탈 복귀 직후 보호 중이면 안 뜬다
 			c.st.lastLaunch = { player = v.player, at = c.now, effect = effect } -- 자동 검증이 읽는다
 			-- 29-5 탱커 훅 ③: 무게 계수(지금은 전원 1.0 - BossMechanics.weightFactorOf). 무거울수록 낮게·가까이·짧게 뜬다 -
 			-- 높이·거리·체공·면역 시간을 계수로 나눈다(조작을 잃는 시간이 짧아지면 면역도 같이 짧아져야 공짜 면역이 안 된다).
 			local weight = BossMechanics.weightFactorOf(v.player)
+			local height = effect.heightStuds + (effect.extraHeightPerCoHit or 0) * math.max((coHits or 1) - 1, 0)
+			height = math.min(height, effect.maxHeightStuds or height) / weight
+			-- BOSS-NIGHT-3 2단계: 넉백/띄움 면역(높이로 나눔 · 체공 + 붙잡힘 뒤부터) - 던짐(escape)은 잡기의 한 동작이라 면역을 안 본다
+			if not PlayerCC.tryLaunch(v.player, height, JumpMath.launchAirSeconds(height) + (effect.holdSeconds and effect.holdSeconds / weight or 0), effect.escape) then
+				continue
+			end
 			-- 29-4 회오리(holdSeconds): 떠서 도는 동안은 조작을 잃는다 - 그동안은 맞지 않는다(immuneSeconds). 이 스킬의 피해는 이미 들어갔다.
 			if effect.immuneSeconds then
 				PlayerState.setInvulnerableUntil(v.player, effect.immuneSeconds / weight, "launchHold") -- P3d-F B6: 출처별 무적
@@ -814,8 +832,6 @@ local function runHitEffects(c, effects, v, from, coHits)
 			end
 			-- P3c A4: 함께 맞은 사람이 많을수록 높이 뜬다(상한 maxHeightStuds). A5: 높이 · 거리 상한과 착지 경계는 클라가 같은 함수(ArenaContainment.limitLaunch)로
 			-- 자른다 - 서버는 구역을 실어 보내고, 검증 계측에는 서버에서 같은 계산을 한 값을 남긴다.
-			local height = effect.heightStuds + (effect.extraHeightPerCoHit or 0) * math.max((coHits or 1) - 1, 0)
-			height = math.min(height, effect.maxHeightStuds or height) / weight
 			local distance = effect.distanceStuds / weight
 			-- 한가운데서 맞으면(판정 원이 발밑) 클라가 아무 방향으로나 튕긴다 - 계측은 가장 나쁜 방향(아레나 바깥쪽)으로 잘린 거리를 남긴다.
 			local away = v.root.Position - from

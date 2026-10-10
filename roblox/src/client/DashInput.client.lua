@@ -91,6 +91,10 @@ local function requestDash()
 	if UIManager.isInputBlocked() then
 		return
 	end
+	-- BOSS-NIGHT-3 2단계: 서버와 같은 조건 - 기절 중 · 띄워진 직후(CCDashAt 전)엔 대시 안 냄(쿨다운도 안 씀)
+	if player:GetAttribute("BossStunned") or workspace:GetServerTimeNow() < (player:GetAttribute("CCDashAt") or 0) then
+		return
+	end
 	if WeaponVisual.bufferInput(requestDash) then
 		return -- W1: 일어나는 중 = 끝나는 순간 낸다
 	end

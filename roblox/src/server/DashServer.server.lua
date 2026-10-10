@@ -44,6 +44,12 @@ local function handleDash(player, mode, tilt, dir)
 		dashResult:FireClient(player, { ok = false, reason = "trapped" })
 		return
 	end
+	-- BOSS-NIGHT-3 2단계(VERIFY-2 정정 3 · 5): 기절 중 = 대시 거절(옛 = 쿨만 쓰고 보호 창이 열렸다) · 띄워진 직후(airborne.dashAfterSeconds 전) = 거절 - 띄움 회복은 그 뒤 공중 대시로만. 클라 DashInput도 같은 조건.
+	local ccReason = require(script.Parent.PlayerCC).dashBlockedReason(player)
+	if ccReason then
+		dashResult:FireClient(player, { ok = false, reason = ccReason })
+		return ccReason
+	end
 
 	local now = os.clock()
 	local charges = PlayerProfile.getDashCharges(player)

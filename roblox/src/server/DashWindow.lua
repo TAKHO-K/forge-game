@@ -14,6 +14,9 @@ local startedAt = {} -- [Player] = os.clock()
 function DashWindow.begin(player, durationSeconds)
 	startedAt[player] = os.clock()
 	PlayerState.setIncomingDamageMultiplierUntil(player, DashConfig.incomingDamageMultiplier, durationSeconds, DashWindow.sourceKey)
+	if typeof(player) == "Instance" then
+		player:SetAttribute("StatusDashGuardUntil", workspace:GetServerTimeNow() + durationSeconds) -- BOSS-NIGHT-3 2단계 상태 아이콘(status-dash-guard · StatusIconData)
+	end
 end
 
 -- 지금 대시 창 안인가(피해 감소 · 통과 판정 공용)

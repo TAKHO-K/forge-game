@@ -12,6 +12,7 @@
 | 1-⑤e 장판 사다리꼴 · 희미한 빔 늘 이음(사용자 10-10) | 끝 | `00ddeea1` | 3 | 0 |
 | 1-⑤f 레이저 = 홀 보석 높이(A안 · 사용자 10-10) | 끝 | `c69d46a0` | 9 | 0 |
 | addendum-2 17 보스 입장 · 다시 도전 = 체력 가득 + 대시 쿨 초기화 | 끝 | `e68fcf4f` | 4 | 0 |
+| 2 CC 체계(+ addendum-2 19 · VERIFY-2 정정 3 ~ 6) | 끝 | (커밋 뒤 기록) | 15 | 0 |
 
 ## 0단계 — 현황 통합표
 표 = `docs/design/boss-bible/BOSS-NIGHT-3/00_inventory.md`(6보스 × 79줄 · 평타 포함) · 덤프 하네스 = `roblox/tools/harness/boss_inventory_dump.luau`.
@@ -163,3 +164,33 @@ Studio 실측(스테이지 100): 캐릭터 머리 위 = 발 위 5.34 · 홀 보�
 
 Studio 확인(수동 Play · `/gg bossentry 45` = 실제 `spawnFor` · `DashHook` = 실제 대시 판정): 체력 0.50 → **1.00**(HUD 속성 1.00) · 대시 직후 거절(busy) → 입장 약 1.5초 뒤 **ok**(쿨 8초라 초기화 없으면 cooldown). 다시 도전 경로는 같은 함수를 부름(Studio 미실행 - 처치 뒤 잔류가 필요해 6단계 투표에서 같이 확인).
 검증: `run_all.sh` 36종 전부 통과.
+
+## 2단계 — CC 체계 (CC-DEFS 10-10 저녁판 = addendum-2 19 기준)
+
+확정표 = `docs/design/boss-bible/CC-DEFS.md`(정의 · 보스 패턴별 현황 · 솔로 자동 해제 보고). 값 = `BossData.mechanics.cc` 한 곳 · 서버 = 새 `server/PlayerCC.lua`.
+
+| 항목 | 전 | 후 |
+|---|---|---|
+| 경직 | 없음 | 0.2초 이동 입력만(걷기 배율 0 · 루트 고정 없음) · 경직 면역 0.8(기절 면역과 따로) · **대시 됨** |
+| 보스 평타 | CC 없음 | 맞으면(피해 > 0) 경직 · 6보스(`stagger.basicAttack`) |
+| 수정 미사일 마지막 발 | 기절 0.25 + 기절 면역 2.0 | 경직 |
+| 넉백 / 띄움 | 같은 `launch` · 면역 없음(일어나기 무적 중 다시 뜸) | 높이 ≥ 5 = 띄움(면역 1.0 · 넉백도 막음) · < 5 = 넉백(면역 0.5) · 면역 = 체공(+ 붙잡힘) 뒤부터 · 던짐(escape) 제외 · 입구 2곳(`runHitEffects` · `launchPlayer`) |
+| 띄움 회복 | 0초부터 대시 | 0.3초 전 대시 거절(서버 `launched` + 클라 `CCDashAt`) · 그 뒤 공중 대시(쿨 공유) · 이단 점프 회복 없음 |
+| 기절 중 대시 | 서버가 안 막음(쿨만 쓰고 보호 창 열림) | 서버 거절 `stunned` · 클라 `BossStunned`면 안 냄 |
+| 둔화 | 없음 | 걷기만 × 0.7 · 3초(이속 보너스와 따로 = 대시 거리 그대로) |
+| 수정 표식 | 없음 | 건 보스 피해만 × 2 · 3초 · 새로 고침만 · 분신 돌격 = 맞을 때 둔화 + 시전 끝난 뒤 표식(분신 피해엔 × 2 없음 `ignoresCrystalMark`) |
+| 상태 아이콘 데이터 | slow · crystalMark 자리만(reserved) | stagger · knockback · airborne · slow · crystalMark · dashGuard = Attribute `Status*Until` + v8 아이콘 이름(UI 줄은 나중) |
+| 짧은 빙결 · 석화 | — | 만들지 않음(필요한 패턴 없음 · "빙결" 덫 이름 유지) |
+
+VERIFY-2 정정(2단계 몫):
+| 번호 | 내용 | 결과 |
+|---|---|---|
+| 3 | 경직 = PlayerStun 안 씀 · Anchor 금지 · 대시 허용 / 기절 중 대시 서버 거절 | 반영함 |
+| 4 | 넉백/띄움 나누는 기준 표 · 면역 검사 두 입구 | 반영함(기준 = 높이 5 · 분포 표 = CC-DEFS.md) |
+| 5 | 띄움 회복 = 공중 대시만 · 0.3초 전 거절(서버 + 클라) · 이단 점프 회복 없음 | 반영함 |
+| 6 | 둔화 = 이속 보너스 말고 걷기만 따로 | 반영함(`setMoveSpeedMultiplier` 출처 `slow`) |
+
+검증:
+- 하네스 `boss_feel` 13/13(새 8: 분신 돌격 둔화 → 표식 순서 · 경직 면역 분리 · 기절 대시 거절 · 넉백/띄움 면역 · 띄움 0.3초 · 둔화 · 표식 · 미사일 경직 - 실제 `PlayerCC` · `PlayerStun` · `PlayerState` + 가짜 시계) · `run_all.sh` 36종 전부 통과 · `boss_framework_test` 97/97.
+- Studio(수동 Play · `/gg cc selftest` = 실제 캐릭터 · `launchPlayer` · `DashHook`): 걷기 24.0 → 경직 0.0(대시 ok) → 0.35초 뒤 24.0 · 다시 경직 = 면역 거절 · 둔화 16.8 → 3초 뒤 24.0 · 띄움 직후 대시 `launched` → 0.35초 `ok` · 띄움 면역 중 넉백 = 거절 · 기절 중 대시 `stunned` · Attribute 3종 켜짐 · 클라 화면 걷기 0 확인 · 게임 스크립트 오류 0줄.
+- 사용자 결정 필요: 솔로 덫 9초 · 가둠 5초 · 대공 잡기 6초 단축 여부(CC-DEFS.md 끝) · 수정 표식 치유사 정화 여부.

@@ -171,6 +171,20 @@ local MECHANICS = {
 	-- 다시 기절하지 않는다(연속 기절 방지). 같은 면역을 대공 잡기의 얼림도 본다 · 잡힘(모든 BossTrap)이 풀린 뒤에도 면역이 붙는다 - "기절 → 기절"이 이어지지 않는다.
 	stun = { immuneSeconds = 2.0 },
 
+	-- BOSS-NIGHT-3 2단계 CC(docs/design/boss-bible/CC-DEFS.md · server/PlayerCC). 강도 = 경직 < 넉백 < 띄움 < 기절 - 면역은 강도별로 따로(경직 면역은 기절을 안 막고 기절 면역은 경직을 안 막는다).
+	--   stagger = 이동 입력만 seconds(걷기 배율 0 - 루트 고정 없음 · 대시 됨) · 뒤 immuneSeconds 경직 면역 · basicAttack = 보스 평타가 맞히면 경직(전 보스)
+	--   launch 나눔: heightStuds ≥ airborneMinHeightStuds = 띄움 · 아래 = 넉백. 면역 = 체공(+ 붙잡힘)이 끝난 뒤 immuneSeconds(띄움 면역은 넉백도 막는다) · escape(던짐)는 면역을 안 본다(잡기의 한 동작)
+	--   airborne.dashAfterSeconds = 띄워진 뒤 이 시간 전엔 대시 거절(띄움 회복 = 공중 대시만 · 쿨 공유)
+	--   slow = 걷기만 × walkMultiplier(대시 거리 · 보호 창 그대로) · 새로 고침만 / crystalMark = 표식을 건 보스가 주는 피해 × multiplier(새로 고침만 · 상한 = multiplier) · 시전이 끝난 뒤 걸림
+	cc = {
+		stagger = { seconds = 0.2, immuneSeconds = 0.8, basicAttack = true },
+		knockback = { immuneSeconds = 0.5 },
+		airborne = { immuneSeconds = 1.0, dashAfterSeconds = 0.3 },
+		airborneMinHeightStuds = 5,
+		slow = { seconds = 3.0, walkMultiplier = 0.7 },
+		crystalMark = { seconds = 3.0, multiplier = 2 },
+	},
+
 	-- BR1 핵심 기믹 실패(설계 §3): 55% → 85% · 쉴드 무시. 기믹 판정 실패(resolveGimmick)에만 쓴다 - 다른 %최대체력 피해(돌진 · 구덩이 · 반사 · 분신)는
 	-- 옛 발동당 상한(gimmickFailMaxHpFraction 55%)에 그대로 묶인다. 85%는 "실패 + 강한 공격 한 번 = 죽음"이면서 단독으로는 죽지 않는 값(즉사는 K 단계).
 	-- 그 보스전에서 **처음 보는** 기믹의 실패는 firstMaxHpFraction(옛 55% - 배우는 한 번), 두 번째부터 maxHpFraction(85%). 난이도 모형(첫 도전 전멸률 목표 30 ~ 50%)에서
@@ -1088,6 +1102,7 @@ local SPECIES = {
 				telegraphSeconds = 2.2, directions = 3, stepDeg = 25, centered = true, halfWidthStuds = 3.5,
 				outSpeedStuds = 45, backSpeedStuds = 45, turnSeconds = 0.4, arenaMarginStuds = 4,
 				damage = { kind = "attack", multiplier = 2.8 }, damageLabel = "분신 돌격",
+				onHit = { { type = "slow" } }, afterCastOnHit = { { type = "crystalMark" } }, ignoresCrystalMark = true, -- BOSS-NIGHT-3 2단계: 맞으면 둔화 · 시전이 끝난 뒤 수정 표식(분신 자신의 피해엔 × 2 없음)
 			},
 		},
 	},

@@ -1699,6 +1699,35 @@ local function handleCommand(player, args)
 		local dashAfter = dashHook and dashHook:Invoke(player, false)
 		print(("BOSSENTRY|spawned %s|hpBefore %.2f|dash1 %s|dashBeforeEntry %s|hpAfterEntry %.2f|dashAfterEntry %s|hpAttr %.2f"):format(tostring(spawned), before, tostring(first), tostring(blocked), after, tostring(dashAfter), (player:GetAttribute("Hp") or -1) / maxHp))
 		reply(player, ("보스 입장 확인: 체력 %.0f%% → %.0f%% · 대시 입장 전 %s → 입장 뒤 %s"):format(before * 100, after * 100, tostring(blocked), tostring(dashAfter)))
+	elseif sub == "cc" and args[2] == "selftest" then
+		-- BOSS-NIGHT-3 2단계: 실제 캐릭터에 경직 · 둔화 · 띄움(launchPlayer) · 기절 → 걷기 속도 · 대시(DashHook = 실제 판정) 기록
+		local PlayerCC = require(script.Parent.PlayerCC)
+		local dashHook = game:GetService("ServerStorage"):FindFirstChild("DashHook")
+		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		local walk0 = humanoid.WalkSpeed
+		local staggered = PlayerCC.stagger(player)
+		local walkStagger = humanoid.WalkSpeed
+		local dashInStagger = dashHook:Invoke(player, true)
+		task.wait(0.35)
+		local walkAfter = humanoid.WalkSpeed
+		local again = PlayerCC.stagger(player)
+		task.wait(1)
+		PlayerCC.slow(player)
+		local walkSlow = humanoid.WalkSpeed
+		task.wait(3.2)
+		local walkSlowEnd = humanoid.WalkSpeed
+		local launched = require(script.Parent.BossPatterns).launchPlayer(player, root.Position + Vector3.new(4, 0, 0), 6, 8, "CC 시험")
+		local dashEarly = dashHook:Invoke(player, true)
+		task.wait(0.35)
+		local dashLate = dashHook:Invoke(player, true)
+		local relaunch = require(script.Parent.BossPatterns).launchPlayer(player, root.Position + Vector3.new(4, 0, 0), 3, 8, "CC 시험")
+		task.wait(3)
+		require(script.Parent.PlayerStun).stun(player, 0.7)
+		local dashStun = dashHook:Invoke(player, true)
+		print(("CCSELF|walk %.1f|stagger %s walk %.1f dash %s|0.35s walk %.1f restagger %s|slow walk %.1f → %.1f|launch %s dash0.0 %s dash0.35 %s knockbackDuringAirImmune %s|stunDash %s|attrs %s %s %s")
+			:format(walk0, tostring(staggered), walkStagger, tostring(dashInStagger), walkAfter, tostring(again), walkSlow, walkSlowEnd, tostring(launched), tostring(dashEarly), tostring(dashLate), tostring(relaunch), tostring(dashStun),
+			tostring(player:GetAttribute("StatusStaggerUntil") ~= nil), tostring(player:GetAttribute("StatusAirborneUntil") ~= nil), tostring(player:GetAttribute("StatusDashGuardUntil") ~= nil)))
 	elseif sub == "ult" then
 		-- K1 궁극기: /gg ult fill(게이지 100) · /gg ult state · /gg ult forge(위조 요청 거부 검사 - 게이지 0 요청 · 활 먼 조준)
 		local Ultimate = require(script.Parent.UltimateService)

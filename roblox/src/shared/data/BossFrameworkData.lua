@@ -223,7 +223,7 @@ D.v3 = {
 				targetRule = "missileTarget", preferBeyondStuds = 12, reflectable = false,
 				lockOnFirstHit = { turnRateDeg = 900 }, passThrough = "dash",
 				keepCountByDamage = true, -- BOSS-NIGHT-3 1-②: 스테이지 곡선 = 5발 유지 · 한 발 피해 × (곡선 개수 ÷ 5)(1 ~ 100단계 합계 0.60 → 0.36 · BossFramework.applyV3 withCurve)
-				lastOnHit = { { type = "stun", seconds = 0.25 } },
+				lastOnHit = { { type = "stagger" } }, -- BOSS-NIGHT-3 2단계: 옛 기절 0.25(+ 기절 면역 2.0) → 경직
 				aimMarkSeconds = 0.6,
 				damage = { kind = "attack", multiplier = 0.12 }, damageLabel = "마법 미사일",
 			},
