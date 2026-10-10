@@ -177,6 +177,14 @@ function BossGateWindow.render()
 	local head = label(win, Text.get("ui1.gate.head", { stage = tostring(current.stage or "-"), zone = zone and zone.theme or "" }), px(phone and 12 or 16), color)
 	head.Position = UDim2.fromOffset(x0, y)
 	head.Size = UDim2.fromOffset(w, phone and 16 or 22)
+	local HELP = require(ReplicatedStorage.Shared.data.UiV2Flags).help
+	if HELP then -- UI-1b 1절 3: 파티 인원 · 처음 보는 기술 안내 = 머리 줄 옆 [?]
+		local firstMeet = current.firstMeet
+		local hb = require(script.Parent.Parent.ui.v2.HelpButton).besideLabel(head, "bossGate", { rows = function()
+			return firstMeet and { { Text.get("ui1b.help.row.first"), Text.get("ui1.gate.firstMeet") } } or {}
+		end })
+		hb.Size = UDim2.fromOffset(phone and 22 or 28, phone and 22 or 28)
+	end
 	y += phone and 16 or 26
 	local name = label(win, Text.name(boss.displayName or current.bossId), px(phone and 22 or 44), Color3.new(1, 1, 1), "korean")
 	name.Position = UDim2.fromOffset(x0, y)
@@ -231,7 +239,7 @@ function BossGateWindow.render()
 	bt.TextYAlignment = Enum.TextYAlignment.Top
 	bt.TextTruncate = Enum.TextTruncate.AtEnd
 	y += P.bandH + P.gap
-	if current.firstMeet then
+	if current.firstMeet and not HELP then
 		local note = label(win, Text.get("ui1.gate.firstMeet"), px(phone and 11 or 15), hex(L.colors.info))
 		note.Name = "FirstMeetNote"
 		note.Position = UDim2.fromOffset(x0, y)
@@ -241,6 +249,7 @@ function BossGateWindow.render()
 	local party = label(win, Text.get("ui1.gate.partyHint"), px(phone and 11 or 14), Color3.fromRGB(150, 156, 180))
 	party.Position = UDim2.fromOffset(x0, y)
 	party.Size = UDim2.fromOffset(P.w - x0 - P.pad, phone and 14 or 18)
+	party.Visible = not HELP
 	-- 버튼: [파티 찾기](비활성 + 이유) [혼자 도전](노랑)
 	local bw, bh = P.button[1], P.button[2]
 	local by = P.h - P.pad - bh - (phone and 0 or 18)

@@ -7,6 +7,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local QuestData = require(ReplicatedStorage.Shared.data.QuestData)
+local HELP = require(ReplicatedStorage.Shared.data.UiV2Flags).help -- UI-1b 1절 3: 안내 줄 = [?]
 local SeasonBoardData = require(ReplicatedStorage.Shared.data.SeasonBoardData)
 local TitleData = require(ReplicatedStorage.Shared.data.TitleData)
 local CosmeticSlotData = require(ReplicatedStorage.Shared.data.CosmeticSlotData)
@@ -231,7 +232,7 @@ local function renderWeek(body, P, phone)
 	if not att then
 		return cells
 	end
-	if not phone then
+	if not phone and not HELP then -- UI-1b 1절 3: 안내 줄 = 제목 옆 [?] 안
 		local note = label(body, Text.get("ui1.att.note"), px(16), Color3.fromRGB(200, 204, 220))
 		note.Position = UDim2.fromOffset(P.pad, P.note.y)
 		note.Size = UDim2.new(1, -P.pad * 2, 0, P.note.h)
@@ -299,6 +300,7 @@ local function renderSeason(body, P, phone)
 		cnt.Position = UDim2.fromOffset(P.pad + 430, T.y)
 		cnt.Size = UDim2.fromOffset(70, T.h)
 		local note = label(body, Text.get("ui1.att.seasonNote", { n = tostring(SeasonBoardData.after.sparkleShard or 1) }), px(14), Color3.fromRGB(150, 156, 180))
+		note.Visible = not HELP -- UI-1b 1절 3: = [?] 안
 		note.Position = UDim2.fromOffset(P.pad + 500, T.y)
 		note.Size = UDim2.new(1, -(P.pad * 2 + 500), 0, T.h)
 		note.TextTruncate = Enum.TextTruncate.AtEnd
@@ -467,10 +469,18 @@ function AttendanceV2.render()
 	local title = label(win, Text.get("ui1.att.title"), px(phone and 18 or 26), Color3.new(1, 1, 1), "korean")
 	title.Position = UDim2.fromOffset(P.pad + (phone and 40 or 54), 0)
 	title.Size = UDim2.fromOffset(phone and 52 or 70, P.head)
+	local helpW = 0
+	if HELP then -- UI-1b 1절 3: 제목 옆 [?] = 7일 · 시즌판 · 초기화 안내
+		local HB = require(script.Parent.Parent.ui.v2.HelpButton)
+		HB.besideLabel(title, "attendance", { rows = function()
+			return { { Text.get("ui1b.help.row.week"), Text.get("ui1.att.note") }, { Text.get("ui1b.help.row.season"), Text.get("ui1.att.seasonNote", { n = tostring(SeasonBoardData.after.sparkleShard or 1) }) } }
+		end })
+		helpW = require(ReplicatedStorage.Shared.data.UiLayoutData).helpButton.pcSize + 14
+	end
 	local n = #claimList(view)
 	if not phone then
 		local sub = label(win, n > 0 and Text.get("ui1.att.sub", { n = tostring(n) }) or "", px(16), Color3.fromRGB(190, 196, 214))
-		sub.Position = UDim2.fromOffset(P.pad + 130, 0)
+		sub.Position = UDim2.fromOffset(P.pad + 130 + helpW, 0)
 		sub.Size = UDim2.fromOffset(300, P.head)
 	end
 	local line = Instance.new("Frame")

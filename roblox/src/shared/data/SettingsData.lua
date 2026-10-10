@@ -4,7 +4,7 @@
 --   UI-1b 0절(VERIFY-5): UI-1에서 바꾼 기본값은 해당 UiV2Flags를 끄면 옛 값(doubleTapDash = map).
 --   reduceFlashes = 번개 · 태초 화면 섬광 끄기(관문 날씨 섬광 끔 · 피뢰침 방전은 흰 번쩍 대신 밝기만 · 태초 연출의 화면 밝아짐 없음 - 보스 경고 표시는 그대로).
 return {
-	order = { "cameraTopDown", "reduceFlashes", "screenShake", "dimOthersTrail", "autoStage", "volumeSfx", "volumeMusic", "volumeUi", "volumeBossCue", "transcendNotice", "fxLevel", "volumeAmbient", "muteSfx", "muteUi", "muteAmbient", "muteMusic", "windowPositions", "graphics", "language", "quietOthersSfx", "minimapOn", "minimapRotate", "minimapFar", "mapHintSeen", "hubIntroRank", "hubIntroBoard", "hubIntroChallenge", "hubIntroTailor", "bulkSellGrades", "sellHintSeen", "weekendBannerAt", "skipMenu", "autoProcessMode", "autoProcessHintSeen", "menuLoreSeen", "lastSeenNewsId", "textScale", "doubleTapDash", "bagSort", "bagSortAsc", "hudLayoutPc", "hudLayoutPhone", "hudLayoutVersion", "showKeys", "vibrationOff" },
+	order = { "cameraTopDown", "reduceFlashes", "screenShake", "dimOthersTrail", "autoStage", "volumeSfx", "volumeMusic", "volumeUi", "volumeBossCue", "transcendNotice", "fxLevel", "volumeAmbient", "muteSfx", "muteUi", "muteAmbient", "muteMusic", "windowPositions", "graphics", "language", "quietOthersSfx", "minimapOn", "minimapRotate", "minimapFar", "mapHintSeen", "hubIntroRank", "hubIntroBoard", "hubIntroChallenge", "hubIntroTailor", "bulkSellGrades", "sellHintSeen", "weekendBannerAt", "skipMenu", "autoProcessMode", "autoProcessHintSeen", "menuLoreSeen", "lastSeenNewsId", "textScale", "doubleTapDash", "bagSort", "bagSortAsc", "hudLayoutPc", "hudLayoutPhone", "hudLayoutVersion", "showKeys", "vibrationOff", "helpSeen" },
 	keys = {
 		cameraTopDown = { kind = "boolean", default = false, attrs = { "CameraTopDown" } },
 		reduceFlashes = { kind = "boolean", default = false, attrs = { "ReduceFlashes" } },
@@ -35,7 +35,8 @@ return {
 		hudLayoutPhone = { kind = "hudLayout", device = "phone", default = "", attrs = { "HudLayoutPhone" } },
 		hudLayoutVersion = { kind = "stamp", default = 0, attrs = { "HudLayoutVersion" } },
 		showKeys = { kind = "boolean", default = true, attrs = { "SettingShowKeys" } }, -- UI-1 7b 단축키 표시(메뉴 키 칩 · 스킬 칸 키 판)
-		vibrationOff = { kind = "boolean", default = false, attrs = { "VibrationOff" } }, -- UI-1 7b 진동 끔(지원 기기만 줄 보임 - client/ui/Haptics)
+		vibrationOff = { kind = "boolean", default = false, attrs = { "VibrationOff" } },
+		helpSeen = { kind = "idSet", default = "", attrs = { "HelpSeen" } }, -- UI-1b 1절 3: 눌러 본 [?] id 목록("ember,codex" · HelpData.ids만 · 새 [?] 작은 점 = 처음 1번) -- UI-1 7b 진동 끔(지원 기기만 줄 보임 - client/ui/Haptics)
 		-- UI-1 4단계(03 v3 §6): 가방 정렬(등급 · 부위 · 전투력 · 최신) · 낮은 것 먼저(기본 = 높은 것 먼저) - 계정 · 없는 키 = 기본값(이관 없음 · SAVE 버전 안 올림)
 		bagSort = { kind = "choice", default = "grade", options = { "grade", "part", "power", "newest" }, attrs = { "BagSort" } },
 		bagSortAsc = { kind = "boolean", default = false, attrs = { "BagSortAsc" } }, -- FINAL-1b 결정 3: W/A/D 두 번 = 짧은 대시(끄면 그 입력 무시 · S 두 번 백플립은 그대로 · 계정 · 없는 키 = 켬, 이관 없음)

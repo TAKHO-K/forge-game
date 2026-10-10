@@ -284,6 +284,9 @@ local function build()
 	title.Position = UDim2.fromOffset(B.h * m * 0.6 + 18, 0)
 	title.Size = UDim2.new(0.35, 0, 1, 0)
 	title.ZIndex = 11
+	if require(ReplicatedStorage.Shared.data.UiV2Flags).help then -- UI-1b 1절 3: 편집 규칙(옮기기 · 금지 자리 · 겹침) = 제목 옆 [?]
+		require(script.Parent.Parent.ui.v2.HelpButton).besideLabel(title, "hudEdit", { zIndex = 12 })
+	end
 	local bw, bh = (device == "phone" and 110 or 200) * m, (B.h - 12) * m
 	local function btn(name, textKey, kind, i, fn)
 		local b = UiKit.button({ parent = bar, kind = kind, name = name, text = Text.get(textKey), align = Enum.TextXAlignment.Center, padX = 6,

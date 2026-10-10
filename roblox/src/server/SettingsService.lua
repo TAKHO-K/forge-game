@@ -65,6 +65,19 @@ function SettingsService.sanitize(key, value)
 			return value
 		end
 		return nil
+	elseif def.kind == "idSet" then -- UI-1b 1절 3: id 목록 "a,b"(HelpData.ids에 있는 id만 · 중복 없음 · 길이 상한)
+		local HelpData = require(ReplicatedStorage.Shared.data.HelpData)
+		if type(value) ~= "string" or #value > HelpData.maxLen then
+			return nil
+		end
+		local seen = {}
+		for id in value:gmatch("[^,]+") do
+			if not HelpData.ids[id] or seen[id] then
+				return nil
+			end
+			seen[id] = true
+		end
+		return value
 	elseif def.kind == "stamp" then -- QUEUE-ALL9A 1-2: 시각 도장(유닉스 초 정수 - 주말 배너 본 창)
 		if type(value) == "number" and value == math.floor(value) and value >= 0 and value < 2 ^ 40 then
 			return value

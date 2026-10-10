@@ -397,6 +397,7 @@ local function build(L)
 		anchorPoint = Vector2.new(L.anchorX, L.anchorY),
 		position = UDim2.fromOffset(L.winX, L.winY), -- 앵커 점 자리(px) - PC = 사용 가능 영역 가운데 · 폰 = 메뉴바 오른쪽 위
 		help = { short = Text.get("shop.help.short"), detail = Text.get("shop.help.detail") },
+		helpId = "shop", -- UI-1b 1절 3: 토큰 · 스타터 안내 = 제목 옆 [?](스위치 끔 = 옛 도움말)
 		onOpen = function()
 			setStatus("", "textSecondary")
 			if built then

@@ -170,6 +170,7 @@ local function build()
 		R.levelText.Size = UDim2.new(1, -(x0 + P.close + 4), 1, 0)
 	else
 		local t = label(head, Text.get("ui1.enh.station"), 20, Color3.new(1, 1, 1), "korean")
+		t.Name = "Title"
 		t.Position = UDim2.fromOffset(x0, 0)
 		t.Size = UDim2.new(0, 90, 1, 0)
 		t.AutomaticSize = Enum.AutomaticSize.X
@@ -297,6 +298,26 @@ local function build()
 	-- 4. 불씨 칸
 	local emberHolder = row(win, 4, EmberBar.height(phone), "Ember")
 	R.ember = EmberBar.build(emberHolder, phone and (innerW - 352) / 2 or 0, 0, phone and 352 or innerW, phone)
+	if require(ReplicatedStorage.Shared.data.UiV2Flags).help then -- UI-1b 1절 3: 불씨 규칙 줄(실패 1번 = 불씨 +n% · +n 칸 = 실패 n번) = 제목 옆 [?] 안 "지금" 줄
+		local foot, footR = emberHolder:FindFirstChild("Foot", true), emberHolder:FindFirstChild("FootRight", true)
+		for _, l in ipairs({ foot, footR }) do
+			if l then
+				l.Visible = false
+			end
+		end
+		local anchorLabel = phone and R.levelText or head:FindFirstChild("Title")
+		if anchorLabel then
+			require(script.Parent.Parent.Parent.ui.v2.HelpButton).besideLabel(anchorLabel, "ember", { rows = function()
+				local now = {}
+				for _, l in ipairs({ foot, footR }) do
+					if l and l.Text ~= "" then
+						table.insert(now, l.Text)
+					end
+				end
+				return #now > 0 and { { Text.get("ui1b.help.row.now"), table.concat(now, " · ") } } or {}
+			end })
+		end
+	end
 
 	-- 5. 아래 줄: 방지 토글 · [i] · 비용 · [강화](PC)
 	local foot = row(win, 5, P.foot + (phone and 0 or (px(15) - 15)), "Foot")

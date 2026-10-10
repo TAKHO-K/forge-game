@@ -51,7 +51,7 @@ local function claimHeight()
 end
 
 local function build()
-	local panel = Panel.create({ id = QuestsPanel.id, kind = "window", title = Text.get("quests.titleV2"), size = PANEL_SIZE,
+	local panel = Panel.create({ id = QuestsPanel.id, kind = "window", title = Text.get("quests.titleV2"), size = PANEL_SIZE, helpId = "quests", -- UI-1b 1절 3: 일일 · 주간 초기화 안내
 		onOpen = function()
 			task.defer(function()
 				QuestsPanel.render()

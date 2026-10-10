@@ -47,6 +47,7 @@ return {
 		{ path = { "settings", "showKeys" }, scope = "account", sample = false, note = "UI-1 7b 단축키 표시" },
 		{ path = { "settings", "vibrationOff" }, scope = "account", sample = true, note = "UI-1 7b 진동 끔" },
 		{ path = { "pets", "list", 1, "locked" }, scope = "account", sample = true, note = "UI-1 7c 펫 잠금(Pet.locked - 잠근 펫은 놓아주기 안 됨)" },
+		{ path = { "settings", "helpSeen" }, scope = "account", sample = "ember,codex", note = "UI-1b 1절 3 눌러 본 [?] 도움말 id(새 [?] 작은 점 = 처음 1번)" },
 	},
 	-- 진행이 없는 직업 칸은 캐릭터로 만들지 않는다: 경험치 0 · 최고 스테이지 ≤ 1 · 환생 0 · 무기 +0 · 등급 0 · 착용 장비 없음 · 보석 없음
 }

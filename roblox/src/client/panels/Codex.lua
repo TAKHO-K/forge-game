@@ -341,7 +341,7 @@ function S.select(sel)
 end
 
 local function build()
-	local panel = Panel.create({ id = CodexPanel.id, kind = "window", title = Text.name(CodexData.text.title), size = PANEL_SIZE,
+	local panel = Panel.create({ id = CodexPanel.id, kind = "window", title = Text.name(CodexData.text.title), size = PANEL_SIZE, helpId = "codex", -- UI-1b 1절 3: 상자 · 별 · 칭호 규칙
 		onOpen = function()
 			task.defer(function()
 				CodexPanel.render()

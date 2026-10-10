@@ -91,7 +91,9 @@ function Panel.create(props)
 	closeButton.TextColor3 = colors.textSecondary
 	closeButton.Parent = frame
 
-	if props.help then
+	if props.helpId and require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).help then -- UI-1b 1절 3: 제목 옆 [?](A 설명 창)
+		require(script.Parent.Parent.v2.HelpButton).besideLabel(titleLabel, props.helpId)
+	elseif props.help then
 		HelpToggle.build({
 			parent = frame,
 			text = props.help,

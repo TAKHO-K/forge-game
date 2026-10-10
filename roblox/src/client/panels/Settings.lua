@@ -84,6 +84,17 @@ local function cycleRow(body, y, labelText, key, names, refs, resolve)
 		b.setText(Text.name(names[current()] or tostring(current())))
 	end)
 	refs[key] = b
+	return label
+end
+
+-- UI-1b 1절 3: 줄 설명(작은 글) = 줄 이름 옆 [?](제목 = 줄 이름 · 줄 = "설명: …") · 스위치 끔 = 설명 줄 그대로
+local HELP = require(ReplicatedStorage.Shared.data.UiV2Flags).help
+local function hintToHelp(hint, nameLabel, title)
+	if not HELP or not nameLabel then
+		return
+	end
+	hint.Visible = false
+	require(script.Parent.Parent.ui.v2.HelpButton).besideLabel(nameLabel, "settings", { title = title, rows = { { Text.get("ui1b.help.row.about"), hint.Text } } })
 end
 
 local function build()
@@ -108,10 +119,11 @@ local function build()
 
 	-- [화면]
 	local s = pages.screen
-	cycleRow(s, PAD, Text.get("settings.fxLevel"), "fxLevel", { off = Text.get("settings.fx.off"), low = Text.get("settings.fx.low"), normal = Text.get("settings.fx.normal") }, refs)
+	local fxLabel = cycleRow(s, PAD, Text.get("settings.fxLevel"), "fxLevel", { off = Text.get("settings.fx.off"), low = Text.get("settings.fx.low"), normal = Text.get("settings.fx.normal") }, refs)
 	local fxHint = Theme.label(s, Text.get("settings.fxLevelHint"), "caption", "textSecondary")
 	fxHint.Position = UDim2.fromOffset(PAD, PAD + 38)
 	fxHint.Size = UDim2.new(1, -PAD * 2, 0, 18)
+	hintToHelp(fxHint, fxLabel, Text.get("settings.fxLevel"))
 	refs.flashToggle = Toggle.build({ parent = s, name = "ReduceFlashesToggle", text = Text.get("settings.reduceFlashes"), value = player:GetAttribute("ReduceFlashes") == true,
 		width = width, position = UDim2.fromOffset(PAD, PAD + 62), onChanged = function(v)
 			player:SetAttribute("ReduceFlashes", v)
@@ -127,12 +139,13 @@ local function build()
 			AttackTrail.setDimOthers(v)
 			save("dimOthersTrail", v)
 		end })
-	cycleRow(s, PAD + 62 + ROW * 3, Text.get("settings.graphics"), "graphics", { normal = Text.get("settings.gfx.normal"), lite = Text.get("settings.gfx.lite") }, refs, GraphicsMode.effective)
+	local gfxLabel = cycleRow(s, PAD + 62 + ROW * 3, Text.get("settings.graphics"), "graphics", { normal = Text.get("settings.gfx.normal"), lite = Text.get("settings.gfx.lite") }, refs, GraphicsMode.effective)
 	local gfxHint = Theme.label(s, Text.get("settings.gfx.liteHint"), "caption", "textSecondary") -- QUEUE-ALL6 A2: 가벼움에서 꺼지는 것
 	gfxHint.Name = "GraphicsLiteHint"
 	gfxHint.TextWrapped = true
 	gfxHint.Position = UDim2.fromOffset(PAD, PAD + 62 + ROW * 3 + 38)
 	gfxHint.Size = UDim2.new(1, -PAD * 2, 0, 36)
+	hintToHelp(gfxHint, gfxLabel, Text.get("settings.graphics"))
 	local shiftHint = Theme.label(s, Text.get("settings.shiftLockHint"), "caption", "textSecondary")
 	shiftHint.TextWrapped = true
 	shiftHint.Position = UDim2.fromOffset(PAD, PAD + 62 + ROW * 4 + 30)
@@ -317,12 +330,13 @@ local function build()
 		player:GetAttributeChangedSignal("AutoProcess"):Connect(function()
 			tidyButton.setText(tidyText())
 		end)
-		cycleRow(g, y + ROW, Text.get("autoTidy.mode"), "autoProcessMode", { sell = Text.get("autoTidy.mode.sell"), dismantle = Text.get("autoTidy.mode.dismantle") }, refs)
+		local tidyLabel = cycleRow(g, y + ROW, Text.get("autoTidy.mode"), "autoProcessMode", { sell = Text.get("autoTidy.mode.sell"), dismantle = Text.get("autoTidy.mode.dismantle") }, refs)
 		local tidyNote = Theme.label(g, Text.get("autoTidy.note"), "caption", "textSecondary")
 		tidyNote.Name = "AutoTidyNote"
 		tidyNote.TextWrapped = true
 		tidyNote.Position = UDim2.fromOffset(PAD, y + ROW * 2 - 8)
 		tidyNote.Size = UDim2.new(1, -PAD * 2, 0, 18)
+		hintToHelp(tidyNote, tidyLabel, Text.get("autoTidy.mode"))
 	end
 	do -- 코드 입력(서버 RedeemCode가 검증 · 대소문자 무시)
 		local y = PAD + ROW * 4 + 22
@@ -433,11 +447,12 @@ local function build()
 		local Haptics = require(script.Parent.Parent.ui.Haptics)
 		local newPill = require(ReplicatedStorage.Shared.data.UiLayoutData).settings.v7.showNewPill -- "새로" 알약 = 출시 판 숨김(스위치)
 		local y = PAD
-		cycleRow(c, y, Text.get("ui1.set.language") .. (newPill and (" · " .. Text.get("ui1.set.new")) or ""), "language", { ko = Text.get("ui1.set.langKo"), en = Text.get("ui1.set.langEn"), auto = Text.get("ui1.set.langAuto") }, refs)
+		local langLabel = cycleRow(c, y, Text.get("ui1.set.language") .. (newPill and (" · " .. Text.get("ui1.set.new")) or ""), "language", { ko = Text.get("ui1.set.langKo"), en = Text.get("ui1.set.langEn"), auto = Text.get("ui1.set.langAuto") }, refs)
 		local langNote = Theme.label(c, Text.get("ui1.set.languageNote"), "caption", "textSecondary")
 		langNote.TextWrapped = true
 		langNote.Position = UDim2.fromOffset(PAD, y + 38)
 		langNote.Size = UDim2.new(1, -PAD * 2, 0, 32)
+		hintToHelp(langNote, langLabel, Text.get("ui1.set.language"))
 		y += 38 + 36
 		refs.showKeysToggle = Toggle.build({ parent = c, name = "ShowKeysToggle", text = Text.get("ui1.set.showKeys"), value = player:GetAttribute("SettingShowKeys") ~= false,
 			width = width, position = UDim2.fromOffset(PAD, y), onChanged = function(v)

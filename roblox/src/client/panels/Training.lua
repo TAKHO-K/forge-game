@@ -59,7 +59,7 @@ local function affordable(t)
 end
 
 local function build()
-	local panel = Panel.create({ id = TrainingPanel.id, kind = "window", title = Text.get("training.title"), size = PANEL_SIZE,
+	local panel = Panel.create({ id = TrainingPanel.id, kind = "window", title = Text.get("training.title"), size = PANEL_SIZE, helpId = "training", -- UI-1b 1절 3
 		onOpen = function()
 			task.defer(function()
 				TrainingPanel.render()

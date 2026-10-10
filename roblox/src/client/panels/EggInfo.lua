@@ -184,7 +184,9 @@ end
 local function hatchTableV7()
 	local phone = Theme.isMobile
 	line(Text.get("egg.hatchHeader"), "body", "textPrimary", "HatchHeader")
-	line(Text.get("ui1.pet.oddsNote"), "caption", "textSecondary", "OddsNote")
+	if not require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).help then -- UI-1b 1절 3: = [?] 안
+		line(Text.get("ui1.pet.oddsNote"), "caption", "textSecondary", "OddsNote")
+	end
 	order += 1
 	local legend = Instance.new("Frame") -- 범례 = 색 네모 + 등급 이름
 	legend.Name = "OddsLegend"
@@ -253,7 +255,9 @@ local function hatchTableV7()
 			num.Size = UDim2.new(0, numW, 1, 0)
 		end
 	end
-	line(Text.get("ui1.pet.rules"), "caption", "textSecondary", "HatchRules")
+	if not require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).help then -- UI-1b 1절 3: 규칙 띠 = 제목 옆 [?]
+		line(Text.get("ui1.pet.rules"), "caption", "textSecondary", "HatchRules")
+	end
 end
 
 -- 부화 결과 확률 표: 열 = 알 등급(보통 · 좋은 · 희귀) · 줄 = 결과 등급(일반 · 희귀 · 영웅 · 전설 - 표시 이름 = EggData.hatchGradeNames)
@@ -342,6 +346,7 @@ local function build()
 		kind = "window",
 		title = Text.get("egg.title", { count = 0, cap = NestState.cap }),
 		size = PANEL_SIZE,
+		helpId = "egg", -- UI-1b 1절 3: 확률 아래 규칙 띠 · 확률 메모 = [?] 안
 	})
 	local scroll = Instance.new("ScrollingFrame")
 	scroll.Name = "Body"

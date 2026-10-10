@@ -553,6 +553,10 @@ local function renderTitles(S, scroll)
 	local hint = label(scroll, Text.name(CodexData.text.titleHint), "caption", Theme.colors.textSecondary, UDim2.fromOffset(PAD, 2), UDim2.new(1, -PAD * 2, 0, ts * 2 + 4), Enum.TextXAlignment.Left)
 	hint.TextWrapped = true
 	local y = ts * 2 + 10
+	if require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).help then -- UI-1b 1절 3: 이름표 순서 규칙 = 도감 제목 옆 [?]
+		hint.Visible = false
+		y = 4
+	end
 	local rows = { { id = "", name = CodexData.text.titleNone } }
 	for _, t in ipairs(view.titles) do
 		table.insert(rows, t)
