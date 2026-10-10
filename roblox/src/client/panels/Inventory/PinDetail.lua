@@ -403,7 +403,12 @@ function PinDetail.attach(S, R, detail, card)
 			if gemSlot == slot then
 				hideGem()
 			end
-			Toast.push("TC", { text = Text.get(why == "transcend" and "ui1c.gear.gem.removedTrans" or "ui1c.gear.gem.removed"), colorName = "textPrimary", seconds = 2 })
+			if pin.shown() then
+				task.defer(S.refreshDetail) -- 열려 있는 무기 상세의 홈 줄을 다시 그린다(Play 발견: 빼기 뒤 홈이 채워진 채로 남음 - 다시 열어야 빈칸)
+			end
+			if why == "transcend" then -- 일반 보석 = 보석함이 늘어 기존 "보석 획득 [보석 탭 열기]" 토스트가 같은 줄에 뜬다(Play 확인 - 겹쳐 밀림) · 초월 보석은 보석함이 안 늘어 따로 알림
+				Toast.push("TC", { text = Text.get("ui1c.gear.gem.removedTrans"), colorName = "textPrimary", seconds = 2 })
+			end
 		else
 			Toast.push("TC", { text = Text.get("ui1c.gear.gem.removeFail"), colorName = "textPrimary", seconds = 3 })
 		end

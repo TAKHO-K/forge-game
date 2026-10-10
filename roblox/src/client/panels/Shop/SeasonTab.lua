@@ -268,7 +268,7 @@ function SeasonTab.render(ctx, env, opts)
 	ctx.row({ name = "ClaimAll", title = Text.get("season.claimAllTitle"), buttons = claimAll })
 	-- QUEUE-ALL9B 4-8 칸 건너뛰기(시즌당 상한 · 40칸까지 · 방이 모자라면 버튼 끔 - 서버도 같은 판정)
 	local skipButtons = {}
-	for _, sk in ipairs({ { key = "pass_skip1", n = 1 }, { key = "pass_skip5", n = 5 } }) do
+	for _, sk in ipairs({ { key = "pass_skip1", n = 1 } }) do -- SEC-FIX-1 8: 따라잡기 = 한 번에 1칸(옛 5칸 묶음 pass_skip5 = 숨김 · 상품 자리만 남김)
 		local b = env.robuxButton(sk.key, "Skip" .. sk.n)
 		if (season.skipRoom or 0) < sk.n then
 			b.enabled = false

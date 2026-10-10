@@ -85,7 +85,7 @@ return {
 		["ui1c.gear.gem.slotLine"] = "{slot}번 홈 · {grade}까지 들어감",
 		["ui1c.gear.gem.remove"] = "빼기",
 		["ui1c.gear.gem.removeNo"] = "빼기는 없어요 · 바꾸면 원래 보석은 보석 칸으로 돌아와요",
-		["ui1c.gear.gem.removed"] = "보석을 보석함으로 옮겼어요", -- SEC-FIX-1 14 [빼기](무료 · 그대로)
+		-- SEC-FIX-1 14 [빼기]: 일반 보석 성공 = 기존 "보석 획득" 토스트(보석함이 늚) · 초월 · 실패만 아래
 		["ui1c.gear.gem.removedTrans"] = "초월 보석을 초월 보석 목록으로 옮겼어요",
 		["ui1c.gear.gem.removeFail"] = "보석을 빼지 못했어요 · 다시 눌러 주세요",
 		["ui1c.gear.gem.swap"] = "바꾸기",
@@ -170,7 +170,6 @@ return {
 		["ui1c.gear.gem.slotLine"] = "Socket {slot} · fits up to {grade}",
 		["ui1c.gear.gem.remove"] = "Remove",
 		["ui1c.gear.gem.removeNo"] = "Gems can't be removed · swapping returns the old gem to your gem bag",
-		["ui1c.gear.gem.removed"] = "Gem moved to your gem bag",
 		["ui1c.gear.gem.removedTrans"] = "Transcendent gem moved back to its list",
 		["ui1c.gear.gem.removeFail"] = "Couldn't remove the gem · try again",
 		["ui1c.gear.gem.swap"] = "Swap",
