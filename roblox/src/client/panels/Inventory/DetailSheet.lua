@@ -193,7 +193,15 @@ compareButton.Activated:Connect(function()
 		S.openCompareView(S.selectedValue)
 	end
 end)
-local ORDERED = { equipButton, awakenButton, inheritButton, dismantleButton, sellButton, rerollButton, craftButton, compareButton }
+-- UI-1c 5단계: 고정 창(스위치 gearPin) = 무기 상세에 [보석 홈](보석 탭) · 상세 판을 칸 옆 고정 창으로(PinDetail)
+local PIN = require(script.Parent.Layout).pin
+local gemHomeButton = makeActionButton(9, 120, "plain")
+gemHomeButton.Name = "GemHomeButton"
+gemHomeButton.Text = Text.get("ui1c.gear.gemHome")
+gemHomeButton.Activated:Connect(function()
+	R.selectTab("보석")
+end)
+local ORDERED = { equipButton, awakenButton, inheritButton, dismantleButton, sellButton, rerollButton, craftButton, compareButton, gemHomeButton }
 -- UI-1 4단계: 끼우면 전투력 ▲ +n%(초록) · ▼ −n%(빨강) · = 같음(회색) - 색 + 모양(서버 같은 함수 · 가방 정렬 · 바닥 ▲와 같은 값)
 function S.powerLine(pct)
 	if pct > 0.05 then
@@ -293,6 +301,14 @@ local function refreshEquipped(part, item)
 	S.primordialActions.refresh("equip", part, item, blockReason ~= nil and blockReason ~= "busy")
 end
 
+-- UI-1c 5단계: 상세 무기 그림 = 가방 칸 · 도감과 같은 원본 32장(ui/weapon/weapon-<무기>-g<등급> · ItemCell v3와 같은 키 규칙)
+local function weaponArtKey(gradeId)
+	local W = require(ReplicatedStorage.Shared.data.UiLayoutData).bag.v3.weaponIcon
+	local stem = W.classStem[player:GetAttribute("ClassId") or ""]
+	local gi = table.find(ArmorData.gradeOrder, gradeId) or 1
+	return stem and (W.prefix .. stem .. "-g" .. gi) or nil
+end
+
 local function refreshDetailBody()
 	setHint(nil) -- 아래 분기가 필요한 것만 다시 채운다
 	hideButtons()
@@ -313,9 +329,10 @@ local function refreshDetailBody()
 		local gradeId = S.weaponGradeId()
 		local described = ItemDescribe.weapon(gradeId, player:GetAttribute("WeaponLevel") or 0)
 		card.set({
-			title = described.title, gradeId = gradeId, part = "weapon", iconKey = ItemIcons.keyFor("weapon", gradeId, nil, player:GetAttribute("ClassId")),
+			title = described.title, gradeId = gradeId, part = "weapon", iconKey = (PIN and weaponArtKey(gradeId)) or ItemIcons.keyFor("weapon", gradeId, nil, player:GetAttribute("ClassId")),
 			lines = { { text = Text.get("gear.detail.weaponMeta", { meta = described.meta }), color = UIColors.textPrimary } }, gems = true,
 		})
+		gemHomeButton.Visible = PIN == true
 	elseif S.selectedKind == "gemSlot" and type(S.selectedValue) == "number" and gemState and Gem.isFilled(gemState.gems, S.selectedValue) then
 		local gem = gemState.gems[S.selectedValue]
 		card.set({
@@ -532,10 +549,11 @@ local function visibleButtons()
 	return list
 end
 
+local pin -- UI-1c 5단계 고정 창(아래 attach)
 local function actionsGeometry(L)
 	local list = visibleButtons()
 	local n = #list
-	if L.mode == "phone" then
+	if L.mode == "phone" and not pin then
 		local avail = L.winW - 16 - 52 - PHONE_INFO_MIN
 		local perRow = math.clamp(math.floor((avail + PHONE_GAP) / (PHONE_BUTTON_W + PHONE_GAP)), 1, math.max(n, 1))
 		local rows = n > 0 and math.ceil(n / perRow) or 0
@@ -543,7 +561,7 @@ local function actionsGeometry(L)
 		return list, perRow, PHONE_BUTTON_W, rows, height, PHONE_GAP
 	end
 	local perRow = 3
-	local width = math.floor(((L.detailW - 20) - (perRow - 1) * PC_GAP) / perRow)
+	local width = math.floor((((pin and (pin.size(L))) or L.detailW) - 20 - (perRow - 1) * PC_GAP) / perRow)
 	local rows = n > 0 and math.ceil(n / perRow) or 0
 	local height = rows > 0 and rows * L.actionH + (rows - 1) * PC_GAP or 0
 	return list, perRow, width, rows, height, PC_GAP
@@ -560,7 +578,13 @@ local function placeDetail(L)
 	local phone = L.mode == "phone"
 	local list, perRow, buttonW, _, groupH, gap = actionsGeometry(L)
 	local width, height, infoX, infoY, infoW, infoH, groupX, groupW
-	if phone then
+	if pin then -- UI-1c: 칸 옆 고정 창(머리 아래부터 내용 · 버튼 = 아래 줄)
+		width, height = pin.size(L)
+		pin.place(L, width, height)
+		groupX, groupW = 10, width - 20
+		infoX, infoY, infoW = 10, pin.head() + 6, width - 20
+		infoH = height - infoY - groupH - 4 - 18 - 6 - 10
+	elseif phone then
 		height = phoneSheetHeight(L)
 		width = L.winW
 		detail.Position = UDim2.new(0, 0, 0, L.winH - height)
@@ -578,8 +602,8 @@ local function placeDetail(L)
 		infoX, infoY, infoW = 10, 10, width - 20
 		infoH = height - 10 - groupH - 4 - 18 - 6 - 10
 	end
-	sheetClose.Visible = phone
-	local groupTop = height - (phone and 8 or 10) - groupH
+	sheetClose.Visible = phone and not pin
+	local groupTop = height - ((phone and not pin) and 8 or 10) - groupH
 	actions.Position = UDim2.new(0, groupX, 0, groupTop)
 	actions.Size = UDim2.new(0, groupW, 0, groupH)
 	for index, btn in ipairs(list) do
@@ -587,7 +611,7 @@ local function placeDetail(L)
 		local x = phone and (groupW - (math.min(perRow, #list) * (buttonW + gap) - gap)) + col * (buttonW + gap) or col * (buttonW + gap)
 		btn.Position = UDim2.new(0, x, 0, row * (L.actionH + gap))
 		btn.Size = UDim2.new(0, buttonW, 0, L.actionH)
-		btn.TextSize = Theme.textSize(phone and "body" or "header")
+		btn.TextSize = Theme.textSize((phone or pin) and "body" or "header")
 	end
 	-- S20d: 이유 줄 = 버튼 묶음 바로 위(아래 끝 = 묶음 위 - 4)
 	dhint.Position = UDim2.new(0, groupX, 0, groupTop - 4 - 16)
@@ -602,6 +626,17 @@ end
 
 -- 폰 시트: 선택이 없으면 숨는다(PC 카드는 항상 보인다). refreshDetail이 끝날 때마다 다시 정한다.
 local function applySheetVisibility()
+	if pin then -- UI-1c: 고정 창 = 선택 있을 때만 · 본문 줄이지 않음(창 위에 뜸)
+		if S.sheetInset ~= 0 then
+			S.sheetInset = 0
+			R.applyLayout()
+		end
+		if R.layout and pin.shown() then
+			placeDetail(R.layout)
+		end
+		pin.update()
+		return
+	end
 	local shown = S.mode ~= "phone" or S.selectedKind ~= nil
 	detail.Visible = shown
 	-- 폰: 시트가 올라오면 본문 프레임이 그만큼 짧아진다(ZIndexBehavior가 Global이라 겹치면 뒤 프레임이 시트 위로 비친다). 값이 바뀔 때만 배치를 다시 적용한다.
@@ -627,6 +662,10 @@ local function refreshDetail()
 	end
 end
 S.refreshDetail = refreshDetail
+
+if PIN then
+	pin = require(script.Parent.PinDetail).attach(S, R, detail, card)
+end
 
 table.insert(R.layouts, function(L)
 	placeDetail(L)

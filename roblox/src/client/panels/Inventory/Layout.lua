@@ -11,6 +11,8 @@
 local Layout = {}
 local BAG_V2 = require(game:GetService("ReplicatedStorage").Shared.data.UiLayoutData).bag -- QUEUE-UI2 UI2-5 2차(03 v2 겉모습 - lookV2 끄면 옛 값)
 Layout.lookV2 = BAG_V2 ~= nil and BAG_V2.lookV2 == true
+-- UI-1c 5단계: 장비 상세 = 칸 옆 고정 창(스위치 gearPin) → PC 오른쪽 상세 단 없음(가방 목록이 넓어짐 · 열 = bag.pin.pc.maxCols) · detailX = nil(고정 창이 자리를 정한다)
+Layout.pin = require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).gearPin == true and BAG_V2 ~= nil and BAG_V2.pin ~= nil
 
 Layout.phoneWidthBelow = 720
 Layout.phoneHeightBelow = 400
@@ -65,6 +67,7 @@ function Layout.compute(screenWidth, screenHeight, touch, hudReserve)
 		L.bagX, L.bagY, L.bagW, L.bagH = 0, L.bodyTop, L.winW, L.bodyH
 		L.gearSlot = 78
 		L.gearCols = 4
+		L.pin = Layout.pin or nil
 		L.sheetWide = true -- 폰 시트는 항상 두 칸(왼쪽 정보 스크롤 · 오른쪽 버튼)
 	else
 		-- QUEUE-ALL9C 2-6: 터치 화면(태블릿 · 큰 폰 842 × 534)은 창이 메뉴바 오른쪽(phoneLeftInset)부터 그려진다 → 그만큼 뺀 폭으로 3단을 짠다
@@ -83,6 +86,9 @@ function Layout.compute(screenWidth, screenHeight, touch, hudReserve)
 		local pad, gap = Layout.pad, Layout.colGap
 		local leftW = L.wide and (L.winW >= Layout.pcWidth and Layout.pc.leftW or 260) or 190
 		local rightW = L.wide and (L.winW >= Layout.pcWidth and Layout.pc.rightW or 360) or 290
+		if Layout.pin then
+			rightW = 0 -- 오른쪽 단 없음(아래 midW에 그 단 앞 간격도 돌려줌)
+		end
 		-- 정렬 · 일괄 버튼 자리: 가운데 단이 넓으면(400) 가방 위 줄 · 아니면 머리 오른쪽(BagTab.layoutBag와 같은 판정)
 		L.pillsInRow = L.winW - 2 * pad - 2 * gap - leftW - rightW >= 400
 		L.currencyInHeader = Layout.lookV2 and L.pillsInRow -- 03 v2: 재화 = 머리 오른쪽(버튼이 머리에 있으면 옛처럼 머리 아래 줄)
@@ -92,7 +98,7 @@ function Layout.compute(screenWidth, screenHeight, touch, hudReserve)
 		local colTop = L.headerH + L.currencyH + pad
 		local colH = L.winH - colTop - pad
 		local midMin = Layout.cellSize + 2 * Layout.gridPad
-		local midW = math.max(midMin, L.winW - 2 * pad - 2 * gap - leftW - rightW)
+		local midW = math.max(midMin, L.winW - 2 * pad - (Layout.pin and 1 or 2) * gap - leftW - rightW)
 		local midX = pad + leftW + gap
 		L.gearX, L.gearY, L.gearW, L.gearH = pad, colTop, leftW, colH
 		L.tabX, L.tabY, L.tabW = midX, colTop, midW
@@ -101,6 +107,9 @@ function Layout.compute(screenWidth, screenHeight, touch, hudReserve)
 		L.bagX, L.bagY, L.bagW, L.bagH = midX, L.bodyTop, midW, L.bodyH
 		L.bodyX, L.bodyW = pad, leftW + gap + midW
 		L.detailX, L.detailY, L.detailW, L.detailH = midX + midW + gap, colTop, rightW, colH
+		if Layout.pin then
+			L.detailX, L.detailW, L.pin = nil, nil, true
+		end
 		if midW < 330 then
 			-- 아주 좁은 PC(폭 720 ~ 900): 가운데 단에 탭 5개가 안 들어간다 - 탭 줄을 왼쪽 + 가운데 단 위로 넓히고 착용 칸도 탭 아래에서 시작한다.
 			L.tabX, L.tabW = pad, L.bodyW
@@ -115,7 +124,7 @@ function Layout.compute(screenWidth, screenHeight, touch, hudReserve)
 	L.cellGap = phone and Layout.cellGap or Layout.pc.cellGap
 	L.bagCols = columns(L.bagW - 2 * Layout.gridPad, L.cellSize, L.cellGap)
 	if not phone then
-		L.bagCols = math.min(L.bagCols, Layout.pc.maxCols)
+		L.bagCols = math.min(L.bagCols, Layout.pin and BAG_V2.pin.pc.maxCols or Layout.pc.maxCols)
 	end
 	return L
 end

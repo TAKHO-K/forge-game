@@ -80,7 +80,7 @@ function CompareView.create(S, R)
 		if L and not phone then -- 가운데 가방 + 오른쪽 상세 자리를 덮음
 			local top = math.min(L.bagY, L.detailY or L.bagY)
 			f.Position = UDim2.fromOffset(L.bagX, top)
-			f.Size = UDim2.fromOffset((L.detailX or L.bagX) + (L.detailW or 0) - L.bagX, L.bagY + L.bagH - top)
+			f.Size = UDim2.fromOffset(L.detailX and (L.detailX + L.detailW - L.bagX) or L.bagW, L.bagY + L.bagH - top) -- UI-1c: 고정 창(detailX nil) = 가방 단만
 		else
 			f.Size = UDim2.fromScale(1, 1)
 		end

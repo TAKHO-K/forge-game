@@ -171,6 +171,9 @@ R.goldPillLabel = refs.goldPillLabel
 
 local tip = CompareTip.create(R.screenGui)
 S.compareTip = tip
+tip.blocked = function() -- UI-1c 5단계: 고정 창이 열려 있으면 마우스 올림 설명 끔
+	return require(script.Parent.Layout).pin and S.selectedKind ~= nil
+end
 
 local function paintLockChip()
 	local on = S.lockedOnly
@@ -214,6 +217,11 @@ local function selectBagIndex(index)
 		seen(index)
 	end
 	S.refreshDetail()
+	S.paintBagSelection()
+end
+-- 가방 칸 흰 선택 테 = 지금 선택(UI-1c: 고정 창 바깥 닫기도 부른다)
+function S.paintBagSelection()
+	local index = S.selectedKind == "bag" and S.selectedValue or nil
 	for i, cell in pairs(cellFrames) do
 		local selStroke = cell:FindFirstChild("SelectionStroke")
 		if selStroke then
@@ -335,6 +343,7 @@ local function makeCell(entry, order)
 			S.equipFromBag(entry.index)
 			return
 		end
+		S.pinAnchor = cell -- UI-1c 5단계: 고정 창 = 이 칸 옆
 		selectBagIndex(entry.index)
 	end)
 	cell.InputBegan:Connect(function(input)

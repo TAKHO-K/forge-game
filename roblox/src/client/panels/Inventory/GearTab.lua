@@ -517,6 +517,7 @@ local function makeSlot(part, order, equipped)
 	nameLabel.Size = UDim2.new(1, 8, 0, LABEL_H - 3)
 
 	slot.Activated:Connect(function()
+		S.pinAnchor = slot -- UI-1c 5단계: 고정 창 = 이 칸 옆
 		onSlotActivated(part, filled)
 	end)
 	if filled and part ~= "weapon" then

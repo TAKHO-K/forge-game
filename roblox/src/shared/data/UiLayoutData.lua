@@ -213,6 +213,14 @@ return {
 			check = { on = "ui/weapon/cell-check-on", off = "ui/weapon/cell-check-off", size = 26 },
 			gemLockedText = "ui1.bag.gemSoon", -- 보석 홈 열기 방식 = 사용자 확인 대기 → 잠긴 홈 = 자물쇠 + "곧 열려요"(지시 "준비 중" = 글자 검사 ALL8 A3 금지 문구라 같은 뜻으로 · 새 힘 · 비용 없음)
 		},
+		-- UI-1c 5단계 장비 상세 고정 창 + 보석 2단(I v1 §3 · pc_07 · pc_08 · pc_09 · ph_05): 칸 옆 고정(하늘 테) · 보석 창 겹침(자홍 테) · PC 오른쪽 고정 판 자리 = 비움(가방 목록 넓어짐 · 열 maxCols)
+		pin = {
+			pc = { w = 580, wEn = 620, h = 660, head = 44, gap = 24, stroke = 3, gemW = 420, gemH = 330, gemIcon = 72, maxCols = 11, line = 3 },
+			phone = { w = 430, wEn = 430, h = 0, head = 40, gap = 8, stroke = 3, gemW = 336, gemH = 200, gemIcon = 48, line = 0 }, -- 폰 h 0 = 창 본문 높이
+			colors = { sky = "8FD8FF", magenta = "E85BD0", panel = "161A2B", rowLine = "2A3150", label = "FFD45A", muted = "9AA3C0", socketRing = "FFFFFF" },
+			zBump = 10, -- InventoryGui = Global z: 고정 창 = 칸(1 ~ 7) 위 · 확인 창(22) · 필터 판(30) · 비교(40) 아래
+			socketHit = 44, -- 상세 안 보석 홈 누름 칸(터치 44)
+		},
 	},
 	-- UI-1 6단계 E 강화 불씨(05_enhance-inherit/v4 spec §3 ~ 6): 강화대 창(빠른 창) + 불씨 칸 · 큰 창 = 옛 강화 패널([i]로 열기)
 	enhance = {

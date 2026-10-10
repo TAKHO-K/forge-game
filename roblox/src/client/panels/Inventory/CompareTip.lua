@@ -53,6 +53,9 @@ function CompareTip.create(screenGui)
 	end
 
 	function self.show(anchor, item, equipped, classId)
+		if self.blocked and self.blocked() then
+			return -- UI-1c 5단계: 고정 창이 열린 동안 마우스 올림 설명 없음
+		end
 		if not (anchor and item) then
 			return
 		end
