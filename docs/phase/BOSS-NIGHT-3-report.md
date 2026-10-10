@@ -13,7 +13,7 @@
 | 1-⑤f 레이저 = 홀 보석 높이(A안 · 사용자 10-10) | 끝 | `c69d46a0` | 9 | 0 |
 | addendum-2 17 보스 입장 · 다시 도전 = 체력 가득 + 대시 쿨 초기화 | 끝 | `e68fcf4f` | 4 | 0 |
 | 2 CC 체계(+ addendum-2 19 · VERIFY-2 정정 3 ~ 6) | 끝 | `bb912150` | 15 | 0 |
-| 3 투사체 · 범위(+ addendum-2 12 · 13 · VERIFY-2 7 · 8) | 끝 | (커밋 뒤 기록) | 11 | 0 |
+| 3 투사체 · 범위(+ addendum-2 12 · 13 · VERIFY-2 7 · 8) | 끝 | `0b29ac56` | 9 | 0 |
 
 ## 0단계 — 현황 통합표
 표 = `docs/design/boss-bible/BOSS-NIGHT-3/00_inventory.md`(6보스 × 79줄 · 평타 포함) · 덤프 하네스 = `roblox/tools/harness/boss_inventory_dump.luau`.
