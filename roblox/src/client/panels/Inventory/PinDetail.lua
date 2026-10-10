@@ -25,7 +25,7 @@ local C = P.colors
 
 local function gradeName(gradeId)
 	local g = ArmorData.grades[gradeId]
-	return g and g.displayName or tostring(gradeId)
+	return g and Text.name(g.displayName) or tostring(gradeId) -- 영어 = 이름 표(Text.name)
 end
 
 function PinDetail.attach(S, R, detail, card)
@@ -59,6 +59,7 @@ function PinDetail.attach(S, R, detail, card)
 	end
 	detail.BackgroundColor3 = V9.hex(C.panel)
 	detail.BackgroundTransparency = 0.02
+	detail.Active = true -- 창 밖 형제라 뒤 칸으로 클릭이 새지 않게(폰에서 갑옷 칸이 눌림 - Play 발견)
 
 	-- 머리: 고정 표시 + [닫기]
 	local head = Instance.new("Frame")
@@ -105,6 +106,7 @@ function PinDetail.attach(S, R, detail, card)
 	gemPop.BackgroundColor3 = V9.hex(C.panel)
 	gemPop.BackgroundTransparency = 0.02
 	gemPop.Visible = false
+	gemPop.Active = true
 	gemPop.Parent = gui
 	V9.corner(gemPop, 14)
 	V9.stroke(gemPop, C.magenta, P.pc.stroke)
@@ -136,7 +138,7 @@ function PinDetail.attach(S, R, detail, card)
 		local w = lang() and g.wEn or g.w
 		if S.mode == "phone" then
 			w = math.min(w, math.floor(L.winW * 0.56))
-			return w, L.winH - (L.headerH + (L.currencyH or 0)) - 8
+			return w, L.winH - L.headerH - 8 -- 머리 아래부터(재화 줄 덮음 - 폰 높이 302라 내용 칸 확보)
 		end
 		return w, math.min(g.h, L.screenH - 16)
 	end
@@ -167,7 +169,7 @@ function PinDetail.attach(S, R, detail, card)
 		local ap, as = anchorRect()
 		if S.mode == "phone" then
 			local wp = rel(win.AbsolutePosition)
-			x, y = wp.X + 8, wp.Y + L.headerH + (L.currencyH or 0) + 4
+			x, y = wp.X + 8, wp.Y + L.headerH + 4
 		elseif ap then
 			local gap = geo().gap
 			x = ap.X + as.X + gap
@@ -266,11 +268,10 @@ function PinDetail.attach(S, R, detail, card)
 		local dp, ds = rel(detail.AbsolutePosition), detail.AbsoluteSize
 		local sw = gui.AbsoluteSize.X
 		local x = dp.X + ds.X + (phone and 8 or 24)
-		if x + W > sw - 8 then
+		if phone and sw - x - 8 >= 260 then
+			W = math.min(W, sw - x - 8) -- 폰: 상세 옆 남은 폭에 맞춤(나란히 - ph_05)
+		elseif x + W > sw - 8 then
 			x = math.max(8, sw - W - 8)
-		end
-		if phone then
-			W = math.min(W, sw - x - 8)
 		end
 		local y = dp.Y + (phone and 40 or math.floor(ds.Y * 0.45))
 		y = math.clamp(y, 8, math.max(8, gui.AbsoluteSize.Y - H - 8))
@@ -400,7 +401,7 @@ function PinDetail.attach(S, R, detail, card)
 			serial += 1
 			hideGem()
 		end
-		local shown = pin.shown() and R.screenGui.Enabled
+		local shown = pin.shown() and R.screenGui.Enabled and R.win.Visible -- 가방을 닫으면 Window만 숨는다(ScreenGui는 켜짐) → 창 밖 형제인 고정 창도 같이
 		detail.Visible = shown
 		if not shown then
 			line.Visible, lineDot.Visible = false, false
@@ -461,7 +462,7 @@ function PinDetail.attach(S, R, detail, card)
 		end
 		local before = pressSerial
 		pressSerial = nil
-		if not (before and detail.Visible and gui.Enabled) then
+		if not (before and detail.Visible and gui.Enabled and R.win.Visible) then
 			return
 		end
 		local objs = player.PlayerGui:GetGuiObjectsAtPosition(input.Position.X, input.Position.Y)
@@ -483,12 +484,17 @@ function PinDetail.attach(S, R, detail, card)
 			end
 		end)
 	end)
-	gui:GetPropertyChangedSignal("Enabled"):Connect(function()
-		if not gui.Enabled then
-			hideGem()
+	local function onShownChanged()
+		if not (gui.Enabled and R.win.Visible) then
+			PinDetail._close() -- 가방을 닫으면 고정도 풀림(다시 열면 빈 상태 - 기준 칸 없이 뜨지 않게)
+			detail.Visible = false
 			line.Visible, lineDot.Visible = false, false
+		elseif R.layout and pin.shown() then
+			S.refreshDetail()
 		end
-	end)
+	end
+	gui:GetPropertyChangedSignal("Enabled"):Connect(onShownChanged)
+	R.win:GetPropertyChangedSignal("Visible"):Connect(onShownChanged)
 
 	return pin
 end

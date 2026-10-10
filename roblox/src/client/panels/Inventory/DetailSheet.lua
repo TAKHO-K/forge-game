@@ -560,7 +560,7 @@ local function actionsGeometry(L)
 		local height = rows > 0 and rows * L.actionH + (rows - 1) * PHONE_GAP or 0
 		return list, perRow, PHONE_BUTTON_W, rows, height, PHONE_GAP
 	end
-	local perRow = 3
+	local perRow = (pin and L.mode == "phone") and math.clamp(n, 1, 4) or 3 -- UI-1c: 폰 고정 창 = 버튼 한 줄(내용 칸 확보)
 	local width = math.floor((((pin and (pin.size(L))) or L.detailW) - 20 - (perRow - 1) * PC_GAP) / perRow)
 	local rows = n > 0 and math.ceil(n / perRow) or 0
 	local height = rows > 0 and rows * L.actionH + (rows - 1) * PC_GAP or 0
