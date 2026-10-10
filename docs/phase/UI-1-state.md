@@ -28,4 +28,8 @@ UI-1 끝. 다음 = 사용자: rojo serve 다시 켜고 Connect · 보고서 11�
 |---|---|---|---|
 | 0-가 VERIFY-5 서버 · 하네스 | 완료 | (아래 커밋) | run_all = 기대 검사 수 EXP 고정 · 실행 전 결과 파일 지움 · 종료 코드 · 에러 문구 ERR_RE 하나("[태그] 에러" · "하네스 에러" · stacktrace) · 끝 줄 "전체 n개 · X m" · 상1 autoProcess 새 계정 = normal(v36 단계 · 복구 · 하네스 migrate_curve 24) · 여러 칸 판매/분해 중복 번호 거름 + 처리 직전 확인값(attack 10 · 옛 코드 X 확인) · 스타터 = viewOpen만 셈(2초 중복 = 1 · monetize 86) · 도감 받은 장부 하나(CodexRules.paidLedger · 스위치 끔 점수판 = 증가분만 · 열어 둔 점수판 → 해당 상자 · codex_box 35 고정값 4445 · 442) · UiV2Flags 끔 = 옛 fitRight · 인셋 · 배율 · Theme 옛 폰 판정 · 기본값(doubleTapDash = map · 스타터 OR = rest · autoProcess epic = bag) · 2폼 카드 = boss 스위치만 · HudEdit 연결 누수(ui1_static 9) · 강화대 닫기 색 = 데이터 |
 
-다음 시작: 0-나 = 도감 그림 160×288 재업로드 · 실제 GUI 겹침 검사(Studio) · 빠진 13건 표.
+| 0-나 그림 · 실제 겹침 | 완료 | 846c41eb | 도감 무기 64장 160×288 재업로드(이미지 id 64) · UiLayoutData.realCheck + HudRealRules + hud/HudRealCheck(Studio · 속성 DebugHudRealCheck → DebugHudRealResult) |
+| 1-1 글자 | 완료 | 2c557bba | textBase 1.15 · 최소 PC 18/15 · 폰 14/12 · hudNumber · UiV2Flags.text |
+| 1-2 보스 바 | 완료 | 1b31f09c | 상단 바 빈 칸 안 760×44 / 430×34 · UiV2Flags.topbarBoss · 보스전 접힘 버그 수정 · 캡처 docs/design/ui1b/1-2 |
+
+다음 시작: 1-16 HUD 재화 칩(v9 0-4 · 높이 52 · 아이콘 36 · 이름 · 누르면 설명) → 1-15 강화 창 → 1-3 [?] → 1-b 나머지 → 2절 → 3절 → 보고(13건 표 · F7 실제 검사 다시).
