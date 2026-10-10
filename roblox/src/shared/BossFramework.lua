@@ -202,6 +202,9 @@ function BossFramework.applyV3(data, rigKey)
 		local projectile = s.primitive == "projectile"
 		local scale = (out.skillRangeScale or 1) * (projectile and 1 or row.zoneRangeScale)
 		s = BossSkillMath.scaleSkills({ x = s }, scale).x
+		if not projectile then
+			s = BossSkillMath.boostRange(s, scale, out.rangeBoostCap) -- BOSS-NIGHT-3 3단계 모양별 범위 확대(반응 스킬 제외)
+		end
 		s = table.clone(s)
 		if projectile then
 			local base = s.count or 1
@@ -213,6 +216,7 @@ function BossFramework.applyV3(data, rigKey)
 				s.baseCount, s.count = base, curved
 			end
 			s.radiusStuds = (s.radiusStuds or 1) * row.projectileRadiusScale
+			s = table.clone((BossSkillMath.fitProjectileSpeed(s))) -- BOSS-NIGHT-3 3단계 투사체 회피 식(바나나 · 검기)
 		end
 		if not s.reactive then -- 반응 스킬(도약 고정 · 비행 · 바나나 · 뒷발차기 …)은 V3에서 회피를 따로 설계 · 검증했다 - 일반 추가 스킬만 기본 스킬과 같은 전조 맞춤
 			BossSkillMath.fitTelegraphs(s, 8, WorldConfig.playerWalkSpeedStuds)

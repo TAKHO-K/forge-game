@@ -176,6 +176,14 @@ local MECHANICS = {
 	--   launch 나눔: heightStuds ≥ airborneMinHeightStuds = 띄움 · 아래 = 넉백. 면역 = 체공(+ 붙잡힘)이 끝난 뒤 immuneSeconds(띄움 면역은 넉백도 막는다) · escape(던짐)는 면역을 안 본다(잡기의 한 동작)
 	--   airborne.dashAfterSeconds = 띄워진 뒤 이 시간 전엔 대시 거절(띄움 회복 = 공중 대시만 · 쿨 공유)
 	--   slow = 걷기만 × walkMultiplier(대시 거리 · 보호 창 그대로) · 새로 고침만 / crystalMark = 표식을 건 보스가 주는 피해 × multiplier(새로 고침만 · 상한 = multiplier) · 시전이 끝난 뒤 걸림
+	-- BOSS-NIGHT-3 3단계 범위 확대(addendum-2 12 · BossSkillMath.boostRange): 모양별 추가 배율 - 원(보스 · 대상) · 부채꼴(반경) · 직선 · 왕복 직선(반폭 - 길이는 이미 벽까지) × 1.15 · 장판(소용돌이) × 1.1.
+	--   도넛은 안 · 밖을 같이. 최종 배율(기본 대비 = 이속 보정 × 곡선 × 이 값) 상한 = 지금 최고 단계의 최종 배율(BossRules.rangeBoostCap = 1.152 × 1.15) → 높은 단계는 지금보다 안 넓어진다.
+	--   제외: 기본공격 · 강화 평타(rangeBoost = false) · fixedRadius(원 안 내려찍기 12) · 돌진(경로 = 몸 폭) · 고리 파동(두께 · 벽까지) · 에네르기파 · 투사체 · 반응 스킬(회피 따로 설계 · 검증).
+	rangeBoost = { circleBoss = 1.15, circleTarget = 1.15, sector = 1.15, line = 1.15, boomerang = 1.15, vortex = 1.1 },
+	-- BOSS-NIGHT-3 3단계 투사체 회피 식(addendum-2 13 · BossSkillMath.fitProjectileSpeed): 예고 + distance ÷ 속도 − reaction ≥ (판정 반경 + 1) ÷ walk × margin.
+	--   직진 투사체(primitive projectile · turnRateDeg 없음)만 - 못 맞추면 속도를 식이 맞는 값까지 낮춘다(큰 투사체 = 자동으로 느림). 유도탄은 회전 속도 표로 따로 · 돌진(charge)은 제외.
+	projectileDodge = { distanceStuds = 25, reactionSeconds = 0.5, walkStuds = 16, margin = 1.25 },
+
 	cc = {
 		stagger = { seconds = 0.2, immuneSeconds = 0.8, basicAttack = true },
 		knockback = { immuneSeconds = 0.5 },
@@ -358,6 +366,7 @@ local function enhancedBasic(label, motion)
 		primitive = "sector", bubble = "swipe", motion = motion,
 		cooldownSeconds = 7, priority = P.normal,
 		conditions = { { type = "targetWithin", studs = 14 } },
+		rangeBoost = false, -- BOSS-NIGHT-3 3단계: 범위 확대 = 기본공격 제외(강화 평타도 평타 계열)
 		telegraphSeconds = 1.3, angleDeg = 100, radiusStuds = 14, facing = "target",
 		outline = true, weaponFlash = true,
 		dodge = { distanceStuds = 7.1 },

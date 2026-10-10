@@ -892,9 +892,64 @@ function BossSkillMath.fitTelegraphs(skill, standoffStuds, walkSpeedStuds)
 	return skill, added
 end
 
+-- BOSS-NIGHT-3 3단계 범위 확대: 모양별 추가 배율(BossData.mechanics.rangeBoost) × 지금 배율 currentScale이 cap을 넘지 않게 자른다(1 아래로는 안 줄임). 반경 · 안 반경 · 반폭 · 마무리 · 칸 · 펄스(scaleSkills와 같은 칸 - 돌진 경로 · 흩어짐 제외). 반환 = 사본(또는 그대로), 실제 곱한 배율.
+local BOOST_FIELDS = { "radiusStuds", "innerRadiusStuds", "halfWidthStuds" }
+function BossSkillMath.boostRange(skill, currentScale, cap)
+	local boost = skill.rangeBoost ~= false and not skill.fixedRadius and not skill.reactive and BossData.mechanics.rangeBoost[skill.primitive]
+	if not boost or not cap then
+		return skill, 1
+	end
+	local factor = math.max(1, math.min(boost, cap / currentScale))
+	if factor <= 1 + 1e-9 then
+		return skill, 1
+	end
+	local copy = table.clone(skill)
+	for _, field in ipairs(BOOST_FIELDS) do
+		if copy[field] then
+			copy[field] *= factor
+		end
+	end
+	if copy.finisher then
+		copy.finisher = table.clone(copy.finisher)
+		copy.finisher.radiusStuds *= factor
+	end
+	for _, key in ipairs({ "shots", "pulses" }) do
+		if copy[key] then
+			local list = {}
+			for index, entry in ipairs(copy[key]) do
+				list[index] = table.clone(entry)
+				for _, field in ipairs(BOOST_FIELDS) do
+					if entry[field] then
+						list[index][field] = entry[field] * factor
+					end
+				end
+			end
+			copy[key] = list
+		end
+	end
+	return copy, factor
+end
+
+-- BOSS-NIGHT-3 3단계: 직진 투사체가 회피 식(BossData.mechanics.projectileDodge)을 못 맞추면 속도를 맞는 값으로 낮춘다(사본 · 반경은 곡선을 곱한 뒤 값). 반환 = 사본(또는 그대로), 옛 속도(바꿨으면).
+function BossSkillMath.fitProjectileSpeed(skill)
+	if skill.primitive ~= "projectile" or (skill.turnRateDeg or 0) > 0 or not skill.speedStuds then
+		return skill, nil
+	end
+	local rule = BossData.mechanics.projectileDodge
+	local need = ((skill.radiusStuds or 0) + 1) / rule.walkStuds * rule.margin
+	local travel = need + rule.reactionSeconds - (skill.telegraphSeconds or 0) -- 날아오는 데 필요한 최소 초
+	if travel <= 0 or rule.distanceStuds / skill.speedStuds >= travel - 1e-9 then
+		return skill, nil
+	end
+	local copy = table.clone(skill)
+	copy.speedStuds = math.floor(rule.distanceStuds / travel * 10) / 10 -- 0.1 단위 내림(식이 맞는 쪽)
+	return copy, skill.speedStuds
+end
+
 -- 곡선 행을 스킬표 사본에 얹는다(원본 BossData는 안 건드린다). 순서: (이미 곱한 이속 보정 위에) 장판 범위 × → 장판 개수 ± → 연쇄 칸 ± → 투사체 인당 개수 · 반경 → 전조 맞춤.
 -- zoneExtra를 따로 주면(견습 = 0) 행 값 대신 쓴다. 반환: 새 표, 전조를 늘린 스킬 { [id] = 초 }.
-function BossSkillMath.applyCurve(skills, row, zoneExtraOverride, walkSpeedStuds)
+-- boost(선택) = { scale = 이속 보정, cap = BossRules.rangeBoostCap() } - 장판 범위 × 뒤에 모양별 추가 배율(boostRange)을 곱한다(전조 맞춤보다 먼저 - 넓어진 만큼 예고가 자동으로 늘어난다).
+function BossSkillMath.applyCurve(skills, row, zoneExtraOverride, walkSpeedStuds, boost)
 	local zoneScaled = {}
 	for id, skill in pairs(skills) do
 		if skill.primitive ~= "projectile" then
@@ -906,10 +961,14 @@ function BossSkillMath.applyCurve(skills, row, zoneExtraOverride, walkSpeedStuds
 	local out, fitted = {}, {}
 	for id, skill in pairs(skills) do
 		local copy = table.clone(zoneScaled[id] or skill)
+		if boost and copy.primitive ~= "projectile" then
+			copy = table.clone((BossSkillMath.boostRange(copy, boost.scale * row.zoneRangeScale, boost.cap)))
+		end
 		if copy.primitive == "projectile" then
 			copy.baseCount = skill.count or 1
 			copy.count = BossSkillMath.perPersonCount(skill.count or 1, row)
 			copy.radiusStuds = skill.radiusStuds * row.projectileRadiusScale
+			copy = table.clone((BossSkillMath.fitProjectileSpeed(copy))) -- BOSS-NIGHT-3 3단계 투사체 회피 식
 		end
 		if extra ~= 0 and copy.densityScalable and copy.count then
 			local count = math.max(1, copy.count + extra)

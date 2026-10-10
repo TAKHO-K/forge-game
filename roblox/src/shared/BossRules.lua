@@ -65,6 +65,15 @@ function BossRules.skillRangeScale(stage)
 	return math.max(1, referenceSpeedFactor(stage) / referenceSpeedFactor(BossData.stageInterval))
 end
 
+-- BOSS-NIGHT-3 3단계: 범위 확대 뒤 최종 배율(기본 대비) 상한 = 지금 최고 단계의 최종 배율(이속 보정 상한 × 곡선 장판 범위 최댓값 = 1.152 × 1.15).
+function BossRules.rangeBoostCap()
+	local zone = 1
+	for _, row in ipairs(require(ReplicatedStorage.Shared.data.BossCurveData).rows) do
+		zone = math.max(zone, row.zoneRangeScale)
+	end
+	return BossRules.maxSkillRangeScale() * zone
+end
+
 -- 배율의 상한(스테이지가 아무리 올라도 이 값) - 검사기가 최악의 경우로 쓴다.
 function BossRules.maxSkillRangeScale()
 	return BossRules.skillRangeScale(math.huge)
@@ -320,7 +329,9 @@ function BossRules.buildInstanceDataFrom(trashBase, stage, boss, tierIndex, hpMu
 		-- 공유해도 안전하다 - BossData는 절대 런타임에 고치지 않는다), 아니면 넓힌 사본이다.
 		-- S14: 배율로 넓힌 뒤(배율 → 밀도 순서) 밀도만큼 원을 늘린다. 둘 다 사본이라 BossData 원본은 그대로다.
 		-- BR1-2: 이속 보정 → 난이도 곡선(장판 범위 · 개수 · 연쇄 · 투사체 인당 개수 · 반경 → 전조 맞춤 - BossSkillMath.applyCurve).
-		skills = (BossSkillMath.applyCurve(BossSkillMath.scaleSkills(boss.skills, BossRules.skillRangeScale(stage)), BossSkillMath.curveRow(stage), densityExtra or 0, WorldConfig.playerWalkSpeedStuds)),
+		skills = (BossSkillMath.applyCurve(BossSkillMath.scaleSkills(boss.skills, BossRules.skillRangeScale(stage)), BossSkillMath.curveRow(stage), densityExtra or 0, WorldConfig.playerWalkSpeedStuds,
+			{ scale = BossRules.skillRangeScale(stage), cap = BossRules.rangeBoostCap() })), -- BOSS-NIGHT-3 3단계 모양별 범위 확대(상한 = 지금 최고 단계 최종 배율)
+		rangeBoostCap = BossRules.rangeBoostCap(),
 		curveTier = BossSkillMath.curveRow(stage).tier,
 		curveStage = stage, -- BOSS-NIGHT-3 1-②: 새 몸(applyV3)이 나중에 얹는 투사체 스킬도 같은 곡선 행을 쓴다
 		skillOrder = boss.skillOrder,

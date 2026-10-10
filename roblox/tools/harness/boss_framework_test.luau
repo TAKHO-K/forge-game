@@ -403,9 +403,9 @@ do
 	check("V3 이속 × 1.3 · 질주 25 stud 밖 × 1.5", math.abs(g.moveSpeedStuds - e.moveSpeedStuds * 1.3) < 1e-6 and g.sprintBeyondStuds == 25 and g.sprintMultiplier == 1.5,
 		("%.1f → %.1f · 질주 %.1f stud/s(걷기 %d)"):format(e.moveSpeedStuds, g.moveSpeedStuds, g.moveSpeedStuds * g.sprintMultiplier, walk))
 	local b, l = g.skills.banana, g.skills.leap
-	local bOk = b and b.reactive and b.telegraphSeconds == 0.45 and b.speedStuds == 110 and b.leadFraction == 0.5 and b.damage.kind == "maxHp" and b.damage.fraction == 0.07
+	local bOk = b and b.reactive and b.telegraphSeconds == 0.45 and b.speedStuds == MODS.BossSkillMath.fitProjectileSpeed({ primitive = "projectile", speedStuds = 110, radiusStuds = b.radiusStuds, telegraphSeconds = 0.45 }).speedStuds and b.speedStuds < 110 and b.leadFraction == 0.5 and b.damage.kind == "maxHp" and b.damage.fraction == 0.07
 		and b.cooldownSeconds == 3 and b.conditions[1].type == "targetBeyondFor" and b.conditions[1].studs == 30 and b.conditions[1].seconds == 1.5 and b.overrides[1].set.count == 3
-	check("V3 바나나(조건 30 stud · 1.5초 · 쿨 3 · 예비 0.45 · 110 stud/s · 리드 50% · 7% · 광폭 3갈래)", bOk == true, b and ("쿨 %d · 예비 %.2f · 속도 %d · 리드 %.0f%% · 최대 체력 %.0f%% · 광폭 %d갈래"):format(
+	check("V3 바나나(조건 30 stud · 1.5초 · 쿨 3 · 예비 0.45 · 110 stud/s → 회피 식 속도(3단계) · 리드 50% · 7% · 광폭 3갈래)", bOk == true, b and ("쿨 %d · 예비 %.2f · 속도 %d · 리드 %.0f%% · 최대 체력 %.0f%% · 광폭 %d갈래"):format(
 		b.cooldownSeconds, b.telegraphSeconds, b.speedStuds, b.leadFraction * 100, b.damage.fraction * 100, b.overrides[1].set.count) or "없음")
 	local lOk = l and l.reactive and l.telegraphSeconds == 1.1 and l.lockSeconds == 0.4 and l.flightSeconds == 0.8 and l.maxLeapStuds == 60 and math.abs(l.radiusStuds - (half + 12 * d.skillRangeScale)) < 1e-6 -- BOSS-NIGHT-3 1-②: 반응 스킬도 이속 보정
 		and l.conditions[1].count == 2 and l.conditions[1].seconds == 12 and l.onHit[1].type == "launch"
@@ -505,9 +505,10 @@ do
 		("일반 후보 %d개 · 반응 %s"):format(#g.skillOrder, table.concat(g.reactiveOrder, ",")))
 	local tw, bk, go, ts = g.skills.trunkWhip, g.skills.backKick, g.skills.gore, g.skills.tuskShot
 	-- BOSS-NIGHT-3 1-②: 새 몸 스킬도 스테이지 곡선(이속 보정 × 장판 범위) - 반경 = 기본 × 배율 + 몸 앞 · 뒤 끝
-	local zs = d.skillRangeScale * MODS.BossSkillMath.curveRow(15).zoneRangeScale
+	local zs = math.min(d.skillRangeScale * MODS.BossSkillMath.curveRow(15).zoneRangeScale * MODS.BossData.mechanics.rangeBoost.sector, d.rangeBoostCap) -- BOSS-NIGHT-3 3단계: 코 채찍(추가 부채꼴) × 1.15 · 상한
+	local zsReactive = d.skillRangeScale * MODS.BossSkillMath.curveRow(15).zoneRangeScale -- 뒷발차기 = 반응 스킬(확대 제외)
 	check("매머드 앞 · 뒤 구역(반경 = 머리 앞 끝 / 엉덩이 끝 기준)", math.abs(tw.radiusStuds - (12 * zs + front)) < 1e-6 and math.abs(tw.conditions[1].studs - (12 + front)) < 1e-6 -- 조건 거리는 기본 스킬처럼 배율 밖
-		and math.abs(bk.radiusStuds - (14 * zs + rear)) < 1e-6 and math.abs(bk.conditions[1].studs - (20 + rear)) < 1e-6 and math.abs(go.arenaMarginStuds - (4 + front)) < 1e-6,
+		and math.abs(bk.radiusStuds - (14 * zsReactive + rear)) < 1e-6 and math.abs(bk.conditions[1].studs - (20 + rear)) < 1e-6 and math.abs(go.arenaMarginStuds - (4 + front)) < 1e-6,
 		("앞 끝 %.1f · 엉덩이 끝 %.1f · 옆 %.1f stud · 코 채찍 r %.1f · 뒷발차기 r %.1f(조건 %.1f) · 돌진 벽 여유 %.1f"):format(front, rear, half, tw.radiusStuds, bk.radiusStuds, bk.conditions[1].studs, go.arenaMarginStuds))
 	check("매머드 상아 돌진 경로 반폭 = 몸 반폭 · 균열선", math.abs(go.pathHalfWidthStuds - half) < 1e-6 and go.markStyle == "crack", ("%.2f stud"):format(go.pathHalfWidthStuds))
 	check("매머드 바닥 표시 끔(근접) · 예비 +0.12", g.skills.slam.noFloor and g.skills.innerSmash.noFloor and g.skills.swipe.noFloor and tw.noFloor and bk.noFloor and not g.skills.stomp.noFloor

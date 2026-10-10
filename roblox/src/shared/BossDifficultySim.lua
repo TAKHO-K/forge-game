@@ -431,6 +431,14 @@ function BossDifficultySim.run(bossId, options)
 					local first = (seenCount[j.skill] or 0) <= 1 and not familiar
 					if m and j.reactive == "banana" then
 						local hc = (first and v3sim.bananaHit.first or v3sim.bananaHit.later) * hitScale
+						local ref = v3sim.bananaHit.refSpeedStuds
+						if ref and j.skill.speedStuds and j.skill.speedStuds < ref then -- BOSS-NIGHT-3 3단계(VERIFY-2 7): 가정 명중률 = 속도 ref 기준 → 피할 여유(예고 + 25 ÷ 속도 − 반응)가 늘어난 비로 낮춘다
+							local rule = BossData.mechanics.projectileDodge
+							local function spare(speed)
+								return math.max(j.skill.telegraphSeconds + rule.distanceStuds / speed - rule.reactionSeconds, 0.05)
+							end
+							hc *= spare(ref) / spare(j.skill.speedStuds)
+						end
 						local hits = 0
 						for k = 1, j.shots do
 							if rng() < hc * (k > 1 and cfg.extraProjectileHit or 1) then

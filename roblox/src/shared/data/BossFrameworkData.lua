@@ -81,7 +81,7 @@ D.v3 = {
 		},
 		firstAssist = { perFail = 0.10, max = 0.30 },
 		-- 원거리가 30 stud 밖에 있는 비율 0.25: 활 사거리 15(10 × 1.5) + 새 몸 피격 반경 약 6.2 = 보스 중심 약 21 stud 안에서 때린다 → 30 밖 = 피하기 · 물러남 동안만(보스 질주 15.6이 따라붙음)
-		sim = { rangedFarShare = 0.25, meleeFarShare = 0.08, farSegmentSeconds = 3, bananaHit = { first = 0.45, later = 0.3 }, leapHit = { first = 0.55, later = 0.35 } },
+		sim = { rangedFarShare = 0.25, meleeFarShare = 0.08, farSegmentSeconds = 3, bananaHit = { first = 0.45, later = 0.3, refSpeedStuds = 110 }, leapHit = { first = 0.55, later = 0.35 } },
 	},
 	-- BOSS-NIGHT-1 1 빙하 매머드 "빙하 엄니"(설계 메모 MAMMOTH-SCORPION-NOTES · 새 몸이 뜰 때만): 수호자와 같은 근접 규칙(바닥 표시 없음 · 예비 +0.12 · 엄니/코/발 발광) +
 	--   신규 4패턴 = 얼음 상아 발사 tuskShot(얼음 창 spear 대체 · 고드름처럼 자기 축 회전 2발) · 코 채찍 trunkWhip · 상아 돌진 gore(경로 폭 = 몸 폭 · 균열선) · 뒷발차기 backKick(반응 - 뒤쪽 1.5초).
