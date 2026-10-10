@@ -17,4 +17,49 @@ return {
 		{ id = "crystalMark", nameKey = "status.crystalMark", source = "StatusCrystalMarkUntil", order = 10, kind = "debuff", icon = "status-crystal-mark" }, -- 수정 표식(그 보스 피해 × 2 · 3초)
 		{ id = "dashGuard", nameKey = "status.dashGuard", source = "StatusDashGuardUntil", order = 11, kind = "buff", icon = "status-dash-guard" }, -- 대시 보호 창(받는 피해 × 0.5 · 무적 아님)
 	},
+	-- UI-1 1단계(00 v8 §4 · 39 + 옛 1): 아이콘 id → 범주(cc 빨강 · debuff 노랑 · buff 파랑 · 색 = UiPartsData.statusColors) · 그림(ui/ds/status-<id>) · 이름 · 효과 한 줄 키(TextData_ui1).
+	--   src = 데이터 연결: attr(Attribute 이름) · on("player" | "character" | "boss") · mode("truthy" = 있으면 · "untilServer" = 서버 시각 끝 · "untilOs" = os.time 끝) · buff(BuffUpdate id)
+	--   src 없음 = 연결할 데이터 없음 → 안 보임(CC-UI-1 §1 · MISSING 8). strong = 강한 버프(빛) · unused = 파일만(옛 이름).
+	icons = {
+		stun = { cat = "cc", src = { { attr = "BossStunned", on = "player", mode = "truthy", seconds = 0.7 }, { attr = "BossStunUntil", on = "boss", mode = "untilServer" } } },
+		["trap-freeze"] = { cat = "cc", trapKinds = { "frozen", "airFrozen", "snowball" } },
+		["trap-submerge"] = { cat = "cc", trapKinds = { "submerged" } },
+		["trap-crystal"] = { cat = "cc", trapKinds = { "crystallized", "crystal" } },
+		["trap-bury"] = { cat = "cc", trapKinds = { "buried" } },
+		["trap-shock"] = { cat = "cc", trapKinds = { "shocked" } },
+		["trap-grab"] = { cat = "cc", trapKinds = { "grabbed" }, trapFallback = true }, -- 표에 없는 잡힘 종류 = 잡힘
+		["grab-lift"] = { cat = "cc", src = { { attr = "BossGrabGauge", on = "player", mode = "truthy" } } },
+		airborne = { cat = "cc", src = { { attr = "StatusAirborneUntil", on = "player", mode = "untilServer" } } },
+		["cage-bubble"] = { cat = "cc", trapKinds = { "bubbled" } },
+		["cage-tornado"] = { cat = "cc", trapKinds = { "tornado" } },
+		knockdown = { cat = "cc", src = { { attr = "FallKnockdown", on = "character", mode = "truthy", seconds = 1.6 } } },
+		stagger = { cat = "cc", src = { { attr = "StatusStaggerUntil", on = "player", mode = "untilServer" } } },
+		knockback = { cat = "cc", src = { { attr = "StatusKnockbackUntil", on = "player", mode = "untilServer" } } },
+		petrify = { cat = "cc", trapKinds = { "statue" } },
+		slow = { cat = "debuff", src = { { attr = "StatusSlowUntil", on = "player", mode = "untilServer" } } },
+		["crystal-mark"] = { cat = "debuff", src = { { attr = "StatusCrystalMarkUntil", on = "player", mode = "untilServer" } } },
+		["dmg-taken-up"] = { cat = "debuff" },
+		["regen-off"] = { cat = "debuff", src = { { attr = "BossEncounterId", on = "player", mode = "truthy" } } }, -- 보스전 = 자동회복 꺼짐
+		["shared-damage"] = { cat = "debuff" },
+		["power-shot"] = { cat = "buff", src = { { buff = "quickShot" } } },
+		["backstep-charge"] = { cat = "buff", src = { { buff = "backstepShotBuff" } } },
+		["shadow-clone"] = { cat = "buff", src = { { buff = "guaranteedCrit" } } },
+		["dealing-mode"] = { cat = "buff", src = { { buff = "dealingMode" } } },
+		heal = { cat = "buff", src = { { buff = "healerBuff" } } },
+		shield = { cat = "buff", src = { { attr = "Shield", on = "player", mode = "positive" }, { attr = "BossShielded", on = "boss", mode = "truthy" } } },
+		["war-cry"] = { cat = "buff", src = { { buff = "warcryBuff" } } },
+		["shadow-mark"] = { cat = "buff", src = { { buff = "shadowMark" } } },
+		destroyer = { cat = "buff", src = { { attr = "UltTransform", on = "player", mode = "truthy" } } },
+		sanctuary = { cat = "buff" },
+		whirlwind = { cat = "buff" },
+		["dash-guard"] = { cat = "buff", src = { { attr = "StatusDashGuardUntil", on = "player", mode = "untilServer" } } },
+		invuln = { cat = "buff" },
+		["first-boss-help"] = { cat = "buff" },
+		berserk = { cat = "buff" },
+		comeback = { cat = "buff", strong = true, src = { { attr = "ComebackUntil", on = "player", mode = "untilOs" } } },
+		["boss-trap"] = { cat = "debuff" },
+		["boss-transform-guard"] = { cat = "buff", src = { { attr = "BossTransformGuard", on = "boss", mode = "truthy", seconds = 3.5 } } },
+		["boss-enrage"] = { cat = "buff", src = { { attr = "BossEnraged", on = "boss", mode = "truthy" } } }, -- UI-1 0단계 ⑧ 서버 Attribute 하나
+		["dash-invuln"] = { cat = "buff", unused = true }, -- 옛 이름(대시 무적) - v2에서 dash-guard로 · 파일만
+	},
 }

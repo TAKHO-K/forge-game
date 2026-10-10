@@ -171,6 +171,10 @@ ReplicatedStorage:WaitForChild("RiftBanner").OnClientEvent:Connect(function(info
 	if type(info) ~= "table" then
 		return
 	end
+	if info.kind == "start" and require(ReplicatedStorage.Shared.data.UiV2Flags).parts then -- UI-1 1단계: 균열 = A 알림 배너(00 v8 §6 · 카운트다운 없음)
+		require(script.Parent.ui.v2.UiParts).banner({ kind = "rift", title = Text.name(RiftData.text.start), line = "" })
+		return
+	end
 	Toast.push("TC", { richParts = { { text = Text.name(info.kind == "start" and RiftData.text.start or RiftData.text.finish), color = Color3.fromRGB(214, 180, 255), bold = true } },
 		seconds = RiftData.bannerSeconds, fadeSeconds = 0.4 })
 end)

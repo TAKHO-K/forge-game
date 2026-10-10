@@ -7538,6 +7538,34 @@
   "status": "Approved",
   "imageId": 108717344439121
  },
+ "ui/ds/banner-icon-golden.png": {
+  "sha256": "f3233a94a440c87ff86c5423b1b604a129c01f7c2c7330aaa23d0fb864e8ccef",
+  "assetType": "Decal",
+  "assetId": 79408385731204,
+  "status": "Approved",
+  "imageId": 127159243930282
+ },
+ "ui/ds/banner-icon-rift.png": {
+  "sha256": "39884e5168865eae5fb789e67a8f910ca352ff849af85be7e98abd98b8b5aa22",
+  "assetType": "Decal",
+  "assetId": 130733791922120,
+  "status": "Approved",
+  "imageId": 136947469745351
+ },
+ "ui/ds/banner-icon-server-goal.png": {
+  "sha256": "5a8bd609561b78c08a6b2f4de754b0aba9c03ceb8d6a6b7c2d6ef3b37eae45b5",
+  "assetType": "Decal",
+  "assetId": 137200978640730,
+  "status": "Approved",
+  "imageId": 121970107866250
+ },
+ "ui/ds/banner-panel.png": {
+  "sha256": "28aa775ca31d3fa6229982b889e845429e789d39f81f6847e887cb4bbc621f88",
+  "assetType": "Decal",
+  "assetId": 128345177064025,
+  "status": "Approved",
+  "imageId": 71396866510360
+ },
  "ui/ds/btn-card-disabled.png": {
   "sha256": "128b4061c20072b9a5b8eced6a2488b37dcc2b0be3cdd6ad3a61e12719e76c20",
   "assetType": "Decal",
@@ -7818,6 +7846,41 @@
   "status": "Approved",
   "imageId": 72261492320688
  },
+ "ui/ds/cd-mask-circle.png": {
+  "sha256": "2da979d5145398e75b210daa7da7ecce6cc1586f957065a2343b5ef6be7b1889",
+  "assetType": "Decal",
+  "assetId": 138160062919468,
+  "status": "Approved",
+  "imageId": 91761336663401
+ },
+ "ui/ds/cd-mask-r18.png": {
+  "sha256": "6965ac01a0c019dc17c3d22b8c436f7baae80477ad98851e34189bf35ad7d17e",
+  "assetType": "Decal",
+  "assetId": 79210300842059,
+  "status": "Approved",
+  "imageId": 85665732416033
+ },
+ "ui/ds/cd-ready-flash-circle.png": {
+  "sha256": "1df8e69bc6e9a7b6c0677cc3b5c500ac047cf7b4990f3669e87c7d9cba5128a2",
+  "assetType": "Decal",
+  "assetId": 121068670026644,
+  "status": "Approved",
+  "imageId": 99942819820932
+ },
+ "ui/ds/cd-ready-flash-r18.png": {
+  "sha256": "1497c606ebf1a6fced740f7d3aa345d687d2cf10b68da4632d0c0130a036af61",
+  "assetType": "Decal",
+  "assetId": 72606830353409,
+  "status": "Approved",
+  "imageId": 136275914347423
+ },
+ "ui/ds/empty-ring.png": {
+  "sha256": "e10bfda6239b9bfd5ed8e3e9700147bb028df8e73812bba0e6649907b77342e2",
+  "assetType": "Decal",
+  "assetId": 97432646695132,
+  "status": "Approved",
+  "imageId": 110859856916376
+ },
  "ui/ds/focus-ring-circle.png": {
   "sha256": "0ddea412053fa8cce46be125263aa60fe407551edc4b5243fa02c4dbe70e6a88",
   "assetType": "Decal",
@@ -7838,6 +7901,41 @@
   "assetId": 114312430627668,
   "status": "Approved",
   "imageId": 132306161283478
+ },
+ "ui/ds/fx-pop-rays.png": {
+  "sha256": "7cbe97498d2fe2d0a4232e73b49f22e43f332d03db7422cce08e6795acee73e9",
+  "assetType": "Decal",
+  "assetId": 114849165913151,
+  "status": "Approved",
+  "imageId": 84826489279181
+ },
+ "ui/ds/gauge-fill.png": {
+  "sha256": "c754b86b8046403527746e6b2ca73c5cb2f1c999d5d68588f093bee088c4d45e",
+  "assetType": "Decal",
+  "assetId": 83141358702024,
+  "status": "Approved",
+  "imageId": 129206252544541
+ },
+ "ui/ds/gauge-shine.png": {
+  "sha256": "a0a3325658be51d8c7fdf0d077e9fa46f4e468fb194d22191bee4585cb2809b5",
+  "assetType": "Decal",
+  "assetId": 87215945968677,
+  "status": "Approved",
+  "imageId": 127506487668718
+ },
+ "ui/ds/gauge-tip.png": {
+  "sha256": "f78d3954b7d29033b13c53a887d715854401042c909cb18ddab61d5e985ce86b",
+  "assetType": "Decal",
+  "assetId": 108602940302575,
+  "status": "Approved",
+  "imageId": 85791487853341
+ },
+ "ui/ds/gauge-track.png": {
+  "sha256": "31ddb3fe738d1c4be20cd7396c59f188bbd0d8c6c65c82b8f0cc0e78781d1672",
+  "assetType": "Decal",
+  "assetId": 117508167438083,
+  "status": "Approved",
+  "imageId": 81619776857517
  },
  "ui/ds/gem-body-ancient.png": {
   "sha256": "1c639f01ca59b83b9e1a9c0a243bc0b6eb4c6525782b487743dd6cc101ea870d",
@@ -8062,6 +8160,13 @@
   "assetId": 115473943529653,
   "status": "Approved",
   "imageId": 72934742852275
+ },
+ "ui/ds/icon-loading-shimmer.png": {
+  "sha256": "e5db8fa97eb1db7fbfdd506f250f7801d2943a5c8a45300c33a6367fd0c972dc",
+  "assetType": "Decal",
+  "assetId": 77583564939443,
+  "status": "Approved",
+  "imageId": 106434195467035
  },
  "ui/ds/icon-lock.png": {
   "sha256": "dc89284970fedd288b846496c081fcc85804b5387bb5466324397542170b8407",
@@ -8314,6 +8419,405 @@
   "assetId": 107957378112047,
   "status": "Approved",
   "imageId": 124695660841973
+ },
+ "ui/ds/status-airborne.png": {
+  "sha256": "5e1c6371a1ab0209c3fbe57ed588d426dc9b01522aa0e973aa2434812daaeb45",
+  "assetType": "Decal",
+  "assetId": 101701742375865,
+  "status": "Approved",
+  "imageId": 128168432043213
+ },
+ "ui/ds/status-backstep-charge.png": {
+  "sha256": "1ed58074977d75688092f9b6cf64ccffe825758eb053380b66f26b1b9fdfdafa",
+  "assetType": "Decal",
+  "assetId": 113109957235239,
+  "status": "Approved",
+  "imageId": 80354911870434
+ },
+ "ui/ds/status-berserk.png": {
+  "sha256": "9022413f52194bbf0698172eb2f3cb6e78d614ca73c14be9cdd8a34ce9e4cc22",
+  "assetType": "Decal",
+  "assetId": 121417164810030,
+  "status": "Approved",
+  "imageId": 123695793416631
+ },
+ "ui/ds/status-boss-enrage.png": {
+  "sha256": "6ba4abd9ed607158e24e71a9bbb4d629f291ca414ba09c8b3d5b5f28ef52b084",
+  "assetType": "Decal",
+  "assetId": 95483958972014,
+  "status": "Approved",
+  "imageId": 112040960325388
+ },
+ "ui/ds/status-boss-transform-guard.png": {
+  "sha256": "ddcb79e3558182575cdfbb3a4ad743fa156fd389e67112300a9f69f479bf53b2",
+  "assetType": "Decal",
+  "assetId": 140521118703371,
+  "status": "Approved",
+  "imageId": 102310047534470
+ },
+ "ui/ds/status-boss-trap.png": {
+  "sha256": "df3626a7fd216ffeea1bc7980e3d18b3e4cfa40c1924c9e859c5e7bdd5a69492",
+  "assetType": "Decal",
+  "assetId": 122074288724405,
+  "status": "Approved",
+  "imageId": 138030826341850
+ },
+ "ui/ds/status-cage-bubble.png": {
+  "sha256": "9e80fbfdf09e1342bac61f25dd58d8c52bd13157d425af27f65e13288b771b57",
+  "assetType": "Decal",
+  "assetId": 95185185833801,
+  "status": "Approved",
+  "imageId": 84228460977818
+ },
+ "ui/ds/status-cage-tornado.png": {
+  "sha256": "7f9dbef0c63c2352b449787003be4f589e4555d1b5071d8e65ac87d0f83586f8",
+  "assetType": "Decal",
+  "assetId": 133302395436428,
+  "status": "Approved",
+  "imageId": 89416190370881
+ },
+ "ui/ds/status-comeback.png": {
+  "sha256": "c4edc1d054c2ef822c4c3854ec193b7c1550d607810fa2645420cd653df3a5c2",
+  "assetType": "Decal",
+  "assetId": 95162590494134,
+  "status": "Approved",
+  "imageId": 108606679719179
+ },
+ "ui/ds/status-crystal-mark.png": {
+  "sha256": "9602d065a04ca000aa3f765b598e3a9c83307ff7003dfafb5a863077aaef7354",
+  "assetType": "Decal",
+  "assetId": 74419238418631,
+  "status": "Approved",
+  "imageId": 127302793007642
+ },
+ "ui/ds/status-dash-guard.png": {
+  "sha256": "935a80224c4c070ce088c7f292ab3ac69352e3c4928a9371e9c4e5e9f2de59e8",
+  "assetType": "Decal",
+  "assetId": 111645856852912,
+  "status": "Approved",
+  "imageId": 127625501005225
+ },
+ "ui/ds/status-dash-invuln.png": {
+  "sha256": "bcc6f7d123e552d62350852a240abbb5128d3cf3e6efc31b14861f9489ca101a",
+  "assetType": "Decal",
+  "assetId": 87911008553039,
+  "status": "Approved",
+  "imageId": 87425338683764
+ },
+ "ui/ds/status-dealing-mode.png": {
+  "sha256": "4d9a8bb2a6e5556270fe7ba8670025186fca2cdaa64cb6ac7ff7bc24284f8269",
+  "assetType": "Decal",
+  "assetId": 108657602643706,
+  "status": "Approved",
+  "imageId": 99373213138725
+ },
+ "ui/ds/status-destroyer.png": {
+  "sha256": "58ccadfabcb1041c808d22dd64513d2c09c65837ce03de6e03839f53c6b41222",
+  "assetType": "Decal",
+  "assetId": 111600362250450,
+  "status": "Approved",
+  "imageId": 121411514476903
+ },
+ "ui/ds/status-dmg-taken-up.png": {
+  "sha256": "1b0a5a05a8f6c5d2c2eab72da7a03442d9eee362fd5190f1fb1fc130e1ef7573",
+  "assetType": "Decal",
+  "assetId": 92120384473240,
+  "status": "Approved",
+  "imageId": 101021883427611
+ },
+ "ui/ds/status-first-boss-help.png": {
+  "sha256": "2dca8afc1e77c2c43e0758b297c0c614d773e6b03611ced93755dfc01fa68ed1",
+  "assetType": "Decal",
+  "assetId": 91767929154810,
+  "status": "Approved",
+  "imageId": 100862017689441
+ },
+ "ui/ds/status-frame-buff.png": {
+  "sha256": "240d73fe499f8c99793563ff286437645802e7ccd793b5ec0c65edff3a52bc10",
+  "assetType": "Decal",
+  "assetId": 71320865859778,
+  "status": "Approved",
+  "imageId": 76640512542260
+ },
+ "ui/ds/status-frame-cc.png": {
+  "sha256": "bdf05b05b084f1c2f8afb87a002e02391aa1971f992803e95473c3ee3ac450ae",
+  "assetType": "Decal",
+  "assetId": 91458352328525,
+  "status": "Approved",
+  "imageId": 125195232130149
+ },
+ "ui/ds/status-frame-debuff.png": {
+  "sha256": "f49e5142c4711acbe5bac80560ffc87bbc9036868e163d57c42bbc11984e13cb",
+  "assetType": "Decal",
+  "assetId": 119183338050241,
+  "status": "Approved",
+  "imageId": 140501301702829
+ },
+ "ui/ds/status-frame-more.png": {
+  "sha256": "3b3ae9c22f6a20c134130d03a06b2fbbff5eb74d7e5a1b7fce1f5af5cf1411a0",
+  "assetType": "Decal",
+  "assetId": 124091386079354,
+  "status": "Approved",
+  "imageId": 122481928037044
+ },
+ "ui/ds/status-glow.png": {
+  "sha256": "38dc360210854817fc4e4a23ecef4d54ecea439239d20e32e6b99780fe2daff8",
+  "assetType": "Decal",
+  "assetId": 87984726491607,
+  "status": "Approved",
+  "imageId": 99673306403643
+ },
+ "ui/ds/status-grab-lift.png": {
+  "sha256": "1f64315c34f3d2ee55db27c13df2d137697e625d1ef0bbcba3f4046553ae686a",
+  "assetType": "Decal",
+  "assetId": 90019517178667,
+  "status": "Approved",
+  "imageId": 94025308235087
+ },
+ "ui/ds/status-heal.png": {
+  "sha256": "86d744eb4e16f58a2f14574ead3f03dd69e05399a79583aed2192ba3f25e1a8e",
+  "assetType": "Decal",
+  "assetId": 83119934778461,
+  "status": "Approved",
+  "imageId": 120075676470707
+ },
+ "ui/ds/status-invuln.png": {
+  "sha256": "6c4e14641ad420e5db7b82e36374c7540fb925c6bef90dfef4dba53c682dc2ad",
+  "assetType": "Decal",
+  "assetId": 96870766879572,
+  "status": "Approved",
+  "imageId": 78749478506237
+ },
+ "ui/ds/status-knockback.png": {
+  "sha256": "d8e9de34e7a3f6538df0b7aab818bd4ffbaeddd23ed0858c7e6e341532c2883e",
+  "assetType": "Decal",
+  "assetId": 120011210559743,
+  "status": "Approved",
+  "imageId": 129330413314838
+ },
+ "ui/ds/status-knockdown.png": {
+  "sha256": "bf2ee187f3d61985098afecfafe7c9e5fb219ee6d2e8f25b5adc64dc306dca2e",
+  "assetType": "Decal",
+  "assetId": 77440957618095,
+  "status": "Approved",
+  "imageId": 128780371363238
+ },
+ "ui/ds/status-petrify.png": {
+  "sha256": "fc4371bba8f1762aec814bfe0bd6ee7b87814cac95df16994a8f75e3aa764281",
+  "assetType": "Decal",
+  "assetId": 129404048585547,
+  "status": "Approved",
+  "imageId": 72643446330835
+ },
+ "ui/ds/status-power-shot.png": {
+  "sha256": "6f369fa581fd405f02950a70d1fe65a50298d190ca652c1608c9d9984cc06843",
+  "assetType": "Decal",
+  "assetId": 114381866995235,
+  "status": "Approved",
+  "imageId": 102414333045541
+ },
+ "ui/ds/status-regen-off.png": {
+  "sha256": "75d86afed201b9ce0517c8c25caa9a01ca2ebcb7700bd56b4fe175a694147a68",
+  "assetType": "Decal",
+  "assetId": 133675168148577,
+  "status": "Approved",
+  "imageId": 121491295905904
+ },
+ "ui/ds/status-sanctuary.png": {
+  "sha256": "4b18b9ece03670bc76457a7bae30f821603d7e9ed5c31277cea5ae46c04ba09b",
+  "assetType": "Decal",
+  "assetId": 108704591753736,
+  "status": "Approved",
+  "imageId": 87850952676288
+ },
+ "ui/ds/status-shadow-clone.png": {
+  "sha256": "bf66ecea4fe794923a446c806079690dc22b2b1fb6c2bddc68d44e3f79831113",
+  "assetType": "Decal",
+  "assetId": 130770497907926,
+  "status": "Approved",
+  "imageId": 95657042902404
+ },
+ "ui/ds/status-shadow-mark.png": {
+  "sha256": "0d95f42bc9e4f9cb5631ead0c79f9c51e428c00d3af22ac08ea8f81ff59da254",
+  "assetType": "Decal",
+  "assetId": 128632824730963,
+  "status": "Approved",
+  "imageId": 125369149467828
+ },
+ "ui/ds/status-shared-damage.png": {
+  "sha256": "8a1272751ddd0f0e3db27e64ffb08d6d50dbe33e49d59718851678b28de488bc",
+  "assetType": "Decal",
+  "assetId": 125736581150070,
+  "status": "Approved",
+  "imageId": 118648607101153
+ },
+ "ui/ds/status-shield.png": {
+  "sha256": "178f6583ff91307782cd88592f10809dde62356e778b6655dab931653773701d",
+  "assetType": "Decal",
+  "assetId": 73656724929646,
+  "status": "Approved",
+  "imageId": 74303778596881
+ },
+ "ui/ds/status-slow.png": {
+  "sha256": "ae7a09aa0d8a3f35351674300739a5fbe1b121f18596ef1b5913b2830935bf0f",
+  "assetType": "Decal",
+  "assetId": 134127105888966,
+  "status": "Approved",
+  "imageId": 91184855982232
+ },
+ "ui/ds/status-stagger.png": {
+  "sha256": "8bf4e57db601d0768cd1484095468ec3eb84654d2fcbdb71109d396985bbe10d",
+  "assetType": "Decal",
+  "assetId": 77747042735555,
+  "status": "Approved",
+  "imageId": 129490378135045
+ },
+ "ui/ds/status-stun.png": {
+  "sha256": "3b530defacc486ce7f57e881a953d4590f4cf0da2852e15bf445643972383064",
+  "assetType": "Decal",
+  "assetId": 139080948519737,
+  "status": "Approved",
+  "imageId": 107494379847071
+ },
+ "ui/ds/status-trap-bury.png": {
+  "sha256": "a847c1003c71856ed103d5d21c1ccd13197648e1a92594e63beefa36dec20463",
+  "assetType": "Decal",
+  "assetId": 79797105794819,
+  "status": "Approved",
+  "imageId": 99985879534615
+ },
+ "ui/ds/status-trap-crystal.png": {
+  "sha256": "de1db726c4e83f2c8d4ea326ffd5fa3c9f1e0cf8724242df7c2e1967e1615dd6",
+  "assetType": "Decal",
+  "assetId": 83475761086641,
+  "status": "Approved",
+  "imageId": 96839362699528
+ },
+ "ui/ds/status-trap-freeze.png": {
+  "sha256": "b49dac580c9e4b80f21d0ceb242d874007a271147bda087ca5cc08a736cf6b8c",
+  "assetType": "Decal",
+  "assetId": 87616141021438,
+  "status": "Approved",
+  "imageId": 104962259917304
+ },
+ "ui/ds/status-trap-grab.png": {
+  "sha256": "0bf1d01a17b968095f87b773a5a770a50cfba21fd38cd7e5690697c71451eca4",
+  "assetType": "Decal",
+  "assetId": 134585006128555,
+  "status": "Approved",
+  "imageId": 99103943168520
+ },
+ "ui/ds/status-trap-shock.png": {
+  "sha256": "ebabf90bc2c7af7985f9bcd4892eac1854e1b5412fee0ccabf12faccd0118338",
+  "assetType": "Decal",
+  "assetId": 120589692857779,
+  "status": "Approved",
+  "imageId": 76667967263676
+ },
+ "ui/ds/status-trap-submerge.png": {
+  "sha256": "a1dd394e0642738bbbab672d7262f0fec37eca5a95ef1416eb04e7abfee04be1",
+  "assetType": "Decal",
+  "assetId": 85296847838168,
+  "status": "Approved",
+  "imageId": 98109689981102
+ },
+ "ui/ds/status-war-cry.png": {
+  "sha256": "42a06fbdfc029e740f619f7fc435f57820588937d83896163f9b71caf4e633bb",
+  "assetType": "Decal",
+  "assetId": 134312476171001,
+  "status": "Approved",
+  "imageId": 97458952205457
+ },
+ "ui/ds/status-whirlwind.png": {
+  "sha256": "c050b72947e3d7275e80827aae13b306188f9b7b80f8eecaeefdf5c31c4ac7fe",
+  "assetType": "Decal",
+  "assetId": 111667200464106,
+  "status": "Approved",
+  "imageId": 117334532903919
+ },
+ "ui/ds/tip-arrow.png": {
+  "sha256": "a77fca5d01fcbc93b1fa842ca94e7dd1b0f7832af18b12401da97c1879aab21e",
+  "assetType": "Decal",
+  "assetId": 80018362379031,
+  "status": "Approved",
+  "imageId": 113711586345570
+ },
+ "ui/ds/tip-panel.png": {
+  "sha256": "d8ae1ec9be319bec0dd56d6b53851ca7f712108c70441cc75ab69a046a854763",
+  "assetType": "Decal",
+  "assetId": 91006065050952,
+  "status": "Approved",
+  "imageId": 99815165231290
+ },
+ "ui/ds/toggle-focus.png": {
+  "sha256": "0a8703a7f3abc04d3c560120d34b18dcdb1d234596bab98f868fb7af047748fb",
+  "assetType": "Decal",
+  "assetId": 82751568772218,
+  "status": "Approved",
+  "imageId": 99822448928382
+ },
+ "ui/ds/toggle-knob-disabled.png": {
+  "sha256": "d1113ddc65cb3c544e6c3c3bb20e2c509716f84208a889653bec7f994bcccdfa",
+  "assetType": "Decal",
+  "assetId": 112433713489767,
+  "status": "Approved",
+  "imageId": 110490080403507
+ },
+ "ui/ds/toggle-knob-pressed.png": {
+  "sha256": "052f95b6c0a7e737f695f6b318700959836ea570e409ea894d180051cbe35ea5",
+  "assetType": "Decal",
+  "assetId": 138394679237786,
+  "status": "Approved",
+  "imageId": 89691298291371
+ },
+ "ui/ds/toggle-knob.png": {
+  "sha256": "597eefe100a9b5ffd230157a26ed1e1fbbf8f55d7e3f949712fd70d376a6d367",
+  "assetType": "Decal",
+  "assetId": 97119637998174,
+  "status": "Approved",
+  "imageId": 126149923820187
+ },
+ "ui/ds/toggle-track-off-disabled.png": {
+  "sha256": "73cddf1aee225c05663bf22798c3156d113d10be689eada4d451aba63a4f367c",
+  "assetType": "Decal",
+  "assetId": 132284712835535,
+  "status": "Approved",
+  "imageId": 122366875022860
+ },
+ "ui/ds/toggle-track-off-pressed.png": {
+  "sha256": "990ac1dd8385c2d3c3521f1b68d7b35ea7ad77d5c94ab628f299f127cfa00b08",
+  "assetType": "Decal",
+  "assetId": 87313207934651,
+  "status": "Approved",
+  "imageId": 120972112453965
+ },
+ "ui/ds/toggle-track-off.png": {
+  "sha256": "6cb40f97693526c9670c63b447ee27a140d54d81c09e6ffe94705a981bc8fe78",
+  "assetType": "Decal",
+  "assetId": 98345436259693,
+  "status": "Approved",
+  "imageId": 137836984128860
+ },
+ "ui/ds/toggle-track-on-disabled.png": {
+  "sha256": "c04bfdb4209eda0d5ad08ff990f02e543fd09f85883cb677393dd799b561fbb9",
+  "assetType": "Decal",
+  "assetId": 73399811242316,
+  "status": "Approved",
+  "imageId": 136416578084309
+ },
+ "ui/ds/toggle-track-on-pressed.png": {
+  "sha256": "d358c26013d6ecf635a0b804a5b93c76e3c3b09b8f606cc07bc3e68a9c58dd81",
+  "assetType": "Decal",
+  "assetId": 110170192188618,
+  "status": "Approved",
+  "imageId": 80460592629690
+ },
+ "ui/ds/toggle-track-on.png": {
+  "sha256": "2844cedaba3ea2cd148586a37573680e73543f10de05a3faed1af4a0c06cd394",
+  "assetType": "Decal",
+  "assetId": 99814557308165,
+  "status": "Approved",
+  "imageId": 130760141716309
  },
  "ui/hud/disc-256.png": {
   "sha256": "43740fe47355b9cd5fa4898459b9e78ade0b901d7434b042373d195f2789d2dc",

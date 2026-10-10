@@ -43,6 +43,7 @@ printf "%-22s %s\n" menu_gate_src "$(python menu_gate_static.py 2>&1 | grep -a -
 printf "%-22s %s\n" hud_v5_src "$(python hud_v5_static.py 2>&1 | grep -a -E '끝 [0-9]+/[0-9]+' | tail -1)" # QUEUE-UI2 UI2-4 환생 진입 경로 · 메뉴 창 = PanelRegistry · 키 칩 · 빨강
 EXTRA_FILES=first/MenuArtFit.lua,first/MenuBootData.lua run ui_v2 res_uiv2.txt SlotSave ui_v2_test.luau # QUEUE-UI UI-0 토큰 · 좌표 표 · 아이콘 표 · 배율 · 신직업 = 데이터 추가만
 run hud_layout res_hudlayout.txt "" hud_layout_test.luau # UI-1 0단계 02 v6 배치: 해상도 7 × 평상시 · 보스전 · 화면 밖 · 상단 바 · 터치 44 · 접기 · 폰 전투 버튼(겹침 = 목록)
+run ui1_parts res_ui1parts.txt "" ui1_parts_test.luau # UI-1 1단계 A 부품: 상태 아이콘 39 · 그림 기록 · ko/en 짝 · 색 3개 · 잡힘 종류
 run ui_rules res_ui.txt "" ui_rules_test.luau # QUEUE-ALL9C 블록 1 화면 규칙(순위 상위 약 n% 등 순수 함수)
 run community_goal res_goal.txt "" community_goal_test.luau # QUEUE-ALL7 B5 합동 목표 00 · ±25% · 문턱 순서
 run boss_motion res_motion.txt "" boss_motion_test.luau motion_prelude.luau

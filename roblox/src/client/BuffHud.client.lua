@@ -14,6 +14,9 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local UIColors = require(ReplicatedStorage.Shared.data.UIColors)
+if require(ReplicatedStorage.Shared.data.UiV2Flags).status then
+	return -- UI-1 1단계: 상태 아이콘 줄 = hud/StatusHud(00 v8) · 스위치를 끄면 이 옛 버프 칸으로
+end
 
 local buffUpdate = ReplicatedStorage:WaitForChild("BuffUpdate")
 

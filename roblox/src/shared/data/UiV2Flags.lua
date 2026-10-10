@@ -2,6 +2,7 @@
 return {
 	hud = true, -- 0 · 2단계: 02 v6 배치(폰 전투 버튼 = UiLayoutData.hud.phone.combat · 우리 점프 · 기본 점프 숨김) · B v2 스킬 칸 · 보스 바 위 가운데
 	status = true, -- 1단계: A 상태 아이콘 줄(StatusIconData)
+	parts = true, -- 1단계: A 공용 부품(토글 그림 스위치 · 게이지 · 배너 · 전투 문구 · 빈 상태)
 	boss = true, -- 3단계: F 보스 창(진입 카드 · 2폼 카드 · 첫 만남 카드 · 잔류 선택)
 	bag = true, -- 4단계: C 가방 · 장비
 	codex = true, -- 5단계: D 도감
