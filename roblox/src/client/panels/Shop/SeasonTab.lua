@@ -275,7 +275,10 @@ function SeasonTab.render(ctx, env, opts)
 		end
 		table.insert(skipButtons, b)
 	end
-	ctx.row({ name = "Skip", title = Text.get("season.skipTitle"), subtitle = Text.get("season.skipSub", { room = tostring(season.skipRoom or 0) }), buttons = skipButtons })
+	-- SEC-FIX-1 8: 칸 건너뛰기 = 못 한 출석 따라잡기(하루 1칸 · 서버 판정 skipRoom · skipWhy) - 막혔으면 이유 한 줄
+	local skipSub = (season.skipRoom or 0) > 0 and Text.get("season.skipCatchUp")
+		or Text.get(({ caught_up = true, today = true, ahead = true, cap = true, no_date = true })[season.skipWhy] and ("season.skipLock." .. season.skipWhy) or "season.skipLock.default")
+	ctx.row({ name = "Skip", title = Text.get("season.skipTitle"), subtitle = skipSub, buttons = skipButtons })
 	ctx.row({ name = "BoardEntry", title = Text.get("board.seasonTitle"), subtitle = Text.get("board.entrySub"), buttons = { { name = "BoardOpen", text = Text.get("board.open"), width = 120, enabled = true,
 		onActivated = function() -- QUEUE-ALL9B 5-4 시즌 출석판 다른 입구
 			require(script.Parent.Parent.SeasonBoard).open()

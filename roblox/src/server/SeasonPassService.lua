@@ -8,6 +8,9 @@ local LeaderboardConfig = require(ReplicatedStorage.Shared.data.LeaderboardConfi
 local SeasonPassData = require(ReplicatedStorage.Shared.data.SeasonPassData)
 local LeaderboardRules = require(ReplicatedStorage.Shared.LeaderboardRules)
 local Monetization = require(ReplicatedStorage.Shared.Monetization)
+local Quest = require(ReplicatedStorage.Shared.Quest)
+local QuestData = require(ReplicatedStorage.Shared.data.QuestData)
+local SeasonBoardData = require(ReplicatedStorage.Shared.data.SeasonBoardData)
 local PlayerProfile = require(script.Parent.PlayerProfile)
 
 local SeasonPassService = {}
@@ -88,6 +91,7 @@ function SeasonPassService.ensure(player, now)
 		pass.claimedPaid = {}
 		pass.skipBought = 0 -- QUEUE-ALL9B 4-8 이번 시즌 구매로 오른 칸 수
 		pass.skipTiers = {} -- 건너뛰기로 얻은 칸(문자열 키 - 무료 줄 알 · 성장 재화 = 토큰)
+		pass.skipDay = -1 -- SEC-FIX-1 8: 하루 1번(새 시즌 = 다시)
 		quests.currencies.passExp = 0
 		if old ~= 0 then
 			print(("[B2] 시즌 패스 넘김: %s - 시즌 %d → %d(경험치 · 받음 · 유료 초기화)"):format(player.Name, old, season))
@@ -96,18 +100,84 @@ function SeasonPassService.ensure(player, now)
 	end
 	pass.skipBought = tonumber(pass.skipBought) or 0
 	pass.skipTiers = type(pass.skipTiers) == "table" and pass.skipTiers or {}
+	pass.skipDay = tonumber(pass.skipDay) or -1
 	return pass, false
 end
 
--- QUEUE-ALL9B 4-8 칸 건너뛰기: 이번 시즌에 더 살 수 있는 칸 수(구매 상한 - 이미 산 칸 · 40칸 - 도달 칸 중 작은 쪽)
-function SeasonPassService.skipRoom(player)
-	local pass = SeasonPassService.ensure(player)
-	local quests = PlayerProfile.getQuestState(player)
-	if not pass or not quests then
-		return 0
+-- SEC-FIX-1 8: 이번 시즌 시작 시각(리더보드 · 패스 공통 시계 - 시작일이 안 정해졌으면 nil)
+function SeasonPassService.seasonStartUnix(now)
+	local start = LeaderboardRules.seasonStartOf(LeaderboardConfig)
+	if start <= 0 then
+		return nil
+	end
+	return start + (SeasonPassService.currentSeason(now) - 1) * LeaderboardConfig.seasonLengthDays * 86400
+end
+
+-- SEC-FIX-1 8: 매일 출석한 무료 유저가 오늘(UTC 날짜)까지 모으는 패스 경험치 상한 = 시즌 첫날 ~ 오늘 매일(접속 + 그날 일간 전부 + 일일 상자 · 주말 2배) + 시작한 주마다 주간 전부.
+--   주간은 주 첫날 끝낸 것으로 친다(가장 빠른 무료 유저 - 사는 사람이 그보다 앞설 수 없게 넉넉한 쪽). 순수(시각을 받는다).
+function SeasonPassService.paceExp(seasonStart, now)
+	local function mult(source, t)
+		return Monetization.passExpMultiplier(source, (Monetization.weekendWindow(t, SeasonPassData.weekend)), SeasonPassData.weekend)
+	end
+	local weekly = 0
+	for _, q in ipairs(QuestData.weekly) do
+		weekly += q.reward.passExp or 0
+	end
+	local exp, seenWeek = 0, {}
+	for day = Quest.dayOf(seasonStart), Quest.dayOf(now) do
+		local t = math.max(seasonStart, day * 86400 + 12 * 3600)
+		local daily = 0
+		for _, q in ipairs(Quest.dailyFor(day)) do
+			daily += q.reward.passExp or 0
+		end
+		exp += (QuestData.loginReward.passExp or 0) * mult("login", t) + daily * mult("daily", t) + (QuestData.dailyChest.passExp or 0) * mult("chest", t)
+		local week = Quest.weekOf(t)
+		if not seenWeek[week] then
+			seenWeek[week] = true
+			exp += weekly * mult("weekly", t)
+		end
+	end
+	return exp
+end
+
+-- SEC-FIX-1 8(사용자 결정 10-11 "못 한 출석 따라잡기로만"): 지금 살 수 있는 칸 수(0 | 1) · 막힌 이유(화면 한 줄 - 압박 문구 없음).
+--   이유: "no_date"(시즌 시작일 미정) · "caught_up"(출석을 다 했음 = 따라잡을 칸 0) · "today"(오늘 이미 삼) · "ahead"(매일 출석한 유저의 오늘 칸에 이미 닿음) · "cap"(시즌 상한 · 40칸)
+--   출석 = 시즌 출석판 센 칸(quests.board.count - 하루 첫 접속 1칸 · 서버 UTC 날짜) · 출석판을 다 채웠으면(32칸) 놓친 날이 없는 것으로 친다(그 뒤는 셀 수 없음).
+function SeasonPassService.catchUp(pass, quests, now)
+	now = now or os.time()
+	local start = SeasonPassService.seasonStartUnix(now)
+	if not start then
+		return 0, "no_date"
+	end
+	local today = Quest.dayOf(now)
+	local elapsed = today - Quest.dayOf(start) + 1
+	local board = quests.board
+	local attended = type(board) == "table" and board.season == SeasonPassService.currentSeason(now) and (tonumber(board.count) or 0) or 0
+	if attended >= elapsed or attended >= #SeasonBoardData.cells then
+		return 0, "caught_up"
+	end
+	if pass.skipDay == today then
+		return 0, "today"
 	end
 	local reach = Monetization.seasonReach(quests.currencies.passExp or 0, SeasonPassData.expPerTier)
-	return math.max(0, math.min(SeasonPassData.skip.capPerSeason - pass.skipBought, SeasonPassData.skip.maxTier - reach))
+	if pass.skipBought >= SeasonPassData.skip.capPerSeason or reach >= SeasonPassData.skip.maxTier then
+		return 0, "cap"
+	end
+	local paceReach = Monetization.seasonReach(SeasonPassService.paceExp(start, now), SeasonPassData.expPerTier)
+	if reach + 1 > math.min(paceReach, SeasonPassData.skip.maxTier) then
+		return 0, "ahead"
+	end
+	return SeasonPassData.skip.perDay, nil
+end
+
+-- QUEUE-ALL9B 4-8 칸 건너뛰기: 지금 더 살 수 있는 칸 수 · SEC-FIX-1 8: = 따라잡기 판정(0 | 1) · 둘째 반환 = 막힌 이유
+function SeasonPassService.skipRoom(player, now)
+	local pass = SeasonPassService.ensure(player, now)
+	local quests = PlayerProfile.getQuestState(player)
+	if not pass or not quests then
+		return 0, "no_profile"
+	end
+	return SeasonPassService.catchUp(pass, quests, now)
 end
 local lastSkipMarked = setmetatable({}, { __mode = "k" }) -- player → 마지막 applySkip이 표시한 칸 키(revertSkip 전용)
 -- 칸 n개 올리기(영수증 지급 - 방은 호출부가 먼저 확인). 오른 칸 = 건너뛴 칸 표시. 반환: ok, 이유
@@ -128,9 +198,11 @@ function SeasonPassService.applySkip(player, n)
 		pass.skipTiers[tostring(reach + i)] = true
 		table.insert(marked, tostring(reach + i))
 	end
+	marked.prevSkipDay = pass.skipDay -- SEC-FIX-1 8: 되돌리기(저장 실패)가 하루 1번 표시도 되돌린다
 	lastSkipMarked[player] = marked -- 리뷰: 저장 대기 중 경험치가 늘어도 되돌리기가 이 칸들만 지운다
 	quests.currencies.passExp = exp + n * per
 	pass.skipBought += n
+	pass.skipDay = Quest.dayOf(os.time())
 	return true, marked -- QUEUE-ALL10 0-1 리뷰 L1: 영수증 되돌림이 이 표시만 지운다(겹친 두 영수증)
 end
 -- 되돌리기(저장 실패 - 영수증 재시도가 다시 지급)
@@ -148,6 +220,9 @@ function SeasonPassService.revertSkip(player, n, markedArg)
 	if marked then
 		for _, key in ipairs(marked) do
 			pass.skipTiers[key] = nil
+		end
+		if marked.prevSkipDay ~= nil then
+			pass.skipDay = marked.prevSkipDay
 		end
 	else
 		local reach = Monetization.seasonReach(quests.currencies.passExp or 0, per)
@@ -183,7 +258,7 @@ function SeasonPassService.view(player)
 		bonus = SeasonPassData.bonus, -- QUEUE-ALL9A 1-3 반복 보너스 칸(41칸부터 - 도달 = reach)
 		reach = reach,
 		bonusCap = SeasonPassData.bonusCap, -- QUEUE-ALL9B 보완 5-2(41 ~ 40 + 상한)
-		skipRoom = SeasonPassService.skipRoom(player), skipBought = pass.skipBought, skipTiers = table.clone(pass.skipTiers), -- 4-8
+		skipRoom = SeasonPassService.skipRoom(player), skipWhy = select(2, SeasonPassService.skipRoom(player)), skipBought = pass.skipBought, skipTiers = table.clone(pass.skipTiers), -- 4-8 · SEC-FIX-1 8 막힌 이유
 		saleActive = SeasonPassData.saleActive, premiumKey = Monetization.activePremiumKey(SeasonPassData), -- 4-4
 		value = (function() -- 4-7 "가치 약 ×N"
 			local MonetizationData = require(ReplicatedStorage.Shared.data.MonetizationData)

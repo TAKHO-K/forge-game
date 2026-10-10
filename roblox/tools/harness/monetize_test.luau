@@ -201,6 +201,14 @@ local ok, err = pcall(function()
 
 	-- ⑥ 시즌 패스: 경험치 → 칸 · 무료 받기 · 유료 없이 거부 · 알 무료 줄 · 시즌 넘김 초기화
 	local SP = MODS.SeasonPassService
+	-- SEC-FIX-1 8: 칸 건너뛰기 구매 조건이 "못 한 출석 따라잡기(하루 1칸)"로 바뀌었다(사용자 결정 10-11 · 검사 = sec_shop_test). 이 하네스의 건너뛰기 검사는
+	--   칸 표시 · 토큰 환산 · 되돌림 · 영수증 멱등 같은 기계 동작이라 따라잡기 조건 대신 옛 시즌 상한 판정(남은 상한 · 40칸)을 하네스 대역으로 둔다(게임 코드 분기 없음).
+	if SP.catchUp then
+		SP.catchUp = function(pass, quests)
+			local reach = Mon.seasonReach(quests.currencies.passExp or 0, Season.expPerTier)
+			return math.max(0, math.min(Season.skip.capPerSeason - pass.skipBought, Season.skip.maxTier - reach)), nil
+		end
+	end
 	SP.ensure(player) -- 접속 때(MonetizationService.onLoaded)처럼 먼저 이번 시즌으로 넘긴다(시즌 0 → 지금 = 경험치 0부터)
 	qs.currencies.passExp = Season.expPerTier * 5 + 10
 	local c1 = SP.claim(player, "free", 1)

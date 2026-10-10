@@ -51,6 +51,7 @@ return {
 		{ path = { "settings", "autoHideLogin" }, scope = "account", sample = 20371, note = "UI-1b 1-b 12 접속 보상 창 [오늘 하루 보지 않기] 날" },
 		{ path = { "settings", "autoHideSeason" }, scope = "account", sample = 20371, note = "UI-1b 1-b 12 시즌 출석판 창 [오늘 하루 보지 않기] 날" },
 		{ path = { "settings", "helpSeen" }, scope = "account", sample = "ember,codex", note = "UI-1b 1절 3 눌러 본 [?] 도움말 id(새 [?] 작은 점 = 처음 1번)" },
+		{ path = { "seasonPass", "skipDay" }, scope = "account", sample = 20372, note = "SEC-FIX-1 8 칸 건너뛰기를 산 UTC 날짜(하루 1번 - 못 한 출석 따라잡기)" },
 	},
 	-- 진행이 없는 직업 칸은 캐릭터로 만들지 않는다: 경험치 0 · 최고 스테이지 ≤ 1 · 환생 0 · 무기 +0 · 등급 0 · 착용 장비 없음 · 보석 없음
 }

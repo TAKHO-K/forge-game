@@ -313,7 +313,7 @@ local function defaultProfile()
 		cosmetics = { themes = {}, gliderSkins = {}, equipped = {}, treeStations = {}, items = {} }, -- QUEUE-ALL6 H(v64) items = 꾸미기 소품
 		quarantine = {}, -- QUEUE-ALL5 A3(v63): 보관 칸 - 데이터에서 없어진 id를 가진 값({ kind, why, value, classId?, at }). 로드 실패 대신 여기로 · 그 id가 다시 생기면 제자리로(SaveSystem.quarantineUnknownIds)
 		mailbox = { gifts = {}, seq = 0, claimedIds = {} }, -- gifts = { { id, kind, itemId | amount, from, note, at } } · seq = 이 계정 안 선물 번호 · claimedIds(v62) = 받은 선물 id(최근 MonetizationData.gifts.claimedIdsKeep개 - 재지급 방지)
-		seasonPass = { season = 0, premium = false, claimedFree = {}, claimedPaid = {}, skipBought = 0, skipTiers = {} }, -- season = 기록한 시즌 번호(바뀌면 경험치 · 받음 · 유료 초기화) · QUEUE-ALL9B v66 skipBought(이번 시즌 구매로 오른 칸) · skipTiers(건너뛴 칸 - 문자열 키)
+		seasonPass = { season = 0, premium = false, claimedFree = {}, claimedPaid = {}, skipBought = 0, skipTiers = {}, skipDay = -1 }, -- season = 기록한 시즌 번호(바뀌면 경험치 · 받음 · 유료 초기화) · QUEUE-ALL9B v66 skipBought(이번 시즌 구매로 오른 칸) · skipTiers(건너뛴 칸 - 문자열 키)
 
 		-- 보석 가루(P2.5b C, v31) - 계정 공유(gold · materials와 같은 층). 보석 분해로만 늘고(PlayerProfile.dismantleGem · dismantleGemsUpTo) 재련 · 변환권 구매가 쓴다(trySpendGemDust).
 		gemDust = 0,
@@ -1592,6 +1592,13 @@ local function migrate(data)
 			end
 		end
 		data.version = 76
+	end
+	if data.version < 77 then
+		-- SEC-FIX-1 8(사용자 결정 10-11 "칸 건너뛰기 = 못 한 출석 따라잡기"): seasonPass.skipDay = 마지막으로 칸 건너뛰기를 산 UTC 날짜(하루 1번) - 옛 세이브 = -1(추가만)
+		if type(data.seasonPass) == "table" then
+			data.seasonPass.skipDay = tonumber(data.seasonPass.skipDay) or -1
+		end
+		data.version = 77
 	end
 
 	data.savedAt = data.savedAt or 0

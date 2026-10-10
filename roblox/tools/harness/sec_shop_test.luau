@@ -88,6 +88,53 @@ local ok, err = pcall(function()
 	local okTok = pcall(MS.buyWithTokens, player, "theme_ember")
 	check("3 그 뒤 토큰 구매 입구 동작(잠금 없음)", okTok and not MS.receiptBusy(player))
 	Data.products.theme_ember.productId = 0
+
+	-- ═══ 8. 칸 건너뛰기 = 못 한 출석 따라잡기로만(사용자 결정 10-11) ═══
+	local SP, Season, LB = MODS.SeasonPassService, MODS.SeasonPassData, MODS.LeaderboardConfig
+	local qs = PlayerProfile.getQuestState(player)
+	local now = os.time()
+	local d0 = os.date("!*t", now - 5 * 86400 + 9 * 3600) -- 시즌 시작 = 5일 전(한국 날짜)
+	LB.firstSeasonDateKst = { d0.year, d0.month, d0.day }
+	local season = SP.currentSeason(now)
+	local start = SP.seasonStartUnix and SP.seasonStartUnix(now) or LB.firstSeasonDateKst and MODS.LeaderboardRules.seasonStartOf(LB)
+	local elapsed = math.floor(now / 86400) - math.floor(start / 86400) + 1
+	SP.ensure(player)
+	local pass = s.seasonPass
+	Data.products.pass_skip1.productId, Data.products.pass_skip5.productId = 9101, 9105
+	MS.validProducts.pass_skip1, MS.validProducts.pass_skip5 = true, true
+	local function setAttend(count)
+		qs.board = { season = season, count = count, lastDay = math.floor(now / 86400), claimed = {}, bonusDay = -1 }
+	end
+	pass.skipBought, pass.skipTiers, pass.skipDay = 0, {}, -1
+	qs.currencies.passExp = 0
+	setAttend(elapsed) -- 매일 출석함
+	local okA, whyA = MS.promptProduct(player, "pass_skip1")
+	check("8 출석 다 함(센 칸 = 지난 날) = 구매 버튼 잠김 · 프롬프트 거절(옛 = 시즌 상한만 봐서 열림)", not okA and SP.skipRoom(player) == 0, ("%s · 방 %s · 지난 날 %d"):format(tostring(whyA), tostring(SP.skipRoom(player)), elapsed))
+	local vA = SP.view(player)
+	check("8 잠김 이유 한 줄 = 출석 다 함(caught_up)", vA.skipWhy == "caught_up", tostring(vA.skipWhy))
+	setAttend(elapsed - 1) -- 하루 놓침
+	local okB = MS.promptProduct(player, "pass_skip1")
+	local rB = MS.processReceipt({ PlayerId = 77, ProductId = 9101, PurchaseId = "P-CATCH1", CurrencySpent = 25 }, deps)
+	check("8 하루 놓침 = 1칸 살 수 있음 · 영수증 = 1칸 · 오늘 표시", okB and tostring(rB):find("PurchaseGranted") ~= nil and pass.skipBought == 1 and pass.skipDay == math.floor(now / 86400),
+		("프롬프트 %s · 산 칸 %d"):format(tostring(okB), pass.skipBought))
+	local shard0 = qs.currencies.sparkleShard
+	local okC, whyC = MS.promptProduct(player, "pass_skip1")
+	local rC = MS.processReceipt({ PlayerId = 77, ProductId = 9101, PurchaseId = "P-CATCH2", CurrencySpent = 25 }, deps)
+	check("8 같은 날 두 번째 = 프롬프트 거절 · 들어온 영수증 = 칸 안 오름(토큰 환산 경로)(옛 = 하루 제한 없음)", not okC and pass.skipBought == 1 and tostring(rC):find("PurchaseGranted") ~= nil and qs.currencies.sparkleShard > shard0,
+		("%s · 산 칸 %d"):format(tostring(whyC), pass.skipBought))
+	local okR = pcall(MS.processReceipt, { PlayerId = 77, ProductId = 9101, PurchaseId = "P-CATCH1", CurrencySpent = 25 }, deps)
+	check("8 같은 영수증 다시 = 멱등(칸 그대로)", okR and pass.skipBought == 1)
+	pass.skipDay = -1
+	local pace = SP.paceExp and SP.paceExp(start, now) or 0
+	qs.currencies.passExp = pace -- 매일 출석한 무료 유저의 오늘 경험치에 이미 닿음
+	local okD = MS.promptProduct(player, "pass_skip1")
+	check("8 오늘 칸(매일 출석 유저 도달)을 넘기기 = 거절(옛 = 앞서 나감)", not okD and SP.paceExp ~= nil, ("pace %d · 도달 %d"):format(pace, MODS.Monetization.seasonReach(pace, Season.expPerTier)))
+	qs.currencies.passExp = 0
+	local ok5 = MS.promptProduct(player, "pass_skip5")
+	check("8 한 번에 1칸 = 5칸 묶음 거절", not ok5)
+	local mig = MODS.SaveSystem.migrate({ version = 76, seasonPass = { season = 1, premium = false, claimedFree = {}, claimedPaid = {}, skipBought = 2, skipTiers = {} } })
+	check("8 저장 이관 v76 → 현재: seasonPass.skipDay = -1 추가(나머지 그대로)", mig.seasonPass.skipDay == -1 and mig.seasonPass.skipBought == 2 and mig.version >= 77, tostring(mig.seasonPass.skipDay))
+	LB.firstSeasonDateKst = nil
 end)
 if not ok then print("[SECSHOP] 에러 " .. tostring(err)) end
 print(("[SECSHOP] 끝 %d/%d"):format(pass, total))

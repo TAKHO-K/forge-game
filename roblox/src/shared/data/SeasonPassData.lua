@@ -116,7 +116,9 @@ return {
 	saleActive = false,
 	-- QUEUE-ALL9B 4-8 칸 건너뛰기(pass_skip1 · pass_skip5): 시즌당 구매로 오른 칸 상한 · 40칸까지만 · 넘는 영수증 = 토큰 환산(상품 robux 비례).
 	--   건너뛴 칸의 무료 줄: 알 → 토큰 2(유료 랜덤 회피) · 골드 · 강화석 · 성장 소모품 → 토큰 1(로벅스로 성장 재화를 얻는 길 차단 - 보완 6-2) · 치장 = 그대로.
-	skip = { capPerSeason = 20, maxTier = TIERS, eggTokens = 2, growthTokens = 1 },
+	-- SEC-FIX-1 8(사용자 결정 10-11): 칸 건너뛰기 = "못 한 출석 따라잡기"로만 - 출석판 센 칸 < 시즌 시작부터 지난 날 수일 때만 · 하루 perDay번(1) · 한 번에 1칸 ·
+	--   매일 출석한 무료 유저가 오늘까지 닿는 칸(SeasonPassService.paceExp - 접속 + 일간 전부 + 상자 + 시작한 주의 주간 전부 · 주말 2배)을 넘지 못함. 날짜 = 서버 UTC(출석판과 같은 기준).
+	skip = { capPerSeason = 20, maxTier = TIERS, eggTokens = 2, growthTokens = 1, perDay = 1 },
 	-- 성장 재화 종류(무료 줄만 · 건너뛴 칸 = 토큰 1)
 	growthKinds = { gold = true, enhanceStone = true, highEnhanceStone = true, gemDust = true, protectDrop = true },
 	-- QUEUE-ALL9B 4-1 패스 치장 상당가(R$ - 같은 종류의 상점가 · 대표 = 499급) · 가치 목표(보완 지시: ×5 ~ 8 · 토큰 ≤ 20%)
