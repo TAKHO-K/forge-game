@@ -264,6 +264,8 @@ return {
 			bossPortraits = { section_guardian = "ui/boss/boss-portrait-guardian", crystal_queen = "ui/boss/boss-portrait-crystal", abyssal_lord = "ui/boss/boss-portrait-abyssal",
 				scorpion_queen = "ui/boss/boss-portrait-scorpion", storm_lord = "ui/boss/boss-portrait-storm", frost_giant = "ui/boss/boss-portrait-mammoth" },
 		},
+		-- UI-1b 1-b 14(사용자: 전갈 여왕 핀이 잘 안 보임 · 버튼이 아래 핀을 가림): 흐림(안 가 본 구역) 투명도 · 핀 흰 테 · 그림자 · 구역 이름 비켜 놓을 자리(지도 비율 y)
+		v1b = { fogDim = 0.7, pinStroke = "FFFFFF", pinStrokeW = 2, shadowOffset = 2, shadowT = 0.45, nameTries = { { 0, -0.045 }, { 0, 0.05 }, { 0, -0.08 }, { 0, 0.085 }, { 0.07, -0.045 }, { -0.07, -0.045 }, { 0.07, 0.05 }, { -0.07, 0.05 }, { 0, -0.115 }, { 0, 0.12 } }, nameGap = 6 }, -- { x, y } 비율(구역 가운데 기준)
 	},
 	-- UI-1 7b단계 보스 관문 창(08 v7 §3)
 	bossGate = {

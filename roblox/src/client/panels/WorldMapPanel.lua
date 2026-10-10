@@ -25,6 +25,7 @@ local TextService = game:GetService("TextService")
 
 local WorldMapPanel = {}
 WorldMapPanel.id = "worldMap"
+local MAP1B = require(ReplicatedStorage.Shared.data.UiV2Flags).map1b -- UI-1b 1-b 14
 local V7 = require(ReplicatedStorage.Shared.data.UiV2Flags).map -- UI-1 7b(08 v7 §1): 지도 버튼 = 지도 판 안쪽 오른쪽 아래 · 관문 = 보스 초상 핀 · 내 위치로
 local G = require(ReplicatedStorage.Shared.data.UiLayoutData).map
 
@@ -123,6 +124,35 @@ local function marker(parent, place, size)
 		b.BackgroundTransparency = 0
 		b.BackgroundColor3 = place.kind == "checkpoint" and Theme.color("success") or Theme.color("gold")
 		Theme.corner(b, size)
+	end
+	if MAP1B then -- 핀 흰 테(관문 = 금 테 그대로) + 그림자(어두운 원 · 오른쪽 아래로 조금)
+		local V = G.v1b
+		if not b:FindFirstChildOfClass("UIStroke") then
+			local st = Instance.new("UIStroke")
+			st.Color = Color3.fromHex(V.pinStroke)
+			st.Thickness = V.pinStrokeW
+			st.Parent = b
+			if not b:FindFirstChildOfClass("UICorner") then
+				local c = Instance.new("UICorner")
+				c.CornerRadius = UDim.new(0.5, 0)
+				c.Parent = b
+			end
+		end
+		local sh = Instance.new("Frame")
+		sh.Name = "PinShadow"
+		sh.AnchorPoint = b.AnchorPoint
+		sh.Position = b.Position + UDim2.fromOffset(V.shadowOffset, V.shadowOffset)
+		sh.Size = b.Size
+		sh.BackgroundColor3 = Color3.new(0, 0, 0)
+		sh.BackgroundTransparency = V.shadowT
+		sh.ZIndex = b.ZIndex - 1
+		sh.Parent = parent
+		local sc = Instance.new("UICorner")
+		sc.CornerRadius = UDim.new(0.5, 0)
+		sc.Parent = sh
+		b.Destroying:Connect(function()
+			sh:Destroy()
+		end)
 	end
 	b.Parent = parent
 	b.Activated:Connect(function()
@@ -319,7 +349,7 @@ local function refreshDim()
 		if index then
 			local bright = zoneBright(D.zones[index], index)
 			if child.Name:match("^Fog_") then
-				child.BackgroundTransparency = bright and 1 or 0.45
+				child.BackgroundTransparency = bright and 1 or (MAP1B and G.v1b.fogDim or 0.45) -- UI-1b: 흐림 옅게(핀 · 이름이 위로 또렷하게)
 			elseif child:IsA("TextLabel") then
 				child.TextTransparency = bright and 0 or 0.5
 				if child:GetAttribute("SubArea") then
@@ -336,6 +366,57 @@ local function refreshDim()
 	end
 end
 
+-- UI-1b 1-b 14: 구역 이름이 핀(관문 초상 · 마을 기능 등)과 겹치면 다음 자리(위 · 아래로 조금씩)로 - 확대 · 핀 다시 그릴 때마다
+local function avoidZoneNames()
+	if not built then
+		return
+	end
+	-- UI-1b 1-b 14: 구역 이름이 핀(관문 초상 · 마을 기능 등)과 겹치면 다음 자리(위 · 아래로 조금씩)로
+	local pins = {}
+	for _, m in ipairs(built.markers:GetChildren()) do
+		if m:IsA("GuiButton") and (m.Name:match("^Marker_") or (m.Name:match("^Name_") and m.Visible)) then -- 핀 + 마을 이름표
+			table.insert(pins, m)
+		end
+	end
+	-- 후보 자리를 지도 비율로 직접 계산(Position을 바꾼 같은 프레임에는 AbsolutePosition이 안 바뀐다 - Play 실측)
+	local cp, cs = built.canvas.AbsolutePosition, built.canvas.AbsoluteSize
+	local function hits(l, xScale, yScale)
+		local tb = l.TextBounds
+		local cx, cy = cp.X + xScale * cs.X, cp.Y + yScale * cs.Y
+		local x0, y0 = cx - tb.X / 2, cy - tb.Y / 2
+		local area = 0 -- 겹친 넓이 합(닿음 = 가장자리 nameGap px 포함)
+		local g = G.v1b.nameGap
+		for _, m in ipairs(pins) do
+			local q, t = m.AbsolutePosition, m.AbsoluteSize
+			local w = math.min(x0 + tb.X, q.X + t.X + g) - math.max(x0, q.X - g)
+			local h = math.min(y0 + tb.Y, q.Y + t.Y + g) - math.max(y0, q.Y - g)
+			if w > 0 and h > 0 then
+				area += w * h
+			end
+		end
+		return area
+	end
+	for _, l in ipairs(built.canvas:GetChildren()) do
+		if l:IsA("TextLabel") and l.Name:match("^ZoneName_") then
+			local base = l:GetAttribute("BaseY") or l.Position.Y.Scale + 0.045
+			local baseX = l:GetAttribute("BaseX") or l.Position.X.Scale
+			l:SetAttribute("BaseY", base)
+			l:SetAttribute("BaseX", baseX)
+			local px, py, best = nil, nil, math.huge
+			for _, t in ipairs(G.v1b.nameTries) do -- 첫 빈자리 · 다 막히면 겹친 넓이가 가장 작은 자리
+				local a = hits(l, baseX + t[1], base + t[2])
+				if a < best then
+					px, py, best = baseX + t[1], base + t[2], a
+				end
+				if a == 0 then
+					break
+				end
+			end
+			l.Position = UDim2.fromScale(px, py)
+		end
+	end
+end
+
 local function applyView()
 	local base = built.view.AbsoluteSize
 	local side = math.min(base.X, base.Y) * zoom
@@ -347,6 +428,9 @@ local function applyView()
 	end
 	refreshDim()
 	task.defer(layoutLabels)
+	if MAP1B then
+		task.defer(avoidZoneNames)
+	end
 end
 
 local function renderMarkers()
@@ -365,6 +449,9 @@ local function renderMarkers()
 		return a.place.priority < b.place.priority
 	end)
 	task.defer(layoutLabels) -- 글 크기(AbsoluteSize)가 잡힌 뒤
+	if MAP1B then
+		task.defer(avoidZoneNames)
+	end
 	for _, pin in ipairs(MapPins.list()) do
 		marker(built.markers, { kind = "pin", icon = "pin_user", name = pin.label, position = pin.position, pin = pin }, 24)
 	end
@@ -612,6 +699,13 @@ local function build()
 		bar.Size = UDim2.fromOffset(bs * 4 + S.gap * 3, bs)
 		bar.ZIndex = 18
 		bar.Parent = view
+		if MAP1B then -- UI-1b 1-b 14: 지도 판 밖 오른쪽 세로 열(판 아래쪽 핀을 가리던 것) · 지도 판 = 그 폭만큼 좁힘
+			view.Size = UDim2.new(1, -(SIDE_W + 20 + bs + S.gap), 1, -16)
+			bar.Parent = content
+			bar.AnchorPoint = Vector2.new(0, 1)
+			bar.Position = UDim2.new(1, -(SIDE_W + 6 + S.gap + bs), 1, -8)
+			bar.Size = UDim2.fromOffset(bs, bs * 4 + S.gap * 3)
+		end
 		local recenter = Button.build({ parent = side, kind = "secondary", width = 64, height = 48, text = "◎", onActivated = function()
 			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 			if root then
@@ -625,7 +719,7 @@ local function build()
 		for i, b in ipairs({ zoomIn.root, zoomOut.root, recenter.root, legendButton.root }) do
 			b.Parent = bar
 			b.AnchorPoint = Vector2.zero
-			b.Position = UDim2.fromOffset((i - 1) * (bs + S.gap), 0)
+			b.Position = MAP1B and UDim2.fromOffset(0, (i - 1) * (bs + S.gap)) or UDim2.fromOffset((i - 1) * (bs + S.gap), 0)
 			b.Size = UDim2.fromOffset(bs, bs)
 			b.ZIndex = 19
 			for _, d in ipairs(b:GetDescendants()) do
