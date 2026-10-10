@@ -14,6 +14,8 @@
 --   ⑥ 우선순위가 큰 쪽. 굶주림: starvationSeconds 이상 안 나온 스킬은 starvationPriorityBonus가 더해진다.
 --      같으면 가장 오래 기다린 것(readyAt이 이른 것), 그것도 같으면 skillOrder 순 - 21-3의 "가장 오래 기다린
 --      것부터"가 우선순위가 전부 같은 보스(구간 수호자)에서 그대로 재현된다.
+--      BOSS-NIGHT-3 addendum-2 15: config.waitWeightedPick이고 ctx.rng가 있으면(실전 · 모형) 가장 높은 우선순위 후보 중에서 "마지막 사용(또는 전투 시작) 뒤
+--      기다린 초"를 가중치로 뽑는다(목록 앞 · 먼저 준비된 패턴만 나오던 것을 고침). ctx.rng가 없는 검증은 옛 규칙 그대로.
 --
 -- 발동 조건 조각(skill.conditions = { {type=...}, ... } - 전부 참이어야 한다):
 --   hpBelow / hpAbove { value }        보스 체력 비율
@@ -139,7 +141,8 @@ function BossScheduler.pick(state, skills, skillOrder, config, ctx)
 					priority -= skill.lowerAfter.priority
 				end
 				if skill.starvationSeconds and now - state.lastUsedAt[id] >= skill.starvationSeconds then
-					priority += config.starvationPriorityBonus
+					-- BOSS-NIGHT-3 addendum-2 15: starvedFlat = 굶주린 스킬은 원래 우선순위와 관계없이 같은 값(시그니처 50이 굶주린 일반 스킬을 늘 이기던 것 - 굶주린 것끼리는 가중치 뽑기)
+					priority = config.starvedFlat and config.starvationPriorityBonus or priority + config.starvationPriorityBonus
 				end
 				table.insert(candidates, { id = id, priority = priority, readyAt = readyAt, heavy = heavy })
 			end
@@ -177,6 +180,24 @@ function BossScheduler.pick(state, skills, skillOrder, config, ctx)
 	end
 	if not best then
 		return nil
+	end
+	if config.waitWeightedPick and ctx.rng then
+		local pool, sum = {}, 0
+		for _, candidate in ipairs(candidates) do
+			if candidate.priority == best.priority then
+				local weight = math.max(now - (state.lastUsedAt[candidate.id] or state.startedAt or now), 1)
+				sum += weight
+				table.insert(pool, { candidate = candidate, weight = weight })
+			end
+		end
+		local roll = ctx.rng() * sum
+		for _, entry in ipairs(pool) do
+			roll -= entry.weight
+			if roll <= 0 then
+				best = entry.candidate
+				break
+			end
+		end
 	end
 
 	-- ⑦ 선행 조건(29-3): 고른 스킬의 precondition이 거짓이면 그 스킬 대신 precondition.otherwise를 시작한다 - 고른

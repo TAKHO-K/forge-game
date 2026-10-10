@@ -585,6 +585,8 @@ local function scheduler(globalCooldownSeconds)
 		enragedGlobalCooldownSeconds = 2.5,
 		entryGraceSeconds = 2, -- 입장·재도전 유예(20.44 [3](다)) - 텔레포트 직후 예고 없이 맞지 않게
 		starvationPriorityBonus = MECHANICS.starvationPriorityBonus,
+		waitWeightedPick = true, -- BOSS-NIGHT-3 addendum-2 15: 같은 우선순위 = 기다린 초 가중치 뽑기(BossScheduler ⑥)
+		starvedFlat = true, -- BOSS-NIGHT-3 addendum-2 15: 굶주린 스킬 우선순위 = starvationPriorityBonus(원래 값 무시)
 		lanes = MECHANICS.lanes, -- A2-N4 §2-1(BossScheduler 강공격 줄)
 	}
 end
@@ -1447,7 +1449,8 @@ local SPECIES_MECHANICS = {
 -- BR1 굶주림 통일: 스킬이 보스마다 5개씩 늘어 한 바퀴(전역 쿨 + 구속 × 9 ~ 10개)가 약 90초가 됐다. 옛 굶주림 40 ~ 45초는 그보다 짧아 "굶주린" 스킬(+1000)이
 -- 늘 이겨서 굶주림 값이 없는 스킬(대공 잡기 · 강화 평타 · 시그니처)이 거의 안 나왔다(모형 · 스케줄러 순서 실측 - 빙결 강타 90초에 1번 · 잡기 0번).
 -- → 기믹이 아닌 모든 스킬의 굶주림 = BR1_STARVATION_SECONDS(한 바퀴보다 약간 짧게 - 가장 오래 기다린 스킬만 끌어올린다).
-local BR1_STARVATION_SECONDS = 75
+-- BOSS-NIGHT-3 addendum-2 15: 75 → 30(전투 길이 기준 - 평균 전투 55 ~ 90초의 절반 안쪽 · 75는 전투보다 길어 굶주림이 거의 안 걸렸다) + 굶주리면 우선순위 같게(starvedFlat) + 기다린 초 가중치 뽑기(waitWeightedPick).
+local BR1_STARVATION_SECONDS = 30
 for _, species in ipairs(SPECIES) do
 	for _, skill in pairs(species.skills) do
 		if skill.primitive ~= "gimmick" then

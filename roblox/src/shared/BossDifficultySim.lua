@@ -171,7 +171,7 @@ function BossDifficultySim.run(bossId, options)
 	local shieldUntil = -1 -- 수정 부수기(보호막) - 이때까지 딜 0
 	local tgDone = false -- BOSS-NIGHT-1 변신 무적 한 번
 
-	local ctx = { graceUntil = config.entryGraceSeconds }
+	local ctx = { graceUntil = config.entryGraceSeconds, rng = rng } -- BOSS-NIGHT-3 addendum-2 15: 가중치 뽑기(실전과 같은 규칙)
 	-- GUARDIAN-V3 반응 스킬 상태: 대상이 멀리(30 stud 밖) 있는 구간 · 빗나감 기록
 	local far, farSince, farUntil, missLog = false, nil, 0, {}
 	local farShare = v3sim and (role == "ranged" and v3sim.rangedFarShare or v3sim.meleeFarShare) or 0

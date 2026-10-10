@@ -489,7 +489,11 @@ local function ensureState(model, data)
 		st.zoneKey = MonsterState.getZoneKey(model) -- G1-0: 바닥 판정의 발밑 지면(단상)을 찾을 때(victims)
 		st.position = MonsterState.getSpawnPosition(model)
 		-- 스케줄러에 넘기는 문맥은 한 번만 만든다(매 틱 클로저를 새로 만들지 않는다).
+		local pickRandom = Random.new()
 		st.pickCtx = {
+			rng = function() -- BOSS-NIGHT-3 addendum-2 15: 같은 우선순위 후보 가중치 뽑기
+				return pickRandom:NextNumber()
+			end,
 			conditionMet = function(condition)
 				return conditionMet(model, st, data, condition)
 			end,
