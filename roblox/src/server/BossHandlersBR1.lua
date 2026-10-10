@@ -1036,7 +1036,8 @@ BossHandlersBR1.sweep = {
 		local maxSeconds = skill.pull.maxSeconds
 		if f < 1 and c.now >= (st.sweepYawAt or 0) and typeof(c.model) == "Instance" then -- 1-⑤ 보이는 몸 = 빔 각도(0.1초마다)
 			st.sweepYawAt = c.now + 0.1
-			local a = math.rad(BossSkillMath.sweepAngleAt(skill, st.sweepCenterDeg, st.sweepDir, t))
+			-- 0.13초 앞선 각: 클라 몸 회전 부드럽게 하기(지수 계수 10 = 일정 회전에서 약 0.1초 늦음) + 0.1초 갱신 평균 0.05초를 메움(Studio 실측 - 회전 기울기를 끈 뒤: 앞선 각 0.07초 = 보석이 8.6° 늦음)
+			local a = math.rad(BossSkillMath.sweepAngleAt(skill, st.sweepCenterDeg, st.sweepDir, t + 0.13))
 			c.model:SetAttribute("BossAimLockYaw", math.atan2(-math.cos(a), -math.sin(a)))
 		end
 		local lat = st.sweepLat or 0

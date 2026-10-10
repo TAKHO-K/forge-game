@@ -676,7 +676,9 @@ local function updateEntry(e, now, dt, camPos)
 	local moved = Vector3.new(e.visPos.X - prev.X, 0, e.visPos.Z - prev.Z)
 	local speedNow = moved.Magnitude / math.max(dt, 1e-3)
 	e.speed += (speedNow - e.speed) * (1 - math.exp(-dt * 8))
-	e.turn += (((e.visYaw - prevYaw + math.pi) % (2 * math.pi) - math.pi) / math.max(dt, 1e-3) - e.turn) * (1 - math.exp(-dt * 6))
+	-- BOSS-NIGHT-3 1-⑤: 조준 고정 동안은 회전 기울기(turnLean · 스프링) 없음 - 수정 여왕 빔(초당 150°)은 늘 최대 12° 기울어 홀 보석이 도는 쪽으로 약 1 stud 밀렸다(Studio 실측)
+	local turnNow = e.aimLocked and 0 or ((e.visYaw - prevYaw + math.pi) % (2 * math.pi) - math.pi) / math.max(dt, 1e-3)
+	e.turn += (turnNow - e.turn) * (1 - math.exp(-dt * 6))
 	local stride = (BossMotion.walkFor(e.ctx, e.form).stride or 0.7) * e.S * BossMotion.strideScale(e.ctx, e.speed) -- A2-M1: 달릴수록 보폭이 는다(BossMotion과 같은 배율 - 발 미끄러짐 없음) · BOSS-FRAMEWORK: 세트 보폭
 	local prevGait = e.gait
 	e.gait = (e.gait + moved.Magnitude / (2 * stride)) % 1

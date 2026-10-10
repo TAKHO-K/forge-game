@@ -204,11 +204,16 @@ end
 --   바닥 띠(레이저 궤적 예고) = 레이저보다 BEAM_LEAD_SECONDS 앞서 같은 방향으로 도는 바닥 선 + 띠 바깥 끝의 회전 화살표 · 레이저가 지나간 자리는 아무것도 안 남는다.
 --   전조 동안 띠는 시작선에 서 있다가 발사 BEAM_LEAD_SECONDS 전부터 돈다 · 빈틈 회차는 보스 곁 원을 안전색으로.
 local BEAM_LEAD_SECONDS = 0.6
+-- BOSS-NIGHT-3 1-⑤ 빔 위 시작 거리 = 서버 판정(r ≥ inner · 빔 위 거리 ≥ fwd)과 같은 식: 옆으로 lat 비킨 줄이 안쪽 원(inner)을 벗어나는 자리와 보석 앞(fwd) 중 먼 쪽
+local function beamStart(d)
+	local lat = d.lat or 0
+	return math.max(d.fwd or 0, math.sqrt(math.max(d.inner * d.inner - lat * lat, 0)))
+end
 function BossBR13View.sweepTelegraph(data)
 	clearSweep()
 	sweep = { data = data, parts = {}, fireAt = os.clock() + data.seconds }
 	local color = data.color or DANGER
-	local span = data.length - math.max(data.inner, data.fwd or 0)
+	local span = data.length - beamStart(data)
 	local band = newPart(Vector3.new(3, 0.2, span), DANGER, 0.35)
 	local arrowA = newPart(Vector3.new(1.2, 0.2, 4), WHITE, 0.05)
 	local arrowB = newPart(Vector3.new(1.2, 0.2, 4), WHITE, 0.05)
@@ -252,7 +257,7 @@ local function updateBand(d)
 	local deg = BossSkillMath.sweepAngleAt(skill, d.angleDeg, d.dirSign, math.max(ahead, 0))
 	local dir = Vector3.new(math.cos(math.rad(deg)), 0, math.sin(math.rad(deg)))
 	local y = Vector3.new(0, 0.25, 0)
-	local start = math.max(d.inner, d.fwd or 0)
+	local start = beamStart(d)
 	local mid = d.center + Vector3.new(-dir.Z, 0, dir.X) * (d.lat or 0) + dir * ((start + d.length) / 2) + y -- BOSS-NIGHT-3 1-⑤ 홀 보석 아래 평행선(서버 판정과 같은 lat · fwd)
 	sweep.band.CFrame = CFrame.lookAt(mid, mid + dir)
 	-- 화살표: 띠 바깥 끝에서 회전 방향(접선)으로 "<" 두 획
@@ -273,7 +278,7 @@ function BossBR13View.sweepFire(data)
 	if sweep.orb then
 		destroy(sweep.orb)
 	end
-	local span = d.length - math.max(d.inner, d.fwd or 0)
+	local span = d.length - beamStart(d)
 	local beam = newPart(Vector3.new(d.halfWidth * 2, d.beamHeight, span), d.color or DANGER, 0.05)
 	local core = newPart(Vector3.new(d.halfWidth * 0.8, d.beamHeight * 1.1, span), WHITE, 0.2)
 	table.insert(sweep.parts, beam)
@@ -529,7 +534,7 @@ RunService.RenderStepped:Connect(function()
 		local skill = { sweepDeg = d.sweepDeg, sweepSeconds = d.sweepSeconds, startLeadDeg = d.startLeadDeg }
 		local deg = BossSkillMath.sweepAngleAt(skill, d.angleDeg, d.dirSign, os.clock() - sweep.startedAt)
 		local dir = Vector3.new(math.cos(math.rad(deg)), 0, math.sin(math.rad(deg)))
-		local mid = d.center + Vector3.new(-dir.Z, 0, dir.X) * (d.lat or 0) + dir * ((math.max(d.inner, d.fwd or 0) + d.length) / 2) + Vector3.new(0, d.beamHeight / 2, 0) -- BR1-4a: 낮은 빔(발 위 beamHeight - 점프로 넘는다) · 1-⑤ 홀 아래 평행선
+		local mid = d.center + Vector3.new(-dir.Z, 0, dir.X) * (d.lat or 0) + dir * ((beamStart(d) + d.length) / 2) + Vector3.new(0, d.beamHeight / 2, 0) -- BR1-4a: 낮은 빔(발 위 beamHeight - 점프로 넘는다) · 1-⑤ 홀 아래 평행선
 		sweep.beam.CFrame = CFrame.lookAt(mid, mid + dir)
 		sweep.core.CFrame = sweep.beam.CFrame
 	end

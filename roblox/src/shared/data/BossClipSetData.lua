@@ -1432,10 +1432,12 @@ do
 	C.q_drop = { pre = { { f = 1.0, ease = "inout", pose = SKY } },
 		post = { { s = 0.08, ease = "out", pose = merge(HOLD, { Shoulder_L = { 70, 0, 6 }, Elbow_L = { 4, 0, 0 }, Waist = { -10, 0, 0 } }) }, { s = 0.9, ease = "inout", pose = REST_POSE } }, hitstop = 0.05 }
 	-- 에네르기파 energyBeam(예비 2.5초 → 540° 3.6초): 두 손으로 홀 보석에 빛을 모음(날개 접힘) → 보석을 앞으로 겨눈 채 버팀(몸 회전은 빔 그림 · 보이는 몸 = 바라보기)
+	--   BOSS-NIGHT-3 1-⑤(사용자 10-10): 홀을 거꾸로 쥐고 보석을 앞 아래 바닥 가까이 내려 바닥을 쓰는 자세(낮은 빔 = 바닥을 훑음) · 쓸기 = 손목 앞뒤(빔 방향 = 옆 lat 그대로)
 	local CHARGE = merge(HOLD, { Shoulder_R = { 60, 0, 10 }, Elbow_R = { 70, 0, 0 }, Wrist_R = { -20, 0, 0 }, Shoulder_L = { 60, 0, -14 }, Elbow_L = { 70, 0, 0 }, Waist = { 6, 0, 0 } }, wings(14, 10))
-	local BEAM = merge(SC_POINT, { Shoulder_L = { 80, 0, -20 }, Elbow_L = { 20, 0, 0 } }, wings(-18, -12))
+	local BEAM = merge(HOLD, { Waist = { -38, 0, 0 }, Shoulder_R = { 60, 0, -30 }, Elbow_R = { 15, 0, 0 }, Wrist_R = { 170, 0, 0 },
+		Shoulder_L = { 70, 0, -24 }, Elbow_L = { 30, 0, 0 } }, wings(-18, -12))
 	C.q_beam = { pre = { { f = 0.7, ease = "inout", pose = CHARGE }, { f = 1.0, ease = "in", pose = merge(CHARGE, { Waist = { 12, 0, 0 } }) } },
-		post = { { s = 0.1, ease = "out", pose = BEAM } }, loop = { period = 0.5, poses = { BEAM, merge(BEAM, { Shoulder_R = { 94, 0, -2 }, Waist = { -8, 0, 0 } }) } }, hitstop = 0.05,
+		post = { { s = 0.1, ease = "out", pose = BEAM } }, loop = { period = 0.5, poses = { BEAM, merge(BEAM, { Wrist_R = { 160, 0, 0 }, Waist = { -40, 0, 0 } }) } }, hitstop = 0.05,
 		tremble = { from = 0.6, amp = 2, joints = { "Shoulder_R", "Shoulder_L" } } }
 	-- 수정 오르골 orgel(전멸기): 두 손을 왕관에 대고 들어 올린 채 버팀(머리 위 표시)
 	local CROWN = merge(HOLD, { Shoulder_L = { 150, 0, 30 }, Elbow_L = { 70, 0, 0 }, Shoulder_R = { 150, 0, -30 }, Elbow_R = { 70, 0, 0 }, Wrist_R = { -20, 0, 0 }, Neck = { 10, 0, 0 } }, LIFT, wings(-14, -10))

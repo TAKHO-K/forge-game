@@ -89,6 +89,11 @@
   "right": -0.15,
   "n": 2
  },
+ "crystal_queen_v2/energyBeam": {
+  "fwd": -1.0,
+  "right": -0.6,
+  "n": 153
+ },
  "crystal_queen_v2/magicMissiles": {
   "fwd": 0.67,
   "right": -0.4,

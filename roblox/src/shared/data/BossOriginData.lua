@@ -9,7 +9,7 @@ return {
 		tridentThrow = { kind = "launch", part = "TridentHead", contact = 1.01, tuned = 2, after = { 2.776, 3.622, -2.103 }, before = { 2.776, 3.622, -2.103 }, },
 	},
 	crystal_queen_v2 = {
-		energyBeam = { kind = "launch", part = "ScepterGem", contact = 2.51, after = { 2.218, 4.676, -0.271 }, before = { 2.218, 4.090, -0.271 }, },
+		energyBeam = { kind = "launch", part = "ScepterGem", contact = 2.51, tuned = 153, after = { 1.873, 2.953, -1.495 }, before = { 1.873, 2.368, -1.495 }, },
 		magicMissiles = { kind = "launch", part = "ScepterGem", contact = 0.61, tuned = 35, after = { 2.041, 6.804, -0.355 }, before = { 2.041, 6.373, -0.355 }, },
 		shards = { kind = "launch", part = "Hand_L", contact = 1.01, tuned = 2, after = { -1.985, 5.716, -1.093 }, before = { -1.985, 5.399, -1.093 }, },
 	},
