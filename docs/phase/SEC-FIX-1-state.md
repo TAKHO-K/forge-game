@@ -10,7 +10,8 @@
 | 번호 | 항목 | 상태 | 커밋 | 재현 하네스(옛 → 새) |
 |---|---|---|---|---|
 | 1 | 칸 전환 중 자동저장 · 받음 표시와 보상 같은 저장 단위 | 끝 | c75bea32 | `sec_save_test` 1-a · 1-b · 1-c: 옛 5/9 → 새 9/9 |
-| 2 | 같은 서버 재접속 저장 멈춤(AUDIT1 #15) | 끝 | (이 커밋) | `sec_save_test` 2: 옛(c75bea32) 10/13 → 새 13/13 |
+| 2 | 같은 서버 재접속 저장 멈춤(AUDIT1 #15) | 끝 | 1bd638ec | `sec_save_test` 2: 옛(c75bea32) 10/13 → 새 13/13 |
+| 3 | 결제 applyReward 에러 시 잠금 안 풀림 | 끝 | (이 커밋) | `sec_shop_test` 3: 옛 1/6 → 새 6/6 |
 
 ## 1. 칸 전환 중 자동저장 끼어듦
 
@@ -28,3 +29,10 @@
 - 순서: 퇴장 = beginLeave → markReleasing(놓음) → flush → clear → 세션 잊기 → endLeave / 로드 = 대기 → 읽기(놓은 값 · 최신 savedAt).
 - 하네스 `sec_save_test` 2: 접속 → 진행 → 퇴장(계정 키 첫 시도 장애 = 1초 재시도) → 0.3초 뒤 같은 서버 재접속 → 로드 값 · 자동저장 한 주기 · 다시 퇴장.
 - 남은 위험: 퇴장 저장이 30초를 넘으면(DataStore 장기 장애) 기다리기를 멈추고 읽는다 - 옛 동작과 같음(그 뒤는 stale 안내 "다시 접속해 주세요"). 다른 서버로 옮겨 접속은 기존 약한 세션 잠금(10초) 그대로.
+
+## 3. 결제 applyReward 에러 시 잠금 안 풀림
+
+- 원인(하네스로 확인): `processReceipt`가 `inFlight` · `busyPlayers`를 올린 뒤 영수증 기록 · 지급을 pcall 없이 부름 → 지급 함수 런타임 에러면 `done()`이 안 불려 그 서버에서 그 구매(영영 NotProcessedYet) · 토큰 구매 · 시즌 받기 · 선물 받기가 막히고, 기록된 영수증 + 부분 지급이 메모리에 남아 자동저장으로 써질 수 있었다.
+- 고침: 영수증 기록 ~ `applyReward`를 pcall 한 구간으로. 에러 = `undo`(영수증 기록 · 이번 지급 · promptSeason 되돌림 - 그것도 pcall) + `done()` + warn + 기록 `grant_error` + **NotProcessedYet**(PurchaseGranted 반환 안 함 - Roblox가 다음에 다시 부른다).
+- 하네스 `sec_shop_test` 3: 지급 함수가 앞 지급(테마) 뒤 에러 → 에러 안 새어 나감 · 잠금 풀림 · 영수증 · 테마 되돌림 · 재시도 = PurchaseGranted · 토큰 구매 입구 동작.
+- 남은 위험: 에러가 계속 나는 상품은 접속마다 NotProcessedYet 반복(지급 0 · 기록 `grant_error` 한 줄) - 운영이 구매 기록으로 확인 · 환불.

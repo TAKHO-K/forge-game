@@ -212,33 +212,44 @@ function MonetizationService.processReceipt(receiptInfo, deps)
 			busyPlayers[player] = nil
 		end
 	end
+	-- SEC-FIX-1 3: 기록 · 지급 구간 에러(지급 함수 런타임 에러 등) = 옛엔 done()이 안 불려 그 서버에서 그 사람의 구매 · 토큰 구매 · 시즌 받기 · 선물 받기가 계속 막히고
+	--   기록된 영수증 + 부분 지급이 자동저장으로 남을 수 있었다. 이제 pcall로 감싸 에러 = 되돌림(영수증 기록 · 부분 지급) + 잠금 해제 + NotProcessedYet(다음에 다시 처리).
 	local granted, undo = MonetizationService.captureUndo(player)
-	Monetization.recordReceipt(s.purchases, purchaseId, os.time(), MonetizationData.receiptKeep)
-	local reward = {}
-	local refund = 0
-	-- 결정 8: 이미 전부 가진 것(클라가 직접 연 구매 창) · 결정 9: 지난 시즌에 연 유료 줄 영수증이 다음 시즌에 온 것 → 조각 환산(유료 줄은 켜지 않는다)
-	local staleSeason = s.seasonPass.promptSeason ~= nil and s.seasonPass.promptSeason ~= SeasonPassService.currentSeason()
-	local hasPremium = false
-	for _, grant in ipairs(product.grants) do
-		hasPremium = hasPremium or grant.kind == "seasonPremium"
-	end
-	local skipN = 0
-	for _, grant in ipairs(product.grants) do
-		skipN += grant.kind == "passTierSkip" and (grant.amount or 0) or 0
-	end
-	local skipOver = skipN > 0 and SeasonPassService.skipRoom(player) < skipN -- QUEUE-ALL9B 4-8: 상한 넘는 영수증(창을 연 뒤 칸이 오름 등) = 토큰 환산
-	if MonetizationService.ownsAll(player, product) or (hasPremium and staleSeason) or skipOver then
-		refund = Monetization.tokenPriceForRobux(MonetizationData, product.robux) or 0 -- QUEUE-ALL9B 3-3: 상품 robux 비례(토큰 가격과 같은 식)
-		reward = { sparkleShard = refund }
-	else
+	local okRun, ok, summary = pcall(function()
+		Monetization.recordReceipt(s.purchases, purchaseId, os.time(), MonetizationData.receiptKeep)
+		local reward = {}
+		local refund = 0
+		-- 결정 8: 이미 전부 가진 것(클라가 직접 연 구매 창) · 결정 9: 지난 시즌에 연 유료 줄 영수증이 다음 시즌에 온 것 → 조각 환산(유료 줄은 켜지 않는다)
+		local staleSeason = s.seasonPass.promptSeason ~= nil and s.seasonPass.promptSeason ~= SeasonPassService.currentSeason()
+		local hasPremium = false
 		for _, grant in ipairs(product.grants) do
-			reward[grant.kind] = grant.id or grant.amount or true
+			hasPremium = hasPremium or grant.kind == "seasonPremium"
 		end
+		local skipN = 0
+		for _, grant in ipairs(product.grants) do
+			skipN += grant.kind == "passTierSkip" and (grant.amount or 0) or 0
+		end
+		local skipOver = skipN > 0 and SeasonPassService.skipRoom(player) < skipN -- QUEUE-ALL9B 4-8: 상한 넘는 영수증(창을 연 뒤 칸이 오름 등) = 토큰 환산
+		if MonetizationService.ownsAll(player, product) or (hasPremium and staleSeason) or skipOver then
+			refund = Monetization.tokenPriceForRobux(MonetizationData, product.robux) or 0 -- QUEUE-ALL9B 3-3: 상품 robux 비례(토큰 가격과 같은 식)
+			reward = { sparkleShard = refund }
+		else
+			for _, grant in ipairs(product.grants) do
+				reward[grant.kind] = grant.id or grant.amount or true
+			end
+		end
+		if hasPremium then
+			s.seasonPass.promptSeason = nil
+		end
+		return MonetizationService.applyReward(player, reward, refund > 0 and "refund" or "product", granted)
+	end)
+	if not okRun then
+		pcall(undo, purchaseId)
+		done()
+		warn(("[B2] 구매 처리 에러(되돌림 · 다음에 다시): %s - %s"):format(player.Name, tostring(ok)))
+		log("grant_error")
+		return Decision.NotProcessedYet
 	end
-	if hasPremium then
-		s.seasonPass.promptSeason = nil
-	end
-	local ok, summary = MonetizationService.applyReward(player, reward, refund > 0 and "refund" or "product", granted)
 	if not ok then
 		undo(purchaseId) -- 부분 지급 금지: 앞 grant가 들어갔어도 전부 되돌린다
 		done()
