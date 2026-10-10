@@ -139,7 +139,7 @@ local function buildLoadoutCore(classId, level, weaponLevel, weaponGrade, armorI
 		dealItemLevelBest = math.max(dealItemLevels.gloves, dealItemLevels.shoes),
 		atk = PlayerCombat.getAttack(weapon, classId, level, attackPercentBonus, nil, permanentMultiplier, dealItemLevels),
 		defense = PlayerCombat.getDefense(classId, armorBonus, gemBonus.defensePercent),
-		maxHp = (CombatConfig.playerMaxHp + maxHpBonus) * (1 + gemBonus.maxHpPercent) * (permanentHpMultiplier or 1),
+		maxHp = (CombatConfig.playerMaxHp + maxHpBonus) * (1 + gemBonus.maxHpPercent) * (permanentHpMultiplier or 1) * CombatConfig.hpScale, -- PROG-2B-1 5 체력 눈금(게임 computeMaxHp와 같은 식)
 		speedPercentBonus = speedPercentBonus,
 		weaponLevel = weapon.level, -- P2.5a: 딜링모드 투자 기울기(PlayerCombat.getInvestmentScale)가 읽는다
 		attackPercentBonus = attackPercentBonus,

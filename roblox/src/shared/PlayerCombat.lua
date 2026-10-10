@@ -229,7 +229,7 @@ end
 
 function PlayerCombat.getDefense(classId, equipmentDefenseBonus, defensePercentBonus)
 	local class = ClassData.classes[classId]
-	local defense = (CombatConfig.playerDefense + (equipmentDefenseBonus or 0)) * class.def * (1 + (defensePercentBonus or 0))
+	local defense = (CombatConfig.playerDefense + (equipmentDefenseBonus or 0)) * class.def * (1 + (defensePercentBonus or 0)) * CombatConfig.hpScale -- PROG-2B-1 5 체력 눈금(몹 공격과 같은 H - 감소율 불변)
 	return Sanitize.number(defense, 0) -- S21-0 A2: 스탯 합산 출구
 end
 

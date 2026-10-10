@@ -89,7 +89,7 @@ function V.runPure()
 	section("보스 공격 완화", function()
 		local function ratio(stage)
 			local data = BossRules.buildInstanceData(stage, BossRules.bossIdForStage(stage), 1)
-			return data.attack / InfiniteStage.getMonsterAttack(MonsterData.tier1.attack, stage)
+			return data.attack / (InfiniteStage.getMonsterAttack(MonsterData.tier1.attack, stage) * CombatConfig.hpScale) -- PROG-2B-1 5: 보스 공격 = 체력 눈금 포함
 		end
 		local expect = InfiniteStage.interpBand(BossCurveData.attackEase, 1000)
 		check(("보스 공격 ÷ 옛 값: 500 = %.3f · 1,000 = %.3f(표 %.3f) · 3,000 = %.3f"):format(ratio(500), ratio(1000), expect, ratio(3000)), math.abs(ratio(500) - 1) < 1e-9 and math.abs(ratio(1000) - expect) < 1e-6 and math.abs(ratio(3000) - 1) < 1e-9)

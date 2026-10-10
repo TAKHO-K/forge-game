@@ -95,6 +95,10 @@ return {
 
 	-- 웹 BALANCE.playerMaxHp=10 그대로.
 	playerMaxHp = 10,
+	-- PROG-2B-1 5(HP-SCALE-1 D1 · D2 - 사용자 확정): 체력 눈금 상수 H. 체력 출처(기본 · 갑옷 고정) · 방어 출처(기본 · 갑옷) · 몹 / 보스 공격 · 흡혈 요청량에 같이 곱한다.
+	--   감소식 방어 ÷ (방어 + α × 몹 공격) · 권장 방어(∝ 몹 공격)에서 H가 지워져 몇 대 맞으면 죽나 · 처치 · 진행이 정확히 그대로(시뮬 청크 생존 타수 비 1.000000).
+	--   숫자만 커진다(스테이지 46: 체력 42.5 → 213 · 몹 한 대 21 → 107). 곱하는 곳 = PlayerProfile.computeMaxHp · PlayerCombat.getDefense · MonsterStats 공격 · BalanceSim · 흡혈.
+	hpScale = 5,
 
 	-- 피격 상한(playerDamageCapRatio)은 9-5에서 폐지했다(PRD-forge-game-roblox.md 20.11-4
 	-- "재확인 — 피격 상한 폐지" 참고) - 스펙이 모자란 구역에서 즉사하는 걸 "여기 오면

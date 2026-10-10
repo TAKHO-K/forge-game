@@ -9,8 +9,8 @@
 | 1 | 수련 개편(D3 · G6) | 끝 | `a66b3aea` |
 | 2 | 골드 곡선 C(G1 ~ G5 · G8) | 끝 | `bbfd78d0` |
 | 3 | 몹 기준 함수(C7) | 끝 | `5b2c0aeb` |
-| 4 | 치명(C1 ~ C10) | 끝 | (이 커밋) |
-| 5 | 체력 눈금(D1 ~ D3 · D5) | - | |
+| 4 | 치명(C1 ~ C10) | 끝 | `23ac8334` |
+| 5 | 체력 눈금(D1 ~ D3 · D5) | 끝 | (이 커밋) |
 | 6 | 보석함 상한 · 교환 코드 이름 | - | |
 | 7 | 합친 EconSim + Studio | - | |
 
@@ -210,3 +210,25 @@ python ../../PROG-2B-1/sim/an0.py <폴더> top zA,zAh,zAK,zAhK,zC,zCg,zCx,zCS,zC
 
 - 100% 도달 = CRIT-TRAIN-1 목표 그대로("치명 채우기" 2,000 ~ 5,000 · 3,920 ~ 5,000).
 - 스테이지별 몹 타수(사냥 몹 · 치명 기대값 · ±5% 창 중앙값 · `X_HITS`): 일반 1,000 1.5 · 2,000 4.0 · 3,000 3.8 · 5,000 3.6 · 8,500 3.5 · 15,000 3.5 · 25,300 3.6타 - 100% 앞뒤로 튀지 않는다. 상위 1% 약 2타 · 캐주얼 5 ~ 6타.
+
+---
+
+## 5. 체력 눈금 (HP-SCALE-1 D1 ~ D3 · D5)
+
+**바꾼 것**
+- `CombatConfig.hpScale = 5`(상수) - 곱하는 곳: `PlayerProfile.computeMaxHp` · `PlayerCombat.getDefense` · `MonsterStats.trashAttack · bossAttack` · `BalanceSim` 최대 체력(방어는 getDefense 경유).
+- D3 흡혈 요청량 × H(`PlayerProfile.applyLifesteal` - 상한은 최대 체력 % 그대로).
+- 능력치 표 고정 줄(기본 체력 · 갑옷 체력 · 기본 방어 · 갑옷 방어) × H(합 = 최종값).
+- 권장 방어 기본 경로(`CombatFormula.recommendedDefense`)를 `MonsterStats.trashAttack` 경유로 · 생존 앵커 표(`EconSimTables`) = 원 공격 × H.
+- **피격 연출 버그**: `PlayerHitFeedback`가 `humanoid.MaxHealth`(늘 100 → 사실상 "피해 ≥ 12면 큰 피격") 대신 Attribute `MaxHp`(실제 최대 체력)로 큰 피격 판정.
+- `DevTools` K1 성역 검사 한 방 = 최대 체력 × 1,000(옛 1e9 고정 - 고스테이지에서 못 죽임).
+- Studio 검증 기대값: `P25aVerify` C1.4 · `BalanceDecisionVerify` 생존 앵커 = 원 공격 × H · `C4Verify` 보스 공격 비 = ÷ (원 × H) · `C2Verify` 받는 피해 배율 = 실제 몹 공격(× H). `S21_0Verify` · `P25cVerify` · `ShieldVerify` · `BossMechanicsVerify` = 비율 · 자기 일치 검사라 그대로.
+- 방어 공식 · 치유사 = 그대로(이미 비율형) · D5(2,000 뒤 몹 한 방 > 내 한 방) = 그대로.
+- 체력바 · 받은 피해 · 회복 숫자 = 이미 `NumberFormat`(K · M · B …) - 추가 작업 없음.
+- 저장 = 변경 없음.
+
+**하네스** (`run_all` 63개 · X 0 · 새 `hp_scale` 6)
+- 4지점(46 · 1,000 · 8,500 · 25,300) 체력 · 방어 · 몹 · 보스 공격 · 권장 방어 = 정확히 ×5 · 생존 타수 = 그대로(1e-9) · 방어 ÷ 권장 방어 = 그대로 · 감소율 = 그대로 · 흡혈 요청 1,000 × 0.03 × 5 = 150.
+- `monster_stats` 골든 다시 뽑음(공격 키 전부 ×5.000000 · HP ×1) · ALL10 켬 공격 검사 = 상대 1e-12(곱 순서).
+
+**EconSim**: 4 프로필 × 약 3.47만 청크 **전부 4단계와 같음**(도달 시간 변화 0 - `ref4.txt` 그대로). 스테이지 46 숫자 예(하네스): 체력 29.75 → 148.7 · 몹 한 대 41.9 → 209.6(1.17대 그대로).

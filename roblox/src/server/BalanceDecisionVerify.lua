@@ -145,7 +145,7 @@ function BalanceDecisionVerify.runPure()
 		local bowLoadout = BalanceSim.buildAnchorLoadout(BalanceAnchorConfig.referenceClassId, BalanceAnchorConfig.referenceLevel, 0)
 		local point = BalanceSim.measurePoint(bowLoadout, stage)
 		-- QUEUE-6h-b R1: 기대값 갱신(C5-3 43c7cc4 - 생존 앵커 = 잡몹 공격 구간 배율 전 원 값 · P25a C1.4와 같은 식)
-		point.surviveHits = BalanceSim.getSurviveHits(BalanceSim.buildAnchorLoadout(BalanceAnchorConfig.referenceClassId, 1000, 0), InfiniteStage.getMonsterAttack(MonsterData.tier1.attack, 1000))
+		point.surviveHits = BalanceSim.getSurviveHits(BalanceSim.buildAnchorLoadout(BalanceAnchorConfig.referenceClassId, 1000, 0), InfiniteStage.getMonsterAttack(MonsterData.tier1.attack, 1000) * require(game:GetService("ReplicatedStorage").Shared.data.CombatConfig).hpScale) -- PROG-2B-1 5 체력 눈금
 		local below = BalanceSim.measurePoint(bowLoadout, stage - 0.05).killRotationSeconds
 		local above = BalanceSim.measurePoint(bowLoadout, stage + 0.05).killRotationSeconds
 		local target = BalanceAnchorConfig.killTargetSeconds

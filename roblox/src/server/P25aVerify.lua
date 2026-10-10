@@ -100,7 +100,7 @@ function P25aVerify.runPure()
 		local cells, ok = {}, true
 		for _, stage in ipairs({ 1000, 5000, 20000 }) do
 			local loadout = BalanceSim.buildAnchorLoadout(classId, stage, 0)
-			local hits = BalanceSim.getSurviveHits(loadout, InfiniteStage.getMonsterAttack(MonsterData.tier1.attack, stage)) -- C5-3: 앵커 = 잡몹 공격 구간 배율 전 원 값
+			local hits = BalanceSim.getSurviveHits(loadout, InfiniteStage.getMonsterAttack(MonsterData.tier1.attack, stage) * CombatConfig.hpScale) -- C5-3: 앵커 = 잡몹 공격 구간 배율 전 원 값 · PROG-2B-1 5: 체력 눈금(loadout 체력 · 방어와 같은 H)
 			table.insert(cells, ("%d → %.4f"):format(stage, hits))
 			ok = ok and math.abs(hits - BalanceAnchorConfig.surviveTargetHits) <= 0.02
 		end

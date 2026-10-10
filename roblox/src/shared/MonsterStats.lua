@@ -5,6 +5,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local InfiniteStage = require(ReplicatedStorage.Shared.InfiniteStage)
 local BossCurveData = require(ReplicatedStorage.Shared.data.BossCurveData)
+local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig) -- PROG-2B-1 5 체력 눈금(hpScale)
 local All10 = require(ReplicatedStorage.Shared.All10) -- QUEUE-ALL10 2-6 몹 곡선(전역 재조정 · 사람별 돌파 계수 - 스위치 끔 = 1)
 local ReferenceBuild = require(ReplicatedStorage.Shared.ReferenceBuild) -- PROG-2B-1 몹 기준 함수(새 힘만큼 HP 계수)
 
@@ -17,8 +18,9 @@ function MonsterStats.trashHp(baseHp, stage)
 	return InfiniteStage.getTrashHp(baseHp, stage) * All10.hpCurveFactor(stage) * ReferenceBuild.hpFactor(stage)
 end
 
+-- PROG-2B-1 5: × 체력 눈금(CombatConfig.hpScale - 플레이어 체력 · 방어와 같은 배율 · 몇 대 불변)
 function MonsterStats.trashAttack(baseAttack, stage)
-	return InfiniteStage.getTrashAttack(baseAttack, stage) * All10.attackCurveFactor(stage)
+	return InfiniteStage.getTrashAttack(baseAttack, stage) * All10.attackCurveFactor(stage) * CombatConfig.hpScale
 end
 
 -- 사람별 돌파 계수(계승한 사람에게만 · 몹 HP에 곱하는 값): 서버는 그 사람이 주는 피해 ÷ 이 값(MonsterState - 레벨차 계수와 같은 자리) · 몹 정보 UI는 HP × 이 값 · EconSim도 같은 함수.
@@ -45,7 +47,7 @@ function MonsterStats.bossHp(trashBase, stage, boss, hpMultiplierExtra, partyHpM
 end
 
 function MonsterStats.bossAttack(trashBase, stage, boss)
-	return InfiniteStage.getMonsterAttack(trashBase.attack, stage) * boss.attackMultiplier * InfiniteStage.interpBand(BossCurveData.attackEase, stage) * All10.attackCurveFactor(stage)
+	return InfiniteStage.getMonsterAttack(trashBase.attack, stage) * boss.attackMultiplier * InfiniteStage.interpBand(BossCurveData.attackEase, stage) * All10.attackCurveFactor(stage) * CombatConfig.hpScale -- PROG-2B-1 5 체력 눈금
 end
 
 return MonsterStats

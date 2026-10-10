@@ -16,6 +16,6 @@ feedback.OnClientEvent:Connect(function(damage, absorbed)
 	DamageNumbers.showTaken(player.Character, damage or 0, absorbed or 0)
 	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 	if humanoid and humanoid.Health > 0 then -- W3b 피격 반응(움찔 · 큰 피격 = 뒤로 밀림)
-		require(script.Parent.WeaponVisual).playHit(player, (damage or 0) + (absorbed or 0), humanoid.MaxHealth)
+		require(script.Parent.WeaponVisual).playHit(player, (damage or 0) + (absorbed or 0), player:GetAttribute("MaxHp") or humanoid.MaxHealth) -- PROG-2B-1 5(HP-SCALE-1): 실제 최대 체력(서버 Attribute MaxHp) - humanoid.MaxHealth는 늘 100이라 큰 피격 판정이 "피해 ≥ 12"였다
 	end
 end)

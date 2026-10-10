@@ -1957,7 +1957,7 @@ end
 local function computeMaxHp(player)
 	local bonus = Loot.getMaxHpBonus(PlayerProfile.getEquipped(player, "armor"))
 	local optionMaxHpPercent = PlayerProfile.getOptionBonus(player, "maxHpPercent")
-	return NumberGuard.amount((CombatConfig.playerMaxHp + bonus) * (1 + optionMaxHpPercent) * PlayerProfile.getMilestoneMaxHpMultiplier(player), CombatConfig.playerMaxHp) -- P2.5b D · P2.5c B2: 마일스톤 버킷(MilestoneData.stat = "survival"일 때만 - 기본 1) · PROG-2B-1 2 공용 검증(비정상 = 기본 체력)
+	return NumberGuard.amount((CombatConfig.playerMaxHp + bonus) * (1 + optionMaxHpPercent) * PlayerProfile.getMilestoneMaxHpMultiplier(player) * CombatConfig.hpScale, CombatConfig.playerMaxHp * CombatConfig.hpScale) -- PROG-2B-1 5 체력 눈금 -- P2.5b D · P2.5c B2: 마일스톤 버킷(MilestoneData.stat = "survival"일 때만 - 기본 1) · PROG-2B-1 2 공용 검증(비정상 = 기본 체력)
 end
 
 function PlayerProfile.refreshMaxHp(player)
@@ -1992,6 +1992,7 @@ function PlayerProfile.applyLifesteal(player, damage)
 	local classState = profile and activeClassState(profile)
 	local setCap = classState and SetBonus.axisCap(classState.equipment, "lifesteal")
 	local fraction = PlayerProfile.getOptionBonus(player, "lifesteal", setCap ~= nil)
+	damage *= CombatConfig.hpScale -- PROG-2B-1 5(HP-SCALE-1 D3): 흡혈 요청량 = 준 피해 × 비율 × 체력 눈금(체력이 H배라 요청도 H배 - 정확히 불변 · 상한 = 최대 체력 % 그대로)
 	local granted = fraction > 0 and PlayerState.tryLifesteal(player, damage * fraction) or 0
 	if setCap then
 		local setFraction = 0
@@ -2305,9 +2306,9 @@ function STAT_BUILDERS.maxHp(player, profile, classState)
 	local opt = optionParts(profile, classState, "maxHpPercent")
 	local milestone = Milestone.maxHpMultiplier(classState.milestoneLevel or 0)
 	return computeMaxHp(player), {
-		{ source = "base", kind = "flat", value = CombatConfig.playerMaxHp },
+		{ source = "base", kind = "flat", value = CombatConfig.playerMaxHp * CombatConfig.hpScale }, -- PROG-2B-1 5: 고정 줄도 체력 눈금(합 = 최종값)
 		{ source = "base", kind = "add", value = milestone - 1 },
-		{ source = "gear", kind = "flat", value = armor },
+		{ source = "gear", kind = "flat", value = armor * CombatConfig.hpScale },
 		{ source = "gear", kind = "add", value = opt.gear },
 		{ source = "training", kind = "add", value = PlayerProfile.getMilestoneMaxHpMultiplier(player) - milestone + opt.training },
 		{ source = "gem", kind = "add", value = opt.gem },
@@ -2318,8 +2319,8 @@ function STAT_BUILDERS.defense(player, profile, classState)
 	local armorDef = Loot.getArmorDefense(classState.equipment.armor)
 	local opt = optionParts(profile, classState, "defensePercent")
 	return PlayerCombat.getDefense(profile.classId, armorDef, PlayerProfile.getDefensePercentBonus(player)), {
-		{ source = "base", kind = "flat", value = CombatConfig.playerDefense * class.def },
-		{ source = "gear", kind = "flat", value = armorDef * class.def },
+		{ source = "base", kind = "flat", value = CombatConfig.playerDefense * class.def * CombatConfig.hpScale }, -- PROG-2B-1 5 체력 눈금
+		{ source = "gear", kind = "flat", value = armorDef * class.def * CombatConfig.hpScale },
 		{ source = "gear", kind = "add", value = opt.gear },
 		{ source = "training", kind = "add", value = opt.training },
 		{ source = "gem", kind = "add", value = opt.gem },

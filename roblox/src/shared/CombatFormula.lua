@@ -88,7 +88,7 @@ end
 
 -- 권장 방어(스테이지 · 때린 몹의 공격 - 없으면 기준 구역 몹): α × 몹 공격 × 대표 방어 비율.
 function CombatFormula.recommendedDefense(stage, attack)
-	local a = attack or InfiniteStage.getTrashAttack(MonsterData[MonsterData.tierOrder[CombatFormulaData.representative.referenceTier]].attack, stage) -- C5-3 잡몹 공격 구간 배율
+	local a = attack or require(ReplicatedStorage.Shared.MonsterStats).trashAttack(MonsterData[MonsterData.tierOrder[CombatFormulaData.representative.referenceTier]].attack, stage) -- C5-3 잡몹 공격 구간 배율 · PROG-2B-1 5: MonsterStats 경유(체력 눈금 · 몹 곡선 포함)
 	return math.max(CombatConfig.damageReductionAlpha * a * interpLog(CombatFormulaData.representative.defenseRatio, stage) * CombatFormulaData.representative.defenseScale, 1e-9)
 end
 
