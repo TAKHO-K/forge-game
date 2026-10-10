@@ -4,7 +4,7 @@
 
 | 단계 | 상태 | 커밋 | 바뀐 파일 | 삭제 |
 |---|---|---|---|---|
-| 0 현황 통합표 | 끝 | (커밋 뒤 기입) | 3 | 0 |
+| 0 현황 통합표 | 끝 | `4251b72d` | 3 | 0 |
 
 ## 0단계 — 현황 통합표
 표 = `docs/design/boss-bible/BOSS-NIGHT-3/00_inventory.md`(6보스 × 79줄 · 평타 포함) · 덤프 하네스 = `roblox/tools/harness/boss_inventory_dump.luau`.
