@@ -38,6 +38,17 @@ do
 		end
 	end
 end
+do -- UI-1b 1-b 19: 구역 안 순서 = 데이터 번호(no) - 도감 번호 고정
+	local noOf = {}
+	for _, spec in ipairs(require(script.Parent.SecretNestData)) do
+		noOf[spec.id] = spec.no
+	end
+	for _, list in pairs(nestsByZone) do
+		table.sort(list, function(a, b)
+			return (noOf[a] or 999) < (noOf[b] or 999)
+		end)
+	end
+end
 local BUILT = CodexRules.build(nestsByZone)
 CodexService.built = BUILT
 

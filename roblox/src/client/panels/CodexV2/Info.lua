@@ -6,6 +6,7 @@
 --   칸 속성(구역 · 종 · 단계)은 서버와 같은 CodexRules.build로 만든다(서버가 둥지 id는 안 보내므로 둥지는 화면 표의 줄 "nest:<구역>" 순서로 번호를 붙인다).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local EGG_NO = require(ReplicatedStorage.Shared.data.UiV2Flags).eggNo -- UI-1b 1-b 19
 
 local GradeColor = require(game:GetService("ReplicatedStorage").Shared.GradeColor) -- QUEUE-ALL9C 2-2 등급 색 쓰임별(text · border)
 local CodexData = require(ReplicatedStorage.Shared.data.CodexData)
@@ -166,6 +167,9 @@ function Info.shortName(view, m)
 	elseif k == "class" then
 		return Text.get("codex.v2.weapon", { grade = ArmorData.grades[ArmorData.gradeOrder[m.weaponGrade + 1]].displayName })
 	elseif k == "nest" then
+		if EGG_NO then -- UI-1b 1-b 19: "모래 유적 3번 ✔" · 못 찾음 = 번호만(유저끼리 번호로 위치를 주고받게)
+			return Text.get(cellV(view, m.id) >= 1 and "ui1b.egg.found" or "ui1b.egg.notFound", { zone = Text.name(CodexData.zoneShort[m.zone]), n = tostring(m.index) })
+		end
 		return cellV(view, m.id) >= 1 and Text.get("codex.v2.nest", { n = tostring(m.index) }) or Text.name(CodexData.zoneShort[m.zone])
 	end
 	return m.id
@@ -190,6 +194,9 @@ function Info.detailName(view, m)
 		return Text.get("class.name." .. m.classId), Info.shortName(view, m), Info.gradeColor(g)
 	elseif k == "nest" then
 		local found = cellV(view, m.id) >= 1
+		if EGG_NO then
+			return Info.shortName(view, m), Text.name(CodexData.zoneShort[m.zone]), Info.gradeColor("rare")
+		end
 		return found and Info.shortName(view, m) or Text.get("codex.v2.nestUnknown"), Text.name(CodexData.zoneShort[m.zone]), Info.gradeColor("rare")
 	end
 	return m.id, "", Info.gradeColor("normal")
@@ -197,6 +204,9 @@ end
 
 -- 설명 글(상세 칸에만): 몬스터 = 도감 힌트(만난 뒤)
 function Info.hint(view, m)
+	if EGG_NO and m.kind == "nest" and cellV(view, m.id) < 1 then -- UI-1b 1-b 19: 힌트 = 구역만
+		return Text.get("ui1b.egg.hint", { zone = Text.name(CodexData.zoneShort[m.zone]) })
+	end
 	if m.kind == "monster" and not Info.unknown(view, m) then
 		local e = MonsterCodexData.entries[m.species]
 		return e and Text.name(e.hint) or nil
@@ -223,6 +233,9 @@ function Info.where(m)
 		if gate then
 			return { place = gate.name, zone = z.key, position = gate.position, guide = { pos = gate.position, label = gate.name } }
 		end
+	end
+	if EGG_NO and k == "nest" then -- UI-1b 1-b 19: 탐험의 알 = 위치 안내 없음(구역 이름만 · 지도 조각 · [길 안내] 없음)
+		return { place = z.theme, zone = z.key }
 	end
 	return { place = z.theme, zone = z.key, position = WorldMapLayout.camp(z), guide = { quest = "zone:" .. z.key } }
 end

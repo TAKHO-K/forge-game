@@ -389,15 +389,17 @@ function Detail.build(parent, S)
 			for key, st in pairs(discs) do
 				st.Transparency = key == whereInfo.zone and 0 or 1
 			end
-			local r = toMap(whereInfo.position)
-			target.Position = UDim2.fromScale(r.X, r.Y)
-			snippet.Position = UDim2.fromOffset(PAD, y)
-			snippet.Visible = true
-			guide.root.Position = UDim2.fromOffset(PAD + 72 + 8, y + 14)
-			guide.root.Visible = true
-			y += 72 + 6
 			local g = whereInfo.guide
-			D.guide = function()
+			if whereInfo.position then -- UI-1b: 위치 없음(탐험의 알) = 지도 조각 · [길 안내] 없음
+				local r = toMap(whereInfo.position)
+				target.Position = UDim2.fromScale(r.X, r.Y)
+				snippet.Position = UDim2.fromOffset(PAD, y)
+				snippet.Visible = true
+				guide.root.Position = UDim2.fromOffset(PAD + 72 + 8, y + 14)
+				guide.root.Visible = g ~= nil
+				y += 72 + 6
+			end
+			D.guide = g and function()
 				local ok = false
 				if g.quest then
 					ok = require(S.clientRoot.QuestGuide).go(g.quest, false)
@@ -407,7 +409,7 @@ function Detail.build(parent, S)
 				if ok then
 					S.close()
 				end
-			end
+			end or nil
 		end
 		progress.Text = Text.get("codex.v2.progress", { v = tostring(pr.v), need = tostring(pr.need) })
 		progress.TextColor3 = pr.done and Theme.colors.gold or Theme.colors.textPrimary
