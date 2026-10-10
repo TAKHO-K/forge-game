@@ -35,9 +35,24 @@ local function label(parent, text, size, color, font)
 end
 
 -- 게시판
+local boardCodes = nil -- SEC-FIX-1 4: 코드 표는 서버 전용(server/SocialCodeData) - 게시판에 보일 공개 코드만 서버에서 받는다(처음 그릴 때 한 번)
+local function fetchBoardCodes()
+	if boardCodes == nil then
+		local remote = ReplicatedStorage:WaitForChild("BoardCodes", 10)
+		local ok, list = false, nil
+		if remote then
+			ok, list = pcall(remote.InvokeServer, remote)
+		end
+		if not (ok and type(list) == "table") then
+			return {} -- 실패 = 이번엔 코드 줄 없이(다음에 다시 받음)
+		end
+		boardCodes = list
+	end
+	return boardCodes
+end
 local function validCodes()
 	local out = {}
-	for _, c in ipairs(SD.codes) do
+	for _, c in ipairs(fetchBoardCodes()) do
 		local e = c.expires
 		-- QUEUE-ALL5 C: 만료 = UTC 그날 끝(서버 SocialRewardService와 같은 뜻) - 클라의 os.time(표)는 기기 시간대로 읽힐 수 있어 UTC로 명시
 		if not c.hidden and not c.inactive and os.time() <= DateTime.fromUniversalTime(e[1], e[2], e[3], 23, 59, 59).UnixTimestamp then

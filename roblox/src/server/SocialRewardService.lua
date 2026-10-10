@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local D = require(ReplicatedStorage.Shared.data.SocialRewardData)
+local Codes = require(script.Parent.SocialCodeData) -- SEC-FIX-1 4: 코드 표 = 서버 전용
 local PlayerProfile = require(script.Parent.PlayerProfile)
 
 local SocialRewardService = {}
@@ -37,16 +38,36 @@ function SocialRewardService.normalize(text)
 end
 
 -- 순수: 코드 찾기 · 기한(UTC 그날 끝까지)
+local function endUnixOf(c)
+	local e = c.expires
+	return os.time({ year = e[1], month = e[2], day = e[3], hour = 23, min = 59, sec = 59 }) -- os.time(표)는 서버 지역 시간 해석 - 로블록스 서버는 UTC
+end
 function SocialRewardService.find(code, now)
-	for _, c in ipairs(D.codes) do
+	for _, c in ipairs(Codes.codes) do
 		if c.code == code and not c.inactive then -- QUEUE-ALL6 A5: inactive = 아직 안 연 단계(없는 코드와 같음)
-			local e = c.expires
-			local endUnix = os.time({ year = e[1], month = e[2], day = e[3], hour = 23, min = 59, sec = 59 })
-			-- os.time(표)는 서버 지역 시간 해석 - 로블록스 서버는 UTC
-			return c, (now or os.time()) <= endUnix
+			return c, (now or os.time()) <= endUnixOf(c)
 		end
 	end
 	return nil, false
+end
+
+-- SEC-FIX-1 4: 게시판에 보일 코드만(hidden · inactive · 만료 = 빠짐) - 보상 · 목표 수는 보내지 않는다(게시판 줄 = 코드 · 설명 · 기한)
+function SocialRewardService.boardCodes(now)
+	local out = {}
+	for _, c in ipairs(Codes.codes) do
+		if not c.hidden and not c.inactive and (now or os.time()) <= endUnixOf(c) then
+			table.insert(out, { code = c.code, note = c.note, noteKey = c.noteKey, expires = table.clone(c.expires) })
+		end
+	end
+	return out
+end
+local boardRemote = Instance.new("RemoteFunction")
+boardRemote.Name = "BoardCodes"
+boardRemote.Parent = ReplicatedStorage
+boardRemote.OnServerInvoke = function(player)
+	return require(script.Parent.RequestGate).invoke(player, "BoardCodes", "", function()
+		return SocialRewardService.boardCodes()
+	end)
 end
 
 local lastTry = {} -- [player] = { at, minuteStart, count }

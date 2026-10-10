@@ -13,12 +13,12 @@ T="${TEMP:-/tmp}"
 # 에러 문구 = "[태그] 에러 …" · "[태그] 하네스 에러 …" · "[태그] 스레드 에러 …"(하네스가 pcall로 잡은 것) + luau가 못 잡은 에러(stacktrace:)
 ERR_RE='^\[[A-Za-z0-9_]+\] ([^ ]+ )?에러 |^stacktrace:'
 declare -A EXP=( # 기대 검사 수(끝 a/b의 b) · require_path는 최소값(require가 늘면 같이 늘어남)
-	[security_launch]=45 [save_launch]=65 [save_lock]=12 [migrate_curve]=24 [id_quarantine]=15 [slot_save]=74 [monetize]=86 [dupe]=11
+	[security_launch]=47 [save_launch]=65 [save_lock]=12 [migrate_curve]=24 [id_quarantine]=15 [slot_save]=74 [monetize]=86 [dupe]=11
 	[multiplayer]=12 [attack]=10 [request_gate]=7 [mesh_import]=34 [ops_security]=34 [season_pass]=13 [economy_all9b]=34 [enhance_g]=25
 	[bignum]=67 [bulk_sell]=11 [stat_sheet]=9 [all10]=57 [gear_v3]=10 [gem_home]=25 [monster_stats]=5 [dash_modes]=19 [boss_feel]=13
 	[menu_gate]=14 [menu_gate_src]=11 [hud_v5_src]=10 [ui1_static]=9 [ui1c_static]=13 [ui_v2]=77 [hud_layout]=18 [ui1_parts]=11 [codex_box]=35
 	[ember_view]=8 [hud_edit]=16 [pet_ui]=7 [quick_chat]=6 [ui_rules]=4 [window_layers]=7 [help_data]=6 [train_bundle]=5 [community_goal]=24 [require_path]=5542 [regrow_timing]=8
-	[sec_save]=13 [sec_shop]=6
+	[sec_save]=13 [sec_shop]=6 [sec_secret]=6
 )
 NALL=0; NBAD=0
 verdict() { # 이름 결과파일 종료코드 → 한 줄 출력
@@ -92,6 +92,7 @@ pyrun menu_gate_src python menu_gate_static.py
 pyrun hud_v5_src python hud_v5_static.py # QUEUE-UI2 UI2-4 환생 진입 경로 · 메뉴 창 = PanelRegistry · 키 칩 · 빨강
 pyrun ui1_static python ui1_static.py # UI-1 7c 전투력 = 한 함수(HUD · 캐릭터 · 관문 · 가방)
 pyrun ui1c_static python ui1c_static.py # UI-1c 매머드 이름 = 데이터 한 곳 · 기여 알약 · 순위 · 도감 v3 · 장비 상세(단계마다 늘어남)
+pyrun sec_secret python sec_secret_static.py # SEC-FIX-1 4 클라 복제 폴더(shared · client · first)에 교환 코드 · 서버 전용 설정 없음(옛 = X)
 EXTRA_FILES=first/MenuArtFit.lua,first/MenuBootData.lua run ui_v2 res_uiv2.txt SlotSave ui_v2_test.luau # QUEUE-UI UI-0 토큰 · 좌표 표 · 아이콘 표 · 배율 · 신직업 = 데이터 추가만
 run hud_layout res_hudlayout.txt "" hud_layout_test.luau # UI-1 0단계 02 v6 배치: 해상도 7 × 평상시 · 보스전 · 화면 밖 · 상단 바 · 터치 44 · 접기 · 폰 전투 버튼(겹침 = 목록)
 run ui1_parts res_ui1parts.txt "" ui1_parts_test.luau # UI-1 1단계 A 부품: 상태 아이콘 39 · 그림 기록 · ko/en 짝 · 색 3개 · 잡힘 종류

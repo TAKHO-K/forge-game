@@ -13,16 +13,7 @@ return {
 		text = { invitee = "친구 초대로 왔어요! 환영 보상", inviter = "초대한 친구가 처음 왔어요! 보상" },
 	},
 	codeCooldownSeconds = 3, codePerMinute = 8,
-	-- QUEUE-STUDIO 0-2(사용자 결정 10-01): 출시 코드 = "출시 기념" · "좋아요 목표" 2개(FIRSTBOSS 없음 · 옛 RIFTOPEN 뺌). 게시판 설명 = TextData noteKey(ko/en).
-	--   hidden = 게시판에 안 보임(입력은 됨) - 좋아요 목표를 달성해 공지할 때 false로 바꿔 업데이트한다.
-	--   QUEUE-ALL6 A5(사용자 결정): 좋아요 목표 단계 = 1단계 1,000(LIKES1K) → 5,000 → 10,000. inactive = 없는 코드처럼(입력 X · 게시판 X) - 앞 단계를 달성하면 그 줄의
-	--   inactive를 지우고(입력 가능 · 숨김) 공지 때 hidden도 지운다. 5K · 10K 보상 · 기한은 자리값(켤 때 확정).
-	codes = { -- 코드 표 한 곳(대문자 · 만료 = UTC 날짜 { 년, 월, 일 } 끝까지)
-		{ code = "FORGE2026", reward = { enhanceStone = 15, sparkleShard = 20 }, expires = { 2026, 12, 31 }, note = "출시 기념", noteKey = "update.board.code.launch" },
-		{ code = "LIKES1K", likesGoal = 1000, reward = { enhanceStone = 10, sparkleShard = 10 }, expires = { 2027, 1, 31 }, note = "좋아요 목표", noteKey = "update.board.code.likes", hidden = true },
-		{ code = "LIKES5K", likesGoal = 5000, reward = { enhanceStone = 15, sparkleShard = 15 }, expires = { 2027, 6, 30 }, note = "좋아요 목표 2단계", noteKey = "update.board.code.likes", hidden = true, inactive = true },
-		{ code = "LIKES10K", likesGoal = 10000, reward = { enhanceStone = 20, sparkleShard = 20 }, expires = { 2027, 12, 31 }, note = "좋아요 목표 3단계", noteKey = "update.board.code.likes", hidden = true, inactive = true },
-	},
+	-- 코드 표(codes) = server/SocialCodeData로 옮김(SEC-FIX-1 4 - 여기는 클라에 복제돼 공지 전 코드가 보였다 · 옛 자리 남기지 않음). 게시판 = 서버가 공개 코드만 내려줌(BoardCodes).
 	groupRewardEnabled = false,
 	-- 허브 업데이트 게시판(새 소식 + 지금 유효한 코드 - 만료 지난 코드는 안 보인다)
 	nextUpdateKey = "update.board.next", -- QUEUE-ALL9E1-ADD C: 소식 "다음 업데이트" 한 줄(날짜 약속 없음 - 업데이트 때 이 키의 문구만 바꾼다)

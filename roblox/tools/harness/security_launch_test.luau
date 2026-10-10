@@ -201,6 +201,16 @@ local ok, err = pcall(function()
 	check("좋아요 2 · 3단계(inactive) = 없는 코드처럼 거절 · 1단계는 입력 가능", Social.find("LIKES5K") == nil and Social.find("LIKES10K") == nil and Social.find("LIKES1K") ~= nil and type(r5k) == "table" and r5k.ok == false)
 	local rBad = invoke("RedeemCode", newPlayer("Code2", 1002), { "FORGE2026" })
 	check("코드 자리에 표 = 거절(에러 없음)", type(rBad) == "table" and rBad.ok == false)
+	-- SEC-FIX-1 4: 게시판 코드 = 서버가 공개분만(hidden · inactive · 만료 빠짐 · 보상 안 보냄)
+	local board = Social.boardCodes and Social.boardCodes(os.time({ year = 2026, month = 10, day = 11, hour = 0 })) or {}
+	local seen, rewardSent = {}, false
+	for _, c in ipairs(board) do
+		seen[c.code] = true
+		rewardSent = rewardSent or c.reward ~= nil or c.likesGoal ~= nil
+	end
+	check("SEC-FIX-1 4 게시판 코드 = 공개 코드만(숨김 · 안 연 단계 빠짐 · 보상 안 보냄)", Social.boardCodes ~= nil and seen.FORGE2026 and not seen.LIKES1K and not seen.LIKES5K and not rewardSent, ("%d줄"):format(#board))
+	local boardLate = Social.boardCodes and Social.boardCodes(os.time({ year = 2027, month = 1, day = 1, hour = 0 })) or { 1 }
+	check("SEC-FIX-1 4 게시판 코드 = 만료 지난 코드 빠짐", #boardLate == 0, ("%d줄"):format(#boardLate))
 
 	-- ═══ 2. 초대 보상 ═══
 	local inviter = newPlayer("Inviter", 2000, nil, true)

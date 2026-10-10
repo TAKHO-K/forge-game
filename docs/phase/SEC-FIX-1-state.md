@@ -11,7 +11,8 @@
 |---|---|---|---|---|
 | 1 | 칸 전환 중 자동저장 · 받음 표시와 보상 같은 저장 단위 | 끝 | c75bea32 | `sec_save_test` 1-a · 1-b · 1-c: 옛 5/9 → 새 9/9 |
 | 2 | 같은 서버 재접속 저장 멈춤(AUDIT1 #15) | 끝 | 1bd638ec | `sec_save_test` 2: 옛(c75bea32) 10/13 → 새 13/13 |
-| 3 | 결제 applyReward 에러 시 잠금 안 풀림 | 끝 | (이 커밋) | `sec_shop_test` 3: 옛 1/6 → 새 6/6 |
+| 3 | 결제 applyReward 에러 시 잠금 안 풀림 | 끝 | 71d0eae9 | `sec_shop_test` 3: 옛 1/6 → 새 6/6 |
+| 4a | 교환 코드 표 → 서버 전용 | 끝 | (이 커밋) | `sec_secret_static` 옛 2/6 → 새 6/6 · `security_launch` +2(게시판 공개분만) |
 
 ## 1. 칸 전환 중 자동저장 끼어듦
 
@@ -36,3 +37,13 @@
 - 고침: 영수증 기록 ~ `applyReward`를 pcall 한 구간으로. 에러 = `undo`(영수증 기록 · 이번 지급 · promptSeason 되돌림 - 그것도 pcall) + `done()` + warn + 기록 `grant_error` + **NotProcessedYet**(PurchaseGranted 반환 안 함 - Roblox가 다음에 다시 부른다).
 - 하네스 `sec_shop_test` 3: 지급 함수가 앞 지급(테마) 뒤 에러 → 에러 안 새어 나감 · 잠금 풀림 · 영수증 · 테마 되돌림 · 재시도 = PurchaseGranted · 토큰 구매 입구 동작.
 - 남은 위험: 에러가 계속 나는 상품은 접속마다 NotProcessedYet 반복(지급 0 · 기록 `grant_error` 한 줄) - 운영이 구매 기록으로 확인 · 환불.
+
+## 4. 클라에 보이는 비밀
+
+### 4a. 교환 코드
+- 원인: `shared/data/SocialRewardData.codes`(ReplicatedStorage) → 변조 클라가 require로 공지 전 코드(hidden)까지 읽고 바로 입력 가능 · 켜기 전(inactive) 코드도 켜는 순간 이미 알려짐.
+- 고침: 코드 표 → `server/SocialCodeData.lua`(ServerScriptService = 클라 복제 안 됨 · `OpsConfig`와 같은 자리). **ServerStorage가 아니라 server 폴더**인 이유 = `default.project.json`에 ServerStorage 매핑이 없고, 프로젝트 파일 변경은 실행 중 rojo가 반영 못 해 사용자 재시작이 필요 - 복제 안 됨이라는 효과는 같다.
+  - 옛 자리(`SocialRewardData.codes`)는 **남기지 않음**(남기면 비밀이 그대로 보임) - 주석으로 새 자리 표시. 쿨다운 · 문구 · 초대 수치 · 소식은 shared 그대로.
+  - 검사 = 서버 `SocialRewardService.find`만. 게시판 = 새 RemoteFunction `BoardCodes`(RequestGate.invoke) → `SocialRewardService.boardCodes` = hidden · inactive · 만료 뺀 줄의 코드 · 설명 키 · 기한만(보상 · 목표 수 안 보냄). `client/UpdateBoard`는 처음 그릴 때 한 번 받음.
+- 하네스: `sec_secret_static.py`(복제 폴더 shared · client · first에 코드 문자열 · 코드 표 모양 · 클라 직접 읽기 · 서버 설정 사본 0) 옛 2/6 → 새 6/6 · `security_launch_test` +2(게시판 공개분만 · 만료 빠짐).
+- 운영 절차 바뀜: 좋아요 목표 달성 = `server/SocialCodeData.lua`의 그 줄 inactive · hidden 지우기(옛 = shared 파일).
