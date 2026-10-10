@@ -53,6 +53,13 @@ end
 local function Mg(s)
 	return InfiniteStage.getGoldMultiplier(s)
 end
+if curve and not C.keepBossTable then -- 보스 첫 클리어 골드 = 옛 곡선으로 구운 숫자표(BossFirstClearGoldData) → 새 곡선 비율로 다시 굽는 것과 같게
+	local Enhance = M.Enhance
+	local oldGrant = Enhance.getBossGrantGold
+	Enhance.getBossGrantGold = function(stage)
+		return math.floor(oldGrant(stage) * Mg(stage) / 1.001 ^ (stage - 1))
+	end
+end
 
 -- ── ② 능력치 수련(A = 1 ~ 50 단계당 1%(공용) + 51 ~ 100 고급 수련 그대로 · B = 1 ~ 100 전부 공용(스테이지 연동) · 고급 수련 없음) ──
 local tr = C.training
@@ -116,7 +123,19 @@ end
 local comp = C.comp
 if comp then
 	local oldHp = All10.hpCurveFactor
+	local function interp(t, s)
+		local v = s <= t[1][1] and t[1][2] or t[#t][2]
+		for i = 2, #t do
+			if s > t[i - 1][1] and s <= t[i][1] then
+				return t[i - 1][2] + (t[i][2] - t[i - 1][2]) * (s - t[i - 1][1]) / (t[i][1] - t[i - 1][1])
+			end
+		end
+		return v
+	end
 	local function refOld(s)
+		if comp.oldRef then -- 옛 수련 + 옛 직업 능력의 중앙값 실제 궤적(공격 버킷 값)
+			return interp(comp.oldRef, s)
+		end
 		local evo = 0
 		for _, t in ipairs({ 5000, 7500, 10000 }) do
 			if s >= t then evo += 10 end
@@ -125,7 +144,17 @@ if comp then
 	end
 	local function refNew(s)
 		local v = 0
-		if tr then
+		if tr and comp.trainRef then -- 중앙값(일반 프로필) 실제 궤적 { 스테이지, 단계 } 직선 보간(고정점 맞춤)
+			local t = comp.trainRef
+			local lv = s <= t[1][1] and t[1][2] or t[#t][2]
+			for i = 2, #t do
+				if s > t[i - 1][1] and s <= t[i][1] then
+					lv = t[i - 1][2] + (t[i][2] - t[i - 1][2]) * (s - t[i - 1][1]) / (t[i][1] - t[i - 1][1])
+					break
+				end
+			end
+			v += 0.01 * lv
+		elseif tr then
 			local spl = tr.stagesPerLevel or 20
 			v += 0.01 * math.min(tr.maxLevel or 50, math.floor(s / spl))
 		else
