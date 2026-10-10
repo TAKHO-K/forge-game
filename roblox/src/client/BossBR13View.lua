@@ -47,6 +47,23 @@ local function newPart(size, color, transparency, shape, material)
 	return part
 end
 
+-- BOSS-NIGHT-3 1-⑤e 바닥 장판 사다리꼴 옆 삼각(WedgePart - 직각 = 로컬 (y −, z +) · Studio 확인)
+local function newWedge(color, transparency)
+	local part = Instance.new("WedgePart")
+	part.Anchored = true
+	part.CanCollide = false
+	part.CanQuery = false
+	part.CanTouch = false
+	part.CastShadow = false
+	part.Material = Enum.Material.Neon
+	part.Color = color
+	part.Size = Vector3.new(0.2, 1, 1)
+	part.Transparency = transparency
+	part.Parent = Workspace
+	live[part] = true
+	return part
+end
+
 local function destroy(part)
 	if part and live[part] then
 		live[part] = nil
@@ -208,7 +225,7 @@ local BAND_TRANSPARENCY, ARROW_TRANSPARENCY = 0.6, 0.35 -- 옅은 선(옛 0.35 �
 local BAND_COLOR = DANGER:Lerp(WHITE, 0.35)
 -- 1-⑤d 바닥 장판(위험 범위 예고 - 분명하게): 빔이 앞으로 지나갈 FAN_DEG(남은 회전이 적으면 남은 만큼)를 늘 덮는다 = 예고 없이 맞는 자리 0.
 --   빔은 옆으로 lat 비킨 줄이라 반경마다 극각이 atan2(lat, 빔 위 거리)만큼 앞선다 → 빔 위 거리 띠(FAN_BANDS)마다 그 띠 가운데의 앞섬으로 조각을 돌린다(판정 그대로 · 그림만).
-local FAN_DEG, FAN_TRANSPARENCY, FAN_TILE = 90, 0.6, 7
+local FAN_DEG, FAN_TRANSPARENCY, FAN_TILE = 90, 0.6, 12 -- 조각 = 사다리꼴(1-⑤e)이라 크게 잡아도 빈틈 없음(조각 수 = 부품 × 3)
 local FAN_BANDS = { 0, 6, 10, 14, 19, 25, 35, 55, 85, 1e9 }
 local FAN_BACK_DEG = 5 -- 장판을 빔 쪽으로 조금 당겨 띠 안 앞섬 차이(안쪽 띠 최대 약 ±5°)를 덮음
 -- BOSS-NIGHT-3 1-⑤ 빔 위 시작 거리 = 서버 판정(r ≥ inner · 빔 위 거리 ≥ fwd)과 같은 식: 옆으로 lat 비킨 줄이 안쪽 원(inner)을 벗어나는 자리와 보석 앞(fwd) 중 먼 쪽
@@ -224,10 +241,11 @@ local function buildFan(d)
 			local lat = d.lat or 0
 			local r0, r1 = math.sqrt(lat * lat + a0 * a0), math.sqrt(lat * lat + a1 * a1)
 			local rm, am = (r0 + r1) / 2, (a0 + a1) / 2
-			local n = math.clamp(math.ceil(rm * math.rad(FAN_DEG) / FAN_TILE), 2, 30)
-			for k = 1, n do
-				local part = newPart(Vector3.new(1, 0.2, r1 - r0), BAND_COLOR, FAN_TRANSPARENCY)
-				table.insert(parts, { part = part, rm = rm, r1 = r1, lead = math.deg(math.atan2(lat, am)), k = k, n = n })
+			local n = math.clamp(math.ceil(rm * math.rad(FAN_DEG) / FAN_TILE), 12, 30) -- 조각 ≤ 7.5°: 현이 호보다 안으로 들어가는 깊이(활꼴) ≤ 0.3 stud
+			for k = 1, n do -- 1-⑤e 조각 = 사다리꼴(가운데 직사각형 + 양옆 삼각) · 이웃 조각과 같은 현을 나눠 써 겹침 0(옛 직사각형은 겹친 자리가 짙은 줄무늬)
+				local rect = newPart(Vector3.new(1, 0.2, 1), BAND_COLOR, FAN_TRANSPARENCY)
+				local wl, wr = newWedge(BAND_COLOR, FAN_TRANSPARENCY), newWedge(BAND_COLOR, FAN_TRANSPARENCY)
+				table.insert(parts, { part = rect, wl = wl, wr = wr, r0 = r0, r1 = r1, lead = math.deg(math.atan2(lat, am)), k = k, n = n })
 			end
 		end
 	end
@@ -236,15 +254,30 @@ end
 
 -- 장판 자리: 빔 각 theta부터 도는 방향으로 span°(조각 폭 = 그 반경의 호 길이 ÷ 조각 수)
 local function updateFan(d, theta, span)
+	local up = Vector3.new(0, 0.12, 0)
 	for _, t in ipairs(sweep.fan) do
 		local visible = span > 0.5
-		t.part.Transparency = visible and FAN_TRANSPARENCY or 1
+		for _, p in ipairs({ t.part, t.wl, t.wr }) do
+			p.Transparency = visible and FAN_TRANSPARENCY or 1
+		end
 		if visible then
 			local w = math.rad(span + FAN_BACK_DEG) / t.n
 			local a = math.rad(theta + t.lead - d.dirSign * FAN_BACK_DEG) + d.dirSign * w * (t.k - 0.5) -- 앞섬(lead)은 도는 방향과 무관(빔 위 점 극각 = 빔 각 + atan2(lat, 거리))
 			local dir = Vector3.new(math.cos(a), 0, math.sin(a))
-			t.part.Size = Vector3.new(t.r1 * w * 1.05, 0.2, t.part.Size.Z) -- 바깥 반경 기준 폭(가운데 기준이면 바깥 끝에 틈)
-			t.part.CFrame = CFrame.lookAt(d.center + dir * t.rm + Vector3.new(0, 0.12, 0), d.center + dir * (t.rm + 1) + Vector3.new(0, 0.12, 0))
+			local side = Vector3.new(-dir.Z, 0, dir.X)
+			-- 사다리꼴 = 극각 a ± w/2의 두 반지름 선과 반경 r0 · r1 두 현: 현까지 거리 d0 · d1 · 반폭 h0 · h1
+			local cw, sw = math.cos(w / 2), math.sin(w / 2)
+			local d0, d1, h0, h1 = t.r0 * cw, t.r1, t.r0 * sw, t.r1 * sw / cw -- 바깥 현 = 호에 닿음(d1 = r1 · 옆 끝은 반지름 선 위) → 띠 사이 틈 0 · 겹침은 띠 경계의 얇은 활꼴뿐
+			local len = d1 - d0
+			t.part.Size = Vector3.new(h0 * 2, 0.2, len)
+			t.part.CFrame = CFrame.lookAt(d.center + dir * ((d0 + d1) / 2) + up, d.center + dir * ((d0 + d1) / 2 + 1) + up)
+			local wh = h1 - h0 -- 삼각 밑변(옆 폭)
+			for i, wp in ipairs({ t.wr, t.wl }) do
+				local out = i == 1 and side or -side -- 삼각 로컬 Y = 바깥 옆 · Z = 반지름 바깥 → 직각 = (안쪽 옆 · 바깥 반경)
+				local pos = d.center + dir * ((d0 + d1) / 2) + out * (h0 + wh / 2) + up
+				wp.Size = Vector3.new(0.2, math.max(wh, 0.05), len)
+				wp.CFrame = CFrame.fromMatrix(pos, out:Cross(dir), out, dir)
+			end
 		end
 	end
 end
@@ -264,6 +297,8 @@ function BossBR13View.sweepTelegraph(data)
 	sweep.fan = buildFan(data)
 	for _, t in ipairs(sweep.fan) do
 		table.insert(sweep.parts, t.part)
+		table.insert(sweep.parts, t.wl)
+		table.insert(sweep.parts, t.wr)
 	end
 	if data.gap then -- 보스 곁 빈틈(안전) - 안전색 원판 + 테두리
 		local safe = disc(data.center, data.inner - 0.6, UIColors.success, 0.7)
@@ -331,13 +366,11 @@ function BossBR13View.sweepFire(data)
 	table.insert(sweep.parts, beam)
 	table.insert(sweep.parts, core)
 	sweep.beam, sweep.core, sweep.startedAt = beam, core, os.clock()
-	-- BOSS-NIGHT-3 1-⑤c(사용자 10-10): 안전 원 회차(안쪽 반경이 줄을 가림)는 보석 → 안전 원 경계까지 희미한 빔(그림만 · 판정 없음 = 서버 r ≥ inner 그대로) - 허공에서 시작하지 않고 안전 구역이 보인다
-	local neckSpan = beamStart(d) - (d.fwd or 0)
-	if neckSpan > 0.5 then
-		local neck = newPart(Vector3.new(d.halfWidth * 1.2, d.beamHeight * 0.7, neckSpan), d.color or DANGER, 0.6) -- 0.6 이하 = 폰 · 낮은 그래픽에서도 보임
-		table.insert(sweep.parts, neck)
-		sweep.neck, sweep.neckSpan = neck, neckSpan
-	end
+	-- BOSS-NIGHT-3 1-⑤c · ⑤e(사용자 10-10): 보석 → 밝은 빔 시작까지 희미한 빔을 늘 이어 그림(그림만 · 판정 없음 = 서버 r ≥ inner · 거리 ≥ fwd 그대로)
+	--   안전 원 회차(안쪽 반경이 줄을 가림)와 회전 시작 프레임(보이는 몸이 늦어 보석 ↔ 빔 시작이 1.6까지 벌어짐) 모두 허공에서 시작하지 않는다 · 매 프레임 실제 보석 자리에서
+	local neck = newPart(Vector3.new(d.halfWidth * 1.2, d.beamHeight * 0.7, 1), d.color or DANGER, 0.6) -- 0.6 이하 = 폰 · 낮은 그래픽에서도 보임
+	table.insert(sweep.parts, neck)
+	sweep.neck = neck
 	BossFx.shake(d.center, 0.8)
 end
 
@@ -602,9 +635,17 @@ RunService.RenderStepped:Connect(function()
 		local mid = d.center + Vector3.new(-dir.Z, 0, dir.X) * (d.lat or 0) + dir * ((beamStart(d) + d.length) / 2) + Vector3.new(0, d.beamHeight / 2, 0) -- BR1-4a: 낮은 빔(발 위 beamHeight - 점프로 넘는다) · 1-⑤ 홀 아래 평행선
 		sweep.beam.CFrame = CFrame.lookAt(mid, mid + dir)
 		sweep.core.CFrame = sweep.beam.CFrame
-		if sweep.neck then -- 1-⑤c 희미한 빔: 보석 아래(fwd) → 밝은 빔 시작
-			local nmid = d.center + Vector3.new(-dir.Z, 0, dir.X) * (d.lat or 0) + dir * ((d.fwd or 0) + sweep.neckSpan / 2) + Vector3.new(0, d.beamHeight * 0.35, 0)
-			sweep.neck.CFrame = CFrame.lookAt(nmid, nmid + dir)
+		if sweep.neck then -- 1-⑤c · ⑤e 희미한 빔: 실제 보석(빔 높이) → 밝은 빔 시작 · 0.3 stud 안이면 숨김
+			local h = Vector3.new(0, d.beamHeight * 0.35, 0)
+			local b0 = d.center + Vector3.new(-dir.Z, 0, dir.X) * (d.lat or 0) + dir * beamStart(d) + h
+			local g = sweep.gem and sweep.gem.Parent and Vector3.new(sweep.gem.Position.X, b0.Y, sweep.gem.Position.Z)
+				or (d.center + Vector3.new(-dir.Z, 0, dir.X) * (d.lat or 0) + dir * (d.fwd or 0) + h)
+			local span = (b0 - g).Magnitude
+			sweep.neck.Transparency = span > 0.3 and 0.6 or 1
+			if span > 0.3 then
+				sweep.neck.Size = Vector3.new(sweep.neck.Size.X, sweep.neck.Size.Y, span)
+				sweep.neck.CFrame = CFrame.lookAt((g + b0) / 2, b0)
+			end
 		end
 	end
 	if boom and boom.startedAt then
