@@ -11,6 +11,7 @@ local HudPlace = require(ReplicatedStorage.Shared.HudPlace)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local Text = require(ReplicatedStorage.Shared.Text)
 local L = require(ReplicatedStorage.Shared.data.UiLayoutData).enhance.v4
+local BIG = require(ReplicatedStorage.Shared.data.UiV2Flags).enhanceBig
 local ArtImage = require(script.Parent.Parent.Parent.ui.ArtImage)
 local Theme = require(script.Parent.Parent.Parent.ui.kit.Theme)
 local Toggle = require(script.Parent.Parent.Parent.ui.kit.Toggle)
@@ -106,16 +107,24 @@ local function build()
 	root.Parent = gui
 	local scale = Instance.new("UIScale")
 	scale.Parent = root
+	local win -- 아래에서 만든다(배율 상한 계산에 높이를 씀)
 	local function fit()
 		local v = gui.AbsoluteSize
 		if v.X > 1 then
-			scale.Scale = HudPlace.scale(v.X, v.Y, phone)
+			local m = HudPlace.scale(v.X, v.Y, phone)
+			local s = m * (BIG and (phone and L.zoom.phone or L.zoom.pc) or 1) -- UI-1b 1절 15: 1.3배
+			if BIG and win and win.AbsoluteSize.Y > 0 and scale.Scale > 0 then -- 창 위 끝 = 상단 바(+ 8) 아래까지만(작은 창에서 배율 하한 0.75 × 1.3이 상단 바를 덮던 것)
+				local baseH = win.AbsoluteSize.Y / scale.Scale
+				local top = game:GetService("GuiService"):GetGuiInset().Y + 8
+				s = math.max(m, math.min(s, (v.Y - top) / (baseH + base.h - P.bottom)))
+			end
+			scale.Scale = s
 		end
 	end
 	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
 	fit()
 
-	local win = Instance.new("Frame")
+	win = Instance.new("Frame")
 	win.Name = "Window"
 	win.BackgroundColor3 = hex(W.bg)
 	win.BackgroundTransparency = W.bgT
@@ -129,6 +138,9 @@ local function build()
 		win.Position = UDim2.fromOffset(P.cx, P.bottom)
 	end
 	win.Parent = root
+	win:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+		task.defer(fit)
+	end)
 	corner(win, phone and 12 or 16)
 	local ws = Instance.new("UIStroke")
 	ws.Thickness = 3
@@ -193,6 +205,52 @@ local function build()
 		UIManager.close(StationV4.id)
 	end)
 	R.close = close
+	if BIG then -- UI-1b 1절 15: "유물 무기" 줄 없앰(장비 이름 · 등급색 테로 충분) · 재화 칸 = 큰 아이콘 + "골드" + 숫자 · 누르면 A 설명 창
+		if R.weapon then
+			R.weapon.Visible = false
+		end
+		local old = head:FindFirstChild("GoldPill")
+		if old then
+			old.Visible = false
+		end
+		local G = phone and L.goldChip.phone or L.goldChip.pc
+		local chip = Instance.new("TextButton")
+		chip.Name = "GoldChip"
+		chip.Text = ""
+		chip.AutoButtonColor = false
+		chip.BackgroundColor3 = hex("0E1120")
+		chip.AnchorPoint = Vector2.new(1, 0.5)
+		chip.Position = UDim2.new(1, -(P.close + 10 + (G.gainW or 0)), 0.5, 0) -- 폰: 머리 줄 오른쪽 "공격력 +n%" 글자 왼쪽
+		chip.AutomaticSize = Enum.AutomaticSize.X
+		chip.Size = UDim2.fromOffset(0, G.h)
+		chip.Parent = head
+		corner(chip, G.h / 2)
+		local cp = Instance.new("UIPadding")
+		cp.PaddingLeft, cp.PaddingRight = UDim.new(0, 6), UDim.new(0, 12)
+		cp.Parent = chip
+		local cl = Instance.new("UIListLayout")
+		cl.FillDirection = Enum.FillDirection.Horizontal
+		cl.VerticalAlignment = Enum.VerticalAlignment.Center
+		cl.Padding = UDim.new(0, 6)
+		cl.SortOrder = Enum.SortOrder.LayoutOrder
+		cl.Parent = chip
+		local gi = UiKit.icon(chip, "gold", G.icon)
+		gi.LayoutOrder = 1
+		local nm = label(chip, Text.get("item.name.gold"), G.name, Color3.fromRGB(184, 192, 214), "korean")
+		nm.LayoutOrder = 2
+		nm.AutomaticSize = Enum.AutomaticSize.X
+		nm.Size = UDim2.fromOffset(0, G.h)
+		R.gold = label(chip, "", G.num, Color3.new(1, 1, 1), "number")
+		R.gold.LayoutOrder = 3
+		R.gold.AutomaticSize = Enum.AutomaticSize.X
+		R.gold.Size = UDim2.fromOffset(0, G.h)
+		UiKit.attachPress(chip, { onActivated = function()
+			require(script.Parent.Parent.Parent.ui.v2.InfoTip).currency(chip, "gold")
+		end })
+		if phone and R.levelText then
+			R.levelText.Size = UDim2.new(1, -(x0 + P.close + 4 + G.levelRoom), 1, 0)
+		end
+	end
 
 	-- 2. 단계 줄(PC) + 결과 띠(같은 자리)
 	local levelRow
@@ -499,7 +557,8 @@ function StationV4.refresh()
 	R.toggle.setValue(want and enabled, true)
 	R.toggle.setEnabled(enabled)
 	R.shield.Image = ArtImage.get(want and enabled and L.images.shieldOn or L.images.shieldOff) or ""
-	R.guardSub.Text = st.gaugeFull and Text.get("ui1.enh.guardNone") or (k and Text.get(R.phone and "ui1.enh.guardCostShort" or "ui1.enh.guardCost", { k = ("%.1f"):format(k):gsub("%.0$", "") }) or Text.get("ui1.enh.guardFrom"))
+	local short = R.phone and BIG -- UI-1b: 폰 = 글자가 커져 칸(40)을 넘으면 스위치 위로 번짐 → 짧은 문구("+19부터" · "없음")
+	R.guardSub.Text = st.gaugeFull and Text.get(short and "ui1b.enh.guardNoneShort" or "ui1.enh.guardNone") or (k and Text.get(R.phone and "ui1.enh.guardCostShort" or "ui1.enh.guardCost", { k = ("%.1f"):format(k):gsub("%.0$", "") }) or Text.get(short and "ui1b.enh.guardFromShort" or "ui1.enh.guardFrom"))
 	R.guardName.TextTransparency = enabled and 0 or 0.45
 	-- 비용 · 버튼 · 모자람
 	local costText = maxed and "" or NumberFormat.currency(st.cost or 0, Text.languageFor())

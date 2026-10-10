@@ -226,6 +226,9 @@ return {
 			},
 			window = { bg = "161A2B", bgT = 0.06, stroke = "3A4466", strokeFull = "FFD45A", success = "5BD18A", down = "FF6B6B", close = "E5484D" }, -- close = 닫기 버튼(빨강 = 닫기 규칙 · UI-1b 0절 코드에서 옮김)
 			band = { seconds = 2 }, -- 결과 띠: 2초 뒤 접힘 · 누르면 바로
+			-- UI-1b 1절 15(사용자 "강화 창 너무 작음"): 창 전체 배율(아래 끝 기준 · 폰 = 오른쪽 아래 기준) · 재화 칸 = 아이콘 + 이름 + 숫자(누르면 설명)
+			zoom = { pc = 1.3, phone = 1.15 }, -- 폰 1.15 = 창 위 끝이 폰 메뉴 줄(아래 끝 48) 아래에 남는 최대(1.3 = 메뉴 줄 덮음 · Play 실측)
+			goldChip = { pc = { h = 36, icon = 28, name = 14, num = 18 }, phone = { h = 30, icon = 22, name = 12, num = 15, gainW = 96, levelRoom = 230 } }, -- 폰 = 늘어남 % 글자(gainW) 왼쪽
 			images = {
 				flame = "ui/ember/ember-flame", stripe = "ui/ember/ember-ghost-stripe", medalOn = "ui/ember/ember-medal-on", medalOff = "ui/ember/ember-medal-off",
 				shieldOn = "ui/ember/ember-shield-on", shieldOff = "ui/ember/ember-shield-off", shimmer = "ui/ember/ember-shimmer", spark = "ui/ember/ember-spark",

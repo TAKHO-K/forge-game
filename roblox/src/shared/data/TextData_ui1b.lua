@@ -33,6 +33,8 @@ return {
 		["ui1b.chip.level"] = "레벨",
 		["ui1b.chip.best"] = "최고 {best}",
 		["ui1b.chip.stage"] = "스테이지 {stage}",
+		["ui1b.enh.guardFromShort"] = "+19부터",
+		["ui1b.enh.guardNoneShort"] = "없음",
 	},
 	en = {
 		["ui1b.info.close"] = "Tap outside to close",
@@ -64,5 +66,7 @@ return {
 		["ui1b.chip.level"] = "Level",
 		["ui1b.chip.best"] = "Best {best}",
 		["ui1b.chip.stage"] = "Stage {stage}",
+		["ui1b.enh.guardFromShort"] = "+19 up",
+		["ui1b.enh.guardNoneShort"] = "None",
 	},
 }
