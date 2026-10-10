@@ -76,4 +76,16 @@ hall_ko = [l for l in tx.splitlines() if '"ui1c.hall.' in l]
 check('명예의 전당 글자에 남은 시간 · 차이 · 따라잡기 없음', not any(w in l for l in hall_ko for w in ('남은', '차이', '따라잡', '카운트')))
 hv = read('client/HallBoardView.client.lua')
 check('게시판 겉면 = 창과 같은 단상 함수 · 같은 순위표(all)', 'Hall.podium(' in hv and 'InvokeServer("board", "all")' in hv and '"hall"' in read('shared/data/HelpData.lua'))
+# 4단계 도감 v3: 탐험의 알 번호(구역별 1 ~ n · 중복 0 · 빠진 번호 0 - 도감 칸 = track C · village 제외) · 보스 처치 수 · 못 얻은 칭호 = ???
+nest_src = read('server/SecretNestData.lua')
+by_zone = {}
+for m in re.finditer(r'\{ id = "([^"]+)", zone = "(tier\d)", track = "(\w)", no = (\d+), sub = "(\w+)"', nest_src):
+    nid, zone, track, no, sub = m.groups()
+    if track == 'C' and sub != 'village':
+        by_zone.setdefault(zone, []).append(int(no))
+bad = [z for z, nos in by_zone.items() if sorted(nos) != list(range(1, len(nos) + 1))]
+check('탐험의 알 번호 = 구역별 1 ~ n(중복 · 빠진 번호 0)', len(by_zone) == 6 and not bad, '구역 %d · 칸 %d %s' % (len(by_zone), sum(len(v) for v in by_zone.values()), ','.join(bad)))
+cs = read('server/CodexService.lua')
+check('도감 v3 표 = 보스 실제 처치 수(bossKills · 저장 = 기존 codex.boss)', 'bossKills[id] = tonumber(n) or 0' in cs and 'for id, n in pairs(r.boss or {}) do' in cs)
+check('도감 v3 = 못 얻은 칭호 전부 ???(이름 · 조건 안 보냄)', '(t.hidden or V3) and not PlayerProfile.hasTitle(player, id)' in cs and "{ id = \"hidden\" .. i, hidden = true }" in cs)
 print('[UI1C] 끝 %d/%d' % (passed, total))

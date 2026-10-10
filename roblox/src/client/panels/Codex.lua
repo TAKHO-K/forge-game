@@ -28,6 +28,12 @@ local Monetization = require(ReplicatedStorage.Shared.Monetization)
 local MonetizationData = require(ReplicatedStorage.Shared.data.MonetizationData)
 local NumberFormat = require(ReplicatedStorage.Shared.NumberFormat)
 local Players = game:GetService("Players")
+-- UI-1c 4단계 도감 v3(I v1 §2 · 스위치 UiV2Flags.codexV3): 창 = 기준 화면 좌표(PC 1840 × 990 · 폰 784 × 298) + UIScale · 탭 7(% · 빨간 점) · 띠 = 진행 + 상자 10 + [모두 받기] ·
+--   왼쪽 판 1290 + 오른쪽 상세 502(보스 = 상세 없이 전체 폭) · 무기 · 보스 · 탐험 · 칭호 = CodexV2/V3 · 나머지 탭 = 옛 그리드(칸만 크게)
+local V3ON = require(ReplicatedStorage.Shared.data.UiV2Flags).codexV3
+local L3 = require(ReplicatedStorage.Shared.data.UiLayoutData).codexV3
+local V3 = V3ON and require(script.Parent.CodexV2.V3) or nil
+local V3TABS = { class = true, boss = true, nest = true, title = true }
 
 local CodexPanel = {}
 CodexPanel.id = "codex"
@@ -193,13 +199,110 @@ local function renderTab(tabId)
 	if not S.view then
 		return
 	end
+	if V3ON and V3TABS[tabId] then -- UI-1c 4단계
+		local sc = ensureScroll(tabId)
+		for _, child in ipairs(sc:GetChildren()) do
+			if not child:IsA("UIBase") then
+				child:Destroy()
+			end
+		end
+		local fn = ({ class = V3.renderClass, boss = V3.renderBoss, nest = V3.renderNest, title = V3.renderTitles })[tabId]
+		fn(S, sc)
+		dirty[tabId] = false
+		return
+	end
 	Grid.render(S, tabId, ensureScroll(tabId))
 	dirty[tabId] = false
 end
 
 -- 크기 · 폰 판정 → 위 줄 · 본문 · 상세 칸 자리(창 높이가 화면에 맞춰 줄어도 따라간다)
 local lastLayout
+-- UI-1c 4단계: v3 배치 = 데이터 좌표 그대로(창 = 기준 화면 + UIScale - 화면 크기로 다시 계산하지 않음 · 몸 좌표 = 창 좌표 − 머리)
+local function relayoutV3()
+	local phone = built.v3phone
+	local key = "v3:" .. tostring(phone) .. ":" .. tostring(S.tab)
+	if key == lastLayout then
+		return false
+	end
+	lastLayout = key
+	local P = phone and L3.phone or L3.pc
+	local top = P.head + P.line
+	S.phone = phone
+	S.v3 = true
+	S.claimH = P.tabs[4]
+	S.cellW = P.cell
+	S.cellH = (S.cellW - 12) + 18 + Theme.textSize("caption") * 2
+	local full = S.tab == "boss"
+	local G = full and P.full or P.grid
+	S.gridW = G[3]
+	S.detailW = P.detail[3]
+	-- 탭 7 = 같은 폭 · 글 + %(그림 없음)
+	built.top.Position = UDim2.fromOffset(P.tabs[1], P.tabs[2] - top)
+	built.top.Size = UDim2.fromOffset(P.tabs[3], P.tabs[4])
+	built.tabRow.Size = UDim2.fromScale(1, 1)
+	local n = #Info.tabs
+	local tw = math.floor((P.tabs[3] - (n - 1) * P.tabs.gap) / n)
+	for i, t in ipairs(Info.tabs) do
+		local b = built.tabButtons[t.id]
+		b.Size = UDim2.fromOffset(tw, P.tabs[4])
+		b.Position = UDim2.fromOffset((i - 1) * (tw + P.tabs.gap), 0)
+		b.Icon.Visible = false
+		b.Label.Position = UDim2.fromOffset(0, 0)
+		b.Label.Size = UDim2.fromScale(1, 1)
+		b.Label.RichText = true
+		b.Label.TextSize = P.tabs.text
+	end
+	built.tabRow.CanvasSize = UDim2.fromOffset(0, 0)
+	if P.band then -- 띠: 진행 + 상자 10 + [모두 받기](오른쪽)
+		local B = P.band
+		built.tokenBar.Visible = true
+		built.tokenBar.Position = UDim2.fromOffset(B[1], B[2] - top)
+		built.tokenBar.Size = UDim2.fromOffset(B[3], B[4])
+		built.claimAll.root.Parent = built.tokenBar
+		built.claimAll.root.AnchorPoint = Vector2.new(1, 0.5)
+		built.claimAll.root.Position = UDim2.new(1, -12, 0.5, 0)
+		built.claimAll.root.Size = UDim2.fromOffset(B.claimW, B.claimH)
+		if built.boxRow then
+			local R = built.boxRow
+			R.head.Size = UDim2.new(0, B.headW, 1, 0)
+			R.head.Position = UDim2.fromOffset(16, 0)
+			R.head.Parent.Size = UDim2.fromScale(1, 1)
+			local bar = R.fill.Parent
+			bar.AnchorPoint = Vector2.new(0, 0.5)
+			bar.Position = UDim2.new(0, B.headW + 40, 0.5, 6)
+			bar.Size = UDim2.new(1, -(B.headW + 40 + B.claimW + 60), 0, 10)
+			for n, box in ipairs(R.boxes) do -- 상자 = 막대 위 가운데(10%마다)
+				box.Size = UDim2.fromOffset(B.box, B.box)
+				box.AnchorPoint = Vector2.new(0.5, 0.5)
+				box.Position = UDim2.new(n / #R.boxes, 0, 0.5, 0)
+			end
+		end
+	else -- 폰: 띠 없음(머리 오른쪽 "전체 n%" · [모두 받기] = 머리)
+		built.tokenBar.Visible = false
+		built.claimAll.root.Parent = built.v3head
+		built.claimAll.root.AnchorPoint = Vector2.new(1, 0.5)
+		built.claimAll.root.Position = UDim2.new(1, -(P.close + 110), 0.5, 0)
+		built.claimAll.root.Size = UDim2.fromOffset(110, P.head - 8)
+	end
+	built.gridArea.Position = UDim2.fromOffset(G[1], G[2] - top)
+	built.gridArea.Size = UDim2.fromOffset(G[3], G[4])
+	local D = P.detail
+	built.detail.root.Position = UDim2.fromOffset(D[1], D[2] - top)
+	built.detail.root.Size = UDim2.fromOffset(D[3], D[4])
+	built.detail.root.Visible = not full and S.tab ~= "title"
+	built.titleDetail.Position = built.detail.root.Position
+	built.titleDetail.Size = built.detail.root.Size
+	built.titleDetail.Visible = S.tab == "title"
+	for id in pairs(scrolls) do
+		dirty[id] = true
+	end
+	return true
+end
+
 local function relayout()
+	if V3ON and built.v3 then
+		return relayoutV3()
+	end
 	local screen = built.panel.screenGui.AbsoluteSize
 	local phone = screen.X > 0 and (screen.X < PHONE_W or screen.Y < PHONE_H)
 	local size = built.panel.content.AbsoluteSize
@@ -325,6 +428,15 @@ end
 
 function S.select(sel)
 	S.selected = sel
+	if V3ON and built.v3 and V3TABS[S.tab] then -- UI-1c 4단계: 고른 칸 테 = 다시 그림 · 보스 · 칭호 = 옛 상세 안 씀
+		renderTab(S.tab)
+		if S.tab == "title" then
+			V3.titleDetail(S, built.titleDetail)
+		elseif S.tab ~= "boss" then
+			built.detail.show()
+		end
+		return
+	end
 	if S.tab == "board" then
 		renderTab("board")
 	else
@@ -340,19 +452,140 @@ function S.select(sel)
 	built.detail.show()
 end
 
-local function build()
-	local panel = Panel.create({ id = CodexPanel.id, kind = "window", title = Text.name(CodexData.text.title), size = PANEL_SIZE, helpId = "codex", -- UI-1b 1절 3: 상자 · 별 · 칭호 규칙
-		onOpen = function()
-			task.defer(function()
-				CodexPanel.render()
-				S.send("view")
+-- UI-1c 4단계 v3 창 틀: ScreenGui(Sibling) + 기준 화면 루트(UIScale) + 창(머리 = 책 아이콘 · 도감 28 · [?] · "천천히 모아 보는 곳" · 재화 칩 3 · 닫기) → Panel.create와 같은 refs
+local function buildShellV3(onOpen, onClose)
+	Theme.recompute()
+	local phone = Theme.isMobile
+	local P = phone and L3.phone or L3.pc
+	local HudPlace = require(ReplicatedStorage.Shared.HudPlace)
+	local UiKit = require(script.Parent.Parent.ui.v2.UiKit)
+	local V9 = require(script.Parent.Parent.ui.v2.UiV9)
+	local CurrencyBar = require(script.Parent.Parent.ui.CurrencyBar)
+	local InfoTip = require(script.Parent.Parent.ui.v2.InfoTip)
+	local base = phone and HudPlace.base.phone or HudPlace.base.pc
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "CodexV3Gui"
+	gui.ResetOnSpawn = false
+	gui.IgnoreGuiInset = true
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	gui.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets
+	gui.Enabled = false
+	gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+	local dim = Instance.new("TextButton")
+	dim.Name = "Dim"
+	dim.Text = ""
+	dim.AutoButtonColor = false
+	dim.BackgroundColor3 = Color3.new(0, 0, 0)
+	dim.BackgroundTransparency = 0.55
+	dim.Size = UDim2.fromScale(1, 1)
+	dim.Parent = gui
+	local root = Instance.new("Frame")
+	root.Name = "Root"
+	root.BackgroundTransparency = 1
+	root.AnchorPoint = Vector2.new(0.5, 0.5)
+	root.Position = UDim2.fromScale(0.5, 0.5)
+	root.Size = UDim2.fromOffset(base.w, base.h)
+	root.Parent = gui
+	local scale = Instance.new("UIScale")
+	scale.Parent = root
+	local function fit()
+		local v = gui.AbsoluteSize
+		if v.X > 1 then
+			scale.Scale = math.min(v.X / base.w, v.Y / base.h)
+		end
+	end
+	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
+	fit()
+	local C = L3.colors
+	local win = V9.frame(root, P.win, C.window, "Window")
+	V9.corner(win, phone and 14 or 18)
+	V9.stroke(win, C.stroke, 3)
+	local head = V9.frame(win, { 0, 0, P.win[3], P.head }, nil, "Head")
+	V9.frame(win, { 0, P.head, P.win[3], P.line }, "FFC83D", "AccentLine")
+	local icon = UiKit.icon(head, "book", phone and 26 or 40)
+	icon.Position = UDim2.fromOffset(phone and 12 or 20, math.floor((P.head - (phone and 26 or 40)) / 2))
+	local tx = (phone and 12 or 20) + (phone and 26 or 40) + 10
+	local title = V9.label(head, Text.get("ui1c.codex.title"), V9.px(P.title), "FFFFFF", { name = "Title", font = "korean", rect = { tx, 0, 200, P.head } })
+	title.AutomaticSize = Enum.AutomaticSize.X
+	title.Size = UDim2.fromOffset(0, P.head)
+	title.TextTruncate = Enum.TextTruncate.None
+	local hb = require(script.Parent.Parent.ui.v2.HelpButton).besideLabel(title, "codex")
+	hb.Size = UDim2.fromOffset(phone and 26 or 36, phone and 26 or 36)
+	if P.sub > 0 then
+		local sub = V9.label(head, Text.get("ui1c.codex.sub"), V9.px(P.sub), C.muted, { name = "Sub" })
+		task.defer(function()
+			local s = scale.Scale > 0 and scale.Scale or 1
+			sub.Position = UDim2.fromOffset(tx + title.AbsoluteSize.X / s + 56, 0)
+		end)
+		sub.Size = UDim2.fromOffset(400, P.head)
+	end
+	UiKit.closeButton({ parent = head, name = "Close", rect = { P.win[3] - P.close - 12, math.floor((P.head - P.close) / 2), P.close, P.close }, onActivated = function()
+		UIManager.close(CodexPanel.id)
+	end })
+	local total
+	if P.chipH > 0 then -- 머리 재화 칩 3(높이 44 · 아이콘 28 · 이름 + 숫자 · 누르면 설명 = HUD 칩과 같은 틀)
+		local x = P.win[3] - P.close - 24
+		for i = 3, 1, -1 do
+			local id = ({ "gold", "sparkleShard", "enhanceStone" })[i]
+			local chip = Instance.new("TextButton")
+			chip.Name = "Chip_" .. id
+			chip.AutoButtonColor = false
+			chip.Text = ""
+			chip.BackgroundColor3 = Color3.fromHex("0E1120")
+			chip.AnchorPoint = Vector2.new(1, 0.5)
+			chip.Size = UDim2.fromOffset(150, P.chipH)
+			chip.Position = UDim2.new(0, x, 0.5, 0)
+			chip.Parent = head
+			V9.corner(chip, "pill")
+			V9.stroke(chip, C.stroke, 2)
+			local ic = ArtImage.label(chip, "icons/reward/" .. id, UDim2.fromOffset(P.chipIcon, P.chipIcon), "")
+			ic.Position = UDim2.fromOffset(10, math.floor((P.chipH - P.chipIcon) / 2))
+			V9.label(chip, Text.get("item.name." .. id), V9.px(15), C.muted, { rect = { P.chipIcon + 16, 2, 120, 18 } })
+			local num = V9.label(chip, "", V9.px(18), "FFFFFF", { font = "number", rect = { P.chipIcon + 16, 20, 120, 22 } })
+			local function upd()
+				num.Text = CurrencyBar.text(CurrencyBar.valueOf(id))
+			end
+			Players.LocalPlayer:GetAttributeChangedSignal(CurrencyBar.attrOf(id)):Connect(upd)
+			upd()
+			chip.Activated:Connect(function()
+				InfoTip.currency(chip, id)
 			end)
+			x -= 150 + 10
+		end
+	else -- 폰: "전체 n%"
+		total = V9.label(head, "", V9.px(14), "FFFFFF", { name = "TotalPct", rich = true, align = Enum.TextXAlignment.Right, rect = { P.win[3] - P.close - 220 - 128, 0, 120, P.head } }) -- [모두 받기](닫기 왼쪽 110 · 폭 110) 왼쪽
+	end
+	local body = V9.frame(win, { 0, P.head + P.line, P.win[3], P.win[4] - P.head - P.line }, nil, "Content")
+	UIManager.register(CodexPanel.id, {
+		kind = "window",
+		screenGui = gui,
+		hasCloseButton = true,
+		onOpen = function()
+			gui.Enabled = true
+			onOpen()
 		end,
 		onClose = function()
-			if built then
-				built.detail.stop()
-			end
-		end })
+			gui.Enabled = false
+			onClose()
+		end,
+	})
+	return { screenGui = gui, frame = win, content = body, titleLabel = title, head = head, totalLabel = total, phone = phone }
+end
+
+local function build()
+	local function onOpen()
+		task.defer(function()
+			CodexPanel.render()
+			S.send("view")
+		end)
+	end
+	local function onClose()
+		if built then
+			built.detail.stop()
+		end
+	end
+	local panel = V3ON and buildShellV3(onOpen, onClose) or Panel.create({ id = CodexPanel.id, kind = "window", title = Text.name(CodexData.text.title), size = PANEL_SIZE, helpId = "codex", -- UI-1b 1절 3: 상자 · 별 · 칭호 규칙
+		onOpen = onOpen, onClose = onClose })
 	local top = Instance.new("Frame")
 	top.Name = "Top"
 	top.BackgroundTransparency = 1
@@ -420,6 +653,16 @@ local function build()
 		end })
 	built = { panel = panel, top = top, tabRow = tabRow, tabButtons = tabButtons, claimAll = all, gridArea = gridArea,
 		tokenBar = tokenBar, tokenGauge = tokenGauge, tokenNeed = tokenNeed, tokenWhere = tokenWhere }
+	if V3ON then -- UI-1c 4단계: v3 틀 표시 · 칭호 상세 판(오른쪽 · 칭호 탭만)
+		built.v3, built.v3phone, built.v3head = true, panel.phone, panel.head
+		local td = Instance.new("Frame")
+		td.Name = "TitleDetail"
+		td.BackgroundColor3 = Color3.fromHex(L3.colors.panel)
+		td.Visible = false
+		td.Parent = panel.content
+		Theme.corner(td, 14)
+		built.titleDetail = td
+	end
 	if Info.V2 then -- UI-1 5단계(08 v4-codex §5): 진행 줄 = "전체 진행 n / 362칸 · p%" + 막대 + 상자 10개(10%마다 · 60% · 70% = 토큰 상자) · 상자 = 누르면 보상 창(토글)
 		tokenGauge.root.Visible = false
 		tokenNeed.Visible = false
@@ -532,6 +775,9 @@ local function build()
 	end
 	built.detail = Detail.build(panel.content, S)
 	relayout()
+	if V3ON then -- 탭이 바뀌면 배치(보스 = 전체 폭 · 칭호 = 칭호 상세)도 다시
+		lastLayout = nil
+	end
 	panel.content:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
 		if relayout() then
 			CodexPanel.render()
@@ -543,11 +789,22 @@ function CodexPanel.render()
 	if not built or not UIManager.isOpen(CodexPanel.id) then
 		return
 	end
+	if V3ON and built.v3 then
+		relayout()
+	end
 	for id, b in pairs(built.tabButtons) do
 		local on = id == S.tab
 		b.BackgroundColor3 = on and Color3.fromRGB(96, 80, 160) or Color3.fromRGB(40, 44, 60)
 		b.Label.TextColor3 = on and Theme.colors.textPrimary or Theme.colors.textSecondary
 		b.Dot.Visible = tabClaimable(id)
+		if V3ON and built.v3 then -- UI-1c 4단계: 탭 = 노랑(고름) · 글 + %(PC) · 빨간 점
+			local C = L3.colors
+			b.BackgroundColor3 = Color3.fromHex(on and C.tabOn or C.tabOff)
+			b.Label.TextColor3 = Color3.fromHex(on and C.tabOnText or C.tabOffText)
+			local name = Text.get("ui1c.codex.tab." .. ((built.v3phone and id == "class") and "classShort" or id))
+			local pct = S.view and V3.tabStats(S.view, id)
+			b.Label.Text = (pct and not built.v3phone) and ('%s  <font size="%d">%d%%</font>'):format(name, L3.pc.tabs.pct, pct) or name
+		end
 	end
 	for id, sc in pairs(scrolls) do
 		sc.Visible = id == S.tab
@@ -557,7 +814,11 @@ function CodexPanel.render()
 		built.panel.titleLabel.Text = Text.name(CodexData.text.title)
 		return
 	end
-	built.panel.titleLabel.Text = Text.get("codex.v2.titleScore", { score = tostring(view.score), total = tostring(view.total) })
+	if not (V3ON and built.v3) then
+		built.panel.titleLabel.Text = Text.get("codex.v2.titleScore", { score = tostring(view.score), total = tostring(view.total) })
+	elseif built.panel.totalLabel then -- 폰 머리 "전체 n%"
+		built.panel.totalLabel.Text = Text.get("ui1c.codex.totalPhone", { pct = ("%d"):format(math.floor((view.total > 0 and view.score / view.total or 0) * 100)) })
+	end
 	CodexPanel.renderTokens()
 	local anyClaim = false
 	for _, t in ipairs(Info.tabs) do
@@ -568,6 +829,12 @@ function CodexPanel.render()
 	sc.Visible = true
 	if dirty[S.tab] then
 		renderTab(S.tab)
+	end
+	if V3ON and built.v3 and S.tab == "title" then
+		V3.titleDetail(S, built.titleDetail)
+		return
+	elseif V3ON and built.v3 and S.tab == "boss" then
+		return
 	end
 	built.detail.show()
 end
@@ -585,6 +852,10 @@ function CodexPanel.renderTokens()
 		end
 		local p = view.total > 0 and view.score / view.total or 0
 		B.head.Text = Text.get("ui1.codex.progress", { have = tostring(view.score), total = tostring(view.total), pct = ("%d"):format(math.floor(p * 100)) })
+		if V3ON and built.v3 then -- UI-1c: 띠 머리 = "전체 진행 n / 전체칸" + 큰 %
+			B.head.RichText = true
+			B.head.Text = ('%s  <font size="15">%s</font>\n<font size="30"><b>%d%%</b></font>'):format(Text.get("ui1c.codex.total"), Text.get("ui1c.codex.totalCells", { have = tostring(view.score), total = tostring(view.total) }), math.floor(p * 100))
+		end
 		B.fill.Size = UDim2.fromScale(math.clamp(p, 0, 1), 1)
 		for n, box in ipairs(view.boxes) do
 			local b = B.boxes[n]
@@ -668,6 +939,9 @@ end
 
 -- 점검 · 스크린샷용
 function CodexPanel.setTab(id)
+	if V3ON and built and built.v3 and S.tab ~= id then
+		lastLayout = nil -- 보스 = 전체 폭 · 칭호 = 칭호 상세
+	end
 	S.tab = id
 	S.boardScrolled = false
 	selectFirstClaimable()

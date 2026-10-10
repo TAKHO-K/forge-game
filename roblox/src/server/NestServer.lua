@@ -341,6 +341,9 @@ function NestServer.start()
 			prompt.ActionText = "" -- 문구 = 클라(TextData · NestView)
 			prompt.Parent = part
 			anchors[id] = { part = part, prompt = prompt }
+			if specById[id].no then -- UI-1c 4단계: 탐험의 알 번호 = 맵 자리 표식 EggSpot_<구역>_<번호>(속성 - 파트 이름 NestSpot은 찾기 코드가 써서 그대로 · 번호 = SecretNestData no 고정)
+				part:SetAttribute("EggSpot", ("EggSpot_%s_%d"):format(specById[id].zone, specById[id].no))
+			end
 			prompt.Triggered:Connect(function(player)
 				NestServer.tryPickup(player, id)
 			end)

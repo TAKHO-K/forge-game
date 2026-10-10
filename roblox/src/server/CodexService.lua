@@ -52,6 +52,7 @@ end
 local BUILT = CodexRules.build(nestsByZone)
 CodexService.built = BUILT
 
+local V3 = require(ReplicatedStorage.Shared.data.UiV2Flags).codexV3 -- UI-1c 4단계 도감 v3(보스 처치 수 · 칭호 전체 "???")
 local BOX_ON = require(ReplicatedStorage.Shared.data.UiV2Flags).codex -- UI-1 5단계 진행 상자(끄면 옛 점수판)
 
 local function goldPerKill(stage)
@@ -119,9 +120,11 @@ local function viewOf(player, r)
 		table.insert(board, { threshold = t, done = r.boardDone[key] ~= nil, claimed = r.boardClaimed[key] == true })
 	end
 	local owned = {}
+	local titleTotal = 0
 	for id, t in pairs(TitleData.titles) do
+		titleTotal += 1
 		if PlayerProfile.hasTitle(player, id) then
-			table.insert(owned, { id = id, name = t.name, grade = t.grade })
+			table.insert(owned, { id = id, name = t.name, grade = t.grade, condition = V3 and t.condition or nil })
 		end
 	end
 	table.sort(owned, function(a, b)
@@ -129,7 +132,7 @@ local function viewOf(player, r)
 	end)
 	local hiddenIds = {} -- QUEUE-ALL9E1 0-2 히든 칭호: 얻기 전엔 이름 · 조건 없이 "???" 줄만(끝에 · id 순)
 	for id, t in pairs(TitleData.titles) do
-		if t.hidden and not PlayerProfile.hasTitle(player, id) then
+		if (t.hidden or V3) and not PlayerProfile.hasTitle(player, id) then -- UI-1c 4단계(사용자 결정): 도감 v3 = 못 얻은 칭호 전부 "???"(이름 · 조건 · 힌트 숨김)
 			table.insert(hiddenIds, id)
 		end
 	end
@@ -149,7 +152,14 @@ local function viewOf(player, r)
 				gold = (pay.goldKills or 0) * goldPerKill(stage), enhanceStone = pay.enhanceStone, sparkleShard = pay.sparkleShard })
 		end
 	end
-	return { cells = cells, lines = lines, board = board, score = score, total = BUILT.totalScore, trans = r.trans, titles = owned, selected = r.title, boxes = boxes, stars = r.stars }
+	local bossKills = nil
+	if V3 then -- UI-1c 4단계: 보스 처치 단계 테 = 실제 처치 수(칸 진행값은 문턱에서 잘림 · 저장 = 기존 codex.boss)
+		bossKills = {}
+		for id, n in pairs(r.boss or {}) do
+			bossKills[id] = tonumber(n) or 0
+		end
+	end
+	return { cells = cells, lines = lines, board = board, score = score, total = BUILT.totalScore, trans = r.trans, titles = owned, selected = r.title, boxes = boxes, stars = r.stars, bossKills = bossKills, titleTotal = V3 and titleTotal or nil }
 end
 
 function refresh(player)

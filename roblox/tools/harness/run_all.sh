@@ -16,7 +16,7 @@ declare -A EXP=( # 기대 검사 수(끝 a/b의 b) · require_path는 최소값(
 	[security_launch]=45 [save_launch]=65 [save_lock]=12 [migrate_curve]=24 [id_quarantine]=15 [slot_save]=74 [monetize]=86 [dupe]=11
 	[multiplayer]=12 [attack]=10 [request_gate]=7 [mesh_import]=34 [ops_security]=34 [season_pass]=13 [economy_all9b]=34 [enhance_g]=25
 	[bignum]=67 [bulk_sell]=11 [stat_sheet]=9 [all10]=57 [gear_v3]=10 [gem_home]=25 [monster_stats]=5 [dash_modes]=19 [boss_feel]=13
-	[menu_gate]=14 [menu_gate_src]=11 [hud_v5_src]=10 [ui1_static]=9 [ui1c_static]=10 [ui_v2]=74 [hud_layout]=18 [ui1_parts]=11 [codex_box]=35
+	[menu_gate]=14 [menu_gate_src]=11 [hud_v5_src]=10 [ui1_static]=9 [ui1c_static]=13 [ui_v2]=74 [hud_layout]=18 [ui1_parts]=11 [codex_box]=35
 	[ember_view]=8 [hud_edit]=16 [pet_ui]=7 [quick_chat]=6 [ui_rules]=4 [window_layers]=7 [help_data]=6 [train_bundle]=5 [community_goal]=24 [require_path]=5542 [regrow_timing]=8
 )
 NALL=0; NBAD=0

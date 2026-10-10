@@ -411,4 +411,41 @@ return {
 		refreshSeconds = 90, -- 게시판 겉면 다시 읽기(서버 캐시 갱신 주기와 같음 · LeaderboardConfig.refreshSeconds)
 		displayOrder = 160,
 	},
+	-- UI-1c 4단계 도감 v3(I v1 §2 · pc_03 ~ pc_06 · ph_02 ~ ph_04): 창 안 좌표(창 왼쪽 위 기준 · 기준 화면 px) · 몸 좌표 = 창 좌표 − (head + line)
+	codexV3 = {
+		pc = {
+			win = { 40, 70, 1840, 990 }, head = 64, line = 4, title = 28, sub = 16, close = 48, chipH = 44, chipIcon = 28,
+			tabs = { 16, 76, 1808, 48, gap = 8, text = 20, pct = 15 },
+			band = { 16, 134, 1808, 70, headW = 260, claimW = 200, claimH = 54, box = 40 },
+			grid = { 16, 216, 1290, 758 }, detail = { 1322, 216, 502, 758 }, full = { 16, 216, 1808, 758 },
+			cell = 112, -- 장비 · 펫 · 몬스터 칸(spec 없음 - 넓은 판에 맞춘 값)
+			weapon = { headW = 150, cw = 89, ch = 160, gap = 12, rowGap = 8, titleW = 210, gradeRowH = 34, band = 22 },
+			boss = { cardW = 286, cardH = 556, portrait = 246, name = 24, zone = 15, kills = 26, dot = 30, badge = 44, legendH = 176, gap = 18 },
+			egg = { rowH = 84, cell = 66, gap = 10, nameW = 180, pill = { 24, 22 }, egg = 40, check = 22, q = 28, headH = 44 },
+			titles = { cols = 4, w = 300, h = 112, gap = 14, medal = 48, name = 22, cond = 15, headH = 80 },
+		},
+		phone = {
+			win = { 8, 58, 784, 298 }, head = 44, line = 3, title = 18, sub = 0, close = 36, chipH = 0, chipIcon = 0,
+			tabs = { 8, 52, 768, 40, gap = 6, text = 14, pct = 0 },
+			band = nil, -- 폰 = 띠 없음(머리 오른쪽 "전체 n%" · 받기 = 상세)
+			grid = { 8, 98, 492, 192 }, detail = { 506, 98, 270, 192 }, full = { 8, 98, 768, 192 },
+			cell = 70,
+			weapon = { headW = 60, cw = 44, ch = 44, gap = 4, rowGap = 4, titleW = 0, gradeRowH = 0, band = 0, square = true },
+			boss = { cardW = 123, cardH = 186, portrait = 76, name = 13, zone = 0, kills = 14, dot = 20, badge = 28, legendH = 0, gap = 6 }, -- UI-1c 지시 18: 폰 캡처에서 배지 22 · 점 17이 작아 28 · 20으로
+			egg = { rowH = 30, cell = 28, gap = 4, nameW = 88, pill = { 14, 12 }, egg = 18, check = 10, q = 14, headH = 0 },
+			titles = { cols = 2, w = 236, h = 60, gap = 8, medal = 30, name = 14, cond = 12, headH = 34 },
+		},
+		-- 보스 처치 단계(spec 2-2 · 등급색과 다른 색): n = 최소 처치 · stroke · 바탕 그라데이션(위 → 아래) · 그림 = ui/v9 테 · 배지(20 = 무지개 테 UIGradient)
+		bossTiers = {
+			{ n = 0, stroke = "3A4466", sw = 2, bg = { "20263A", "161A2B" } },
+			{ n = 1, stroke = "8B93A6", sw = 3, bg = { "2C3246", "1B2133" }, frame = "ui/v9/boss-tier-frame-1", badge = "ui/v9/boss-tier-badge-1" },
+			{ n = 3, stroke = "6CCB3A", sw = 4, bg = { "24402A", "16241C" }, frame = "ui/v9/boss-tier-frame-3", badge = "ui/v9/boss-tier-badge-3" },
+			{ n = 5, stroke = "4FD6E8", sw = 4, bg = { "1D3F4C", "132630" }, frame = "ui/v9/boss-tier-frame-5", badge = "ui/v9/boss-tier-badge-5" },
+			{ n = 10, stroke = "FFD45A", sw = 5, bg = { "5A4416", "2E220C" }, frame = "ui/v9/boss-tier-frame-10", badge = "ui/v9/boss-tier-badge-10" },
+			{ n = 20, stroke = "FFFFFF", sw = 7, bg = { "4A3A7A", "1E1840" }, frame = "ui/v9/boss-tier-frame-20", badge = "ui/v9/boss-tier-badge-20", rainbow = { "FF5A5A", "FFC83D", "6CCB3A", "4FD6E8", "A97CFF" }, beamDegPerSec = 0.5 },
+		},
+		zoneColors = { tier1 = "6CCB3A", tier2 = "4FA3FF", tier3 = "3FD0C0", tier4 = "E8A94A", tier5 = "A97CFF", tier6 = "8FD8FF" },
+		colors = { window = "161A2B", stroke = "3A4466", panel = "1B2133", tabOn = "FFC83D", tabOnText = "1A1300", tabOff = "262C44", tabOffText = "C9D0E6", muted = "9AA3C0", gold = "FFD45A", sky = "8FD8FF", check = "4CD964", equip = "FFC83D", unknown = "20263A" },
+		tierUpSeconds = 0.6,
+	},
 }

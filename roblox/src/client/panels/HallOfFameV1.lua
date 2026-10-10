@@ -11,8 +11,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)
 local HudPlace = require(ReplicatedStorage.Shared.HudPlace)
 local Text = require(ReplicatedStorage.Shared.Text)
-local UiModel = require(ReplicatedStorage.Shared.UiModel)
-local Tokens = require(ReplicatedStorage.Shared.data.UiTokens)
 local Flags = require(ReplicatedStorage.Shared.data.UiV2Flags)
 local L = require(ReplicatedStorage.Shared.data.UiLayoutData).hall
 local Theme = require(script.Parent.Parent.ui.kit.Theme)
@@ -40,61 +38,10 @@ local TABS = {
 local built = nil
 local state = { tab = "all", classId = nil, boards = {}, me = {}, token = 0, classMenu = false }
 
-local function hex(h)
-	return Color3.fromHex(h)
-end
--- spec 글자 = 새 보통 기준 → 설정 3단(1.0 · 1.15 · 1.3)만 곱함(textBase는 다시 안 곱함)
-function HallOfFameV1.px(n)
-	local base = Flags.text and Tokens.textBase or 1
-	return math.floor(n * UiModel.textMul(UiKit.textStep(), UiKit.platformTextName()) / base + 0.5)
-end
-local px = HallOfFameV1.px
-local function corner(inst, r)
-	local c = Instance.new("UICorner")
-	c.CornerRadius = r == "pill" and UDim.new(1, 0) or UDim.new(0, r)
-	c.Parent = inst
-	return c
-end
-local function stroke(inst, color, thick, transparency)
-	local s = Instance.new("UIStroke")
-	s.Color = typeof(color) == "Color3" and color or hex(color)
-	s.Thickness = thick
-	s.Transparency = transparency or 0
-	s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	s.Parent = inst
-	return s
-end
-local function frame(parent, rect, color, name)
-	local f = Instance.new("Frame")
-	f.Name = name or "Frame"
-	f.BorderSizePixel = 0
-	f.BackgroundColor3 = color and hex(color) or Color3.new()
-	f.BackgroundTransparency = color and 0 or 1
-	f.Position = UDim2.fromOffset(rect[1], rect[2])
-	f.Size = UDim2.fromOffset(rect[3], rect[4])
-	f.Parent = parent
-	return f
-end
-local function label(parent, text, size, color, props)
-	props = props or {}
-	local l = Instance.new("TextLabel")
-	l.Name = props.name or "Label"
-	l.BackgroundTransparency = 1
-	l.Font = UiKit.font(props.font or "koreanBold")
-	l.TextSize = size
-	l.TextColor3 = typeof(color) == "Color3" and color or hex(color or "FFFFFF")
-	l.TextXAlignment = props.align or Enum.TextXAlignment.Left
-	l.TextYAlignment = props.alignY or Enum.TextYAlignment.Center
-	l.TextTruncate = Enum.TextTruncate.AtEnd
-	l.RichText = props.rich == true
-	l.Text = text or ""
-	if props.rect then
-		l.Position = UDim2.fromOffset(props.rect[1], props.rect[2])
-		l.Size = UDim2.fromOffset(props.rect[3], props.rect[4])
-	end
-	l.Parent = parent
-	return l
-end
+local V9 = require(script.Parent.Parent.ui.v2.UiV9) -- 공용 그리기 조각(px · 판 · 글 · 테 · 아바타)
+local hex, corner, stroke, frame, label = V9.hex, V9.corner, V9.stroke, V9.frame, V9.label
+HallOfFameV1.px = V9.px
+local px = V9.px
 HallOfFameV1.label = label
 
 -- 이름 · 직업 · 값 글
@@ -125,62 +72,9 @@ function HallOfFameV1.podiumValue(entry)
 	return valueOf(entry)
 end
 
--- 아바타 = HeadShot 썸네일(불러오는 중 · 실패 = 회색 원 + 이름 첫 글자) · 사람마다 한 번만 요청
-local thumbs = {} -- [userId] = 그림 문자열 | false(실패) | "pending"
-local waiting = {} -- [userId] = { ImageLabel }
+-- 아바타 = HeadShot 썸네일(UiV9 · 색 = 명예의 전당 표)
 function HallOfFameV1.avatar(parent, userId, name, sizePx, ringColor, ringW)
-	local holder = Instance.new("Frame")
-	holder.Name = "Avatar"
-	holder.BackgroundColor3 = hex(C.faceBg)
-	holder.Size = UDim2.fromOffset(sizePx, sizePx)
-	holder.Parent = parent
-	corner(holder, "pill")
-	if ringColor then
-		stroke(holder, ringColor, ringW or 3)
-	end
-	local initial = (name and name ~= "") and utf8.char(utf8.codepoint(name, 1, 1)) or "?"
-	local first = label(holder, initial, math.floor(sizePx * 0.45), C.faceText, { name = "Initial", align = Enum.TextXAlignment.Center, font = "number" })
-	first.Size = UDim2.fromScale(1, 1)
-	first.TextTruncate = Enum.TextTruncate.None
-	local img = Instance.new("ImageLabel")
-	img.Name = "HeadShot"
-	img.BackgroundTransparency = 1
-	img.Size = UDim2.fromScale(1, 1)
-	img.Visible = false
-	img.Parent = holder
-	corner(img, "pill")
-	local function apply(content)
-		if content then
-			img.Image = content
-			img.Visible = true
-			first.Visible = false
-		end
-	end
-	local id = tonumber(userId)
-	if not id or id <= 0 then
-		return holder
-	end
-	local known = thumbs[id]
-	if type(known) == "string" and known ~= "pending" then
-		apply(known)
-	elseif known == nil or known == "pending" then
-		waiting[id] = waiting[id] or {}
-		table.insert(waiting[id], apply)
-		if known == nil then
-			thumbs[id] = "pending"
-			task.spawn(function()
-				local ok, content, ready = pcall(function()
-					return Players:GetUserThumbnailAsync(id, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
-				end)
-				thumbs[id] = (ok and ready and content) or false
-				for _, fn in ipairs(waiting[id] or {}) do
-					fn(thumbs[id] or nil)
-				end
-				waiting[id] = nil
-			end)
-		end
-	end
-	return holder
+	return V9.avatar(parent, userId, name, sizePx, ringColor, ringW, C)
 end
 
 -- 단상(창 · 게시판 공용): rect 판 안에 2 · 1 · 3 블록 + 아바타 + 왕관 · entries = 1 ~ 3등(없으면 회색 빈 자리)
