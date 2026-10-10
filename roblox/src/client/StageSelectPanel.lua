@@ -527,6 +527,15 @@ local band = StageRewardBand.build({
 	end,
 })
 
+-- UI-1b(Play 실측): 글자가 커지면(UI-1b 1절 1) 띠 높이가 늘어 아래 [이전 10 · 최전선 · 다음 10] 줄을 덮었다 → 창 높이 = 띠 아래 끝 + 페이지 줄(옛 396 고정)
+do
+	local need = BAND_TOP + band.height + 8 + 68
+	if need > PANEL_HEIGHT then
+		panel.Size = UDim2.new(0, PANEL_WIDTH, 0, need)
+		pageRow.Position = UDim2.new(0, 12, 0, need - 68 - BODY_TOP)
+	end
+end
+
 local function attrs()
 	-- 예외 1(세이브 없는 신규 플레이어): 프로필 로드 전엔 Attribute가 nil일 수 있다 -
 	-- 기본값으로 방어한다(open() 자체를 프로필 로드 전엔 안 부르는 게 1차 방어).
@@ -763,6 +772,14 @@ local function onOpen()
 	setStatus("")
 	render()
 	requestPreview()
+	if require(game:GetService("ReplicatedStorage").Shared.data.UiV2Flags).mapFrame then -- UI-1b 3절 7(G spec 다음 보스 카드 = 눌러야 보이던 첫 처치 보상을 바로): 열 때 다음 보스 칸을 골라 둠
+		for s = best + 1, best + 10 do
+			if StageRewardBand.isBossStage(s) then
+				selectBossStage(s)
+				break
+			end
+		end
+	end
 end
 
 local function onClose()
