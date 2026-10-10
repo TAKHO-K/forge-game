@@ -21,6 +21,7 @@
 -- (결성·합류·이탈·승계·좌석 변화를 밖에 알린다 - PartyCrossServer가 레코드를 다시 쓴다). 역방향
 -- require는 여전히 없다.
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

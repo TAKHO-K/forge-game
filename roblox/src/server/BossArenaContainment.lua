@@ -3,6 +3,7 @@
 -- ①(넉백 상한) · ②(착지 경계)가 지키면 이 복귀는 한 번도 일어나지 않아야 한다 - 일어나면 "[forge-game] 위치 보정" 줄이 남고 corrections()에 쌓인다(검증이 0을 확인한다).
 -- BossEncounter가 보스전 시작 · 끝에 track · untrack을 부른다(이 모듈은 BossEncounter를 모른다 - 순환 require 없음).
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

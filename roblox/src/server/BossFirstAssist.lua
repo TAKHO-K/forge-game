@@ -1,6 +1,7 @@
 -- GUARDIAN-V3 첫 보스 도움(BossFrameworkData.v3[보스].firstAssist - 새 몸이 뜰 때만 · data.firstAssist): 이 보스를 처치하기 전까지 전멸 1회마다
 --   그 멤버가 보스에게 받는 피해 − perFail(최대 − max). 받는 피해 배율 = 출처 "bossAssist"(PlayerState - 스킬 · 평타 · 기믹 · 환경 피해 전부) · 전투 동안.
 --   기록 = 저장 hints.bossAssist(v75 - 멤버 각자) · 처치하면 cleared(CombatResolution → noteClear) · 견습 보스전 제외.
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BossFramework = require(ReplicatedStorage.Shared.BossFramework)

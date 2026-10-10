@@ -1,6 +1,7 @@
 -- QUEUE-MENU2 D · E: 캐릭터 칸 전환 · 메인 메뉴로(서버). 원격 입구 = SlotServer.server.lua(SlotRequest).
 --   전환 순서: 금지 상태 확인 → 파티 이탈 → 즉시 저장(성공해야 다음) → 새 칸 로드(실패 = 지금 캐릭터 그대로) → 정리(버프 · 화살 · 분신 · 쿨) → 캐릭터 다시 스폰 → 로드 뒤 처리(ProfileBoot · 쿨/게이지/위치 복원).
 --   메인 메뉴로 = 금지 상태 확인 → 파티 이탈 → 즉시 저장 → 캐릭터를 월드에서 뺌(InMainMenu) - 이어하기(같은 칸) = 다시 스폰 + 마지막 자리.
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SlotSaveData = require(ReplicatedStorage.Shared.data.SlotSaveData)
 local SlotSave = require(script.Parent.SlotSave)

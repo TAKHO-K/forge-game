@@ -13,6 +13,7 @@
 --   · 리더가 보스 스테이지를 떠나면 파티 보스전이 끝난다(전원 사냥터로). 파티원이 떠나면 그
 --     사람만 빠진다(N·HP 배수 고정 - 이탈의 대가는 파티가 진다).
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

@@ -6,6 +6,7 @@
 -- 이미 진행 중인 직업에서 다른 직업으로 바꿀 때만 확인창을 띄운다 - 여긴 서버 검증이라
 -- 그 확인을 건너뛴 요청이 와도 존재하는 classId이기만 하면 그대로 받아들인다.
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ClassData = require(ReplicatedStorage.Shared.data.ClassData)

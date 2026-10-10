@@ -5,6 +5,7 @@
 -- 원자성(PRD 20.18 [3]): 골드 확인/차감부터 결과 반영까지 **yield 지점이 없다** - RemoteEvent 핸들러 하나가 끝까지 실행된 뒤에야 같은 플레이어의
 -- 다음 요청이 처리되므로 골드 차감과 결과 반영 사이에 값이 바뀔 여지가 없다(ImmediateSave.request 전까지 yield 금지).
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local EnhanceConfig = require(ReplicatedStorage.Shared.data.EnhanceConfig)

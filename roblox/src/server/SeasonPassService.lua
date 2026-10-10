@@ -2,6 +2,7 @@
 --   시즌 번호 = 리더보드와 같은 시계(LeaderboardRules.seasonAt · LeaderboardConfig.seasonLengthDays 56). 경험치 = profile.quests.currencies.passExp(G3 퀘스트 보상 칸 - 일일 · 주간 미션이
 --   이미 준다 = 공통 입구 재사용) · 시즌이 바뀌면 경험치 0 · 받은 칸 · 유료를 새로(유료 줄은 시즌마다 다시 산다).
 --   보상 지급 = MonetizationService.applyReward(치장 = CosmeticService · 조각 · 알 = QuestService.grant 한 곳).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LeaderboardConfig = require(ReplicatedStorage.Shared.data.LeaderboardConfig)

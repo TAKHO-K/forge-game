@@ -4,6 +4,7 @@
 --   → 음파 틱 ticks번(tickSeconds 간격): 틱마다 보스 → 사람 시야가 엄폐물(얼음 기둥 · 낙빙 기둥 · 맵 구조물)에 가리면 0(가려짐 표시), 아니면 최대 체력 × tickFraction(보호막 무시)
 --     + 엄폐물은 틱마다 내구 1씩 깎인다(작은 구조물 cover.obstacleTicks · 큰 블록 cover.climbableTicks · 기둥 = 그 지형의 durabilityTicks) - 0이면 부서진다 → 그 뒤 사람은 다음 틱부터 맞는다.
 --   전부 맞으면 ticks × tickFraction(= 90% - 진짜 즉사는 K). 판정은 서버(시야 = 2D 선분 · 원 - BossPropMath.isShielded), 고리 · 금 · 흔들림은 클라(BossSonicView).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BossData = require(ReplicatedStorage.Shared.data.BossData)

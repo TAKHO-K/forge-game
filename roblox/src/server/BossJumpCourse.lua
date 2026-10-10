@@ -4,6 +4,7 @@
 --     마지막 발판 = 수정(구출 대상과 같은 타격 대상 - 평타 · 스킬 · 투사체 · 1인 hitIntervalSeconds에 1번 · hits번이면 깨진다).
 --     아레나 가장자리에 투명 벽(원을 도는 조각 - 끝나면 치운다) · 체크포인트 발판을 밟은 사람은 코스에서 떨어지면 그 체크포인트로 돌아간다(그 코스의 수정이 깨지기 전까지).
 --   두 수정이 다 깨지면 성공(BossEnvironment가 보호막을 풀고 끝낸다). 시간 제한 없음.
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local Workspace = game:GetService("Workspace")

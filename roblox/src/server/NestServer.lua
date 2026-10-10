@@ -2,6 +2,7 @@
 --   번개 문(시간형) · 줍기 위치 검증(M1-2c 서버 위치 기록 - 순간이동 줍기 차단) · 알 등급 · 개체 후보 뽑기 · 비밀 둥지 발견 도감(칭호) · 클라 동기화(NestSync).
 --   수치 = data/NestData(자리 · 재생성 · 줍기) · data/EggData(등급 분포 · 후보 풀). 도형 = shared/WorldStructures(NestSpot 앵커).
 --   알 등급은 "사람 × 둥지 × 줍기 회차"마다 서버 비밀값으로 고정(다시 들어와도 같은 알 - 등급을 보고 고르기 · 재접속 뽑기 없음). 둥지에 보이는 알 = 그 사람이 주울 알(클라 NestView).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")

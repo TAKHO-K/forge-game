@@ -10,6 +10,7 @@
 -- 호출로 바꿨다 - 무한 모드 stageProgress.infinite 자체는 절대 건드리지 않는다(견습 중에도
 -- 그 값은 그대로 저장돼 있다가, 견습을 나가는 순간 다시 읽힌다).
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

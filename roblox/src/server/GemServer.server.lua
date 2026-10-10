@@ -7,6 +7,7 @@
 -- 때마다 PlayerProfile 자신이 GemSync.push를 부른다(GemSync.lua 주석 참고 - 호출부마다
 -- push를 챙기게 하면 잊는 사고가 난다, 이번 세션에 실제로 난 버그).
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GoldCost = require(ReplicatedStorage.Shared.GoldCost)

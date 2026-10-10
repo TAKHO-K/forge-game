@@ -26,6 +26,7 @@
 -- 스테이지를 실제로 옮길 때만(StageServer.server.lua가 despawnFor/leaveFor를 부를 때)
 -- 사냥터로 돌아간다.
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local Players = game:GetService("Players")
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

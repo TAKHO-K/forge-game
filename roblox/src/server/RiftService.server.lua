@@ -2,6 +2,7 @@
 --   DropTable.activeBoost(등급 배율 - 서버 굴림 · 이 VM의 확률 공개)를 켜고 끈다. 시작 · 끝 = 전원 배너(RiftBanner) - 모든 서버가 같은 시각에 스스로 보낸다(서버 간 통신 없음).
 --   개발(Studio): Workspace 속성 RiftForce = true(강제 켬) | false(강제 끔) | nil(시간표) · /gg rift on|off|auto(DevTools).
 --   골드 배율 = RiftService.goldMultiplier()(CombatResolution이 처치 골드에 곱한다).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 

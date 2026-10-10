@@ -4,6 +4,7 @@
 -- MonsterAI에서는 require로 꺼내 쓸 수 없어서다(CombatResolution.lua가 AttackServer에서
 -- 처치 처리를 뽑아낸 것과 같은 이유). 동작은 바꾸지 않았다 - 옮기기만 했다.
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CombatConfig = require(ReplicatedStorage.Shared.data.CombatConfig)

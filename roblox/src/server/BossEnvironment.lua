@@ -8,6 +8,7 @@
 -- 흐름: (체력 hpBelow 이하가 된 뒤 firstDelaySeconds) → 전조 telegraphSeconds(보이는 구역 = 판정 구역) → 활성 durationSeconds → 끝 → cooldownSeconds 뒤 다시.
 -- 서버 = 구역 판정 · 도트 · 튕김만. 기울기 · 물 · 모래 소용돌이 · 바람 줄기 · 끌림/밀림은 클라(BossEnvironmentView).
 -- 겹침(§4-3): shouldDefer - 환경이 도는 동안 "피할 수 없음" 쌍(BossOverlap.classify)의 패턴은 나올 차례에 deferChance로 미루고, 같은 발동 안에서 두 번 나오지 않는다.
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BossData = require(ReplicatedStorage.Shared.data.BossData)

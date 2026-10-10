@@ -4,6 +4,7 @@
 -- 클라이언트(EnhanceUI.client.lua 환생 탭)가 이 요청을 보내기 전에 띄운다 - 서버는 요청이 왔다는
 -- 사실 자체를 "이미 확인받았다"로 믿는다(강화 요청과 같은 신뢰 경계).
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ImmediateSave = require(script.Parent.ImmediateSave)

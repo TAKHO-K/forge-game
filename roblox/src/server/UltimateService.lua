@@ -2,6 +2,7 @@
 --   충전 훅: AttackServer(평타 적중) · SkillServer(스킬 타격 · strikeTarget) · PlayerDamage.takeDamage(받은 피해) · SkillServer 치유 → onDealt / onTaken / onHeal.
 --   보스 입장 = 0(BossEncounter.onEncounterStarted 멤버 전원) · 사냥 중 충전 × huntChargeScale.
 --   타격 함수(strike)는 SkillServer가 register로 넘긴다(스킬과 같은 피해 경로 - 치명 · 힐러 버프 · 처치 보상 · 피해 숫자).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

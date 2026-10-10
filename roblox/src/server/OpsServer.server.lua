@@ -15,6 +15,7 @@
 --   /ops leaderboard remove <userId>        개인 · 직업 순위 + 이번 주 주간 도전 기록 제거
 --   /ops ban <userId> <1d|3d|7d|30d|perm> <사유>  ·  /ops unban <userId>   로블록스 기본 차단(Players:BanAsync · 경험 전체 · 부계정 포함) · perm = 미리보기 + /ops ban confirm <번호>(QUEUE-ALL6R)
 -- 결과는 명령한 사람 채팅 줄(시스템 메시지)로 돌려준다. 자동 제재는 없다.
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")

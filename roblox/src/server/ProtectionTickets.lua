@@ -2,6 +2,7 @@
 -- 하나씩이다 - 자동 검증(EnhanceVerify)과 DevTools("/gg ticket buy")가 스크립트를 require할 수 없어서(Script는 모듈이 아니다) 같은 함수를 바로 부를 수 있게 뒀다.
 -- 가격 · 지급 식은 shared/Enhance.lua(getProtectionPrice · getBossGrant)와 EnhanceConfig.protection이 유일한 출처다 - 여기엔 숫자가 없다.
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local WorldConfig = require(ReplicatedStorage.Shared.data.WorldConfig)

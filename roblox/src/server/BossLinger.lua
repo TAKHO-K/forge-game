@@ -5,6 +5,7 @@
 --   lingerSeconds(90) 동안 아무것도 안 고른 사람은 next(잠수 대비). 마지막 멤버가 빠지면 슬롯이 반납된다(BossEncounter.leaveFor).
 -- 가방이 가득이라 못 넣은 보스 장비는 그 사람이 사냥터로 돌아가는 순간 발밑에 떨어뜨린다(holdDrops → BossEncounter.onMemberReturned).
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 

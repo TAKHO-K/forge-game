@@ -2,6 +2,7 @@
 --   보내는 길: 관리자 명령 `/ops gift <userId> <kind> <id|개수> [메모]`(OpsServer - 허용 계정 = OpsConfig.userIds · 모든 시도가 운영 기록 저장소에 남는다).
 --   대상이 이 서버에 있으면 바로 선물함에, 없으면 DataStore(MonetizationData.gifts.storeName - 검증 무장 중 = _verify)에 쌓고 다음 접속 때 옮긴다.
 --   유저 간 로벅스 선물 = 자리(MonetizationData.gifts.userToUser.enabled = false).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local DataStoreService = game:GetService("DataStoreService")
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")

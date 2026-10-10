@@ -5,6 +5,7 @@
 --      태초 장갑 붙잡기(LedgeClimb - 서버가 모서리를 광선으로 다시 확인하고 HeightGuard 허가를 준다 = 올라서기를 합법 동작으로 등록).
 --   ② 로블록스 기본 Shift Lock을 끈다(DevEnableMouseLock) - 기본 키가 LeftShift라 대시와 겹친다. 시점 고정은 자체 구현(client/ShiftLock.client.lua · LeftControl).
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

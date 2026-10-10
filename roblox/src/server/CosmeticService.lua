@@ -3,6 +3,7 @@
 --   장착 결과 = Player Attribute "Cosmetic_<칸>"(세트 id · 없으면 nil = 기본 모습) - 클라 훅(CosmeticSlotData.slots[].hook)은 이 Attribute만 읽는다(외형 에셋은 A가 채움).
 --   사는 법 = 반짝 조각(profile.quests.currencies.sparkleShard - QuestService가 쓰는 칸) 또는 로벅스 상품(MonetizationService가 grant로 부른다). **골드로는 못 산다.**
 --   조각 새 출처(MonetizationData.shardSources): 나무 정거장 처음 오르기 · 비밀 둥지 도감 새 칸 · 칭호 새로 받음 - 지급은 QuestService.grant 한 곳(§7-6).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CosmeticSlotData = require(ReplicatedStorage.Shared.data.CosmeticSlotData)

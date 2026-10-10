@@ -2,6 +2,7 @@
 -- server/WorldMap이 짓는다. 여기서는 부팅 순서만: 맵 → 리스폰 → 허브 NPC(환생 제단 · 보석상인 - 강화대는 EnhanceStation) → 몬스터 지대(SpawnSites) → 세계 이동(Travel).
 -- 옛 구역 지형(ZoneTerrain) · 맵 밑판 · 능선 · 포탈 패드(TeleportPad)는 더 이상 짓지 않는다(모듈은 남아 있다 - 검증 · 개발 명령 일부가 읽는다).
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 

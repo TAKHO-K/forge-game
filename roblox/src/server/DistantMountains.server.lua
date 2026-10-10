@@ -1,5 +1,6 @@
 -- QUEUE-ALL3 Q10 먼 산 배치(서버 - 모두에게 같은 풍경 · 정적). 수치 = shared/data/DistantMountainData · 메시 = ReplicatedStorage.ArtMeshCache(ArtAssetLoader - ArtStyleV1 켬일 때만).
 --   캐시가 준비되면(ArtMeshReady) 한 번 짓는다. 충돌 · 조회 · 터치 · 그림자 없음 · 세계 경계 밖만(플레이 지형 · 충돌 불변).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 

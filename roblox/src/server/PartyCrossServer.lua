@@ -26,6 +26,7 @@
 --   "해산" 알림(리스폰 마을에 그대로 남는다) → 보스전 중이면 보류(arrivalWaiting, 끝나면 자동 합류) →
 --   붙인다. 어디로 떨어지는가: 로블록스 기본 접속 지점(리스폰 마을). 리더 옆으로 옮기지 않는다.
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local Players = game:GetService("Players")
 local MemoryStoreService = game:GetService("MemoryStoreService")
 local MessagingService = game:GetService("MessagingService")

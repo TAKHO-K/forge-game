@@ -6,6 +6,7 @@
 --   그 뒤 들어온 타격은 처치로 이어지지 않는다(경합 가드 공유). 파티원이 흩어져 있어도 지점마다 "누구든 가까이"라 각자 주변이 유지된다.
 -- 개인 스테이지 수치(HP · 보상)는 그대로 - 여기서는 "있느냐 없느냐"만. 수치 = WorldMapData.spawnSites · 나오는 몬스터 = 구역 hunt.monsters(가중치).
 -- 핵심 틱(SpawnSites.tick)은 훅을 받는다 - 실제 서버와 검증 시뮬(1,000 사이클)이 같은 코드를 돈다.
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

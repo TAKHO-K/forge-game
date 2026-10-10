@@ -5,6 +5,7 @@
 --   그동안 일반 번개(ambient)가 everySeconds마다 무작위 멤버 발밑에 떨어진다. 충전 수가 필요 수(인원에 따라)에 닿으면 즉시 성공(보스 기절 stunSeconds) ·
 --   방전을 다 쓰고도 모자라면 실패 = 최대 체력 failMaxHpFraction · 보호막 무시(전원).
 -- 판정은 서버, 조준경 · 표시 · 빛남 · 남은 수 표시는 클라(BossRodsView).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BossPropMath = require(ReplicatedStorage.Shared.BossPropMath)

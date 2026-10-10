@@ -4,6 +4,7 @@
 --              쏜 뒤에는 스킬과 떨어져 난다(st.projectiles - BossPatterns.step이 매 틱 stepProjectiles를 부른다) - 보스는 다음 스킬을 고를 수 있다.
 --   vortex     소용돌이(끌림 telegraphSeconds 동안 · 클라가 자기 캐릭터를 당긴다 - 걷기보다 느리게) → 중심 폭발 원
 -- 판정은 전부 여기(서버), 그림은 클라(BossBR1View) - 보이는 장판 = 실제 판정. kit = BossPatterns가 넘기는 공용 함수 표(victims · send · …).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 

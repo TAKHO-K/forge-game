@@ -2,6 +2,7 @@
 --   기록: noteArmor(드랍 줍기 - 자동 판매 · 분해 포함) · notePet(부화) · noteMonster(잡몹 처치 · 반짝이) · noteBoss(보스 처치 - 기여 10% 이상) · noteClass(환생 무기 등급) · 둥지 = nestDex 그대로.
 --   완료 순간 = done[칸] = 계정 최고 스테이지(골드 고정) · 줄 완성 = 칭호 즉시 · [받기] = CodexRequest("claim", 칸 id | "all" | "board:<점수>") · 칭호 선택 = ("title", id | "").
 --   화면 = CodexUpdate(서버 → 클라 표 - 클라는 계산하지 않는다 · 둥지 id는 안 보낸다).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")

@@ -19,6 +19,7 @@
 --
 -- 구출에는 보상이 없다(경험치·골드·기여도 0) - 이 파일은 보상 모듈을 아무것도 require하지 않는다.
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

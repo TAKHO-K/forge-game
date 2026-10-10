@@ -6,6 +6,7 @@
 --   ③ 유료 랜덤: PolicyService ArePaidRandomItemsRestricted를 접속 때 캐시(조회 실패 = 제한) - paidRandom 상품은 제한 대상에게 프롬프트 자체를 막는다(지금 paidRandom 0개).
 --   ④ 게임패스(편의): 접속 때 UserOwnsGamePassAsync로 profile.gamepasses 캐시 갱신(조회 실패면 캐시 유지) · 구매 완료 이벤트로 즉시 반영 · 효과 = 각 시스템이 hasPass로 읽는다.
 --   ⑤ 창구 Remote ShopRequest(클라 → 서버) / ShopSync(서버 → 클라 화면 표) - 요청 제한 = RequestGate(공통 입구).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local MarketplaceService = game:GetService("MarketplaceService")
 local PolicyService = game:GetService("PolicyService")
 local Players = game:GetService("Players")

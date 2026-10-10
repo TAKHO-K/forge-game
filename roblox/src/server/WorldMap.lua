@@ -2,6 +2,7 @@
 -- 모든 모델은 Workspace.Ground 아래(GroundProbe의 지면 = 이 폴더). 충돌 없는 도형(잎 · 등불 · 자리 표시)은 CanCollide · CanQuery · CanTouch를 끈다 -
 -- 지면 광선 · 조준 광선 · 터치 이벤트 어디에도 안 걸린다(장식 비용 = 그리기만).
 -- 스트리밍: 나무(BigTree - 줄기 + 잎) · 관문 빛기둥 · 구역 랜드마크는 Persistent(어디서나 보인다 - 스트리밍으로 사라지지 않는다). 나머지는 기본(Nonatomic - 파트 단위로 들어온다 나간다).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local WorldMapLayout = require(ReplicatedStorage.Shared.WorldMapLayout)

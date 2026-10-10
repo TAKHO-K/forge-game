@@ -5,6 +5,7 @@
 --   클라가 보고를 안 보내도 서버 착지 뒤 reportWindowSeconds가 지나면 서버가 스스로 처리한다(물 = 서버 판정 · 사다리 = 세션 fromLadder).
 --   피해 = 최대 체력 비율(보호막 무시 · 받는 피해 배율 없음 - 판정형 피해). 체력이 0이 되거나 치명 속도면 쓰러짐:
 --     "쿵!" + 그을림(Character Attribute FallKnockdown · CharredUntil - 클라 FallFx가 그린다) · 루트 고정 knockdownSeconds → 마지막 안전 지점(이번 체공을 시작한 땅)에서 체력 가득 · 아이템 손실 없음.
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")

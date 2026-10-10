@@ -3,6 +3,7 @@
 -- 트리거(EnhanceServer.server.lua)도 같은 경로를 쓴다 - 실패·중단 처리를 호출부마다 따로
 -- 만들면 한쪽만 고치고 잊어버리기 쉽다.
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local SaveConfig = require(ReplicatedStorage.Shared.data.SaveConfig)

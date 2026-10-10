@@ -1,4 +1,5 @@
 -- QUEUE-ALL1 P4 §1 초대 보상 · §2 코드(서버). 수치 · 규칙 = shared/data/SocialRewardData(주석 참고).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

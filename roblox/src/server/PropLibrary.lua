@@ -2,6 +2,7 @@
 --   라이브러리 = ReplicatedStorage.Assets.Props.<이름>(Model · 피벗 = 바닥 가운데 · −Z = 앞). 같은 이름 교체 모델(PropData.overrideFolders - Rojo `src/shared/PropModels/<이름>.rbxm` 또는 place)이
 --   있으면 그걸 복사해 쓰고, 없으면 틀로 짓는다(Attribute PropSource = "custom" | "template"). 배치 = 라이브러리 모델 복제 → 배율 → 피벗 이동.
 --   카툰 교체 절차 = docs/art/asset-pipeline.md(교체 모델도 틀의 크기 · 충돌 발자국을 지킨다 - 판정 · 검사가 틀 도형을 읽는다).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PropData = require(ReplicatedStorage.Shared.data.PropData)

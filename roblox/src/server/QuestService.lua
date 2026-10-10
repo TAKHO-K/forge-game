@@ -2,6 +2,7 @@
 --   Remote: QuestRequest(action, a, b) - "view" · "claim"(kind, id) · "train"(kind = "stat" | "ability", id) / QuestUpdate(서버 → 클라: 화면 표)
 --   이벤트(note)는 서버 경로가 부른다: CombatResolution(kill · sparkle · bossClear · raidClear) · 강화 · 보석 · 둥지 · 수련. 클라가 진행을 보고하는 길은 없다.
 --   보상 지급 = 이 모듈 한 곳(골드 = GoldCost "quest" × 계정 최고 스테이지 · 강화석 = 재료 · 알 = 가방 · 반짝 조각 · 시즌 패스 경험치 = quests.currencies).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

@@ -9,6 +9,7 @@
 --   도발(성기사 - K)로 풀린 사람은 탈출로 친다. 잡기 동안 보스는 새 패턴을 고르지 않는다(스킬 진행 중) · 환경 변화는 따로 돈다.
 --   공중 가둠(거품 · 회오리 - kind "bubbled")에 갇힌 사람은 "공중"이다 - 얼림 · 잡기로 이어진다(BR1-2 §4).
 -- 판정 · 잡힘 · 던짐 발신은 서버, 손 모션 · 들림 · 던짐 물리는 클라(BossGrabView · 기존 BossStormView.launch).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

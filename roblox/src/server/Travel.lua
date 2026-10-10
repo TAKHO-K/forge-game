@@ -5,6 +5,7 @@
 --   · 허브 귀환(쿨) · 파티원 곁으로(쿨 · 제한) = 요청(TravelRequest RemoteEvent) · 덩굴 리프트(가장 높은 열린 정거장) · 정거장(체크포인트) · 떨어지면 마지막 정거장.
 --   · 보스 관문 판 → BossGate.enter. 세계 밖 · 너무 높은 곳에 서 있으면 허브로.
 --   · 모든 순간이동 전에 RequestStreamAroundAsync(도착지 미리 불러오기 - 스트리밍).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

@@ -4,6 +4,7 @@
 --   전조 telegraphSeconds 동안: 누군가 발판에 **올라서는 순간**마다 그 발판 색이 뒤집힌다(남이 밟아도 내 발판 색이 바뀐다 - 협동 혼란)
 --   판정(전조 끝): 자기 표시와 **같은 색 발판 위**(윗면에 서 있음)면 생존 · 아니면 최대 체력 × failMaxHpFraction(보호막 무시 - 진짜 즉사는 K)
 -- 판정은 서버(발판 = BossPropMath.kitZones · 발 높이), 색칠 · 표시는 클라(BossColorView).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BossData = require(ReplicatedStorage.Shared.data.BossData)

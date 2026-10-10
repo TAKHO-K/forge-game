@@ -1,6 +1,7 @@
 -- A2-N3 Open Cloud 메시 로더: shared/data/ArtAssetIds(생성 파일)의 Model을 InsertService:LoadAsset으로 불러 ReplicatedStorage.ArtMeshCache.<키>에 둔다.
 --   ArtStyleV1 스위치가 켜질 때만(개발 기본 켬 · 라이브 = ArtStyleV1Data.enabled). 로드 실패 · 심사 대기 = 그 키만 빠진다(쓰는 쪽이 지금 모델 그대로 - 경고 1줄).
 --   가져온 모델은 shared/ArtMeshKit.normalize로 리그 공간(stud · 앞 −Z)으로 맞춘 뒤 캐시에 넣는다. 쓰는 곳 = MonsterSpawner(몬스터 · 보스) · WeaponVisual(무기).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local InsertService = game:GetService("InsertService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

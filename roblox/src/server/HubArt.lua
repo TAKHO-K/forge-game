@@ -2,6 +2,7 @@
 --   건물 = Ground.Hub의 Facility_<시설> 상자(HubBuilding = HubArtMeta 키) 자리에 메시를 얹고 상자는 투명(충돌 = 이 상자 하나 그대로).
 --   NPC · 게시판 = 자리 기둥(Spot) 바닥에 세우고 기둥 = 투명 · 충돌 끔(프롬프트 · 이름표 자리 그대로 - 이름표만 메시 꼭대기 위로) · 굴뚝 연기.
 --   메시 색 · 네온 = HubArtMeta parts(생성 표). NPC 모델 = Workspace.HubArt.HubNpc_<id>(WorldPivot = 바닥 프레임 · 클라 HubNpcView가 대기 동작).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 

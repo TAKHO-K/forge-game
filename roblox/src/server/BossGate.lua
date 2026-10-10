@@ -7,6 +7,7 @@
 --   관문 발판을 밟으면(TravelServer 거리 폴링) 그 자리에서 입장도 된다: 솔로 = 바로 · 파티 = 리더만 · 멤버 전원 검사 · 입장 투표 → 파티 보스.
 -- 입장한 사람의 복귀 자리 = 관문 앞(발판 입장) · 원격 입장이면 각자 서 있던 자리(BossEncounter.setReturnPoint - [마을]은 허브).
 -- WorldMapData.boss.entry = "direct"면 옛 즉시 입장(StageServer가 바로 스폰).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BossRules = require(ReplicatedStorage.Shared.BossRules)

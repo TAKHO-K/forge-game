@@ -8,6 +8,7 @@
 -- 그쪽, 서 있으면 바라보는 방향. 클라가 방향 벡터를 따로 보내지 않는다 - 서버가 이미
 -- 갖고 있는 값을 쓴다(AimPoint처럼 "클라가 보낸 방향을 그대로 믿지 않는다").
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

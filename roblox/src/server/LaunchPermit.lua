@@ -5,6 +5,7 @@
 --   요청이 위치 기록보다 먼저 오면 pendingSeconds 동안 새 기록으로 다시 본다. 사람마다 cooldownSeconds · 허가는 가장 최근 것만(HeightGuard).
 --   발판 등록 = register(part, spec) · spec = { top(윗면 Y), center(Vector3 - 윗면 가운데 XZ), radius, apexFeetY(설계 발 정점 - 공중 점프 몫 포함), seconds?, source, hSpeed?(설계 수평 속도 - 없으면 걷기) }.
 --   서버가 직접 보내는 보스 발사(넉백 등)는 이 모듈이 아니라 HeightGuard.grantLaunch(보낸 쪽이 사실을 안다).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

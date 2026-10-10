@@ -1,6 +1,7 @@
 -- UI-1c 3단계 마을 명예의 전당 게시판(I v1 §1-1 · sheet_02): 게시판 파트만 세운다(겉면 그림 · [E] = 클라 HallBoardView).
 --   hub_hall 메시에는 게시판 파트가 없어(HubArtMeta parts = Body · Columns · Door · …) 데이터 크기(UiLayoutData.hall.board: 1200 × 800 ÷ 50 = 24 × 16 stud)로 새로 세운다.
 --   자리 = 명예의 전당 자리 표시(Spot = "hallOfFame") 기준 오프셋 · 스위치 UiV2Flags.hall 끔 = 안 세움.
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 

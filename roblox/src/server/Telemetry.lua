@@ -1,6 +1,7 @@
 -- QUEUE-10h Q15 T1 통계 모듈(서버 전용). 데이터 = shared/data/TelemetryData.lua.
 --   Telemetry.economy(player, currencyKey, flow "source" | "sink", amount, transaction) · custom(player, name, value) · funnel(player, stepName) - 부르는 곳은 한 줄씩.
 --   누적 → flushSeconds마다 · 퇴장 때 전송. Studio(dryRunInStudio) = AnalyticsService를 부르지 않고 [T1] 드라이런 로그.
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")

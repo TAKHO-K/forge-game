@@ -8,6 +8,7 @@
 -- P3c B: 자리 · 크기는 보스 등장마다 무작위(shared/ArenaLayout - 시드는 로그 "보스맵 배치 시드"), 겉모습은 server/BossArenaLooks, 바닥 둔덕(B4)도 여기서 짓는다.
 -- 옛 ⑤ "뺑뺑이 5바퀴면 보스가 부순다"는 없앴다(C8 - 돌진 대상이 가장 가까운 사람이라 숨으면 돌진이 온다).
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

@@ -1,6 +1,7 @@
 -- BR1-3 플레이어 기절(BossData.mechanics.stun - 강화 평타의 onHit "stun"). 기절 = seconds 동안 루트 고정(PlayerState 출처 "stun") + 속성 BossStunned(클라가 머리 위 별을 그린다).
 -- 기절이 풀린 뒤 immuneSeconds 동안은 다시 기절하지 않는다(연속 기절 방지). 같은 면역을 대공 잡기의 얼림도 본다(BossAirGrab) · 잡힘(BossTrap)이 풀려도 면역이 붙는다.
 -- 무적(복귀 보호 · 해제 유예 · 회오리) · 잡힌 사람 · 죽은 사람은 기절하지 않는다(피해가 안 들어간 타격은 기절도 없다).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BossData = require(ReplicatedStorage.Shared.data.BossData)

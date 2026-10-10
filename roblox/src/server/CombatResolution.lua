@@ -5,6 +5,7 @@
 -- (19-4가 이미 겪은 "경합 가드"의 섬세함 - MonsterState.tryClaimDeath 순서를 그대로 지켜야
 -- 한다). applyDamage 자체(HP 차감)는 호출부가 각자 하고, "죽었으면 그다음"만 여기로 온다.
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DropTableData = require(ReplicatedStorage.Shared.data.DropTableData) -- QUEUE-ALL1 P3 첫 보스 확정 전설
 local Text = require(ReplicatedStorage.Shared.Text)

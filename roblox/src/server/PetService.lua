@@ -2,6 +2,7 @@
 --   Remote: PetRequest(action, a) - "view" · "hatch"(알 가방 번호) · "claim"(대기열 번호) · "equip"(펫 번호 | nil = 내려놓기) / PetSync(서버 → 클라: 화면 표)
 --   데리고 다니는 펫 = Player Attribute PetSpecies · PetBody · PetZone · PetGrade(모든 클라가 그 사람 옆에 그린다 - 서버는 위치를 보내지 않는다).
 --   자동 줍기(계정 역대 최고 레벨 peakLevel이 PetData.unlocks.autoPickup 이상 + 펫 동행) = ItemDropServer가 PetService.pickupRange로 반경만 넓힌다(줍기 · 칸 확인 · 바닥 제거는 그쪽 한 곳).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

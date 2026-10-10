@@ -11,6 +11,7 @@
 --       사망보다 먼저 잡는다. 0.25초 폴링(TerrainConfig.voidCheckIntervalSeconds) - 낙하
 --       속도(중력 196)로 -24까지 0.5초는 걸리므로 충분하다.
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

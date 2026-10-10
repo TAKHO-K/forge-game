@@ -2,6 +2,7 @@
 -- 흐름: 파고들기(telegraphSeconds - 보스 모델을 depthStuds 아래로 · 논리 위치는 지표) → 둔덕 N개(구출 대상 엔티티 - 때릴 수 있다)가 wanderRadiusStuds 안을 돌아다닌다 →
 --   진짜를 때리면 성공(여왕이 그 자리로 튀어나와 기절 + 게이트 열림) · 가짜를 때리면 작은 모래 폭발(때린 사람) · 제한 시간이 지나면 전원 90%(보호막 무시).
 -- 진짜 둔덕만 꼬리 끝(서버 파트 "TailTip" - 모두에게 보인다)이 빛난다 · 발자국은 클라(BossSandView)가 진짜 둔덕 뒤에 찍는다. 판정은 서버.
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local BossTrap = require(script.Parent.BossTrap)
 local PlayerDamage = require(script.Parent.PlayerDamage)
 local PlayerState = require(script.Parent.PlayerState)

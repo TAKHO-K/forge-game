@@ -12,6 +12,7 @@
 -- 부정 방지(B3): 서버가 잰 시간만 쓴다 · 이론 최소 시간보다 빠르면 거절(로그) · /gg가 돈 계정(leaderboardTainted) · 제외 목록 · Studio 수동 Play는 쓰지 않는다
 -- (검증 모드는 _verify 저장소에만 쓴다 - COMMON §3).
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local Players = game:GetService("Players")
 local DataStoreService = game:GetService("DataStoreService")
 local MemoryStoreService = game:GetService("MemoryStoreService") -- QUEUE-ALL9C 1-5 100위 밖 "상위 약 n%" 인원 구간

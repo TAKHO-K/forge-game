@@ -17,6 +17,7 @@
 --   victim) → true면 그 사람은 성공. 등록된 판정이 없는 kind는 전원 성공으로 친다(덜 만든 보스가
 --   플레이어를 벌주지 않게).
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BossData = require(ReplicatedStorage.Shared.data.BossData)

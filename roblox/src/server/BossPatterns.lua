@@ -18,6 +18,7 @@
 -- "그 스킬의 지면 Y"(보스 발밑 또는 낙하점 지면) 기준이라 8 넘게 높은 언덕 위에는 닿지 않는다. 돌진 이동은 매 틱
 -- 지면 Y를 따르고, 경사 한계를 넘는 단차를 만나면 그 자리에서 끝난다(헤롱 시작).
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 

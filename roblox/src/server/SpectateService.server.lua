@@ -1,6 +1,7 @@
 -- QUEUE-ALL1 P3 §2 "구경 가기"(후보 · 마지막 순서 - docs/design/v2/04): 다른 서버 초월 알림을 받은 사람이 그 서버(jobId)로 이동. 빛기둥 60초 · 오라 5분 동안 의미가 있다.
 --   요청 = RemoteEvent SpectateRequest(jobId) · 검사 = 문자열 · 이 서버가 아님 · 1인 쿨다운 · 보스전 중 금지. 실패(꽉 참 · 서버 없음) = SpectateResult로 안내.
 --   Studio는 TeleportService가 동작하지 않는다(요청 · 검사까지만 확인 가능).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TeleportService = game:GetService("TeleportService")
 local RunService = game:GetService("RunService")

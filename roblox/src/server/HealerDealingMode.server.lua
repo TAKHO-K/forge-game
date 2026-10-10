@@ -13,6 +13,7 @@
 -- (Humanoid.Health=0)로 리스폰을 트리거한다 - 자원을 다 쓰면 죽을 수 있다는 게 이 스킬의
 -- "변칙 딜러" 정체성이다(PRD 4.1-1).
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

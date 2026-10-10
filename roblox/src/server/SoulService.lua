@@ -1,6 +1,7 @@
 -- QUEUE-10h Q8 K3 영혼 상태(서버 판정 - 규칙 = shared/data/SoulData.lua 머리). 상태 = 서버 표 + Player Attribute SoulState(클라 모습 · 화면용).
 --   BossEncounter가 사망(onDied) · 리스폰(consumePending) · 전멸/끝(clearEncounter · clearPlayer) · 재접속(noteDisconnect · takeRejoin)을 부른다.
 --   공격 · 스킬 · 줍기 · 피해 입구는 isSoul로 막는다(AttackServer · SkillServer · ItemDropServer · PlayerDamage).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local SoulData = require(ReplicatedStorage.Shared.data.SoulData)

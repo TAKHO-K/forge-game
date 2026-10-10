@@ -3,6 +3,7 @@
 --   (간격 = BossSkillMath.orgelShowInterval - 스테이지 곡선) → 입력 limitSeconds: 같은 순서로 친다(누가 쳐도 인정 · 틀리면 처음부터 + 때린 사람 전기 충격).
 --   성공 = 왕관이 깨지고 기절 + 게이트 열림 · 실패 = 수정 조각상 연출(전원 잡힘 "statue" - 무적 · 고정) → 여왕이 거닐며 감상 → 찰칵 → 톡 → 와장창 + 90%(보호막 무시).
 -- 판정 · 시계는 서버, 종 흔들림 · 반짝 · 음 · 진행 "2/5" · 조각상 포즈 · 화면 번쩍은 클라(BossOrgelView).
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BossSkillMath = require(ReplicatedStorage.Shared.BossSkillMath)

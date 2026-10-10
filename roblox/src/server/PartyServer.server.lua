@@ -9,6 +9,7 @@
 -- accept/decline은 로컬 초대(PartyState)와 원격 초대(PartyCrossServer) 둘 다 처리한다 - 클라이언트는
 -- 어느 쪽인지 모른다(토스트 버튼은 하나). RemoteFunction PartyFriendsFetch: 다른 서버에 있는 온라인 친구 목록.
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

@@ -2,6 +2,7 @@
 -- WorldConfig.enhance.stationOffset이 울타리 경계선 바깥임을 이미 보장한다(계산 근거는
 -- WorldConfig.lua 주석 참고). 모양은 기능 확인용 도형이다(몬스터와 같은 원칙, render 폴리시는 나중).
 
+local print = require(game:GetService("ReplicatedStorage").Shared.Log).info -- SEC-FIX-1 9: 라이브 = WARN(이 파일 print = INFO · 꺼짐) · Studio = 그대로
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
