@@ -118,7 +118,7 @@ return {
 			},
 		},
 		crystal_queen = {
-			titleKey = "gimmick.crystal_queen.title", lineKey = "gimmick.crystal_queen.line",
+			titleKey = "gimmick.crystal_queen.title", lineKey = "gimmick.crystal_queen.line", tipKey = "gimmick.crystal_queen.tip", -- BOSS-NIGHT-3 1-⑤f: 에네르기파 = 점프로 넘기(정식 공략)
 			fail = { skill = "orgel" },
 			panels = {
 				{ pic = "bellsSee", captionKey = "gimmick.crystal_queen.see" },

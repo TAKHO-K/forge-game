@@ -583,7 +583,7 @@ function BossIntroDiagram.buildCard(parent, bossId, opts)
 	lineBox.BorderSizePixel = 0
 	lineBox.Parent = root
 	Theme.corner(lineBox, 8)
-	local line = Theme.label(lineBox, Text.get(card.lineKey), "body", "textPrimary")
+	local line = Theme.label(lineBox, Text.get(card.lineKey) .. (card.tipKey and (" · " .. Text.get(card.tipKey)) or ""), "body", "textPrimary") -- BOSS-NIGHT-3 1-⑤f 공략 한마디(tipKey)
 	line.Name = "Line"
 	line.Font = Theme.font
 	line.TextXAlignment = Enum.TextXAlignment.Center

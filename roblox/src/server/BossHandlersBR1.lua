@@ -1000,7 +1000,7 @@ BossHandlersBR1.sweep = {
 		local startDeg = BossSkillMath.sweepAngleAt(skill, st.sweepCenterDeg, st.sweepDir, 0)
 		-- BOSS-NIGHT-3 1-⑤ 수정 여왕 에네르기파 = 홀 보석에서(옛 = 몸 중심): 발생 지점 표(ScepterGem)의 수평 자리를 빔 방향 기준 옆(lat) · 앞(fwd)으로 나눠 둔다 →
 		--   빔 = 중심에서 옆으로 lat만큼 비킨 평행선이 fwd부터 · 보이는 몸은 빔 각도를 따라 돈다(BossAimLockYaw · 클라 그림 = 같은 lat · fwd)
-		st.sweepLat, st.sweepFwd = 0, 0
+		st.sweepLat, st.sweepFwd, st.beamBottom, st.beamTop = 0, 0, nil, nil
 		local gem = BossOrigin.point(c.model:GetAttribute("BossRigKey"), c.data.sizeScale, MonsterState.getHpRatio(c.model), c.st.current,
 			c.position, c.position + Vector3.new(math.cos(math.rad(startDeg)), 0, math.sin(math.rad(startDeg))), st.floorY)
 		if gem then
@@ -1008,11 +1008,17 @@ BossHandlersBR1.sweep = {
 			local u = Vector3.new(math.cos(math.rad(startDeg)), 0, math.sin(math.rad(startDeg)))
 			local n = Vector3.new(-u.Z, 0, u.X)
 			st.sweepLat, st.sweepFwd = rel:Dot(n), math.max(rel:Dot(u), 0)
+			local lift = skill.beamFromOrigin
+			if lift then -- 1-⑤f 레이저 = 홀 보석 가운데 높이 ± 굵기/2(아래 끝 ≤ maxBottom) · 그림 · 판정 같은 값
+				local h = gem.Y - st.floorY
+				st.beamBottom = math.min(h - lift.thicknessStuds / 2, lift.maxBottomStuds)
+				st.beamTop = h + lift.thicknessStuds / 2
+			end
 		end
 		c.model:SetAttribute("BossAimLockYaw", math.atan2(-math.cos(math.rad(startDeg)), -math.sin(math.rad(startDeg))))
 		kit.send(st, "sweepTelegraph", {
 			center = Vector3.new(st.sweepOrigin.X, st.floorY, st.sweepOrigin.Z), angleDeg = st.sweepCenterDeg, startDeg = startDeg, sweepDeg = skill.sweepDeg, startLeadDeg = skill.startLeadDeg,
-			length = st.sweepLength, inner = st.sweepInner, gap = st.sweepGap, halfWidth = skill.halfWidthStuds, beamHeight = skill.beamHeightStuds, lat = st.sweepLat, fwd = st.sweepFwd,
+			length = st.sweepLength, inner = st.sweepInner, gap = st.sweepGap, halfWidth = skill.halfWidthStuds, beamHeight = skill.beamHeightStuds, lat = st.sweepLat, fwd = st.sweepFwd, beamBottom = st.beamBottom, beamTop = st.beamTop,
 			dirSign = st.sweepDir, seconds = skill.telegraphSeconds, sweepSeconds = skill.sweepSeconds, bossId = c.data.id, color = c.data.headColor,
 		})
 		kit.debugEvent("sweepStart", { at = c.now, gap = st.sweepGap, inner = st.sweepInner, length = st.sweepLength, dir = st.sweepDir, startDeg = startDeg })
@@ -1051,7 +1057,7 @@ BossHandlersBR1.sweep = {
 					local feetAbove = v.feet.Y - st.floorY
 					-- 1-⑤: 옆으로 lat 비킨 평행 빔 - 빔 각 θ에서 이 사람에 닿는 조건 r·sin(φ − θ) = lat → θ = φ − asin(lat / r) · 빔 위 거리 s = √(r² − lat²) ≥ fwd
 					local along = math.sqrt(math.max(r * r - lat * lat, 0))
-					if r >= st.sweepInner - 0.5 and r > math.abs(lat) and along >= (st.sweepFwd or 0) - 0.5 and along <= st.sweepLength and feetAbove <= skill.beamHeightStuds and Reach.sameLayer(v.groundFeet, floor) then
+					if r >= st.sweepInner - 0.5 and r > math.abs(lat) and along >= (st.sweepFwd or 0) - 0.5 and along <= st.sweepLength and (if st.beamTop then (feetAbove <= st.beamTop and feetAbove + skill.beamFromOrigin.bodyHeightStuds >= st.beamBottom) else feetAbove <= skill.beamHeightStuds) and Reach.sameLayer(v.groundFeet, floor) then -- 1-⑤f 몸이 레이저 띠와 겹침
 						local half = math.deg(math.atan((skill.halfWidthStuds + 1) / math.max(along, 1)))
 						local phi = math.deg(math.atan2(rel.Z, rel.X)) - math.deg(math.asin(math.clamp(lat / r, -1, 1)))
 						local o0 = ((phi - startDeg) * st.sweepDir) % 360

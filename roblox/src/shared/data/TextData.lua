@@ -164,6 +164,7 @@ local TextData = {
 		["gimmick.crystal_queen.do"] = "같은 순서로 치기",
 		["gimmick.crystal_queen.fail"] = "늦으면 조각상",
 		["gimmick.crystal_queen.line"] = "종이 울린 순서대로 똑같이 쳐요!",
+		["gimmick.crystal_queen.tip"] = "빔은 점프로 넘을 수 있어요",
 		["gimmick.scorpion_queen.title"] = "진짜 전갈 찾기",
 		["gimmick.scorpion_queen.see"] = "빛나는 꼬리",
 		["gimmick.scorpion_queen.do"] = "그 둔덕 때리기",

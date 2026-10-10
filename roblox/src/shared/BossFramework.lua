@@ -232,7 +232,8 @@ function BossFramework.applyV3(data, rigKey)
 		local longer = windup.skills[id]
 		local bodyCharge = (id == "charge" and cfg.chargeHalfWidth == "body") or (cfg.bodyCharges and cfg.bodyCharges[id])
 		local hopHeight = cfg.hopHeight and cfg.hopHeight[id] -- BOSS-NIGHT-2 2b: 지진파 때 서버가 몸을 드는 높이(겉모습 - 판정 · 파동 시각 무관)
-		if hide or longer or bodyCharge or hopHeight or (s.primitive == "ring" and cfg.ringStyle) then
+		local beamLift = cfg.beamFromOrigin and cfg.beamFromOrigin[id] -- BOSS-NIGHT-3 1-⑤f: 낮은 빔 → 발생 지점(홀 보석) 높이의 수평 레이저
+		if hide or longer or bodyCharge or hopHeight or beamLift or (s.primitive == "ring" and cfg.ringStyle) then
 			s = table.clone(s)
 			if hide then
 				s.noFloor = true
@@ -249,6 +250,9 @@ function BossFramework.applyV3(data, rigKey)
 			end
 			if hopHeight then
 				s.hopHeightStuds = hopHeight
+			end
+			if beamLift then
+				s.beamFromOrigin = beamLift
 			end
 			skills[id] = s
 		end

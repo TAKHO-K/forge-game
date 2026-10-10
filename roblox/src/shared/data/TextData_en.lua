@@ -159,6 +159,7 @@ return {
 	["gimmick.crystal_queen.do"] = "Repeat the order",
 	["gimmick.crystal_queen.fail"] = "Slow = statue",
 	["gimmick.crystal_queen.line"] = "Hit the bells in the order they rang!",
+	["gimmick.crystal_queen.tip"] = "Jump over the beam!",
 	["gimmick.scorpion_queen.title"] = "Find the Real One",
 	["gimmick.scorpion_queen.see"] = "Glowing tail",
 	["gimmick.scorpion_queen.do"] = "Hit that mound",

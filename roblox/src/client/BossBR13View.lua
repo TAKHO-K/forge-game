@@ -213,6 +213,9 @@ local function clearSweep()
 		if sweep.gui then
 			sweep.gui:Destroy()
 		end
+		for _, inst in ipairs(sweep.attachments or {}) do -- 1-⑤f 보석 · 빔에 붙인 Attachment · Beam
+			inst:Destroy()
+		end
 		sweep = nil
 	end
 end
@@ -229,6 +232,13 @@ local FAN_DEG, FAN_TRANSPARENCY, FAN_TILE = 90, 0.6, 12 -- 조각 = 사다리꼴
 local FAN_BANDS = { 0, 6, 10, 14, 19, 25, 35, 55, 85, 1e9 }
 local FAN_BACK_DEG = 5 -- 장판을 빔 쪽으로 조금 당겨 띠 안 앞섬 차이(안쪽 띠 최대 약 ±5°)를 덮음
 -- BOSS-NIGHT-3 1-⑤ 빔 위 시작 거리 = 서버 판정(r ≥ inner · 빔 위 거리 ≥ fwd)과 같은 식: 옆으로 lat 비킨 줄이 안쪽 원(inner)을 벗어나는 자리와 보석 앞(fwd) 중 먼 쪽
+-- BOSS-NIGHT-3 1-⑤f 레이저 높이 띠(바닥 위): 서버가 보낸 beamBottom ~ beamTop(홀 보석 높이) · 없으면 옛 낮은 빔 0 ~ beamHeight
+local function beamBand(d)
+	if d.beamTop then
+		return d.beamTop - d.beamBottom, (d.beamTop + d.beamBottom) / 2
+	end
+	return d.beamHeight, d.beamHeight / 2
+end
 local function beamStart(d)
 	local lat = d.lat or 0
 	return math.max(d.fwd or 0, math.sqrt(math.max(d.inner * d.inner - lat * lat, 0)))
@@ -361,16 +371,37 @@ function BossBR13View.sweepFire(data)
 		destroy(sweep.orb)
 	end
 	local span = d.length - beamStart(d)
-	local beam = newPart(Vector3.new(d.halfWidth * 2, d.beamHeight, span), d.color or DANGER, 0.05)
-	local core = newPart(Vector3.new(d.halfWidth * 0.8, d.beamHeight * 1.1, span), WHITE, 0.2)
+	local bandH = beamBand(d)
+	local beam = newPart(Vector3.new(d.halfWidth * 2, bandH, span), d.color or DANGER, 0.05)
+	local core = newPart(Vector3.new(d.halfWidth * 0.8, d.beamTop and bandH * 0.5 or bandH * 1.1, span), WHITE, 0.2) -- 1-⑤f 높은 레이저 = 가운데 흰 심(굵기 절반)
 	table.insert(sweep.parts, beam)
 	table.insert(sweep.parts, core)
 	sweep.beam, sweep.core, sweep.startedAt = beam, core, os.clock()
 	-- BOSS-NIGHT-3 1-⑤c · ⑤e(사용자 10-10): 보석 → 밝은 빔 시작까지 희미한 빔을 늘 이어 그림(그림만 · 판정 없음 = 서버 r ≥ inner · 거리 ≥ fwd 그대로)
 	--   안전 원 회차(안쪽 반경이 줄을 가림)와 회전 시작 프레임(보이는 몸이 늦어 보석 ↔ 빔 시작이 1.6까지 벌어짐) 모두 허공에서 시작하지 않는다 · 매 프레임 실제 보석 자리에서
-	local neck = newPart(Vector3.new(d.halfWidth * 1.2, d.beamHeight * 0.7, 1), d.color or DANGER, 0.6) -- 0.6 이하 = 폰 · 낮은 그래픽에서도 보임
-	table.insert(sweep.parts, neck)
-	sweep.neck = neck
+	--   1-⑤f(사용자 10-10): 희미한 빔 = 보석(ScepterGem)에 붙은 Attachment → 밝은 빔 시작 끝 Attachment의 Beam - 보이는 몸이 보석을 옮긴 뒤 렌더가 그대로 따라감(매 프레임 계산 없음)
+	sweep.attachments = {}
+	if sweep.gem and sweep.gem.Parent then
+		local a0 = Instance.new("Attachment")
+		a0.Name = "BeamNeck0"
+		a0.Parent = sweep.gem
+		local a1 = Instance.new("Attachment")
+		a1.Name = "BeamNeck1"
+		a1.Position = Vector3.new(0, 0, span / 2) -- 빔 부품 CFrame.lookAt(가운데, 앞) → 로컬 +Z = 보스 쪽 끝(밝은 빔 시작)
+		a1.Parent = beam
+		local neck = Instance.new("Beam")
+		neck.Name = "BeamNeck"
+		neck.Attachment0, neck.Attachment1 = a0, a1
+		neck.Width0, neck.Width1 = d.halfWidth * 1.2, d.halfWidth * 1.2
+		neck.Color = ColorSequence.new(d.color or DANGER)
+		neck.Transparency = NumberSequence.new(0.6) -- 0.6 이하 = 폰 · 낮은 그래픽에서도 보임
+		neck.LightEmission = 1
+		neck.FaceCamera = true
+		neck.Segments = 1
+		neck.Parent = beam
+		table.insert(sweep.attachments, a0)
+		sweep.neck = neck
+	end
 	BossFx.shake(d.center, 0.8)
 end
 
@@ -632,21 +663,9 @@ RunService.RenderStepped:Connect(function()
 		local skill = { sweepDeg = d.sweepDeg, sweepSeconds = d.sweepSeconds, startLeadDeg = d.startLeadDeg }
 		local deg = BossSkillMath.sweepAngleAt(skill, d.angleDeg, d.dirSign, os.clock() - sweep.startedAt)
 		local dir = Vector3.new(math.cos(math.rad(deg)), 0, math.sin(math.rad(deg)))
-		local mid = d.center + Vector3.new(-dir.Z, 0, dir.X) * (d.lat or 0) + dir * ((beamStart(d) + d.length) / 2) + Vector3.new(0, d.beamHeight / 2, 0) -- BR1-4a: 낮은 빔(발 위 beamHeight - 점프로 넘는다) · 1-⑤ 홀 아래 평행선
+		local mid = d.center + Vector3.new(-dir.Z, 0, dir.X) * (d.lat or 0) + dir * ((beamStart(d) + d.length) / 2) + Vector3.new(0, select(2, beamBand(d)), 0) -- BR1-4a: 낮은 빔(발 위 beamHeight - 점프로 넘는다) · 1-⑤ 홀 아래 평행선 · 1-⑤f 높이 띠 가운데
 		sweep.beam.CFrame = CFrame.lookAt(mid, mid + dir)
 		sweep.core.CFrame = sweep.beam.CFrame
-		if sweep.neck then -- 1-⑤c · ⑤e 희미한 빔: 실제 보석(빔 높이) → 밝은 빔 시작 · 0.3 stud 안이면 숨김
-			local h = Vector3.new(0, d.beamHeight * 0.35, 0)
-			local b0 = d.center + Vector3.new(-dir.Z, 0, dir.X) * (d.lat or 0) + dir * beamStart(d) + h
-			local g = sweep.gem and sweep.gem.Parent and Vector3.new(sweep.gem.Position.X, b0.Y, sweep.gem.Position.Z)
-				or (d.center + Vector3.new(-dir.Z, 0, dir.X) * (d.lat or 0) + dir * (d.fwd or 0) + h)
-			local span = (b0 - g).Magnitude
-			sweep.neck.Transparency = span > 0.3 and 0.6 or 1
-			if span > 0.3 then
-				sweep.neck.Size = Vector3.new(sweep.neck.Size.X, sweep.neck.Size.Y, span)
-				sweep.neck.CFrame = CFrame.lookAt((g + b0) / 2, b0)
-			end
-		end
 	end
 	if boom and boom.startedAt then
 		local d = boom.data

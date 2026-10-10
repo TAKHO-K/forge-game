@@ -208,6 +208,10 @@ D.v3 = {
 		--   첫 발이 대상에 맞으면 같은 묶음 나머지 고정 추적(900°/초 · 유도 시간 무제한) · 무적 · 대시 중(passThrough "dash" - 0.3초)에는 모든 발이 통과(고정도 안 걸림)
 		--   경직 = 마지막 발에만 0.25초(PlayerStun - 끝나면 면역 2초 = 이어지지 않음) · 피해 = BossSim으로 맞춤(보고서)
 		basicDisabled = true,
+		-- BOSS-NIGHT-3 1-⑤f(사용자 10-10 · A안): 에네르기파 레이저 = 홀 보석 가운데 높이(발생 지점 표)의 수평 띠 · 굵기 thicknessStuds(그림 = 판정 · 여유 0) ·
+		--   아래 끝 ≤ maxBottomStuds(서 있는 캐릭터 머리 5.34보다 낮게 = 서 있으면 맞음) · 몸(발 ~ 발 + bodyHeightStuds)이 띠와 겹치면 맞음 → 2단 점프부터 넘는다
+		--   (스테이지 100: 띠 4.3 ~ 8.9 · 1단 발 최고 7.2 = 못 넘음 · 2단 위 시간 0.40초 ≥ 빔이 지나는 시간 × 1.25 최대 0.25초 - 보고서 표) · 가로 판정 시작 · 안쪽 원 그대로
+		beamFromOrigin = { energyBeam = { thicknessStuds = 4.6, maxBottomStuds = 4.8, bodyHeightStuds = 5.3 } },
 		reactiveOrder = { "magicMissiles" },
 		skills = {
 			magicMissiles = {
