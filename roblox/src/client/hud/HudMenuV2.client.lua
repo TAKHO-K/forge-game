@@ -289,7 +289,7 @@ do
 		local ic = UiKit.icon(b, r.icon, rowH - 12)
 		ic.Position = UDim2.fromOffset(8, 6)
 		ic.ZIndex = 12
-		local l = UiKit.label(b, Text.get(r.label), "body", "text.primary", { name = "Label", font = "korean" })
+		local l = UiKit.label(b, Text.get(SPLIT and r.id == "attendance" and "ui1b.att.title.week" or r.label), "body", "text.primary", { name = "Label", font = "korean" }) -- UI-1b: 나눔 = 창 이름과 같게
 		l.Position = UDim2.fromOffset(rowH + 6, 0)
 		l.Size = UDim2.new(1, -(rowH + 30), 1, 0)
 		l.ZIndex = 12
@@ -585,7 +585,38 @@ setReward = function(open)
 	if rewardWin.Visible and rb and not phone then -- PC: 보상 버튼 왼쪽(열이 퀘스트 칸에 밀려 내려와도 버튼 옆) · 화면 아래 안
 		local w, h = L.rewardWindow[3], L.rewardWindow[4]
 		local y = math.min(rb.Position.Y.Offset, Tokens.base.pc.h - 24 - h)
-		rewardWin.Position = UDim2.fromOffset(rb.Position.X.Offset - 16 - w, y)
+		if V2HUD then -- UI-1b 1-b 13: 아래 끝 = 실제 경험치 바 위 8(기준 높이 대신 화면 · 줄 4로 늘어난 창이 경험치 · 체력바를 덮던 것 - 실제 겹침 검사로 발견)
+			local m = math.max(rightRoot.scale.Scale, 0.01)
+			local exp = player.PlayerGui:FindFirstChild("ExpBarGui") and player.PlayerGui.ExpBarGui:FindFirstChild("ExpTrack")
+			local limit = (exp and exp.AbsoluteSize.Y > 0) and exp.AbsolutePosition.Y or (gui.AbsoluteSize.Y - 24 - 58)
+			-- 창 가로 범위(화면)와 겹치는 아래 HUD(체력바 · 스킬 줄) 위로도
+			local lx = rb.Position.X.Offset
+			for _, id in ipairs(columns.right.ids) do
+				local it = items[id]
+				if it and it.button.Visible and it.button.Parent == rightRoot.frame then
+					lx = math.min(lx, it.button.Position.X.Offset)
+				end
+			end
+			local x0 = rightRoot.frame.AbsolutePosition.X + (lx - 16 - w) * m
+			local x1 = x0 + w * m
+			for _, path in ipairs({ { "PlayerHealthBarGui", "HealthBar" }, { "StatusHudGui", "StatusRowHolder" }, { "SkillSlotsGui", "CentralRow" } }) do
+				local o = player.PlayerGui:FindFirstChild(path[1]) and player.PlayerGui[path[1]]:FindFirstChild(path[2])
+				if o and o:IsA("GuiObject") and o.Visible and o.AbsoluteSize.X > 0 and o.AbsolutePosition.X < x1 and o.AbsolutePosition.X + o.AbsoluteSize.X > x0 then
+					limit = math.min(limit, o.AbsolutePosition.Y)
+				end
+			end
+			y = math.min(y, math.floor((limit - 8 - rightRoot.frame.AbsolutePosition.Y) / m) - h)
+		end
+		local left = rb.Position.X.Offset
+		if V2HUD then -- UI-1b 1-b 13: 오른쪽 열이 2열로 접히면 안쪽 열 버튼 왼쪽(옛 = 보상 버튼 왼쪽 = 안쪽 열을 덮음)
+			for _, id in ipairs(columns.right.ids) do
+				local it = items[id]
+				if it and it.button.Visible and it.button.Parent == rightRoot.frame then
+					left = math.min(left, it.button.Position.X.Offset)
+				end
+			end
+		end
+		rewardWin.Position = UDim2.fromOffset(left - 16 - w, y)
 	end
 end
 

@@ -204,12 +204,18 @@ if S.stage then
 	upd()
 end
 
-local lvChip = chip(r2, 2, nil, function(b)
+-- 폰 = Lv · 전투력도 줄 1(두 줄이면 다음 목표 카드가 칩 아래로 내려가 전투 버튼과 겹침 - Play 실측) · 줄 1이 넘치면 이름만 숨김
+local lvChip = chip(phone and r1 or r2, phone and 10 or 2, nil, function(b)
 	InfoTip.currency(b, "power")
 end)
 lvChip.Name = "Chip_power"
-local lvNum = textBlock(lvChip, 1, Text.get("ui1b.chip.level"))
-local cpNum = textBlock(lvChip, 2, Text.get("ui1b.chip.power"))
+local lvNum, lvName = textBlock(lvChip, 1, Text.get("ui1b.chip.level"))
+local cpNum, cpName = textBlock(lvChip, 2, Text.get("ui1b.chip.power"))
+if phone then
+	table.insert(names, lvName)
+	table.insert(names, cpName)
+	r2.Visible = false
+end
 local function updLv()
 	lvNum.Text = "Lv " .. tostring(player:GetAttribute("CharacterLevel") or 1)
 	local p = player:GetAttribute("CombatPower")

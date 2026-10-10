@@ -330,8 +330,8 @@ return {
 	--   기준 px(HUD 배율 m 곱 · 폰 칩 배율 없음) · 줄 1 = 재화 · 줄 2 = 구역 · 스테이지 · 최고 + Lv · 전투력(폰 = 줄 2 = Lv · 전투력만 - 스테이지는 지도 · 구역 선택)
 	infoChips = {
 		pc = { h = 52, icon = 36, name = 15, num = 20, padX = 12, gap = 10, rowGap = 8, right = 24, top = 68, stage = true },
-		-- 폰 이름 글자 = 보임(사용자 10-10) · 줄 1 폭 > maxW면 그때만 이름 숨김(아이콘 + 숫자 + 누르면 설명)
-		phone = { maxW = 300, h = 40, icon = 26, name = 12, num = 14, padX = 8, gap = 6, rowGap = 6, right = 8, top = 62, stage = false },
+		-- 폰 이름 글자 = 보임(사용자 10-10) · 줄 1(골드 · 토큰 · Lv · 전투력) 폭 > maxW면 그때만 이름 숨김(아이콘 + 숫자 + 누르면 설명)
+		phone = { maxW = 420, h = 40, icon = 26, name = 12, num = 14, padX = 8, gap = 6, rowGap = 6, right = 8, top = 62, stage = false },
 		row1 = { pc = { "gold", "sparkleShard", "enhanceStone" }, phone = { "gold", "sparkleShard" } }, -- 줄 1 재화(좌표 표 밖 - 글자 목록)
 		bg = "0E1120", bgT = 0.25, stroke = "3A4466", strokeW = 2,
 	},
@@ -352,16 +352,19 @@ return {
 			{ id = "chips", path = "TopChipsGui/TopChipsRow", each = true },
 			{ id = "minimap", path = "MinimapGui/Minimap" },
 			{ id = "nextGoal", path = "NextGoalGui/NextGoal" },
-			{ id = "exp", path = "ExpBarGui/ExpTrack" },
+			{ id = "exp", path = "ExpBarGui/ExpTrack", pad = 8 }, -- UI-1b 1-b 13: 경험치 바 위 8px 안 = 닿음(겹침으로 셈)
 			{ id = "health", path = "PlayerHealthBarGui/HealthBar" },
-			{ id = "status", path = "StatusHudGui/StatusRowHolder" },
+			{ id = "status", path = "StatusHudGui/StatusRowHolder", each = true }, -- 빈 틀 말고 보이는 아이콘만
 			{ id = "skills", path = "SkillSlotsGui/CentralRow" },
 			{ id = "phoneCombat", path = "SkillSlotsGui/PhoneCombat", each = true },
 			{ id = "bossBar", path = "BossBarGui/BossBarBottom", topbarOk = true }, -- 상단 바 안 = 설계(I v1 0-3)
 			{ id = "party", path = "PartyHudGui/PartyList" },
 			{ id = "region", path = "WorldHud/RegionLabel" },
 		},
-		allow = {},
+		allow = {
+			{ "rightMenu/RewardPanel", "nextGoal" },
+			{ "exp", "phoneCombat" }, -- 폰 전투 버튼 = 화면 끝 8(02 v6 · hud_layout 검사) · 경험치 바 6px 위 8px 여백 규칙은 보상 버튼용(1-b 13) -- 보상 펼침 창(누를 때만 · 위에 뜸)이 작은 창에서 다음 목표 카드 끝을 덮음 - 경험치 · 체력 · 상태 · 스킬 줄은 피함(1-b 13)
+		},
 		sizes = { { 1920, 1080 }, { 1366, 768 }, { 800, 360, phone = true } }, -- 보고용 기준(Studio 창으로 만들 수 있는 크기는 실측 크기를 함께 적는다)
 	},
 }

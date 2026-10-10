@@ -41,8 +41,16 @@ local function rectOf(id, o)
 	local x0, y0, x1, y1 = p.X, p.Y, p.X + s.X, p.Y + s.Y
 	for _, c in ipairs(o:GetChildren()) do
 		if c:IsA("GuiObject") and c.Visible and c.AbsoluteSize.X >= 1 and c.AbsoluteSize.Y >= 1 and (not c:IsA("TextLabel") or c.Text ~= "") then
-			x0, y0 = math.min(x0, c.AbsolutePosition.X), math.min(y0, c.AbsolutePosition.Y)
-			x1, y1 = math.max(x1, c.AbsolutePosition.X + c.AbsoluteSize.X), math.max(y1, c.AbsolutePosition.Y + c.AbsoluteSize.Y)
+			local cx, cy, cw, ch = c.AbsolutePosition.X, c.AbsolutePosition.Y, c.AbsoluteSize.X, c.AbsoluteSize.Y
+			if c:IsA("TextLabel") and not c.TextScaled then -- 글자 칸 = 실제 글자 폭(칸이 글자보다 넓으면 가짜 겹침)
+				local tb = c.TextBounds
+				local tw, th = math.min(tb.X, cw), math.min(tb.Y, ch)
+				local ax = c.TextXAlignment == Enum.TextXAlignment.Left and 0 or (c.TextXAlignment == Enum.TextXAlignment.Right and 1 or 0.5)
+				local ay = c.TextYAlignment == Enum.TextYAlignment.Top and 0 or (c.TextYAlignment == Enum.TextYAlignment.Bottom and 1 or 0.5)
+				cx, cy, cw, ch = cx + (cw - tw) * ax, cy + (ch - th) * ay, tw, th
+			end
+			x0, y0 = math.min(x0, cx), math.min(y0, cy)
+			x1, y1 = math.max(x1, cx + cw), math.max(y1, cy + ch)
 		end
 	end
 	return { id = id, x = x0, y = y0, w = x1 - x0, h = y1 - y0 }
@@ -78,6 +86,10 @@ local function run()
 				local r = rectOf(u.id, node)
 				if r then
 					r.topbarOk = u.topbarOk
+					if u.pad then -- 위로 여백만큼 넓혀 "닿음"도 겹침으로
+						r.y -= u.pad
+						r.h += u.pad
+					end
 				end
 				table.insert(rects, r)
 			end
