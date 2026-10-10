@@ -15,19 +15,23 @@ D.bodyEdge = {
 	-- damageScale 0.80 = GUARDIAN-V2 5 BossSim(아는 보스 원거리 · 근거리 · 스테이지 100 · 500 · 600판): 전멸 55 ~ 59% → 42 ~ 50% · 받는 피해 94 ~ 97% → 84 ~ 88% · 처치 69초 그대로(체력 무변경)
 	-- GUARDIAN-V3 6(사용자 목표: 첫 조우 전멸 ≤ 50% - 근접 · 원거리 각각): 키 30 · 돌진 폭 = 몸 폭 · 바나나 · 도약이 더해진 V3 모형에서 체력 × 0.85 · 피해 × 0.62
 	--   (BossSim 600판 · 스테이지 100 · 500 - 처음 전멸 원거리 약 46% · 근접 약 43% · 처치 58초 · guardian_v3/s6_bosssim.txt). 아는 보스 전멸 약 24 ~ 28%(바이블 30 ~ 50 하한 아래 - 보고서 결정 필요).
-	section_guardian = { skills = { heavy = true, innerSmash = true, swipe = true, mirror = true }, innerSafe = true, chaseStop = true, damageScale = 0.62, hpScale = 0.85 },
+	-- BOSS-NIGHT-3 7단계(대시 켬 · 반응 대시 · 범위 확대 · 굶주림 뒤 BossSim): 0.62 → 0.59(처음 원거리 46.5 → ≤ 45 - 수호자 목표 10-10)
+	section_guardian = { skills = { heavy = true, innerSmash = true, swipe = true, mirror = true }, innerSafe = true, chaseStop = true, damageScale = 0.59, hpScale = 0.85 },
 	-- BOSS-NIGHT-1 1 매머드: 보스 중심 원 · 부채(빙결 강타 r18 · 원 안 짓밟기 · 강화 평타 · 발 구르기 r30 · 얼음 거울) = 몸 가장자리 기준 · 밸런스 = BossSim(mammoth_v1/s_bosssim.txt)
 	--   피해 × 0.60(600판 · 처음 전멸 원거리 약 41% · 근접 약 48% ≤ 50 · 아는 보스 약 14 ~ 21% = 바이블 30 ~ 50 하한 아래 - 수호자와 같은 구조 · 보고서 결정 필요)
-	frost_giant = { skills = { slam = true, innerSmash = true, swipe = true, stomp = true, mirror = true }, innerSafe = true, chaseStop = true, damageScale = 0.60, hpScale = 1.0 },
+	-- BOSS-NIGHT-3 7단계: 0.60 → 0.70(처음 40 · 35% → ≤ 50 안에서 올림 - 아는 보스 15 → 18%)
+	frost_giant = { skills = { slam = true, innerSmash = true, swipe = true, stomp = true, mirror = true }, innerSafe = true, chaseStop = true, damageScale = 0.70, hpScale = 1.0 },
 	-- BOSS-NIGHT-1 2 폭풍 군주: 강화 평타 · 원 안 낙뢰 · 번개 결계 = 몸 가장자리 기준 · 밸런스 = BossSim(storm_v1/s_bosssim.txt)
 	--   피해 × 0.95(600판 · 처음 전멸 원거리 약 33% · 근접 약 45% ≤ 50 · × 1.0이면 근접 52%) - 아는 보스 12 ~ 18%(30 ~ 50 아래 - 다른 보스와 같은 구조)
-	storm_lord = { skills = { swipe = true, innerSmash = true, mirror = true }, innerSafe = true, chaseStop = true, damageScale = 0.95, hpScale = 1.0 },
+	-- BOSS-NIGHT-3 7단계: 0.95 → 0.90(처음 원거리 52.2 → ≤ 50)
+	storm_lord = { skills = { swipe = true, innerSmash = true, mirror = true }, innerSafe = true, chaseStop = true, damageScale = 0.90, hpScale = 1.0 },
 	-- BOSS-NIGHT-1 3 나가: 꼬리 휩쓸기(도넛 안 · 밖) · 꼬리 반원 · 강화 평타 · 물의 장막 = 몸 가장자리 기준 · 밸런스 = BossSim(abyssal_v1/s_bosssim.txt)
 	--   피해 × 0.75(600판 · 처음 원거리 47% · 근접 49% · 아는 보스 33 ~ 34% - 두 목표 모두 안) · 새 몸이 옛 몸보다 넓지 않아 몸 가장자리 증가 0(밸런스 계수만)
 	abyssal_lord = { skills = { sweep = true, tailSweep = true, swipe = true, mirror = true }, chaseStop = true, damageScale = 0.75, hpScale = 1.0 },
 	crystal_queen = { skills = { burst = true, swipe = true, mirror = true }, chaseStop = true, damageScale = 1.0, hpScale = 1.0 },
 	-- BOSS-NIGHT-2 1 전갈 여왕: 두 집게 휩쓸기(부채 r18) · 강화 평타 = 몸 가장자리 기준 · 밸런스 = BossSim(scorpion_v1/s_bosssim.txt)
-	scorpion_queen = { skills = { clawSweep = true, swipe = true }, innerSafe = true, chaseStop = true, damageScale = 1.0, hpScale = 1.0 },
+	-- BOSS-NIGHT-3 7단계: 1.0 → 0.64(처음 75 · 78% → ≤ 50 - 범위 확대 · 안 나오던 패턴(잠복 · 아르마딜로 · 독침) 등장으로 올라감)
+	scorpion_queen = { skills = { clawSweep = true, swipe = true }, innerSafe = true, chaseStop = true, damageScale = 0.64, hpScale = 1.0 },
 }
 
 -- GUARDIAN-V3(사용자 시험 피드백 · 바이블 §11): 새 몸이 뜰 때만(BossFramework.applyV3 - 몸 가장자리 장치 뒤 · 인스턴스 사본 · BossData 원본 · 라이브 무변경).
@@ -211,7 +215,9 @@ D.v3 = {
 		-- BOSS-NIGHT-3 1-⑤f(사용자 10-10 · A안): 에네르기파 레이저 = 홀 보석 가운데 높이(발생 지점 표)의 수평 띠 · 굵기 thicknessStuds(그림 = 판정 · 여유 0) ·
 		--   아래 끝 ≤ maxBottomStuds(서 있는 캐릭터 머리 5.34보다 낮게 = 서 있으면 맞음) · 몸(발 ~ 발 + bodyHeightStuds)이 띠와 겹치면 맞음 → 2단 점프부터 넘는다
 		--   (스테이지 100: 띠 4.3 ~ 8.9 · 1단 발 최고 7.2 = 못 넘음 · 2단 위 시간 0.40초 ≥ 빔이 지나는 시간 × 1.25 최대 0.25초 - 보고서 표) · 가로 판정 시작 · 안쪽 원 그대로
-		beamFromOrigin = { energyBeam = { thicknessStuds = 4.6, maxBottomStuds = 4.8, bodyHeightStuds = 5.3 } },
+		beamFromOrigin = { energyBeam = { thicknessStuds = 4.6, maxBottomStuds = 4.8, bodyHeightStuds = 5.3,
+			lineLatStuds = 5.6, lineFwdStuds = 7.4, -- BOSS-NIGHT-3 7단계 모형(BossSkillMath.sweepWorst): 빔 축 = 몸 중심에서 옆 · 앞으로 비킨 평행선(1-⑤ Studio 실측 · 옛 몸 중심 빔 = 8.2 · 4.2)
+			jumpOverMinRebirth = 1 } }, -- 7단계 모형(BossDifficultySim): 환생 1부터(공중 점프 1회 = 2단 점프) 빔을 넘는다 = 점프 회피 판정(1-⑤f 측정표) · 환생 0 = 못 넘음
 		reactiveOrder = { "magicMissiles" },
 		skills = {
 			magicMissiles = {

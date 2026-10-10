@@ -184,17 +184,26 @@ end
 
 -- 휩쓸기 회피 최악(근접 standoff ~ 반경): 반원 안 자리(가운데 각에서 φ · 거리 d)에서 가장 가까운 안전(뒤 반원 경계까지 d·cosφ · 반경 밖 R − d)까지 걷는 시간과
 -- 쓸 수 있는 시간(전조 + 빔이 그 각에 닿기까지 = sweepSeconds × (90 − φ) ÷ 180 - 시작 쪽이 φ = +90)의 여유가 가장 작은 자리. 반환: available, required, distance.
+-- BOSS-NIGHT-3 7단계: skill.beamFromOrigin.lineLatStuds · lineFwdStuds(있으면) = 빔 축이 몸 중심에서 옆 lat · 앞 fwd로 비킨 평행선 →
+--   거리 d의 자리는 빔이 asin(lat ÷ d)만큼 먼저 닿고(가장 나쁜 쪽) · 빔 위 거리 √(d² − lat²) < fwd인 자리는 안 쓸린다(서버 sweep 판정과 같은 기하).
 function BossSkillMath.sweepWorst(skill, standoffStuds, walkSpeedStuds)
 	local dodge = BossData.mechanics.dodge
 	local R = skill.radiusStuds
+	local line = skill.beamFromOrigin
+	local lat, fwd = line and line.lineLatStuds or 0, line and line.lineFwdStuds or 0
 	local best = nil
 	for phi = -90, 90, 5 do
 		local c = math.cos(math.rad(phi))
 		local d = standoffStuds
 		while d <= R do
+			local lead = d > lat and math.deg(math.asin(lat / d)) or 90
+			local swept = d > lat and math.sqrt(d * d - lat * lat) >= fwd
 			local dist = math.min(d * c, R - d) + dodge.characterHalfWidthStuds
 			local required = dodge.perceptionSeconds + dist / walkSpeedStuds * dodge.marginFactor
-			local available = skill.telegraphSeconds + skill.sweepSeconds * (90 - phi) / 180
+			local available = skill.telegraphSeconds + skill.sweepSeconds * math.max(90 - phi - lead, 0) / 180
+			if not swept then
+				available = math.huge -- 안 쓸리는 자리
+			end
 			if not best or available - required < best.available - best.required then
 				best = { available = available, required = required, distance = dist }
 			end

@@ -514,8 +514,9 @@ do
 	check("매머드 바닥 표시 끔(근접) · 예비 +0.12", g.skills.slam.noFloor and g.skills.innerSmash.noFloor and g.skills.swipe.noFloor and tw.noFloor and bk.noFloor and not g.skills.stomp.noFloor
 		and math.abs(g.skills.slam.telegraphSeconds - (d.skills.slam.telegraphSeconds + 0.12)) < 1e-6 and g.basicNoFloor and g.innerRingHidden,
 		("빙결 강타 %.2f → %.2f · 코 채찍 %.2f · 발 구르기 바닥 표시 유지(점프로 넘기 - 큰 범위)"):format(d.skills.slam.telegraphSeconds, g.skills.slam.telegraphSeconds, tw.telegraphSeconds))
-	check("매머드 피해 계수 × 0.60(신규 · 반응 포함)", math.abs(g.skills.slam.damage.multiplier - d.skills.slam.damage.multiplier * 0.6) < 1e-6 and math.abs(ts.damage.multiplier - 1.8 * 0.6 * MODS.BossSkillMath.perPersonCount(2, MODS.BossSkillMath.curveRow(15)) / 2) < 1e-6 -- BOSS-NIGHT-3 1-②: 2발 유지 · 1 ~ 100단계 한 발 × 1/2
-		and math.abs(bk.damage.multiplier - 2.0 * 0.6) < 1e-6, ("빙결 강타 %.2f · 얼음 상아 %.2f · 뒷발차기 %.2f"):format(g.skills.slam.damage.multiplier, ts.damage.multiplier, bk.damage.multiplier))
+	local fk = MODS.BossFrameworkData.bodyEdge.frost_giant.damageScale -- BOSS-NIGHT-3 7단계: 0.60 → 0.70(데이터 값을 읽는다)
+	check("매머드 피해 계수 × bodyEdge.damageScale(신규 · 반응 포함)", math.abs(g.skills.slam.damage.multiplier - d.skills.slam.damage.multiplier * fk) < 1e-6 and math.abs(ts.damage.multiplier - 1.8 * fk * MODS.BossSkillMath.perPersonCount(2, MODS.BossSkillMath.curveRow(15)) / 2) < 1e-6 -- BOSS-NIGHT-3 1-②: 2발 유지 · 1 ~ 100단계 한 발 × 1/2
+		and math.abs(bk.damage.multiplier - 2.0 * fk) < 1e-6, ("빙결 강타 %.2f · 얼음 상아 %.2f · 뒷발차기 %.2f"):format(g.skills.slam.damage.multiplier, ts.damage.multiplier, bk.damage.multiplier))
 	local bad = {}
 	for id, s in pairs(g.skills) do
 		if not s.reactive then

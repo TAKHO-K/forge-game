@@ -68,7 +68,7 @@ local ok, err = pcall(function()
 	check("수정 미사일 5발 유지 · 1 ~ 100단계 합계 0.36(5 × 0.072) · 101+ 0.60", q50.count == 5 and q150.count == 5 and math.abs(q50.count * q50.damage.multiplier - 0.36) < 1e-6 and math.abs(q150.count * q150.damage.multiplier - 0.60) < 1e-6,
 		("50: %d × %.3f · 150: %d × %.3f"):format(q50.count, q50.damage.multiplier, q150.count, q150.damage.multiplier))
 	local t50 = inst("frost_giant", 50).skills.tuskShot
-	check("얼음 상아 2발 유지 · 1 ~ 100단계 한 발 × 1/2", t50.count == 2 and math.abs(t50.damage.multiplier - 1.8 * 0.6 / 2) < 1e-6, ("%d × %.3f"):format(t50.count, t50.damage.multiplier))
+	check("얼음 상아 2발 유지 · 1 ~ 100단계 한 발 × 1/2", t50.count == 2 and math.abs(t50.damage.multiplier - 1.8 * MODS.BossFrameworkData.bodyEdge.frost_giant.damageScale / 2) < 1e-6, ("%d × %.3f"):format(t50.count, t50.damage.multiplier))
 	local g100, d100 = inst("section_guardian", 100)
 	local banana = g100.skills.banana
 	check("바나나 반경 = 이속 보정(skillRangeScale) × 곡선 반경 · 개수 곡선(1)", math.abs(banana.radiusStuds - 2 * d100.skillRangeScale) < 1e-6 and banana.count == 1, ("r %.2f(보정 %.3f)"):format(banana.radiusStuds, d100.skillRangeScale))

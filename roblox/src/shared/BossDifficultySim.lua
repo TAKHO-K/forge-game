@@ -218,6 +218,20 @@ function BossDifficultySim.run(bossId, options)
 		return BossSkillMath.boundSeconds(skills[id], 96, nil)
 	end
 
+	-- 대시 시도(준비됐고 쓸 확률을 넘으면): 쿨 · 2단 창을 기록하고 true. 일반 판정 · 반응 스킬 판정이 같이 쓴다(BOSS-NIGHT-3 7단계 VERIFY-2 10).
+	local function tryDash(m, t)
+		if not (dashSim and (t >= m.dashReadyAt or t <= m.dashSecondUntil) and rng() < (familiar and dashSim.useChance.familiar or dashSim.useChance.first)) then
+			return false
+		end
+		if t <= m.dashSecondUntil then
+			m.dashSecondUntil, m.dashReadyAt = -math.huge, t + DashConfig.cooldownSeconds -- 2단 대시 두 번째 = 쿨 시작
+		else
+			m.dashReadyAt = t + DashConfig.cooldownSeconds
+			m.dashSecondUntil = dashCharges >= 2 and t + DashConfig.primordialShoes.chainWindowSeconds or -math.huge
+		end
+		return true
+	end
+
 	local bySource = {}
 	local function damage(m, share, current_, source)
 		if not m.alive then
@@ -371,10 +385,14 @@ function BossDifficultySim.run(bossId, options)
 					local p = BossOrigin.point(options.bodyEdgeRig, data.sizeScale, hp / maxHp, pick, Vector3.zero, Vector3.new(0, 0, -100), 0)
 					originForward = p and -p.Z or nil
 				end
+				local beamJump = skill.beamFromOrigin and skill.beamFromOrigin.jumpOverMinRebirth and (options.rebirth or 0) >= skill.beamFromOrigin.jumpOverMinRebirth -- BOSS-NIGHT-3 7단계: 빔 점프 회피(환생별)
 				for _, j in ipairs(judgmentsOf(skill, surviveHits, data.chaseStopDistanceStuds, originForward)) do
 					j.at += t
 					j.skill = skill
 					j.id = pick
+					if beamJump then
+						j.class = "jump" -- 2단 점프로 넘는 레이저 = 점프 판정 확률(hitChance.jump) · 대시 거리 몫 없음(noDistanceClasses)
+					end
 					table.insert(pending, j)
 				end
 				if skill.primitive == "gimmick" or skill.gate or skill.primitive == "sandSearch" or skill.primitive == "orgel" then -- BR1-3 새 전멸기도 게이트를 세운다(서버 onGimmickStart)
@@ -429,6 +447,21 @@ function BossDifficultySim.run(bossId, options)
 					end
 					local m = alive[1 + math.floor(rng() * math.max(#alive, 1))]
 					local first = (seenCount[j.skill] or 0) <= 1 and not familiar
+					-- BOSS-NIGHT-3 7단계(VERIFY-2 10): 반응 스킬에도 대시 - 쓸 확률 · 맞아도 보호 창 확률만큼 × 0.5 · 대시 통과 스킬(수정 미사일) = 피해 0. 명중 가정 값은 그대로(보수적).
+					local dashed = m ~= nil and tryDash(m, t)
+					if dashed then
+						dashUses.reactive = (dashUses.reactive or 0) + 1
+					end
+					local function reactiveDamage(share, source)
+						if dashed and rng() < dashSim.protectOverlap then
+							dashUses.protected += 1
+							if j.skill.passThrough ~= "dash" then
+								damage(m, share * DashConfig.incomingDamageMultiplier, nil, source)
+							end
+						else
+							damage(m, share, nil, source)
+						end
+					end
 					if m and j.reactive == "banana" then
 						local hc = (first and v3sim.bananaHit.first or v3sim.bananaHit.later) * hitScale
 						local ref = v3sim.bananaHit.refSpeedStuds
@@ -446,21 +479,21 @@ function BossDifficultySim.run(bossId, options)
 							end
 						end
 						if hits > 0 then
-							damage(m, j.skill.damage.fraction * hits, nil, "바나나")
+							reactiveDamage(j.skill.damage.fraction * hits, "바나나")
 						else
 							table.insert(missLog, t)
 						end
 					elseif m and j.reactive == "leap" then
 						local hc = (first and v3sim.leapHit.first or v3sim.leapHit.later) * hitScale
 						if rng() < hc then
-							damage(m, j.skill.damage.multiplier / surviveHits, nil, "도약")
+							reactiveDamage(j.skill.damage.multiplier / surviveHits, "도약")
 						end
 						far, farSince, farUntil = false, nil, t -- 도약 뒤 = 가까이(다음 틱에 구간을 새로 굴린다)
 					elseif m and v3sim.hit and v3sim.hit[j.reactive] then
 						-- BOSS-NIGHT-1 일반 반응 스킬(뒷발차기): 명중 = hit[id](처음 · 두 번째부터) · 피해 = 공격력 배율 ÷ 생존 타수 · 맞든 아니든 구간 끝(밀려남 · 비킴)
 						local h = v3sim.hit[j.reactive]
 						if rng() < (first and h.first or h.later) * hitScale then
-							damage(m, j.skill.damage.multiplier * (h.damageScale or 1) / surviveHits, nil, j.skill.damageLabel) -- BOSS-NIGHT-2: damageScale = 검기 평균 거리 배율
+							reactiveDamage(j.skill.damage.multiplier * (h.damageScale or 1) / surviveHits, j.skill.damageLabel) -- BOSS-NIGHT-2: damageScale = 검기 평균 거리 배율
 						end
 						if not h.keepFar then -- BOSS-NIGHT-2: 원거리 반응 스킬(검기 · 전류 구슬)은 대상이 멀리 있는 구간을 끊지 않는다(뒷발차기 = 밀려나 구간 끝)
 							behind, behindSince, behindUntil = false, nil, t
@@ -592,16 +625,9 @@ function BossDifficultySim.run(bossId, options)
 					for _, m in ipairs(members) do
 						if m.alive and t >= m.trappedUntil then
 							-- FINAL-1b 3단계: 대시(준비됐고 피하려 하면) = 번 시간만큼 회피 여유 + 맞아도 보호 창 확률만큼 × 0.5(통과 스킬 = 0)
-							local dashed = false
 							local slackOverride = nil
-							if dashSim and (t >= m.dashReadyAt or t <= m.dashSecondUntil) and rng() < (familiar and dashSim.useChance.familiar or dashSim.useChance.first) then
-								dashed = true
-								if t <= m.dashSecondUntil then
-									m.dashSecondUntil, m.dashReadyAt = -math.huge, t + DashConfig.cooldownSeconds -- 2단 대시 두 번째 = 쿨 시작
-								else
-									m.dashReadyAt = t + DashConfig.cooldownSeconds
-									m.dashSecondUntil = dashCharges >= 2 and t + DashConfig.primordialShoes.chainWindowSeconds or -math.huge
-								end
+							local dashed = tryDash(m, t)
+							if dashed then
 								if not dashSim.noDistanceClasses[j.class] then
 									local shortSaved = DashConfig.modes.short.rangeStuds / walk - DashConfig.modes.short.durationSeconds
 									local longSaved = DashConfig.rangeStuds / walk - DashConfig.durationSeconds
@@ -732,7 +758,7 @@ function BossDifficultySim.monteCarlo(bossId, options, runs)
 			counts[id] = (counts[id] or 0) + c
 		end
 		for k, v in pairs(r.dashUses or {}) do
-			dashUses[k] += v / runs
+			dashUses[k] = (dashUses[k] or 0) + v / runs -- BOSS-NIGHT-3 7단계: reactive(반응 스킬 대시) 칸도
 		end
 		for id, d in pairs(r.bySource) do
 			bySource[id] = (bySource[id] or 0) + d / runs / (opts.partySize or 1)
