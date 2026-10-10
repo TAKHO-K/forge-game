@@ -8,6 +8,7 @@ local Workspace = game:GetService("Workspace")
 local D = require(ReplicatedStorage.Shared.data.HubServiceData)
 local HubArtData = require(ReplicatedStorage.Shared.data.HubArtData)
 local WorldMapData = require(ReplicatedStorage.Shared.data.WorldMapData)
+local UiV2Flags = require(ReplicatedStorage.Shared.data.UiV2Flags)
 local Text = require(ReplicatedStorage.Shared.Text)
 local ArtImage = require(script.Parent.ui.ArtImage)
 local Toast = require(script.Parent.ui.kit.Toast)
@@ -44,17 +45,19 @@ for _, s in ipairs(D.services) do
 end
 
 local function attach(part, s)
-	if part:FindFirstChild(PROMPT_NAME) then
+	if part:FindFirstChild(PROMPT_NAME) or part:FindFirstChild("HubServiceIcon") then
 		return
 	end
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.Name = PROMPT_NAME
-	prompt:SetAttribute("HubService", s.id)
-	prompt.ActionText = Text.get(s.actionKey)
-	prompt.ObjectText = Text.get(s.nameKey)
-	prompt.MaxActivationDistance = D.promptDistance
-	prompt.RequiresLineOfSight = false
-	prompt.Parent = part
+	if not (s.boardFlag and UiV2Flags[s.boardFlag]) then -- UI-1c: 게시판이 [E]를 가지면 건물 자리 프롬프트는 안 만든다(두 개 겹침)
+		local prompt = Instance.new("ProximityPrompt")
+		prompt.Name = PROMPT_NAME
+		prompt:SetAttribute("HubService", s.id)
+		prompt.ActionText = Text.get(s.actionKey)
+		prompt.ObjectText = Text.get(s.nameKey)
+		prompt.MaxActivationDistance = D.promptDistance
+		prompt.RequiresLineOfSight = false
+		prompt.Parent = part
+	end
 	local icon = Instance.new("BillboardGui")
 	icon.Name = "HubServiceIcon"
 	icon.Size = UDim2.fromOffset(34, 34)

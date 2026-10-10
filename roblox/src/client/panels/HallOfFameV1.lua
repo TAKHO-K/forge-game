@@ -252,6 +252,7 @@ local function build()
 	end
 	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
 	fit()
+	V9.textFloor(root, scale, phone) -- UI-1c: 작은 화면에서 글자 최소 크기
 	built = { gui = gui, root = root, phone = phone }
 	UIManager.register(HallOfFameV1.id, {
 		kind = "window",
@@ -390,17 +391,20 @@ render = function()
 		bp.Parent = box
 		box.Parent = win
 		corner(box, 8)
-		task.defer(function() -- 알약 폭이 정해진 뒤 그 왼쪽에
+		local by = label(win, Text.get("ui1c.hall.basis"), px(BS.small), C.muted, { name = "BasisLabel", align = Enum.TextXAlignment.Right })
+		by.AnchorPoint = Vector2.new(1, 0)
+		by.Size = UDim2.fromOffset(80, BS.h)
+		local function placeBasis() -- 알약 폭이 정해진 뒤 그 왼쪽에(UI-1c: 글자 최소 크기로 폭이 바뀌면 다시 - 옛 = 한 번만 → 겹침)
 			if not box.Parent then
 				return
 			end
 			local s = B.root:FindFirstChildOfClass("UIScale").Scale
 			box.Position = UDim2.fromOffset(W - T.x - pill.AbsoluteSize.X / s - 12, T.y)
-			local by = label(win, Text.get("ui1c.hall.basis"), px(BS.small), C.muted, { name = "BasisLabel", align = Enum.TextXAlignment.Right })
-			by.AnchorPoint = Vector2.new(1, 0)
 			by.Position = UDim2.fromOffset(W - T.x - pill.AbsoluteSize.X / s - 12 - box.AbsoluteSize.X / s - 10, T.y)
-			by.Size = UDim2.fromOffset(80, BS.h)
-		end)
+		end
+		task.defer(placeBasis)
+		pill:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeBasis)
+		box:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeBasis)
 		if state.tab == "class" then -- ▾ = 직업 고르기(작은 목록)
 			UiKit.attachPress(box, { onActivated = function()
 				state.classMenu = not state.classMenu

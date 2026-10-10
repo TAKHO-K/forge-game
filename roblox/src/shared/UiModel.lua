@@ -187,6 +187,18 @@ function UiModel.textPx(name, isPhone, stepKey, platformName, rootScale)
 	return math.floor(base * UiModel.textMul(stepKey, platformName) * comp + 0.5)
 end
 
+-- UI-1c: 기준 화면(1920 × 1080 · 800 × 360)을 UIScale로 줄인 창의 최소 글자. px = 지금 TextSize(설정 배율 포함) · mul = 설정 배율.
+--   화면 글자(px × rootScale)가 최소(본문급 = minText.body · 그보다 작은 글자 = minText.small)보다 작으면 TextSize를 그만큼 키운다. rootScale ≥ 1 = 그대로.
+function UiModel.textFloorPx(px, rootScale, isPhone, mul)
+	local s = tonumber(rootScale) or 1
+	if s >= 1 or s <= 0 then
+		return px
+	end
+	local m = Tokens.minText[isPhone and "phone" or "pc"]
+	local floorEff = (px >= m.body * (mul or 1) - 0.5) and m.body or m.small
+	return math.max(px, math.ceil(floorEff / s - 0.01))
+end
+
 -- QUEUE-UI2 판정(10-05) 카드 줄바꿈: 숫자 + 단위 = 한 덩어리("1분 전" · "스테이지 21" · "환생 4회"). 덩어리 구분 = 두 칸 띄움("  " - 글 데이터 cardLine 형식).
 --   measure(글) → 폭 px · maxWidth 안에 덩어리 단위로 채우고 넘치면 다음 줄 → 줄 목록(덩어리 안에서는 끊지 않는다)
 function UiModel.wrapChunks(text, maxWidth, measure)

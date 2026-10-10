@@ -114,6 +114,7 @@ local function build()
 	end
 	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
 	fit()
+	require(script.Parent.Parent.ui.v2.UiV9).textFloor(root, scale, phone) -- UI-1c: 작은 화면에서 글자 최소 크기
 	built = { gui = gui, root = root, phone = phone }
 	UIManager.register(BossGateWindow.id, {
 		kind = "window",

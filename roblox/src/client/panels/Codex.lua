@@ -496,6 +496,7 @@ local function buildShellV3(onOpen, onClose)
 	end
 	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
 	fit()
+	V9.textFloor(root, scale, phone) -- UI-1c: 작은 화면에서 글자 최소 크기
 	local C = L3.colors
 	local win = V9.frame(root, P.win, C.window, "Window")
 	V9.corner(win, phone and 14 or 18)
@@ -513,10 +514,12 @@ local function buildShellV3(onOpen, onClose)
 	hb.Size = UDim2.fromOffset(phone and 26 or 36, phone and 26 or 36)
 	if P.sub > 0 then
 		local sub = V9.label(head, Text.get("ui1c.codex.sub"), V9.px(P.sub), C.muted, { name = "Sub" })
-		task.defer(function()
+		local function placeSub() -- UI-1c: 글자 최소 크기로 제목이 커지면 다시(옛 = 한 번만 → [?]와 겹침)
 			local s = scale.Scale > 0 and scale.Scale or 1
 			sub.Position = UDim2.fromOffset(tx + title.AbsoluteSize.X / s + 56, 0)
-		end)
+		end
+		task.defer(placeSub)
+		title:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeSub)
 		sub.Size = UDim2.fromOffset(400, P.head)
 	end
 	UiKit.closeButton({ parent = head, name = "Close", rect = { P.win[3] - P.close - 12, math.floor((P.head - P.close) / 2), P.close, P.close }, onActivated = function()
@@ -628,7 +631,8 @@ local function build()
 		end)
 		tabButtons[t.id] = b
 	end
-	local all = Button.build({ parent = top, kind = "claim", text = Text.get("codex.v2.claimAll"), width = ALL_W, height = 48,
+	-- UI-1c: v3 [모두 받기] = 목업 노랑(buy 색 = 노랑 주 버튼)
+	local all = Button.build({ parent = top, kind = V3ON and "buy" or "claim", text = Text.get("codex.v2.claimAll"), width = ALL_W, height = 48,
 		position = UDim2.new(1, 0, 0, 0), anchorPoint = Vector2.new(1, 0), onActivated = claimAll })
 	all.root.Name = "ClaimAll"
 	local gridArea = Instance.new("Frame")

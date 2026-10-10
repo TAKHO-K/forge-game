@@ -9,7 +9,7 @@ return {
 	-- QUEUE-ALL9A 3-1 지도 이름 "한 기능 = 이름 하나": building = 자기 건물(HubArtData.buildingNames 키) · 기능 자리가 그 건물에서 이 거리(stud · 수평) 안이면 지도 · 미니맵에 건물 이름만
 	ownBuildingRadius = 25,
 	services = {
-		{ id = "hallOfFame", spot = "hallOfFame", building = "hub_hall", panel = "leaderboard", icon = "icons/hud/rank", nameKey = "hub.service.hallOfFame", actionKey = "hub.service.hallOfFame.action", introKey = "hub.service.hallOfFame.intro", intro = "hubIntroRank" },
+		{ id = "hallOfFame", spot = "hallOfFame", building = "hub_hall", panel = "leaderboard", icon = "icons/hud/rank", nameKey = "hub.service.hallOfFame", actionKey = "hub.service.hallOfFame.action", introKey = "hub.service.hallOfFame.intro", intro = "hubIntroRank", boardFlag = "hall" }, -- UI-1c: boardFlag 스위치 켬 = [E]는 게시판(HallBoardView) 하나만 · 건물 자리엔 프롬프트 없음(겹침)
 		{ id = "noticeBoard", spot = "noticeBoard", panel = "board", icon = "icons/hud/attendance", nameKey = "hub.service.noticeBoard", actionKey = "hub.service.noticeBoard.action", introKey = "hub.service.noticeBoard.intro", intro = "hubIntroBoard" },
 		{ id = "challengeKnight", spot = "challengeKnight", panel = "quests", focus = "challenge", icon = "icons/ui/pin_boss", nameKey = "hub.service.challengeKnight", actionKey = "hub.service.challengeKnight.action", introKey = "hub.service.challengeKnight.intro", intro = "hubIntroChallenge" },
 		-- QUEUE-ALL8 A: 출시 기능 자리(정식 이름 + 프롬프트 · 설명 = hintKey 한 줄 · 첫 소개 없음)

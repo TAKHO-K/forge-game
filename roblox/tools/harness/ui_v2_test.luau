@@ -45,6 +45,15 @@ local okRun, err = pcall(function()
 	check("UI2-2 PreferredTextSize와 안 겹침(큰 쪽 하나 - 곱하지 않음)", near(M0.textMul("xlarge", "Larger"), math.max(1.3 * B, 1.3)) and near(M0.textMul("normal", "Largest"), math.max(B, 1.5)) and near(M0.textMul("large", "Medium"), 1.15 * B))
 	local card = math.floor(18 * B + 0.5) -- UI-1b: 새 보통 = 토큰 × textBase
 	check("UI2-2 루트 배율 보정: 1080 = 토큰 × 새 기준 · 592 창(0.548) = 화면 글자 ≥ 그 × 0.75", M0.textPx("cardInfo", false, "normal", "Medium", 1) == card and M0.textPx("cardInfo", false, "normal", "Medium", 0.548) * 0.548 >= card * 0.75 - 0.5, tostring(M0.textPx("cardInfo", false, "normal", "Medium", 1)))
+	-- UI-1c 재개 2: 기준 화면 창(UIScale) 최소 글자 = 화면 PC 본문 18 · 작은 15 / 폰 14 · 12
+	do
+		local s = math.min(1366 / 1920, 768 / 1080)
+		local f = M0.textFloorPx
+		local eff = function(px, sc, ph) return f(px, sc, ph, 1) * sc end
+		check(("UI1C 최소 글자 1366×768(%.3f): 본문 18 → 화면 ≥ 18 · 작은 15 → ≥ 15 · 큰 제목 28 → ≥ 18"):format(s), eff(18, s, false) >= 18 and eff(15, s, false) >= 15 and eff(16, s, false) >= 15 and eff(28, s, false) >= 18, ("%d %d %d"):format(f(18, s, false, 1), f(15, s, false, 1), f(28, s, false, 1)))
+		check("UI1C 최소 글자 폰(0.9): 본문 14 → ≥ 14 · 작은 12 → ≥ 12 · 배율 1 이상 = 그대로", eff(14, 0.9, true) >= 14 and eff(12, 0.9, true) >= 12 and f(15, 1, false, 1) == 15 and f(13, 1.2, true, 1) == 13)
+		check("UI1C 최소 글자 1592 창(0.548) · 글자 1.3: 원래보다 작아지지 않음 · 화면 ≥ 최소", f(39, 0.548, false, 1.3) == 39 and eff(15, 0.548, false) >= 15 and f(20, 0.548, false, 1.3) * 0.548 >= 15)
+	end
 
 	-- 2. 좌표 표: 모든 rect = 숫자 4개 · 기준 화면 안 · 폰 버튼 44 이상
 	local bad, out, touch = {}, {}, {}
