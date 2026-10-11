@@ -116,6 +116,60 @@ local ok, err = pcall(function()
 	check("수정 표식 = 건 보스 피해만 × 2 · 겹쳐도 × 2 · 3초 뒤 × 1", m1 == 2 and m2 == 1 and m3 == 2 and CC.markMultiplier(r, "crystal_queen") == 1, ("%d %d %d → %d"):format(m1, m2, m3, CC.markMultiplier(r, "crystal_queen")))
 	local qm = inst("crystal_queen", 100).skills.magicMissiles
 	check("수정 미사일 마지막 발 = 경직(옛 기절 0.25)", qm.lastOnHit[1].type == "stagger", qm.lastOnHit[1].type)
+
+	-- ④ BN3-finish 0-①(VERIFY-4 6-d): 회오리 직후 대공 잡기 낮춤이 굶주림 균등화 뒤에도 남는다 - 폭풍 · 직전 whirl · grab/swipe 둘 다 굶주림(옛 = grab 약 1000/2000)
+	--   0-②: 시그니처(strike)는 균등화에서 빠져 굶주린 일반 스킬보다 먼저
+	local Sched = MODS.BossScheduler
+	local sd = BR.buildInstanceData(100, "storm_lord", 1)
+	local seed = 12345
+	local function rng() seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648 end
+	local function pickWith(ready, last)
+		local s = Sched.newState(sd.skills, sd.skillOrder, 0, false, sd.scheduler)
+		for _, sid in ipairs(sd.skillOrder) do
+			s.readyAt[sid] = ready[sid] and 0 or math.huge
+			s.lastUsedAt[sid] = 0
+			s.seen[sid] = true -- 자리 비우기(reserveFirstUse) 제외
+		end
+		s.lastSkillId, s.lastEndAt = last, 0
+		return Sched.pick(s, sd.skills, sd.skillOrder, sd.scheduler, { now = 200, rng = rng, conditionMet = function() return true end, boundSeconds = function() return 0 end })
+	end
+	local grabN = 0
+	for _ = 1, 2000 do
+		grabN += pickWith({ grab = true, swipe = true }, "whirl") == "grab" and 1 or 0
+	end
+	local sigN = 0
+	for _ = 1, 500 do
+		sigN += pickWith({ strike = true, swipe = true, discharge = true }, "whirl") == "strike" and 1 or 0
+	end
+	check("회오리 직후 대공 잡기 = 굶주림 균등화 뒤 lowerAfter 감점(둘 다 굶주림이면 swipe)", grabN == 0, ("grab %d/2000(옛 약 1000)"):format(grabN))
+	check("굶주린 시그니처 = 균등화 제외(굶주린 일반 스킬보다 먼저)", sigN == 500 and sd.scheduler.starvedFlatSkipRole == "signature", ("strike %d/500"):format(sigN))
+
+	-- ⑤ BN3-finish 0-⑥(VERIFY-4 7): 투사체 회피 부등식을 코드와 따로 계산(상수 = addendum-2 13 원문: 25 stud · 반응 0.5 · 걷기 16 · 여유 1.25 - 데이터 · fitProjectileSpeed를 안 읽음)
+	--   예고 + 25 ÷ 속도 − 0.5 ≥ (반경 + 1) ÷ 16 × 1.25 · 직진(회전 0) 투사체 전부 × 6보스 새 몸 × 스테이지 5개 · 감속된 것은 0.1 더 빠르면 식이 깨져야(가장 빠른 값)
+	local bad, n, tight = {}, 0, 0
+	for _, bid in ipairs({ "section_guardian", "crystal_queen", "abyssal_lord", "scorpion_queen", "storm_lord", "frost_giant" }) do
+		for _, stage in ipairs({ 100, 200, 400, 1000, 6000 }) do
+			local gg = inst(bid, stage)
+			for sid, sk in pairs(gg.skills) do
+				if sk.primitive == "projectile" and (sk.turnRateDeg or 0) == 0 and sk.speedStuds then
+					n += 1
+					local need = ((sk.radiusStuds or 0) + 1) / 16 * 1.25
+					local have = (sk.telegraphSeconds or 0) + 25 / sk.speedStuds - 0.5
+					if have < need - 1e-9 then
+						table.insert(bad, ("%s.%s@%d %.3f<%.3f"):format(bid, sid, stage, have, need))
+					end
+					local base = MODS.BossFrameworkData.v3[bid] and MODS.BossFrameworkData.v3[bid].skills and MODS.BossFrameworkData.v3[bid].skills[sid]
+					if base and base.speedStuds and sk.speedStuds < base.speedStuds then
+						tight += 1
+						if (sk.telegraphSeconds or 0) + 25 / (sk.speedStuds + 0.1) - 0.5 >= need then
+							table.insert(bad, ("%s.%s@%d 0.1 더 빨라도 통과(감속 과함)"):format(bid, sid, stage))
+						end
+					end
+				end
+			end
+		end
+	end
+	check("직진 투사체 회피 부등식(독립 계산) 전부 성립 · 감속분 = 가장 빠른 값", #bad == 0 and n > 0 and tight > 0, ("%d개 검사 · 감속 %d · 어긋남 %s"):format(n, tight, #bad == 0 and "0" or table.concat(bad, "; ")))
 end)
 if not ok then
 	print("[FEEL] 하네스 에러 " .. tostring(err))

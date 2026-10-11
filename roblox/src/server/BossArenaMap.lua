@@ -24,6 +24,7 @@ local MonsterState = require(script.Parent.MonsterState)
 local PlayerDamage = require(script.Parent.PlayerDamage)
 local PlayerState = require(script.Parent.PlayerState) -- P3d D3: 끼인 사람의 받는 피해 0배를 풀 때
 local HeightGuard = require(script.Parent.HeightGuard) -- G2a: 파편 튕김 동안 서버 높이 검증 예외
+local PlayerCC = require(script.Parent.PlayerCC) -- BN3-finish 0-③: 파편 튕김 = 공용 넉백/띄움 입구
 local JumpMath = require(ReplicatedStorage.Shared.JumpMath)
 local MovementConfig = require(ReplicatedStorage.Shared.data.MovementConfig) -- G2a B5: 무너짐 낙하 속도
 local Looks = require(script.Parent.BossArenaLooks)
@@ -579,9 +580,14 @@ local function fireBreak(state, obstacle, cause)
 					table.insert(dropped, player)
 				end
 			elseif onTop and not (BossArenaMap.isLaunchProtected and BossArenaMap.isLaunchProtected(player)) then -- P3d B2: 복귀 보호 중이면 안 튕긴다
-				table.insert(launched, player)
-				HeightGuard.grantLaunch(player, topBreak.heightStuds, JumpMath.launchAirSeconds(topBreak.heightStuds), "파편 튕김") -- M1-2c 발사 허가
-				if patternEvent then
+				-- BN3-finish 0-③(VERIFY-4 2): 공용 CC 입구(PlayerCC.tryLaunch - 넉백/띄움 면역 · 0.3초 대시 거절 · StatusAirborneUntil) · 면역이면 튕김만 없음(피해는 그대로 · 목록에 안 넣음)
+				local airSeconds = JumpMath.launchAirSeconds(topBreak.heightStuds)
+				local canLaunch = PlayerCC.tryLaunch(player, topBreak.heightStuds, airSeconds)
+				if canLaunch then
+					table.insert(launched, player)
+					HeightGuard.grantLaunch(player, topBreak.heightStuds, airSeconds, "파편 튕김") -- M1-2c 발사 허가
+				end
+				if canLaunch and patternEvent then
 					patternEvent:FireClient(player, "launch", {
 						from = obstacle.center, heightStuds = topBreak.heightStuds, distanceStuds = topBreak.distanceStuds, zoneCenter = zone.center, zoneRadius = zone.radius,
 					})

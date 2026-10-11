@@ -403,7 +403,7 @@ do
 	check("V3 이속 × 1.3 · 질주 25 stud 밖 × 1.5", math.abs(g.moveSpeedStuds - e.moveSpeedStuds * 1.3) < 1e-6 and g.sprintBeyondStuds == 25 and g.sprintMultiplier == 1.5,
 		("%.1f → %.1f · 질주 %.1f stud/s(걷기 %d)"):format(e.moveSpeedStuds, g.moveSpeedStuds, g.moveSpeedStuds * g.sprintMultiplier, walk))
 	local b, l = g.skills.banana, g.skills.leap
-	local bOk = b and b.reactive and b.telegraphSeconds == 0.45 and b.speedStuds == MODS.BossSkillMath.fitProjectileSpeed({ primitive = "projectile", speedStuds = 110, radiusStuds = b.radiusStuds, telegraphSeconds = 0.45 }).speedStuds and b.speedStuds < 110 and b.leadFraction == 0.5 and b.damage.kind == "maxHp" and b.damage.fraction == 0.07
+	local bOk = b and b.reactive and b.telegraphSeconds == 0.45 and 0.45 + 25 / b.speedStuds - 0.5 >= (b.radiusStuds + 1) / 16 * 1.25 - 1e-9 and 0.45 + 25 / (b.speedStuds + 0.1) - 0.5 < (b.radiusStuds + 1) / 16 * 1.25 and b.speedStuds < 110 -- BN3-finish 0-⑥: 회피 부등식을 상수로 직접(옛 = 같은 함수 fitProjectileSpeed로 기대값 - 동어반복) and b.leadFraction == 0.5 and b.damage.kind == "maxHp" and b.damage.fraction == 0.07
 		and b.cooldownSeconds == 3 and b.conditions[1].type == "targetBeyondFor" and b.conditions[1].studs == 30 and b.conditions[1].seconds == 1.5 and b.overrides[1].set.count == 3
 	check("V3 바나나(조건 30 stud · 1.5초 · 쿨 3 · 예비 0.45 · 110 stud/s → 회피 식 속도(3단계) · 리드 50% · 7% · 광폭 3갈래)", bOk == true, b and ("쿨 %d · 예비 %.2f · 속도 %d · 리드 %.0f%% · 최대 체력 %.0f%% · 광폭 %d갈래"):format(
 		b.cooldownSeconds, b.telegraphSeconds, b.speedStuds, b.leadFraction * 100, b.damage.fraction * 100, b.overrides[1].set.count) or "없음")

@@ -587,6 +587,7 @@ local function scheduler(globalCooldownSeconds)
 		starvationPriorityBonus = MECHANICS.starvationPriorityBonus,
 		waitWeightedPick = true, -- BOSS-NIGHT-3 addendum-2 15: 같은 우선순위 = 기다린 초 가중치 뽑기(BossScheduler ⑥)
 		starvedFlat = true, -- BOSS-NIGHT-3 addendum-2 15: 굶주린 스킬 우선순위 = starvationPriorityBonus(원래 값 무시)
+		starvedFlatSkipRole = "signature", -- BN3-finish 0-②: 시그니처는 균등화 제외(굶주리면 원래 50 + 가산 = 굶주린 일반 스킬보다 먼저 · 판당 등장 ≥ 80% 목표)
 		lanes = MECHANICS.lanes, -- A2-N4 §2-1(BossScheduler 강공격 줄)
 	}
 end

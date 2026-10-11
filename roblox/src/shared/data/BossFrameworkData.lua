@@ -234,7 +234,9 @@ D.v3 = {
 				damage = { kind = "attack", multiplier = 0.12 }, damageLabel = "마법 미사일",
 			},
 		},
-		sim = { rangedFarShare = 0.6, meleeFarShare = 0.08, farSegmentSeconds = 3, hit = { magicMissiles = { first = 0.6, later = 0.6, damageScale = 5, keepFar = true } } }, -- 첫 발 명중 60% → 고정 추적으로 5발 전부(damageScale = 발 수)
+		sim = { rangedFarShare = 0.6, meleeFarShare = 0.08, farSegmentSeconds = 3, hit = { magicMissiles = { first = 0.6, later = 0.6, damageScale = 5, keepFar = true,
+			perShot = { distanceStuds = 30, bodyRadiusStuds = 1.0 } } } }, -- 첫 발 명중 60% → 고정 추적으로 5발 전부(damageScale = 발 수 - perShot이 없을 때 옛 한 판정)
+			-- BN3-finish 0-⑤: perShot = 발마다 판정(BossDifficultySim) - 대상 거리 30(원거리 구간 기준 targetBeyond 30) · 몸 반경 1.0 · 대시 창 뒤 발은 유도 회전으로 32 stud 비킨 대상을 쫓는다(BossSkillMath.homingCatches)
 		glow = { color = Color3.fromRGB(150, 240, 255), fillPeak = 0.55, outline = 0.35, skills = { swipe = true, burst = true, spikes = true, energyBeam = true, shards = true, drop = true, magicMissiles = true }, basic = true,
 			basicParts = { R = "ScepterGem", L = "Hand_L" } },
 		marks = { color = LAVENDER, crackColor = Color3.fromRGB(160, 90, 255), transparency = 0.6, crackTransparency = 0.25, crackWidth = 0.35 },

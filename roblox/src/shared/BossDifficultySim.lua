@@ -141,6 +141,7 @@ function BossDifficultySim.run(bossId, options)
 	local dashCharges = options.dashCharges or 1
 	local walk = WorldConfig.playerWalkSpeedStuds
 	local dashUses = { short = 0, long = 0, protectOnly = 0, protected = 0 }
+	local missileShots = nil -- BN3-finish 0-⑤: 연발 유도탄 묶음 수 · 맞은 발 수(발마다 판정)
 	local protect = PlayerCombat.getNewbieDamageMultiplier(stage) -- 스테이지 1 ~ 30 신규 보호(최고 스테이지 = 이 스테이지로 본다)
 	if data.firstAssist and options.assistFails then -- GUARDIAN-V3 첫 보스 도움(받는 피해 배율 - 모든 피해)
 		protect *= require(ReplicatedStorage.Shared.BossFramework).assistMultiplier(data.firstAssist, options.assistFails, false)
@@ -489,6 +490,50 @@ function BossDifficultySim.run(bossId, options)
 							reactiveDamage(j.skill.damage.multiplier / surviveHits, "도약")
 						end
 						far, farSince, farUntil = false, nil, t -- 도약 뒤 = 가까이(다음 틱에 구간을 새로 굴린다)
+					elseif m and j.skill.lockOnFirstHit and v3sim.hit and v3sim.hit[j.reactive] and v3sim.hit[j.reactive].perShot then
+						-- BN3-finish 0-⑤(VERIFY-4 7): 연발 유도탄(수정 미사일) = 발마다 판정. 옛 = 5발을 한 판정으로 묶어 대시 보호 창(0.3초)이 0.6초 일제사격 전부를 통과시켰다.
+						--   대시 안 함(또는 창이 안 겹침) = 첫 발 명중 p → 고정 추적으로 나머지 전부 · 첫 발이 빗나가면 같은 회피가 묶음 전체에 통함(옛 보정 유지).
+						--   대시 창이 첫 발에 겹침 = 창 안(발 간격 × k < protectSeconds) 발은 통과 · 창 뒤 발은 대시로 옆 lateral 비킨 대상을 유도 회전으로 쫓아(homingCatches) 닿는 발만 p · 맞으면 남은 발 고정.
+						local h = v3sim.hit[j.reactive]
+						local p = (first and h.first or h.later) * hitScale
+						local mm = h.perShot
+						local each = j.skill.damage.multiplier / surviveHits
+						local overlap = dashed and rng() < dashSim.protectOverlap
+						if overlap then
+							dashUses.protected += 1
+						end
+						local hitRadius = (j.skill.radiusStuds or 0) + mm.bodyRadiusStuds
+						local hits, locked = 0, false
+						for k = 0, j.shots - 1 do
+							local offset = k * (j.skill.launchIntervalSeconds or 0)
+							if overlap and offset < DashConfig.protectSeconds then
+								if j.skill.passThrough ~= "dash" then
+									damage(m, each * DashConfig.incomingDamageMultiplier, nil, j.skill.damageLabel)
+								end
+							elseif locked then
+								hits += 1
+							elseif overlap then
+								local elapsed = mm.distanceStuds / j.skill.speedStuds - offset -- 대시 순간(첫 발 도착) 이 발이 날아온 시간
+								if BossSkillMath.homingCatches(j.skill, mm.distanceStuds, DashConfig.rangeStuds, math.max(elapsed, 0), hitRadius) and rng() < p then
+									hits += 1
+									locked = true
+								end
+							elseif k == 0 then
+								if rng() < p then
+									hits += 1
+									locked = true
+								else
+									break
+								end
+							end
+						end
+						if hits > 0 then
+							damage(m, each * hits, nil, j.skill.damageLabel)
+						end
+						missileShots = missileShots or { volleys = 0, hits = 0, shots = 0 }
+						missileShots.shots += j.shots
+						missileShots.volleys += 1
+						missileShots.hits += hits
 					elseif m and v3sim.hit and v3sim.hit[j.reactive] then
 						-- BOSS-NIGHT-1 일반 반응 스킬(뒷발차기): 명중 = hit[id](처음 · 두 번째부터) · 피해 = 공격력 배율 ÷ 생존 타수 · 맞든 아니든 구간 끝(밀려남 · 비킴)
 						local h = v3sim.hit[j.reactive]
@@ -731,7 +776,7 @@ function BossDifficultySim.run(bossId, options)
 	end
 	return {
 		seconds = t, killed = hp <= 0, wiped = not anyAlive(), deadCount = dead,
-		takenAverage = takenSum / n, counts = counts, deferred = deferred, bySource = bySource, dashUses = dashUses,
+		takenAverage = takenSum / n, counts = counts, deferred = deferred, bySource = bySource, dashUses = dashUses, missileShots = missileShots,
 	}
 end
 

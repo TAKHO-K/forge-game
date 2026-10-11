@@ -136,13 +136,16 @@ function BossScheduler.pick(state, skills, skillOrder, config, ctx)
 			local blocked = not holdsReservation and reserved ~= nil and now + ctx.boundSeconds(id) + (heavy and lanes.patternAfterHeavySeconds or gap) > reserved
 			if not blocked then
 				local priority = skill.priority or 0
-				-- ⑥-2(BR1-4a): lowerAfter = { skills, priority } - 직전 스킬이 목록에 있으면 우선순위를 그만큼 낮춘다(후보에서 빼지는 않는다 - notAfter와 다르다)
-				if skill.lowerAfter and state.lastSkillId and table.find(skill.lowerAfter.skills, state.lastSkillId) then
-					priority -= skill.lowerAfter.priority
-				end
 				if skill.starvationSeconds and now - state.lastUsedAt[id] >= skill.starvationSeconds then
 					-- BOSS-NIGHT-3 addendum-2 15: starvedFlat = 굶주린 스킬은 원래 우선순위와 관계없이 같은 값(시그니처 50이 굶주린 일반 스킬을 늘 이기던 것 - 굶주린 것끼리는 가중치 뽑기)
-					priority = config.starvedFlat and config.starvationPriorityBonus or priority + config.starvationPriorityBonus
+					-- BN3-finish 0-②(VERIFY-4 6-e): starvedFlatSkipRole(시그니처)은 균등화에서 뺀다 = 원래 값 + 가산 → 굶주리면 굶주린 일반 스킬보다 먼저(판당 등장 보장)
+					local flat = config.starvedFlat and not (config.starvedFlatSkipRole and skill.role == config.starvedFlatSkipRole)
+					priority = flat and config.starvationPriorityBonus or priority + config.starvationPriorityBonus
+				end
+				-- ⑥-2(BR1-4a): lowerAfter = { skills, priority } - 직전 스킬이 목록에 있으면 우선순위를 그만큼 낮춘다(후보에서 빼지는 않는다 - notAfter와 다르다)
+				-- BN3-finish 0-①(VERIFY-4 6-d): 굶주림 뒤에 적용(옛 = 앞에서 빼고 starvedFlat이 덮어써 감점이 사라졌다 - 회오리 직후 대공 잡기)
+				if skill.lowerAfter and state.lastSkillId and table.find(skill.lowerAfter.skills, state.lastSkillId) then
+					priority -= skill.lowerAfter.priority
 				end
 				table.insert(candidates, { id = id, priority = priority, readyAt = readyAt, heavy = heavy })
 			end

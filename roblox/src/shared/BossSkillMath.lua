@@ -955,6 +955,32 @@ function BossSkillMath.fitProjectileSpeed(skill)
 	return copy, skill.speedStuds
 end
 
+-- BN3-finish 0-⑤(VERIFY-4 7): 유도탄 한 발이 옆으로 비킨 대상을 따라잡는가(2D 추적 - 순수 계산 · BossDifficultySim 미사일 발마다 판정).
+--   발사점 (0, 0) → 처음 대상 (distance, 0)으로 직진하다가 elapsed초 뒤 대상이 옆으로 lateral만큼 순간 이동(대시) · 그 뒤 남은 유도 시간(homingSeconds − elapsed) 동안
+--   초당 turnRateDeg까지만 꺾으며 쫓고(그 뒤 직진) lifetimeSeconds 안에 hitRadius 안으로 들어오면 맞음. 반환 = 맞는가, 가장 가까웠던 거리.
+function BossSkillMath.homingCatches(skill, distance, lateral, elapsed, hitRadius)
+	local v, w = skill.speedStuds, math.rad(skill.turnRateDeg or 0)
+	local x, y, heading = math.min(v * elapsed, distance), 0, 0
+	local tx, ty = distance, lateral
+	local t, dt, best = elapsed, 1 / 120, math.huge
+	while t < (skill.lifetimeSeconds or 3) do
+		if t < (skill.homingSeconds or 0) then
+			local want = math.atan2(ty - y, tx - x)
+			local diff = (want - heading + math.pi) % (2 * math.pi) - math.pi
+			heading += math.clamp(diff, -w * dt, w * dt)
+		end
+		x += math.cos(heading) * v * dt
+		y += math.sin(heading) * v * dt
+		t += dt
+		local d = math.sqrt((tx - x) ^ 2 + (ty - y) ^ 2)
+		best = math.min(best, d)
+		if d <= hitRadius then
+			return true, d
+		end
+	end
+	return false, best
+end
+
 -- 곡선 행을 스킬표 사본에 얹는다(원본 BossData는 안 건드린다). 순서: (이미 곱한 이속 보정 위에) 장판 범위 × → 장판 개수 ± → 연쇄 칸 ± → 투사체 인당 개수 · 반경 → 전조 맞춤.
 -- zoneExtra를 따로 주면(견습 = 0) 행 값 대신 쓴다. 반환: 새 표, 전조를 늘린 스킬 { [id] = 초 }.
 -- boost(선택) = { scale = 이속 보정, cap = BossRules.rangeBoostCap() } - 장판 범위 × 뒤에 모양별 추가 배율(boostRange)을 곱한다(전조 맞춤보다 먼저 - 넓어진 만큼 예고가 자동으로 늘어난다).

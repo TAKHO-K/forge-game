@@ -3,6 +3,8 @@
 --   buff · debuff 줄은 BuffState(BuffUpdate)를 그대로 쓴다(이 표 밖). order = 줄에 놓는 순서(같은 색 안에서).
 return {
 	colors = { cc = "red", debuff = "yellow", buff = "blue" },
+	-- BN3-finish 0-⑧(VERIFY-3 M39 확인): 아래 cc 목록 = 옛 정의표(읽는 코드 0 · 삭제 금지라 보관). 화면은 icons 표만 읽는다(UI-1 1단계 - airborne · cage-* 분리 · slow/crystal-mark = debuff · dash-guard = buff · 이름 = ui1.status.*).
+	--   끌림(소용돌이 끌어당김) 아이콘은 v8 assets에 없음 → 디자인 요청 항목(데이터 칸 안 만듦).
 	cc = {
 		{ id = "stun", nameKey = "status.stun", source = "BossStunned", order = 1 }, -- 기절 0.7초 · 뒤 면역 2초
 		{ id = "trap", nameKey = "status.trap", source = "BossTrapKind", order = 2 }, -- 잡힘 6종(빙결 · 침수 · 결정화 · 매몰 · 감전 · 잡힘)
