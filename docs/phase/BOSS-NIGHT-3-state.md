@@ -3,7 +3,7 @@
 ## BN3-finish(10-11 갱신판 · 0 ~ 5-b · 7단계 안 함)
 - **0단계 끝**(VERIFY-4 중급 ① ~ ⑧) - 커밋은 이 파일과 같은 커밋.
 - **다음 = 1단계(addendum-2 18 → 14 → 16)** · 그다음 2(4단계) · 3(5단계) · 4(6단계 투표) · 5(결정) · 5-b(기믹 실패 5% 회복).
-- 프롬프트 = `claude-design-handoff_bosses\BOSS-NIGHT-3-finish-prompt.md`.
+- 프롬프트 = `claude-design-handoff\31_bosses\BOSS-NIGHT-3-finish-prompt.md`.
 
 
 ## 끝난 것
