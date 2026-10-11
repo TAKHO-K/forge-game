@@ -1,4 +1,4 @@
-> 상태: 2026-10-11 · ART-PILOT-1 진행 중 · 게임 데이터 · 코드 · 본 place 변경 0 · 입력 = `claude-design-handoff/50_art-pilot/v1/`
+> 상태: 2026-10-11 · ART-PILOT-1 Studio 넣기 · 재생 · 성능 측정 끝(_ArtPilot 제거) · 게임 데이터 · 코드 · 본 place 변경 0 · 입력 = `claude-design-handoff/50_art-pilot/v1/`
 
 # ART-PILOT-1 — 3D 파이프라인 시범 2종 (대장장이 NPC · rock_boar)
 
@@ -25,7 +25,8 @@
 | 업로드 | 끝 | `roblox/tools/opencloud/pilot_upload.py`(결과 = `roblox/art/pilot/art_pilot_1/pilot-asset-ids.json` · 게임 `asset-ids.json` · `ArtAssetIds.lua` 안 건드림) · 5개 모두 Approved |
 | 애니 변환 | 끝 | `roblox/tools/blender/art_pilot_anim.py` → `*.anim.json`(프레임별 뼈 월드 변화량 - Studio에서 KeyframeSequence 임시 등록으로 재생 예정) |
 | B1-라이트 준비 | 끝 | 같은 리깅 멧돼지(boar_b1 모델 재사용) + 색 1장 1024(`b1_lite/rock_boar_b1lite_albedo_1024.png` · 노멀 · 금속 · 거칠기 없음). 공정 비교용으로 B1 원본 노멀 2K · 금속 4K · 거칠기 4K도 업로드(B1 = 4장) |
-| Studio 넣기 · 재생 · 성능 | **대기** | PROG-2B-1(Studio 사용 7단계) 끝난 뒤 · `Workspace._ArtPilot` 하나 · 끝나면 제거 · 그동안 저장/퍼블리시 금지 · 스크립트 `roblox/tools/art_pilot/01_load.luau` |
+| Studio 넣기 · 재생 · 성능 | 끝(10-11) | `Workspace._ArtPilot` 하나 → 측정 뒤 제거(남은 것 0 · `TestSkipMainMenuUntil` 지움 · 렌더 품질 Automatic 복구 · 저장/퍼블리시 안 함) · 스크립트 `01_load.luau` · `02_anim_kfs.luau` · 결과 = 아래 "Studio 결과" |
+| Python rbxmx 애니 업로드 시험(길 ③) | **이번엔 뺌**(사용자 결정 10-11 · 사용량) | 다음 세션 후보 |
 
 ### B2 부위 자르기 결과 (rock_boar · Meshy 3,111 → 1,516)
 
@@ -86,6 +87,30 @@
 - 잴 것: fps(RenderStepped 6초 평균 · p95 프레임) · `Stats:GetMemoryUsageMbForTag`(GraphicsTexture · GraphicsMeshParts · Animation) · 전체 메모리.
 - 한계: 실제 폰이 아니라 PC Studio 품질 1 대용값. 비율(4종 사이 차이)로 판단.
 - 확인할 것: **Roblox 텍스처 상한**. 영어 문서는 1024 × 1024 상한, 번역 문서는 4096이라 서로 다름 → 업로드한 2K · 4K가 실제 몇 픽셀로 쓰이는지 GraphicsTexture 메모리 차이로 확인([texture specifications](https://create.roblox.com/docs/art/modeling/texture-specifications)). 1024 상한이면 B1 ↔ B1-라이트 차이 = 장 수(4 ↔ 1)뿐.
+
+## Studio 결과 (10-11)
+
+**넣기**: 4종 + 대장장이 모두 InsertService로 들어옴. FBX 모델은 cm 단위(B2 · 지금 몬스터 ScaleTo 0.01) · B1 = 0.94 stud 높이로 들어와 × 2.82(높이 2.65) · 대장장이 × 0.0327(높이 5.6). 대장장이 Icosphere는 들어옴 → 지움. 대장장이 뼈 42 → Roblox 30(끝 뼈 · Meshy 보조 뼈 `Bone_029/030` 등 12개는 안 들어옴 - 애니에는 영향 없음). **FBX 애니는 Model 업로드에 안 실림**(InitialPoses 폴더만) → `02_anim_kfs.luau`로 KeyframeSequence 생성 · 임시 등록 재생(Animator) 확인.
+
+**애니 판정(사용자가 Play를 직접 봄)**: 재생은 되지만 **어색함 - 렉 측정용으로만 씀**.
+- 대장장이 "Heavy Hammer Swing" = 머리 위로 들어 내리치는 **떡메 치는 동작** → 대장장이답지 않음(프리셋 선택 문제).
+- 전체가 **흐느적거림** · 팔 각도가 안 돌아감. 자식 뼈 이동을 빼고 회전만 남겨도(02 스크립트 현재판) 흐느적거림은 그대로 → 원인 후보 = Meshy 자동 리깅 스킨 가중치 · 프리셋 모션 자체 · 내 축 변환의 뼈 비틀림(roll) 처리(미확인).
+
+**성능** (PC Studio · 렌더 품질 1 · 같은 카메라 · 12열 6 stud 간격 · 창 초점 있음 · 기준 = 무리 없음 4.3ms · 60fps)
+
+| 종류 | 마리당 삼각형 | 30마리 삼각형 / 그리기 호출 | 120마리 삼각형 / 그리기 호출 | 120마리 fps · p95 | 렌더 CPU(120) | 움직임 |
+|---|---|---|---|---|---|---|
+| 지금 몬스터 | 1,012 | 3.1만 / 13 | 12.2만 / 13 | 60 · 18.4ms | 4.44ms | Motor6D 사인(Lua) |
+| B2 | 1,516 | 4.6만 / 15 | 18.3만 / 15 | 60 · 18.4ms | 4.71ms | Motor6D 사인(Lua) |
+| B1-라이트 | 3,111 | 9.3만 / 19 | 37.3만 / 65 | 60 · 18.2ms | 4.39ms | Animator(스킨) |
+| B1 | 3,111 | 9.3만 / 19 | 37.3만 / 65 | 60 · 18.5ms | 4.19ms | Animator(스킨) |
+
+- **PC에서는 4종 모두 60fps 상한** → fps로는 차이 없음. 확실한 차이 = 삼각형(B1 = 지금의 3.1배) · **그리기 호출(스킨 메시는 120마리에서 65 ↔ 부위 방식 13 ~ 15 = 4 ~ 5배 · 마리 수에 비례해 늘어남)**. 부위 방식은 같은 메시끼리 묶여 마리 수가 늘어도 호출이 그대로.
+- 폰 판단: 그리기 호출 · 삼각형이 폰에서 먼저 걸리는 값 → 120마리 화면이면 B1 계열이 가장 위험. 실제 폰 측정 필요(이번 PC 수치는 비율 참고).
+- **텍스처 메모리 미확인**: `GetMemoryUsageMbForTag(GraphicsTexture)`가 B1(4장 2K · 4K) · B1-라이트(1장 1K) 모두 +0.0 → Studio 클라 태그로는 안 잡힘. 1024 상한 질문은 열린 채로 둠(B1 ↔ B1-라이트 렌더 CPU · 호출 차이도 없음).
+- 창 초점이 빠지면 15fps로 묶임(첫 측정 2회가 이것 때문에 무효 → 초점 주고 다시 잼). `Stats.RenderCPUFrameTime` · `SceneTriangleCount` · `SceneDrawcallCount`는 초점과 상관없이 읽힘 → 다음 측정도 이 셋을 기준으로.
+
+**결정 필요**: ① 대장장이 모션 = 모루 두드리기(한 손 · 짧은 반복) 프리셋을 다시 고를지 · 직접 키프레임할지 ② 흐느적거림 = 스킨 가중치를 Blender에서 손볼지 · 부위 방식(B2)으로 갈지 ③ 몬스터 = 성능만 보면 B2(지금 대비 삼각형 1.5배 · 호출 거의 같음)가 B1보다 안전.
 
 ## 실서비스 애니 업로드 경로 (조사만 · 업로드 안 함)
 
